@@ -3,6 +3,8 @@
  * Extracted from BatchGenerateGifs.vue for reuse in Create.vue upload flow.
  */
 
+import { t } from '@/utils/i18n';
+
 const DEBUG = false;
 
 let cachedGifModule = null;
@@ -83,7 +85,7 @@ export async function generateRotateGif(viewerRef, onStatus) {
     let shaderTime = 0;
 
     for (let i = 0; i < numFrames; i++) {
-        onStatus?.(`[Rotate] Frame ${i + 1}/${numFrames}`);
+        onStatus?.(t('[Rotate] Frame :i/:total', { i: i + 1, total: numFrames }));
         const angle = startAngle + (i * (Math.PI * 2) / numFrames);
         camera.position.x = target.x + Math.sin(angle) * radius;
         camera.position.z = target.z + Math.cos(angle) * radius;
@@ -104,7 +106,7 @@ export async function generateRotateGif(viewerRef, onStatus) {
     camera.lookAt(originalTarget.x, originalTarget.y, originalTarget.z);
     if (controls) { controls.target.copy(originalTarget); controls.update(); }
 
-    onStatus?.('Encoding rotate GIF...');
+    onStatus?.(t('Encoding rotate GIF...'));
     const blob = await finalizeGif(gif);
     tempCanvas.width = 0; tempCanvas.height = 0;
     return blob;
@@ -182,7 +184,7 @@ export async function generateAnimationGif(viewerRef, legsAnim, torsoAnim, label
     const dt = 1 / animFps;
 
     for (let i = 0; i < numFrames; i++) {
-        onStatus?.(`[${label}] Frame ${i + 1}/${numFrames}`);
+        onStatus?.(t('[:label] Frame :i/:total', { label, i: i + 1, total: numFrames }));
         if (i > 0) animManager.update(dt);
         scene.updateMatrixWorld(true);
 
@@ -199,7 +201,7 @@ export async function generateAnimationGif(viewerRef, legsAnim, torsoAnim, label
     camera.lookAt(originalTarget.x, originalTarget.y, originalTarget.z);
     if (controls) { controls.target.copy(originalTarget); controls.update(); }
 
-    onStatus?.(`Encoding ${label} GIF...`);
+    onStatus?.(t('Encoding :label GIF...', { label }));
     const blob = await finalizeGif(gif);
     tempCanvas.width = 0; tempCanvas.height = 0;
     return blob;
@@ -246,7 +248,7 @@ export async function generateWeaponIdleGif(viewerRef, onStatus) {
 
     const gif = await createGifEncoder(gifWidth, gifHeight);
     for (let i = 0; i < numFrames; i++) {
-        onStatus?.(`[Weapon Idle] Frame ${i + 1}/${numFrames}`);
+        onStatus?.(t('[Weapon Idle] Frame :i/:total', { i: i + 1, total: numFrames }));
         shaderTime += dt;
         viewer.updateShaderAnimations?.(shaderTime);
         scene.updateMatrixWorld(true);
@@ -260,7 +262,7 @@ export async function generateWeaponIdleGif(viewerRef, onStatus) {
     camera.lookAt(originalTarget.x, originalTarget.y, originalTarget.z);
     if (controls) { controls.target.copy(originalTarget); controls.update(); }
 
-    onStatus?.('Encoding weapon idle GIF...');
+    onStatus?.(t('Encoding weapon idle GIF...'));
     const blob = await finalizeGif(gif);
     tempCanvas.width = 0; tempCanvas.height = 0;
     return blob;
@@ -426,7 +428,7 @@ export async function generateShadowStill(viewerRef, onStatus) {
     const blob = await new Promise(resolve => stillCanvas.toBlob(resolve, 'image/png'));
     stillCanvas.width = 0; stillCanvas.height = 0;
 
-    onStatus?.('Shadow still thumbnail generated');
+    onStatus?.(t('Shadow still thumbnail generated'));
     return blob;
 }
 
@@ -460,7 +462,7 @@ export async function generateShadowRotateGif(viewerRef, onStatus) {
     // Use setRotation to set absolute rotation for each frame
     // Positive direction = clockwise when viewed from top
     for (let i = 0; i < numFrames; i++) {
-        onStatus?.(`[Shadow Rotate] Frame ${i + 1}/${numFrames}`);
+        onStatus?.(t('[Shadow Rotate] Frame :i/:total', { i: i + 1, total: numFrames }));
 
         // Set absolute rotation and shader time for this frame
         const rotation = (i / numFrames) * Math.PI * 2;
@@ -481,7 +483,7 @@ export async function generateShadowRotateGif(viewerRef, onStatus) {
     viewer.setRotation(0);
     viewer.setShaderTime(0);
 
-    onStatus?.('Encoding shadow rotate GIF...');
+    onStatus?.(t('Encoding shadow rotate GIF...'));
     const blob = await finalizeGif(gif);
     tempCanvas.width = 0; tempCanvas.height = 0;
     return blob;
@@ -505,14 +507,14 @@ export async function generateAllGifs(viewerRef, model, onStatus) {
         let rotateBlob = null;
 
         try {
-            onStatus?.('Generating shadow still thumbnail...');
+            onStatus?.(t('Generating shadow still thumbnail...'));
             thumbnailBlob = await generateShadowStill(viewerRef, onStatus);
         } catch (e) {
             console.warn('Shadow still failed:', e.message);
         }
 
         try {
-            onStatus?.('Generating shadow rotation GIF...');
+            onStatus?.(t('Generating shadow rotation GIF...'));
             rotateBlob = await generateShadowRotateGif(viewerRef, onStatus);
         } catch (e) {
             console.warn('Shadow rotate GIF failed:', e.message);
@@ -522,7 +524,7 @@ export async function generateAllGifs(viewerRef, model, onStatus) {
     }
 
     if (DEBUG) console.log('[GIF] Starting rotate GIF...');
-    onStatus?.('Generating rotate GIF...');
+    onStatus?.(t('Generating rotate GIF...'));
     const rotateBlob = await generateRotateGif(viewerRef, onStatus);
     if (DEBUG) console.log('[GIF] Rotate blob:', rotateBlob ? `${rotateBlob.size} bytes` : 'null');
 
@@ -530,7 +532,7 @@ export async function generateAllGifs(viewerRef, model, onStatus) {
     if (isWeapon) {
         try {
             if (DEBUG) console.log('[GIF] Starting weapon idle GIF...');
-            onStatus?.('Generating idle GIF (weapon)...');
+            onStatus?.(t('Generating idle GIF (weapon)...'));
             idleBlob = await generateWeaponIdleGif(viewerRef, onStatus);
             if (DEBUG) console.log('[GIF] Weapon idle blob:', idleBlob ? `${idleBlob.size} bytes` : 'null');
         } catch (e) {
@@ -538,7 +540,7 @@ export async function generateAllGifs(viewerRef, model, onStatus) {
         }
     } else {
         try {
-            onStatus?.('Generating idle GIF...');
+            onStatus?.(t('Generating idle GIF...'));
             idleBlob = await generateAnimationGif(viewerRef, 'LEGS_IDLE', 'TORSO_STAND', 'Idle', true, onStatus);
         } catch (e) {
             console.warn('Idle GIF failed:', e.message);
@@ -549,20 +551,20 @@ export async function generateAllGifs(viewerRef, model, onStatus) {
     let headIconBlob = null;
     if (!isWeapon) {
         try {
-            onStatus?.('Generating gesture GIF...');
+            onStatus?.(t('Generating gesture GIF...'));
             gestureBlob = await generateAnimationGif(viewerRef, 'LEGS_IDLE', 'TORSO_GESTURE', 'Gesture', false, onStatus);
         } catch (e) {
             console.warn('Gesture GIF failed:', e.message);
         }
 
-        onStatus?.('Generating head icon...');
+        onStatus?.(t('Generating head icon...'));
         headIconBlob = await generateHeadIcon(viewerRef, onStatus);
     }
 
     let thumbnailBlob = null;
     try {
         if (DEBUG) console.log('[GIF] Starting still thumbnail...');
-        onStatus?.('Generating still thumbnail...');
+        onStatus?.(t('Generating still thumbnail...'));
         thumbnailBlob = await generateStillThumbnail(viewerRef, onStatus);
         if (DEBUG) console.log('[GIF] Thumbnail blob:', thumbnailBlob ? `${thumbnailBlob.size} bytes` : 'null');
     } catch (e) {
