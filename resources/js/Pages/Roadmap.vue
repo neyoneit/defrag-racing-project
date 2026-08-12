@@ -32,15 +32,15 @@ const repoUrl = computed(() => REPOS[activeRepo.value]);
 </script>
 
 <template>
-    <Head title="Roadmap - Defrag Racing" />
+    <Head :title="$t('Roadmap - Defrag Racing')" />
 
     <div>
         <!-- Header -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="text-center">
-                    <h1 class="text-2xl md:text-3xl font-bold text-white mb-4">Development Roadmap</h1>
-                    <p class="text-xl text-gray-400">{{ commitItems.length }} commits of progress - hover for details</p>
+                    <h1 class="text-2xl md:text-3xl font-bold text-white mb-4">{{ $t('Development Roadmap') }}</h1>
+                    <p class="text-xl text-gray-400">{{ $tc(':count commit of progress - hover for details|:count commits of progress - hover for details', commitItems.length) }}</p>
                 </div>
             </div>
         </div>
@@ -52,20 +52,20 @@ const repoUrl = computed(() => REPOS[activeRepo.value]);
                 <!-- FUTURE PLANNED -->
                 <div class="mb-8">
                     <h3 class="text-xl font-bold text-purple-400 mb-4 flex items-center gap-2">
-                        <span class="text-2xl">🔮</span> Future Planned
+                        <span class="text-2xl">🔮</span> {{ $t('Future Planned') }}
                     </h3>
                     <div class="ml-8 text-sm text-gray-400 italic">
-                        <p>Future features will be determined based on community feedback, priorities, and available development time</p>
+                        <p>{{ $t('Future features will be determined based on community feedback, priorities, and available development time') }}</p>
                     </div>
                 </div>
 
                 <!-- ONGOING -->
                 <div>
                     <h3 class="text-xl font-bold text-yellow-400 mb-4 flex items-center gap-2">
-                        <span class="text-2xl">⚡</span> Ongoing
+                        <span class="text-2xl">⚡</span> {{ $t('Ongoing') }}
                     </h3>
                     <div class="ml-8 text-sm text-gray-400 italic">
-                        <p>Current development priorities are determined by community feedback and active needs</p>
+                        <p>{{ $t('Current development priorities are determined by community feedback and active needs') }}</p>
                     </div>
                 </div>
             </div>
@@ -75,12 +75,12 @@ const repoUrl = computed(() => REPOS[activeRepo.value]);
                 <div>
                     <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
                         <h3 class="text-xl font-bold text-green-400 flex items-center gap-2">
-                            <span class="text-2xl">✅</span> Done — {{ commitItems.length }} Commits
+                            <span class="text-2xl">✅</span> {{ $tc('Done — :count Commit|Done — :count Commits', commitItems.length) }}
                         </h3>
                         <!-- Repo tabs -->
                         <div class="flex bg-white/5 rounded-lg overflow-hidden text-sm">
                             <button
-                                v-for="tab in [{ v: 'web', label: 'Website' }, { v: 'launcher', label: 'Launcher' }]"
+                                v-for="tab in [{ v: 'web', label: $t('Website') }, { v: 'launcher', label: $t('Launcher') }]"
                                 :key="tab.v"
                                 @click="activeRepo = tab.v"
                                 :class="['px-4 py-1.5 font-semibold transition-colors', activeRepo === tab.v ? 'bg-green-500/25 text-green-200' : 'text-gray-400 hover:text-gray-200']"
@@ -88,7 +88,7 @@ const repoUrl = computed(() => REPOS[activeRepo.value]);
                         </div>
                     </div>
                     <div v-if="!commitItems.length" class="ml-8 text-sm text-gray-500 italic py-6">
-                        No commits to show here yet.
+                        {{ $t('No commits to show here yet.') }}
                     </div>
                     <div v-else class="ml-8 space-y-2 max-h-[800px] overflow-y-auto pr-4">
                         <div v-for="(commit, index) in commitItems" :key="commit.hash" class="relative pl-6 border-l-2 border-green-500/20">

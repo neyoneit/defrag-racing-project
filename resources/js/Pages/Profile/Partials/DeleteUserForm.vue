@@ -45,29 +45,29 @@ const closeModal = () => {
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                     </svg>
                 </div>
-                <h2 class="text-sm font-bold text-white">Delete Account</h2>
+                <h2 class="text-sm font-bold text-white">{{ $t('Delete Account') }}</h2>
             </div>
         </div>
 
         <div class="space-y-3">
             <div class="text-xs text-gray-400">
-                Once your account is deleted, all of its resources and data will be permanently deleted. Before deleting your account, please download any data or information that you wish to retain.
+                {{ $t('Once your account is deleted, all of its resources and data will be permanently deleted. Before deleting your account, please download any data or information that you wish to retain.') }}
             </div>
 
             <div class="flex justify-end pt-1">
                 <DangerButton @click="confirmUserDeletion">
-                    Delete Account
+                    {{ $t('Delete Account') }}
                 </DangerButton>
             </div>
 
             <!-- Delete Account Confirmation Modal -->
             <DialogModal :show="confirmingUserDeletion" @close="closeModal">
                 <template #title>
-                    Delete Account
+                    {{ $t('Delete Account') }}
                 </template>
 
                 <template #content>
-                    Are you sure you want to delete your account? Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.
+                    {{ $t('Are you sure you want to delete your account? Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.') }}
 
                     <div class="mt-4">
                         <TextInput
@@ -75,7 +75,7 @@ const closeModal = () => {
                             v-model="form.password"
                             type="password"
                             class="mt-1 block w-3/4"
-                            placeholder="Password"
+                            :placeholder="$t('Password')"
                             autocomplete="current-password"
                             @keyup.enter="deleteUser"
                         />
@@ -86,7 +86,7 @@ const closeModal = () => {
 
                 <template #footer>
                     <SecondaryButton @click="closeModal">
-                        Cancel
+                        {{ $t('Cancel') }}
                     </SecondaryButton>
 
                     <DangerButton
@@ -95,7 +95,7 @@ const closeModal = () => {
                         :disabled="form.processing"
                         @click="deleteUser"
                     >
-                        Delete Account
+                        {{ $t('Delete Account') }}
                     </DangerButton>
                 </template>
             </DialogModal>
