@@ -2,6 +2,7 @@
 import { ref, computed, reactive } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import axios from 'axios';
+import { t } from '@/utils/i18n';
 
 const props = defineProps({
     report: Object,
@@ -18,7 +19,7 @@ const showToast = (message, type = 'success') => {
     const id = ++toastId;
     toasts.value.push({ id, message, type });
     setTimeout(() => {
-        toasts.value = toasts.value.filter(t => t.id !== id);
+        toasts.value = toasts.value.filter(toast => toast.id !== id);
     }, 5000);
 };
 
@@ -45,18 +46,18 @@ const dryRunExecProgress = ref('');
 const stats = computed(() => props.report?.stats || {});
 const generatedAt = computed(() => props.report?.generated_at || 'N/A');
 
-const tabs = [
-    { key: 'ZIP_NEEDS_CHECK', label: 'ZIP Needs Check', color: 'yellow' },
-    { key: 'MANUAL_REVIEW', label: 'Manual Review', color: 'orange' },
-    { key: 'FAILED_MANUAL', label: 'Failed Manual', color: 'pink' },
-    { key: 'MISMATCH', label: 'Mismatch', color: 'red' },
-    { key: 'NOT_IN_DB', label: 'Not in DB', color: 'purple' },
+const tabs = computed(() => [
+    { key: 'ZIP_NEEDS_CHECK', label: t('ZIP Needs Check'), color: 'yellow' },
+    { key: 'MANUAL_REVIEW', label: t('Manual Review'), color: 'orange' },
+    { key: 'FAILED_MANUAL', label: t('Failed Manual'), color: 'pink' },
+    { key: 'MISMATCH', label: t('Mismatch'), color: 'red' },
+    { key: 'NOT_IN_DB', label: t('Not in DB'), color: 'purple' },
     { key: 'OK', label: 'OK', color: 'green' },
-    { key: 'NO_MD5', label: 'Scrape Error', color: 'gray' },
-    { key: 'WS_DETAIL_CHECK', label: 'WS Detail Check', color: 'cyan' },
-    { key: 'MISSING_SKIN_NAME', label: 'Missing Skin Name', color: 'amber' },
-    { key: 'VALIDATE_RESOLVED', label: 'Validate Resolved', color: 'rose' },
-];
+    { key: 'NO_MD5', label: t('Scrape Error'), color: 'gray' },
+    { key: 'WS_DETAIL_CHECK', label: t('WS Detail Check'), color: 'cyan' },
+    { key: 'MISSING_SKIN_NAME', label: t('Missing Skin Name'), color: 'amber' },
+    { key: 'VALIDATE_RESOLVED', label: t('Validate Resolved'), color: 'rose' },
+]);
 
 const allResults = computed(() => props.report?.results || []);
 
@@ -161,7 +162,7 @@ async function loadWsDetailCheck() {
         wsDetailItems.value = data;
         wsDetailLoaded.value = true;
     } catch (e) {
-        showToast('Failed to load WS detail check: ' + e.message, 'error');
+        showToast(t('Failed to load WS detail check: :error', { error: e.message }), 'error');
     } finally {
         wsDetailLoading.value = false;
     }
@@ -187,7 +188,7 @@ async function scrapeWsForModel(item) {
             showToast(`Updated #${item.id}: ${JSON.stringify(data.updated)}`);
         }
     } catch (e) {
-        showToast('Scrape failed: ' + (e.response?.data?.error || e.message), 'error');
+        showToast(t('Scrape failed: :error', { error: e.response?.data?.error || e.message }), 'error');
     } finally {
         scrapingWsDetail[item.id] = false;
     }
@@ -195,7 +196,7 @@ async function scrapeWsForModel(item) {
 
 async function batchScrapeWsDetail() {
     const items = filteredWsDetailItems.value.filter(i => getWsUrl(i) && !i.author);
-    if (!items.length) { showToast('No items with WS URL to scrape', 'error'); return; }
+    if (!items.length) { showToast(t('No items with WS URL to scrape'), 'error'); return; }
     for (let i = 0; i < items.length; i++) {
         wsBatchProgress.value = `Scraping ${i + 1}/${items.length}: ${items[i].name}...`;
         await scrapeWsForModel(items[i]);
@@ -232,7 +233,7 @@ async function loadMissingSkinNames() {
         skinNameItems.value = data;
         skinNameLoaded.value = true;
     } catch (e) {
-        showToast('Failed to load: ' + e.message, 'error');
+        showToast(t('Failed to load: :error', { error: e.message }), 'error');
     } finally {
         skinNameLoading.value = false;
     }
@@ -247,7 +248,7 @@ async function fixSkinName(item, newName) {
         skinNameItems.value = skinNameItems.value.filter(i => i.id !== item.id);
         showToast(`#${item.id}: "${data.old_name}" → "${data.new_name}"`);
     } catch (e) {
-        showToast('Fix failed: ' + (e.response?.data?.message || e.message), 'error');
+        showToast(t('Fix failed: :error', { error: e.response?.data?.message || e.message }), 'error');
     } finally {
         fixingName[item.id] = false;
     }
@@ -391,7 +392,7 @@ async function validateResolved() {
         !validateFalsePositives.value.some(fp => fp.download_file === r.download_file)
     );
     if (!resolved.length) {
-        showToast('No unchecked resolved items to validate', 'error');
+        showToast(t('No unchecked resolved items to validate'), 'error');
         return;
     }
 
@@ -405,7 +406,7 @@ async function validateResolved() {
         const { data } = await axios.get('/admin/models-audit/cached-files');
         cachedFiles = new Set(data);
     } catch (e) {
-        showToast('Failed to fetch cached files list', 'error');
+        showToast(t('Failed to fetch cached files list'), 'error');
         validateRunning.value = false;
         return;
     }
@@ -458,7 +459,7 @@ async function unresolveItem(item) {
         }
         showToast(`Unresolved "${item.download_file}" — ready for re-processing`);
     } catch (e) {
-        showToast('Failed to unresolve: ' + (e.response?.data?.error || e.message), 'error');
+        showToast(t('Failed to unresolve: :error', { error: e.response?.data?.error || e.message }), 'error');
     }
 }
 
@@ -474,15 +475,15 @@ const downloadWithProgress = (item, key) => {
 
         es.addEventListener('start', (e) => {
             const d = JSON.parse(e.data);
-            compareStatus[key] = `Downloading... 0 / ${d.total_human}`;
+            compareStatus[key] = t('Downloading... 0 / :total', { total: d.total_human });
         });
 
         es.addEventListener('progress', (e) => {
             const d = JSON.parse(e.data);
             if (d.percent !== null) {
-                compareStatus[key] = `Downloading... ${d.downloaded_human} / ${d.percent}%`;
+                compareStatus[key] = t('Downloading... :done / :percent%', { done: d.downloaded_human, percent: d.percent });
             } else {
-                compareStatus[key] = `Downloading... ${d.downloaded_human}`;
+                compareStatus[key] = t('Downloading... :done', { done: d.downloaded_human });
             }
         });
 
@@ -495,15 +496,15 @@ const downloadWithProgress = (item, key) => {
             es.close();
             try {
                 const d = JSON.parse(e.data);
-                reject(new Error(d.error || 'Download failed'));
+                reject(new Error(d.error || t('Download failed')));
             } catch {
-                reject(new Error('Download connection lost'));
+                reject(new Error(t('Download connection lost')));
             }
         });
 
         es.onerror = () => {
             es.close();
-            reject(new Error('Download connection lost'));
+            reject(new Error(t('Download connection lost')));
         };
     });
 };
@@ -514,13 +515,13 @@ const compareItem = async (item) => {
 
     try {
         // Phase 1: Download with live progress
-        compareStatus[key] = 'Connecting...';
+        compareStatus[key] = t('Connecting...');
         const dlData = await downloadWithProgress(item, key);
 
         if (dlData.already_cached) {
-            compareStatus[key] = `Cached (${dlData.size_human}), inspecting...`;
+            compareStatus[key] = t('Cached (:size), inspecting...', { size: dlData.size_human });
         } else {
-            compareStatus[key] = `Downloaded (${dlData.size_human}), inspecting...`;
+            compareStatus[key] = t('Downloaded (:size), inspecting...', { size: dlData.size_human });
         }
 
         // Phase 2: Inspect
@@ -548,21 +549,21 @@ const compareItem = async (item) => {
 
         if (missingPk3s.length) {
             for (const pk3Name of missingPk3s) {
-                compareStatus[key] = `Auto-importing ${pk3Name}...`;
+                compareStatus[key] = t('Auto-importing :name...', { name: pk3Name });
                 try {
                     const { data: importData } = await axios.post('/admin/models-audit/import-pk3', {
                         download_file: item.download_file,
                         pk3_name: pk3Name,
                         detail_url: item.detail_url || null,
                     });
-                    showToast('Auto-imported: ' + importData.models.map(m => `#${m.id} ${m.name}`).join(', '));
+                    showToast(t('Auto-imported: :models', { models: importData.models.map(m => `#${m.id} ${m.name}`).join(', ') }));
                 } catch (e) {
                     showToast(`Auto-import ${pk3Name} failed: ${e.response?.data?.error || e.message}`, 'error');
                 }
             }
 
             // Re-inspect after imports
-            compareStatus[key] = 'Re-inspecting after import...';
+            compareStatus[key] = t('Re-inspecting after import...');
             const { data: refreshed } = await axios.post('/admin/models-audit/compare', {
                 download_file: item.download_file,
                 local_path: item.local_path || null,
@@ -577,19 +578,19 @@ const compareItem = async (item) => {
         const hasExtras = finalResult.ws_file?.contents?.some(e => e.is_extra);
 
         if (hasTexts) {
-            compareStatus[key] = 'Saving description...';
+            compareStatus[key] = t('Saving description...');
             await saveTextToDescription(item, true);
         }
         if (hasExtras) {
-            compareStatus[key] = 'Building extras ZIP...';
+            compareStatus[key] = t('Building extras ZIP...');
             await buildExtrasZip(item, true);
         }
     } catch (e) {
         compareResults[key] = {
-            error: e.response?.data?.error || e.response?.data?.message || e.message || 'Unknown error',
+            error: e.response?.data?.error || e.response?.data?.message || e.message || t('Unknown error'),
         };
         expandedCompare[key] = true;
-        showToast('Inspect failed: ' + (e.message || 'Unknown error'), 'error');
+        showToast(t('Inspect failed: :error', { error: e.message || t('Unknown error') }), 'error');
     } finally {
         comparing[key] = false;
         delete compareStatus[key];
@@ -661,7 +662,7 @@ const resolveItem = async (item, resolution, note = '') => {
         item.resolution_note = note;
         showToast(`Resolved "${item.download_file}" as ${resolution}`);
     } catch (e) {
-        showToast('Failed to resolve: ' + (e.response?.data?.error || e.message), 'error');
+        showToast(t('Failed to resolve: :error', { error: e.response?.data?.error || e.message }), 'error');
     } finally {
         resolving[key] = false;
     }
@@ -669,7 +670,7 @@ const resolveItem = async (item, resolution, note = '') => {
 
 const importItem = async (item) => {
     const key = item.download_file;
-    if (!confirm(`Import "${item.name}" (${item.download_file}) into DB?`)) return;
+    if (!confirm(t('Import ":name" (:file) into DB?', { name: item.name, file: item.download_file }))) return;
 
     importing[key] = true;
 
@@ -681,9 +682,9 @@ const importItem = async (item) => {
         item.resolved = true;
         item.resolution = 'imported';
         item.resolution_note = 'Imported as: ' + data.models.map(m => `#${m.id} ${m.name}`).join(', ');
-        showToast('Imported: ' + data.models.map(m => `#${m.id} ${m.name}`).join(', '));
+        showToast(t('Imported: :models', { models: data.models.map(m => `#${m.id} ${m.name}`).join(', ') }));
     } catch (e) {
-        showToast('Import failed: ' + (e.response?.data?.error || e.message), 'error');
+        showToast(t('Import failed: :error', { error: e.response?.data?.error || e.message }), 'error');
     } finally {
         importing[key] = false;
     }
@@ -691,7 +692,7 @@ const importItem = async (item) => {
 
 const importPk3 = async (item, pk3Name) => {
     const key = `${item.download_file}:${pk3Name}`;
-    if (!confirm(`Import PK3 "${pk3Name}" from "${item.download_file}" into DB?`)) return;
+    if (!confirm(t('Import PK3 ":pk3" from ":file" into DB?', { pk3: pk3Name, file: item.download_file }))) return;
 
     importingPk3[key] = true;
 
@@ -701,7 +702,9 @@ const importPk3 = async (item, pk3Name) => {
             pk3_name: pk3Name,
             detail_url: item.detail_url || null,
         });
-        showToast('Imported: ' + data.models.map(m => `#${m.id} ${m.name}`).join(', ') + (data.bundle_uuid ? ' (bundled)' : ''));
+        showToast(data.bundle_uuid
+            ? t('Imported: :models (bundled)', { models: data.models.map(m => `#${m.id} ${m.name}`).join(', ') })
+            : t('Imported: :models', { models: data.models.map(m => `#${m.id} ${m.name}`).join(', ') }));
 
         // Re-inspect to refresh the result
         const compareKey = getCompareKey(item);
@@ -711,7 +714,7 @@ const importPk3 = async (item, pk3Name) => {
         });
         compareResults[compareKey] = refreshed;
     } catch (e) {
-        showToast('Import failed: ' + (e.response?.data?.error || e.message), 'error');
+        showToast(t('Import failed: :error', { error: e.response?.data?.error || e.message }), 'error');
     } finally {
         importingPk3[key] = false;
     }
@@ -737,16 +740,20 @@ const buildExtrasZip = async (item, auto = false) => {
     // Count extra files
     const extraFiles = result.ws_file.contents.filter(e => e.is_extra);
     if (!extraFiles.length) {
-        if (!auto) showToast('No extra files found in ZIP', 'error');
+        if (!auto) showToast(t('No extra files found in ZIP'), 'error');
         return;
     }
 
     if (!modelIds.length) {
-        if (!auto) showToast('No DB models found to assign extras to', 'error');
+        if (!auto) showToast(t('No DB models found to assign extras to'), 'error');
         return;
     }
 
-    if (!auto && !confirm(`Build extras ZIP from ${extraFiles.length} file(s) and assign to ${modelIds.length} model(s) (${modelIds.map(id => '#' + id).join(', ')})?`)) return;
+    if (!auto && !confirm(t('Build extras ZIP from :files file(s) and assign to :count model(s) (:ids)?', {
+        files: extraFiles.length,
+        count: modelIds.length,
+        ids: modelIds.map(id => '#' + id).join(', '),
+    }))) return;
 
     buildingExtras[key] = true;
     try {
@@ -760,7 +767,7 @@ const buildExtrasZip = async (item, auto = false) => {
         if (data.skipped?.length) msg.push(`Already set: ${data.skipped.join(', ')}`);
         showToast(msg.join(' | '));
     } catch (e) {
-        showToast('Failed: ' + (e.response?.data?.error || e.message), 'error');
+        showToast(t('Failed: :error', { error: e.response?.data?.error || e.message }), 'error');
     } finally {
         buildingExtras[key] = false;
     }
@@ -803,11 +810,14 @@ const saveTextToDescription = async (item, auto = false) => {
     });
 
     if (!modelIds.length) {
-        if (!auto) showToast('No DB models found to save to', 'error');
+        if (!auto) showToast(t('No DB models found to save to'), 'error');
         return;
     }
 
-    if (!auto && !confirm(`Save text content to description of ${modelIds.length} model(s) (${modelIds.map(id => '#' + id).join(', ')})?`)) return;
+    if (!auto && !confirm(t('Save text content to description of :count model(s) (:ids)?', {
+        count: modelIds.length,
+        ids: modelIds.map(id => '#' + id).join(', '),
+    }))) return;
 
     savingDesc[key] = true;
     try {
@@ -821,9 +831,9 @@ const saveTextToDescription = async (item, auto = false) => {
         if (data.cleaned?.length) msg.push(`Cleaned duplicates: ${data.cleaned.join(', ')}`);
         if (data.updated.length) msg.push(`Saved to ${data.updated.join(', ')}`);
         if (data.skipped?.length) msg.push(`Already has text: ${data.skipped.join(', ')}`);
-        showToast(msg.join(' | ') || 'No changes needed');
+        showToast(msg.join(' | ') || t('No changes needed'));
     } catch (e) {
-        showToast('Failed: ' + (e.response?.data?.error || e.message), 'error');
+        showToast(t('Failed: :error', { error: e.response?.data?.error || e.message }), 'error');
     } finally {
         savingDesc[key] = false;
     }
@@ -844,7 +854,7 @@ const batchPredownload = async () => {
         await Promise.allSettled(batch.map(async (item) => {
             const key = getCompareKey(item);
             try {
-                compareStatus[key] = 'Pre-downloading...';
+                compareStatus[key] = t('Pre-downloading...');
                 await downloadWithProgress(item, key);
             } catch (e) {
                 // ignore individual failures
@@ -868,7 +878,7 @@ const batchInspect = async () => {
         const { data } = await axios.get('/admin/models-audit/cached-files');
         cachedFiles = new Set(data);
     } catch (e) {
-        showToast('Failed to fetch cached files list', 'error');
+        showToast(t('Failed to fetch cached files list'), 'error');
         return;
     }
 
@@ -878,7 +888,7 @@ const batchInspect = async () => {
     const isFailedManualTab = activeTab.value === 'FAILED_MANUAL';
     const allCached = filteredResults.value.filter(i => i.download_file && cachedFiles.has(i.download_file) && !hasCompareResult(i) && !i.resolved && (isManualTab || isFailedManualTab || !i.manual_review));
     if (!allCached.length) {
-        showToast('No cached (pre-downloaded) items to inspect.', 'error');
+        showToast(t('No cached (pre-downloaded) items to inspect.'), 'error');
         return;
     }
 
@@ -939,7 +949,7 @@ const batchDryRun = () => {
     // Only look at items that already have an inspect result
     const items = filteredResults.value.filter(i => !i.resolved && hasCompareResult(i));
     if (!items.length) {
-        showToast('No inspected items to analyze. Run Inspect first.', 'error');
+        showToast(t('No inspected items to analyze. Run Inspect first.'), 'error');
         return;
     }
 
@@ -948,12 +958,12 @@ const batchDryRun = () => {
     for (const item of items) {
         const result = getCompareResult(item);
         if (!result || result.error) {
-            results.push({ item, actions: [], skip_reason: result?.error || 'Inspect failed' });
+            results.push({ item, actions: [], skip_reason: result?.error || t('Inspect failed') });
             continue;
         }
 
         if (!result.all_identical) {
-            results.push({ item, actions: [], skip_reason: 'Not all identical to DB' });
+            results.push({ item, actions: [], skip_reason: t('Not all identical to DB') });
             continue;
         }
 
@@ -962,18 +972,18 @@ const batchDryRun = () => {
         // Check if has texts to save
         const hasTexts = result.ws_file.contents.some(e => e.text_content || e.pk3_text_files);
         if (hasTexts) {
-            actions.push({ type: 'save_desc', label: 'Save text to description' });
+            actions.push({ type: 'save_desc', label: t('Save text to description') });
         }
 
         // Check if has extras to build
         const hasExtras = result.ws_file.contents.some(e => e.is_extra);
         if (hasExtras) {
             const extraFiles = result.ws_file.contents.filter(e => e.is_extra).map(e => e.name);
-            actions.push({ type: 'build_extras', label: `Build extras ZIP (${extraFiles.length} files)`, files: extraFiles });
+            actions.push({ type: 'build_extras', label: t('Build extras ZIP (:count files)', { count: extraFiles.length }), files: extraFiles });
         }
 
         // Always mark identical
-        actions.push({ type: 'mark_identical', label: `Mark identical (DB: ${result.identical_db_ids})` });
+        actions.push({ type: 'mark_identical', label: t('Mark identical (DB: :ids)', { ids: result.identical_db_ids }) });
 
         results.push({ item, actions, db_ids: result.identical_db_ids });
     }
@@ -1028,7 +1038,7 @@ const executeDryRun = async () => {
 
 <template>
     <div class="min-h-screen bg-gray-950 text-white">
-        <Head title="Models Audit" />
+        <Head :title="$t('Models Audit')" />
 
         <!-- Toast notifications -->
         <!-- Nad hlavičkou, viz stejná oprava v Models/Show.vue: nav je sticky
@@ -1053,18 +1063,18 @@ const executeDryRun = async () => {
         <div class="max-w-7xl mx-auto px-4 py-8">
             <!-- Header -->
             <div class="mb-8">
-                <h1 class="text-2xl md:text-3xl font-black mb-2">Models Audit Report</h1>
-                <p class="text-gray-400 text-sm">Generated: {{ generatedAt }}</p>
+                <h1 class="text-2xl md:text-3xl font-black mb-2">{{ $t('Models Audit Report') }}</h1>
+                <p class="text-gray-400 text-sm">{{ $t('Generated: :date', { date: generatedAt }) }}</p>
             </div>
 
             <!-- Stats (from report totals) -->
             <div class="flex flex-wrap gap-3 mb-4 text-xs">
                 <span class="px-2 py-1 rounded bg-green-500/10 border border-green-500/20"><span class="font-bold text-green-400">{{ stats.ok || 0 }}</span> <span class="text-gray-400">OK</span></span>
-                <span class="px-2 py-1 rounded bg-yellow-500/10 border border-yellow-500/20"><span class="font-bold text-yellow-400">{{ stats.zip_needs_check || 0 }}</span> <span class="text-gray-400">ZIP Check</span></span>
-                <span class="px-2 py-1 rounded bg-red-500/10 border border-red-500/20"><span class="font-bold text-red-400">{{ stats.mismatch || 0 }}</span> <span class="text-gray-400">Mismatch</span></span>
-                <span class="px-2 py-1 rounded bg-purple-500/10 border border-purple-500/20"><span class="font-bold text-purple-400">{{ stats.not_in_db || 0 }}</span> <span class="text-gray-400">Not in DB</span></span>
-                <span class="px-2 py-1 rounded bg-gray-500/10 border border-gray-500/20"><span class="font-bold text-gray-400">{{ stats.scrape_error || 0 }}</span> <span class="text-gray-400">Errors</span></span>
-                <span class="px-2 py-1 rounded bg-blue-500/10 border border-blue-500/20"><span class="font-bold text-blue-400">{{ (stats.ok || 0) + (stats.zip_needs_check || 0) + (stats.mismatch || 0) + (stats.not_in_db || 0) + (stats.scrape_error || 0) }}</span> <span class="text-gray-400">Total</span></span>
+                <span class="px-2 py-1 rounded bg-yellow-500/10 border border-yellow-500/20"><span class="font-bold text-yellow-400">{{ stats.zip_needs_check || 0 }}</span> <span class="text-gray-400">{{ $t('ZIP Check') }}</span></span>
+                <span class="px-2 py-1 rounded bg-red-500/10 border border-red-500/20"><span class="font-bold text-red-400">{{ stats.mismatch || 0 }}</span> <span class="text-gray-400">{{ $t('Mismatch') }}</span></span>
+                <span class="px-2 py-1 rounded bg-purple-500/10 border border-purple-500/20"><span class="font-bold text-purple-400">{{ stats.not_in_db || 0 }}</span> <span class="text-gray-400">{{ $t('Not in DB') }}</span></span>
+                <span class="px-2 py-1 rounded bg-gray-500/10 border border-gray-500/20"><span class="font-bold text-gray-400">{{ stats.scrape_error || 0 }}</span> <span class="text-gray-400">{{ $t('Errors') }}</span></span>
+                <span class="px-2 py-1 rounded bg-blue-500/10 border border-blue-500/20"><span class="font-bold text-blue-400">{{ (stats.ok || 0) + (stats.zip_needs_check || 0) + (stats.mismatch || 0) + (stats.not_in_db || 0) + (stats.scrape_error || 0) }}</span> <span class="text-gray-400">{{ $t('Total') }}</span></span>
             </div>
 
             <!-- Tabs -->
@@ -1089,25 +1099,25 @@ const executeDryRun = async () => {
                 <input
                     v-model="searchQuery"
                     type="text"
-                    placeholder="Filter by name or filename..."
+                    :placeholder="$t('Filter by name or filename...')"
                     class="w-full max-w-md bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50"
                 />
                 <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer whitespace-nowrap">
                     <input type="checkbox" v-model="hideResolved" class="rounded bg-white/10 border-white/20 text-blue-500" />
-                    Hide resolved
+                    {{ $t('Hide resolved') }}
                 </label>
             </div>
 
             <!-- Results count + batch actions -->
             <div class="mb-4 flex items-center gap-3 text-sm text-gray-500">
-                <span>{{ filteredResults.length }} results</span>
+                <span>{{ $tc(':count result|:count results', filteredResults.length) }}</span>
                 <button
                     v-if="['ZIP_NEEDS_CHECK', 'OK', 'MANUAL_REVIEW', 'FAILED_MANUAL'].includes(activeTab) && filteredResults.some(i => i.download_url && !hasCompareResult(i))"
                     @click="batchPredownload"
                     :disabled="batchDownloading"
                     class="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs hover:bg-yellow-500/30 transition disabled:opacity-50 font-semibold"
                 >
-                    {{ batchDownloading ? `Downloading... (${batchProgress})` : `Pre-download All (${filteredResults.filter(i => i.download_url && !hasCompareResult(i)).length})` }}
+                    {{ batchDownloading ? $t('Downloading... (:progress)', { progress: batchProgress }) : $t('Pre-download All (:count)', { count: filteredResults.filter(i => i.download_url && !hasCompareResult(i)).length }) }}
                 </button>
                 <button
                     v-if="['ZIP_NEEDS_CHECK', 'OK', 'MANUAL_REVIEW', 'FAILED_MANUAL'].includes(activeTab) && filteredResults.some(i => i.download_url && !hasCompareResult(i))"
@@ -1115,7 +1125,7 @@ const executeDryRun = async () => {
                     :disabled="batchInspecting"
                     class="px-3 py-1 bg-blue-500/20 text-blue-400 rounded text-xs hover:bg-blue-500/30 transition disabled:opacity-50 font-semibold"
                 >
-                    {{ batchInspecting ? `Inspecting... (${batchInspectProgress})` : `Inspect All (${filteredResults.filter(i => i.download_url && !hasCompareResult(i)).length})` }}
+                    {{ batchInspecting ? $t('Inspecting... (:progress)', { progress: batchInspectProgress }) : $t('Inspect All (:count)', { count: filteredResults.filter(i => i.download_url && !hasCompareResult(i)).length }) }}
                 </button>
                 <button
                     v-if="['ZIP_NEEDS_CHECK', 'OK', 'MANUAL_REVIEW', 'FAILED_MANUAL'].includes(activeTab) && filteredResults.some(i => i.download_url && !i.resolved)"
@@ -1123,34 +1133,34 @@ const executeDryRun = async () => {
                     :disabled="dryRunExecuting"
                     class="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded text-xs hover:bg-emerald-500/30 transition disabled:opacity-50 font-semibold"
                 >
-                    {{ `Auto-Resolve Dry Run (${filteredResults.filter(i => !i.resolved && hasCompareResult(i)).length} inspected)` }}
+                    {{ $t('Auto-Resolve Dry Run (:count inspected)', { count: filteredResults.filter(i => !i.resolved && hasCompareResult(i)).length }) }}
                 </button>
             </div>
 
             <!-- Dry Run Results Panel -->
             <div v-if="dryRunResults" class="mb-6 p-4 bg-gray-900/80 border border-emerald-500/30 rounded-lg">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-emerald-400 font-bold text-sm">Dry Run Report</h3>
+                    <h3 class="text-emerald-400 font-bold text-sm">{{ $t('Dry Run Report') }}</h3>
                     <div class="flex gap-2">
                         <button
                             @click="executeDryRun"
                             :disabled="dryRunExecuting || !dryRunResults.some(r => r.actions.length)"
                             class="px-3 py-1.5 bg-emerald-500/30 text-emerald-300 rounded text-xs hover:bg-emerald-500/40 transition disabled:opacity-50 font-bold"
                         >
-                            {{ dryRunExecuting ? `Executing... (${dryRunExecProgress})` : `Execute All (${dryRunResults.filter(r => r.actions.length).length})` }}
+                            {{ dryRunExecuting ? $t('Executing... (:progress)', { progress: dryRunExecProgress }) : $t('Execute All (:count)', { count: dryRunResults.filter(r => r.actions.length).length }) }}
                         </button>
                         <button
                             @click="dryRunResults = null"
                             class="px-3 py-1.5 bg-gray-500/20 text-gray-400 rounded text-xs hover:bg-gray-500/30 transition"
                         >
-                            Dismiss
+                            {{ $t('Dismiss') }}
                         </button>
                     </div>
                 </div>
 
                 <!-- Actionable items -->
                 <div v-if="dryRunResults.some(r => r.actions.length)" class="mb-4">
-                    <div class="text-emerald-300 text-xs font-semibold mb-2">Will auto-resolve ({{ dryRunResults.filter(r => r.actions.length).length }}):</div>
+                    <div class="text-emerald-300 text-xs font-semibold mb-2">{{ $t('Will auto-resolve (:count):', { count: dryRunResults.filter(r => r.actions.length).length }) }}</div>
                     <div class="space-y-1.5 max-h-[400px] overflow-y-auto">
                         <div v-for="(entry, i) in dryRunResults.filter(r => r.actions.length)" :key="'dr-ok-'+i"
                             class="flex items-start gap-3 p-2 bg-emerald-500/5 border border-emerald-500/10 rounded text-xs">
@@ -1174,7 +1184,7 @@ const executeDryRun = async () => {
 
                 <!-- Skipped items -->
                 <div v-if="dryRunResults.some(r => r.skip_reason)">
-                    <div class="text-gray-500 text-xs font-semibold mb-2">Skipped ({{ dryRunResults.filter(r => r.skip_reason).length }}):</div>
+                    <div class="text-gray-500 text-xs font-semibold mb-2">{{ $t('Skipped (:count):', { count: dryRunResults.filter(r => r.skip_reason).length }) }}</div>
                     <div class="space-y-1 max-h-[200px] overflow-y-auto">
                         <div v-for="(entry, i) in dryRunResults.filter(r => r.skip_reason)" :key="'dr-skip-'+i"
                             class="flex items-center gap-3 p-1.5 text-xs text-gray-500">
@@ -1190,35 +1200,35 @@ const executeDryRun = async () => {
                 <div v-if="!wsDetailLoaded" class="text-center py-12">
                     <button @click="loadWsDetailCheck" :disabled="wsDetailLoading"
                         class="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white rounded-lg font-semibold transition-colors">
-                        {{ wsDetailLoading ? 'Loading...' : 'Load Models Missing Metadata' }}
+                        {{ wsDetailLoading ? $t('Loading...') : $t('Load Models Missing Metadata') }}
                     </button>
                 </div>
                 <template v-else>
                     <div class="flex items-center gap-4 mb-4">
-                        <input v-model="wsDetailSearch" type="text" placeholder="Search by name or base model..."
+                        <input v-model="wsDetailSearch" type="text" :placeholder="$t('Search by name or base model...')"
                             class="w-full max-w-md bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50" />
                         <select v-model="wsDetailFilter"
                             class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
-                            <option value="all">All ({{ wsDetailItems.length }})</option>
-                            <option value="has_ws">Has WS URL ({{ wsDetailItems.filter(i => i.ws_detail_url || i.guessed_ws_url).length }})</option>
-                            <option value="no_ws">No WS URL ({{ wsDetailItems.filter(i => !i.ws_detail_url && !i.guessed_ws_url).length }})</option>
+                            <option value="all">{{ $t('All (:count)', { count: wsDetailItems.length }) }}</option>
+                            <option value="has_ws">{{ $t('Has WS URL (:count)', { count: wsDetailItems.filter(i => i.ws_detail_url || i.guessed_ws_url).length }) }}</option>
+                            <option value="no_ws">{{ $t('No WS URL (:count)', { count: wsDetailItems.filter(i => !i.ws_detail_url && !i.guessed_ws_url).length }) }}</option>
                         </select>
                         <button @click="batchScrapeWsDetail"
                             class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-semibold whitespace-nowrap transition-colors cursor-pointer">
-                            {{ wsBatchProgress || 'Batch Scrape All with WS URL' }}
+                            {{ wsBatchProgress || $t('Batch Scrape All with WS URL') }}
                         </button>
-                        <span class="text-sm text-gray-500">{{ filteredWsDetailItems.length }} results</span>
+                        <span class="text-sm text-gray-500">{{ $tc(':count result|:count results', filteredWsDetailItems.length) }}</span>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="border-b border-white/10 text-left text-gray-400">
                                     <th class="py-3 px-4 font-semibold w-16">#</th>
-                                    <th class="py-3 px-4 font-semibold">Model</th>
-                                    <th class="py-3 px-4 font-semibold">Base / Type</th>
-                                    <th class="py-3 px-4 font-semibold">Author</th>
-                                    <th class="py-3 px-4 font-semibold">WS Match</th>
-                                    <th class="py-3 px-4 font-semibold">Actions</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Model') }}</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Base / Type') }}</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Author') }}</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('WS Match') }}</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Actions') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1239,34 +1249,34 @@ const executeDryRun = async () => {
                                     </td>
                                     <td class="py-2 px-4">
                                         <span v-if="item.author" class="text-green-400">{{ item.author }}</span>
-                                        <span v-else class="text-red-400 text-xs">missing</span>
+                                        <span v-else class="text-red-400 text-xs">{{ $t('missing') }}</span>
                                     </td>
                                     <td class="py-2 px-4">
                                         <template v-if="item.ws_detail_url">
                                             <a :href="(item.ws_detail_url.startsWith('http') ? '' : 'https://ws.q3df.org') + item.ws_detail_url"
                                                 target="_blank" class="text-cyan-400 hover:text-cyan-300 text-xs">
-                                                {{ item.ws_name || item.ws_download_file || 'WS page' }}
+                                                {{ item.ws_name || item.ws_download_file || $t('WS page') }}
                                             </a>
                                         </template>
                                         <template v-else-if="item.guessed_ws_url">
                                             <a :href="item.guessed_ws_url" target="_blank" class="text-yellow-400 hover:text-yellow-300 text-xs">
                                                 {{ item.guessed_ws_url.replace('https://ws.q3df.org', '') }}
                                             </a>
-                                            <span class="text-gray-600 text-[10px] ml-1">(guessed)</span>
+                                            <span class="text-gray-600 text-[10px] ml-1">{{ $t('(guessed)') }}</span>
                                         </template>
-                                        <span v-else class="text-gray-600 text-xs">no match</span>
+                                        <span v-else class="text-gray-600 text-xs">{{ $t('no match') }}</span>
                                     </td>
                                     <td class="py-2 px-4">
                                         <button v-if="getWsUrl(item)"
                                             @click="scrapeWsForModel(item)"
                                             :disabled="scrapingWsDetail[item.id]"
                                             class="px-3 py-1 bg-cyan-600/50 hover:bg-cyan-500 disabled:opacity-50 text-white rounded text-xs font-semibold transition-colors">
-                                            {{ scrapingWsDetail[item.id] ? 'Scraping...' : 'Scrape WS' }}
+                                            {{ scrapingWsDetail[item.id] ? $t('Scraping...') : $t('Scrape WS') }}
                                         </button>
                                     </td>
                                 </tr>
                                 <tr v-if="filteredWsDetailItems.length === 0">
-                                    <td colspan="6" class="py-8 text-center text-gray-500">No results</td>
+                                    <td colspan="6" class="py-8 text-center text-gray-500">{{ $t('No results') }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1279,29 +1289,29 @@ const executeDryRun = async () => {
                 <div v-if="!skinNameLoaded" class="text-center py-12">
                     <button @click="loadMissingSkinNames" :disabled="skinNameLoading"
                         class="px-6 py-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-lg font-semibold transition-colors">
-                        {{ skinNameLoading ? 'Loading...' : 'Load Models Missing Skin in Name' }}
+                        {{ skinNameLoading ? $t('Loading...') : $t('Load Models Missing Skin in Name') }}
                     </button>
                 </div>
                 <template v-else>
                     <div class="flex items-center gap-4 mb-4">
-                        <input v-model="skinNameSearch" type="text" placeholder="Search by name, base model, or skin..."
+                        <input v-model="skinNameSearch" type="text" :placeholder="$t('Search by name, base model, or skin...')"
                             class="w-full max-w-md bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50" />
                         <button @click="batchFixSkinNames" :disabled="batchProgress || !filteredSkinNameItems.length"
                             class="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-lg text-sm font-semibold whitespace-nowrap transition-colors">
-                            {{ batchProgress || `Batch Fix All (${filteredSkinNameItems.length})` }}
+                            {{ batchProgress || $t('Batch Fix All (:count)', { count: filteredSkinNameItems.length }) }}
                         </button>
-                        <span class="text-sm text-gray-500">{{ filteredSkinNameItems.length }} results</span>
+                        <span class="text-sm text-gray-500">{{ $tc(':count result|:count results', filteredSkinNameItems.length) }}</span>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="border-b border-white/10 text-left text-gray-400">
                                     <th class="py-3 px-4 font-semibold w-16">#</th>
-                                    <th class="py-3 px-4 font-semibold">Current Name</th>
-                                    <th class="py-3 px-4 font-semibold">Skin</th>
-                                    <th class="py-3 px-4 font-semibold">Expected Name</th>
-                                    <th class="py-3 px-4 font-semibold">Type</th>
-                                    <th class="py-3 px-4 font-semibold">Actions</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Current Name') }}</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Skin') }}</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Expected Name') }}</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Type') }}</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Actions') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1325,12 +1335,12 @@ const executeDryRun = async () => {
                                         <button @click="fixSkinName(item, item.expected_name)"
                                             :disabled="fixingName[item.id]"
                                             class="px-3 py-1 bg-green-600/50 hover:bg-green-500 disabled:opacity-50 text-white rounded text-xs font-semibold transition-colors">
-                                            {{ fixingName[item.id] ? 'Fixing...' : 'Fix' }}
+                                            {{ fixingName[item.id] ? $t('Fixing...') : $t('Fix') }}
                                         </button>
                                     </td>
                                 </tr>
                                 <tr v-if="filteredSkinNameItems.length === 0">
-                                    <td colspan="6" class="py-8 text-center text-gray-500">No results</td>
+                                    <td colspan="6" class="py-8 text-center text-gray-500">{{ $t('No results') }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1343,29 +1353,29 @@ const executeDryRun = async () => {
                 <div class="flex items-center gap-4 mb-4">
                     <button @click="validateResolved" :disabled="validateRunning"
                         class="px-6 py-3 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-lg font-semibold transition-colors">
-                        {{ validateRunning ? `Validating... (${validateProgress})` : `Validate Unchecked (${allResults.filter(r => r.resolved && !validateValid[r.download_file] && !validateFalsePositives.some(fp => fp.download_file === r.download_file)).length})` }}
+                        {{ validateRunning ? $t('Validating... (:progress)', { progress: validateProgress }) : $t('Validate Unchecked (:count)', { count: allResults.filter(r => r.resolved && !validateValid[r.download_file] && !validateFalsePositives.some(fp => fp.download_file === r.download_file)).length }) }}
                     </button>
                     <button v-if="validateRunning" @click="validateRunning = false"
                         class="px-4 py-3 bg-red-700 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors">
-                        Stop
+                        {{ $t('Stop') }}
                     </button>
                     <span v-if="validateFalsePositives.length" class="text-rose-400 font-bold text-sm">
-                        {{ validateFalsePositives.length }} false positive(s) found
+                        {{ $tc(':count false positive found|:count false positives found', validateFalsePositives.length) }}
                     </span>
                 </div>
 
                 <!-- False Positives Table (shown when any found) -->
                 <div v-if="validateFalsePositives.length" class="mb-6">
-                    <h4 class="text-rose-400 font-bold mb-3 text-sm">False Positives</h4>
+                    <h4 class="text-rose-400 font-bold mb-3 text-sm">{{ $t('False Positives') }}</h4>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="border-b border-rose-500/20 text-left text-gray-400">
-                                    <th class="py-3 px-4 font-semibold">Name</th>
-                                    <th class="py-3 px-4 font-semibold">File</th>
-                                    <th class="py-3 px-4 font-semibold">Old Resolution</th>
-                                    <th class="py-3 px-4 font-semibold">Problem</th>
-                                    <th class="py-3 px-4 font-semibold">Actions</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Name') }}</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('File') }}</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Old Resolution') }}</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Problem') }}</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Actions') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1385,11 +1395,11 @@ const executeDryRun = async () => {
                                     <td class="py-2 px-4 flex gap-2">
                                         <button @click="unresolveItem(item)"
                                             class="px-3 py-1 bg-rose-600/50 hover:bg-rose-500 text-white rounded text-xs font-semibold transition-colors">
-                                            Unresolve
+                                            {{ $t('Unresolve') }}
                                         </button>
                                         <a v-if="item.detail_url" :href="item.detail_url" target="_blank"
                                             class="px-2 py-1 bg-gray-500/20 text-gray-400 rounded text-xs hover:bg-gray-500/30 transition">
-                                            WS Page
+                                            {{ $t('WS Page') }}
                                         </a>
                                     </td>
                                 </tr>
@@ -1401,26 +1411,26 @@ const executeDryRun = async () => {
                 <!-- All Resolved Items Table (validate per-item) -->
                 <div>
                     <div class="flex items-center gap-4 mb-4">
-                        <input v-model="validateSearch" type="text" placeholder="Filter by name or filename..."
+                        <input v-model="validateSearch" type="text" :placeholder="$t('Filter by name or filename...')"
                             class="w-full max-w-md bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-rose-500/50" />
                         <select v-model="validateFilter"
                             class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
-                            <option value="all">All ({{ allResults.filter(r => r.resolved).length }})</option>
-                            <option value="valid">Valid ({{ Object.keys(validateValid).length }})</option>
-                            <option value="unchecked">Unchecked ({{ allResults.filter(r => r.resolved && !validateValid[r.download_file] && !validateFalsePositives.some(fp => fp.download_file === r.download_file)).length }})</option>
-                            <option value="false_positive">False Positive ({{ validateFalsePositives.length }})</option>
+                            <option value="all">{{ $t('All (:count)', { count: allResults.filter(r => r.resolved).length }) }}</option>
+                            <option value="valid">{{ $t('Valid (:count)', { count: Object.keys(validateValid).length }) }}</option>
+                            <option value="unchecked">{{ $t('Unchecked (:count)', { count: allResults.filter(r => r.resolved && !validateValid[r.download_file] && !validateFalsePositives.some(fp => fp.download_file === r.download_file)).length }) }}</option>
+                            <option value="false_positive">{{ $t('False Positive (:count)', { count: validateFalsePositives.length }) }}</option>
                         </select>
                     </div>
                     <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
                         <table class="w-full text-sm">
                             <thead class="sticky top-0 bg-gray-950">
                                 <tr class="border-b border-white/10 text-left text-gray-400">
-                                    <th class="py-3 px-4 font-semibold">Name</th>
-                                    <th class="py-3 px-4 font-semibold">File</th>
-                                    <th class="py-3 px-4 font-semibold">Status</th>
-                                    <th class="py-3 px-4 font-semibold">Resolution</th>
-                                    <th class="py-3 px-4 font-semibold">Validation</th>
-                                    <th class="py-3 px-4 font-semibold">Actions</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Name') }}</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('File') }}</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Status') }}</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Resolution') }}</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Validation') }}</th>
+                                    <th class="py-3 px-4 font-semibold">{{ $t('Actions') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1462,14 +1472,14 @@ const executeDryRun = async () => {
                                     <td class="py-2 px-4">
                                         <span v-if="validateFalsePositives.some(fp => fp.download_file === item.download_file)"
                                             class="px-2 py-0.5 bg-rose-600/30 text-rose-300 rounded text-[10px] font-semibold">
-                                            FALSE POSITIVE
+                                            {{ $t('FALSE POSITIVE') }}
                                         </span>
                                         <span v-else-if="validateValid[item.download_file]"
                                             class="px-2 py-0.5 bg-green-600/30 text-green-300 rounded text-[10px] font-semibold">
-                                            VALID
+                                            {{ $t('VALID') }}
                                         </span>
                                         <span v-else class="px-2 py-0.5 bg-gray-600/20 text-gray-500 rounded text-[10px]">
-                                            unchecked
+                                            {{ $t('unchecked') }}
                                         </span>
                                     </td>
                                     <td class="py-2 px-4">
@@ -1484,15 +1494,15 @@ const executeDryRun = async () => {
                                                         ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
                                                         : 'bg-rose-500/20 text-rose-400 hover:bg-rose-500/30'
                                                 ]">
-                                                {{ validatingSingle[item.download_file] ? 'Checking...' : validateValid[item.download_file] ? 'Re-validate' : 'Validate' }}
+                                                {{ validatingSingle[item.download_file] ? $t('Checking...') : validateValid[item.download_file] ? $t('Re-validate') : $t('Validate') }}
                                             </button>
                                             <button v-else @click="unresolveItem(validateFalsePositives.find(fp => fp.download_file === item.download_file))"
                                                 class="px-2 py-1 bg-rose-600/50 hover:bg-rose-500 text-white rounded text-xs font-semibold transition-colors">
-                                                Unresolve
+                                                {{ $t('Unresolve') }}
                                             </button>
                                             <a v-if="item.detail_url" :href="item.detail_url" target="_blank"
                                                 class="px-2 py-1 bg-gray-500/20 text-gray-400 rounded text-xs hover:bg-gray-500/30 transition">
-                                                WS
+                                                {{ $t('WS') }}
                                             </a>
                                         </div>
                                     </td>
@@ -1509,14 +1519,14 @@ const executeDryRun = async () => {
                     <thead>
                         <tr class="border-b border-white/10 text-left text-gray-400">
                             <th class="py-3 px-4 font-semibold">#</th>
-                            <th class="py-3 px-4 font-semibold">Name</th>
-                            <th class="py-3 px-4 font-semibold">File</th>
-                            <th class="py-3 px-4 font-semibold">WS MD5</th>
-                            <th v-if="activeTab === 'MISMATCH'" class="py-3 px-4 font-semibold">Local MD5</th>
-                            <th v-if="activeTab === 'MISMATCH'" class="py-3 px-4 font-semibold">Local Path</th>
-                            <th v-if="activeTab === 'MISMATCH'" class="py-3 px-4 font-semibold">DB ID</th>
-                            <th v-if="activeTab === 'OK'" class="py-3 px-4 font-semibold">Local Path</th>
-                            <th class="py-3 px-4 font-semibold">Actions</th>
+                            <th class="py-3 px-4 font-semibold">{{ $t('Name') }}</th>
+                            <th class="py-3 px-4 font-semibold">{{ $t('File') }}</th>
+                            <th class="py-3 px-4 font-semibold">{{ $t('WS MD5') }}</th>
+                            <th v-if="activeTab === 'MISMATCH'" class="py-3 px-4 font-semibold">{{ $t('Local MD5') }}</th>
+                            <th v-if="activeTab === 'MISMATCH'" class="py-3 px-4 font-semibold">{{ $t('Local Path') }}</th>
+                            <th v-if="activeTab === 'MISMATCH'" class="py-3 px-4 font-semibold">{{ $t('DB ID') }}</th>
+                            <th v-if="activeTab === 'OK'" class="py-3 px-4 font-semibold">{{ $t('Local Path') }}</th>
+                            <th class="py-3 px-4 font-semibold">{{ $t('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1526,7 +1536,7 @@ const executeDryRun = async () => {
                                 <td class="py-3 px-4 font-medium text-white">
                                     {{ item.name }}
                                     <span v-if="item.resolved" class="ml-2 px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded text-xs">{{ item.resolution }}</span>
-                                    <span v-if="item.manual_review" class="ml-2 px-1.5 py-0.5 bg-orange-500/20 text-orange-400 rounded text-xs">manual review</span>
+                                    <span v-if="item.manual_review" class="ml-2 px-1.5 py-0.5 bg-orange-500/20 text-orange-400 rounded text-xs">{{ $t('manual review') }}</span>
                                 </td>
                                 <td class="py-3 px-4 text-gray-300 font-mono text-xs">{{ item.download_file }}</td>
                                 <td class="py-3 px-4 text-gray-500 font-mono text-xs">{{ item.ws_md5 || '-' }}</td>
@@ -1546,10 +1556,10 @@ const executeDryRun = async () => {
                                             class="px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs hover:bg-orange-500/30 transition disabled:opacity-50"
                                         >
                                             <template v-if="isComparing(item)">
-                                                {{ compareStatus[getCompareKey(item)] || 'Working...' }}
+                                                {{ compareStatus[getCompareKey(item)] || $t('Working...') }}
                                             </template>
                                             <template v-else>
-                                                Inspect
+                                                {{ $t('Inspect') }}
                                             </template>
                                         </button>
                                         <!-- Toggle result -->
@@ -1558,13 +1568,13 @@ const executeDryRun = async () => {
                                             @click="toggleCompare(item)"
                                             class="px-2 py-1 bg-orange-500/20 text-orange-400 rounded text-xs hover:bg-orange-500/30 transition"
                                         >
-                                            {{ isExpanded(item) ? 'Hide' : 'Show' }} Result
+                                            {{ isExpanded(item) ? $t('Hide result') : $t('Show result') }}
                                         </button>
                                         <a v-if="item.download_url" :href="item.download_url" target="_blank" class="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs hover:bg-blue-500/30 transition">
-                                            Download
+                                            {{ $t('Download') }}
                                         </a>
                                         <a v-if="item.detail_url" :href="item.detail_url" target="_blank" class="px-2 py-1 bg-gray-500/20 text-gray-400 rounded text-xs hover:bg-gray-500/30 transition">
-                                            WS Page
+                                            {{ $t('WS Page') }}
                                         </a>
                                         <!-- Resolve buttons -->
                                         <template v-if="!item.resolved">
@@ -1574,21 +1584,21 @@ const executeDryRun = async () => {
                                                 :disabled="!!resolving[item.download_file] || !!savingDesc[getCompareKey(item)] || !!buildingExtras[getCompareKey(item)]"
                                                 class="px-2 py-1 bg-green-500/30 text-green-300 rounded text-xs hover:bg-green-500/40 transition disabled:opacity-50 font-semibold"
                                             >
-                                                {{ savingDesc[getCompareKey(item)] || buildingExtras[getCompareKey(item)] ? 'Wait...' : 'Mark Identical' }}
+                                                {{ savingDesc[getCompareKey(item)] || buildingExtras[getCompareKey(item)] ? $t('Wait...') : $t('Mark Identical') }}
                                             </button>
                                             <button
                                                 @click="resolveItem(item, 'duplicate', 'Inner PK3 contains same content as loose files')"
                                                 :disabled="!!resolving[item.download_file]"
                                                 class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs hover:bg-green-500/30 transition disabled:opacity-50"
                                             >
-                                                Mark Duplicate
+                                                {{ $t('Mark Duplicate') }}
                                             </button>
                                             <button
                                                 @click="resolveItem(item, 'ok', 'Verified correct')"
                                                 :disabled="!!resolving[item.download_file]"
                                                 class="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded text-xs hover:bg-emerald-500/30 transition disabled:opacity-50"
                                             >
-                                                Mark OK
+                                                {{ $t('Mark OK') }}
                                             </button>
                                             <!-- Import button for NOT_IN_DB items that have been inspected -->
                                             <button
@@ -1597,7 +1607,7 @@ const executeDryRun = async () => {
                                                 :disabled="!!importing[item.download_file]"
                                                 class="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs hover:bg-purple-500/30 transition disabled:opacity-50"
                                             >
-                                                {{ importing[item.download_file] ? 'Importing...' : 'Import to DB' }}
+                                                {{ importing[item.download_file] ? $t('Importing...') : $t('Import to DB') }}
                                             </button>
                                         </template>
                                     </div>
@@ -1609,29 +1619,29 @@ const executeDryRun = async () => {
                                     <div class="bg-gray-900/80 border-l-4 border-orange-500/50 p-4 m-2 rounded">
                                         <!-- Error -->
                                         <div v-if="getCompareResult(item).error" class="text-red-400 text-sm">
-                                            Error: {{ getCompareResult(item).error }}
+                                            {{ $t('Error: :message', { message: getCompareResult(item).error }) }}
                                         </div>
 
                                         <template v-else>
                                             <!-- Status Banner -->
                                             <div v-if="getCompareResult(item).all_identical" class="mb-3 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-                                                <div class="text-green-400 font-bold">ALL MODELS IDENTICAL TO DB</div>
-                                                <div class="text-green-300/70 text-xs mt-1">DB IDs: {{ getCompareResult(item).identical_db_ids }}</div>
+                                                <div class="text-green-400 font-bold">{{ $t('ALL MODELS IDENTICAL TO DB') }}</div>
+                                                <div class="text-green-300/70 text-xs mt-1">{{ $t('DB IDs: :ids', { ids: getCompareResult(item).identical_db_ids }) }}</div>
                                             </div>
                                             <div v-else class="mb-3 p-3 bg-orange-500/10 border border-orange-500/30 rounded-lg">
-                                                <div class="text-orange-400 font-bold">NOT ALL IDENTICAL</div>
+                                                <div class="text-orange-400 font-bold">{{ $t('NOT ALL IDENTICAL') }}</div>
                                                 <div class="text-xs mt-1 space-y-0.5">
                                                     <template v-for="(entry, ei) in getCompareResult(item).ws_file.contents" :key="'banner-'+ei">
                                                         <template v-if="entry.models_found">
                                                             <template v-for="(mf, mi) in entry.models_found" :key="'banner-mf-'+mi">
                                                                 <div v-if="mf.model_name">
                                                                     <span class="font-mono">{{ mf.model_name }}</span>:
-                                                                    <span v-if="mf.all_identical" class="text-green-400">identical</span>
-                                                                    <span v-else-if="mf.all_in_db" class="text-yellow-400">in DB but files differ</span>
+                                                                    <span v-if="mf.all_identical" class="text-green-400">{{ $t('identical') }}</span>
+                                                                    <span v-else-if="mf.all_in_db" class="text-yellow-400">{{ $t('in DB but files differ') }}</span>
                                                                     <span v-else class="text-orange-400">
                                                                         <template v-for="sk in mf.skins" :key="sk.skin">
-                                                                            <span v-if="!sk.in_db" class="mr-1">{{ sk.skin }} = NOT IN DB</span>
-                                                                            <span v-else-if="sk.file_comparison && sk.file_comparison.status !== 'identical'" class="mr-1">{{ sk.skin }} = differs</span>
+                                                                            <span v-if="!sk.in_db" class="mr-1">{{ $t(':skin = NOT IN DB', { skin: sk.skin }) }}</span>
+                                                                            <span v-else-if="sk.file_comparison && sk.file_comparison.status !== 'identical'" class="mr-1">{{ $t(':skin = differs', { skin: sk.skin }) }}</span>
                                                                         </template>
                                                                     </span>
                                                                 </div>
@@ -1643,20 +1653,20 @@ const executeDryRun = async () => {
 
                                             <!-- ZIP Contents Overview -->
                                             <div class="mb-3 p-3 bg-gray-800/60 border border-gray-700/50 rounded-lg text-xs">
-                                                <div class="text-gray-300 font-semibold mb-2">ZIP contains {{ getCompareResult(item).ws_file.contents.length }} entries ({{ getCompareResult(item).ws_file.size_human }}):</div>
+                                                <div class="text-gray-300 font-semibold mb-2">{{ $t('ZIP contains :count entries (:size):', { count: getCompareResult(item).ws_file.contents.length, size: getCompareResult(item).ws_file.size_human }) }}</div>
                                                 <div class="space-y-1">
                                                     <div v-for="(entry, ei) in getCompareResult(item).ws_file.contents" :key="'ov-'+ei">
                                                         <div class="flex items-center gap-2 font-mono">
                                                             <span v-if="entry.type === 'archive'" class="text-yellow-400 font-semibold">{{ entry.name }}</span>
                                                             <span v-else class="text-gray-300">{{ entry.name }}</span>
                                                             <span class="text-gray-400">{{ entry.size_human }}</span>
-                                                            <span v-if="entry.type === 'archive' && entry.is_extra" class="text-purple-400 font-sans">— extra (bot/support PK3)</span>
-                                                            <span v-else-if="entry.type === 'archive' && entry.models_found" class="text-green-400 font-sans">— analyzed, {{ entry.models_found.length }} model(s) found</span>
-                                                            <span v-else-if="entry.type === 'archive'" class="text-gray-400 font-sans">— analyzed</span>
-                                                            <span v-else-if="entry.text_content" class="text-cyan-400 font-sans">— text file</span>
-                                                            <span v-else-if="fileCategory(entry.name) === 'junk'" class="text-gray-400 font-sans">— ignored</span>
-                                                            <span v-else-if="entry.is_extra" class="text-purple-400 font-sans">— extra file (not in PK3)</span>
-                                                            <span v-else class="text-gray-400 font-sans">— not analyzed</span>
+                                                            <span v-if="entry.type === 'archive' && entry.is_extra" class="text-purple-400 font-sans">{{ $t('— extra (bot/support PK3)') }}</span>
+                                                            <span v-else-if="entry.type === 'archive' && entry.models_found" class="text-green-400 font-sans">{{ $tc('— analyzed, :count model found|— analyzed, :count models found', entry.models_found.length) }}</span>
+                                                            <span v-else-if="entry.type === 'archive'" class="text-gray-400 font-sans">{{ $t('— analyzed') }}</span>
+                                                            <span v-else-if="entry.text_content" class="text-cyan-400 font-sans">{{ $t('— text file') }}</span>
+                                                            <span v-else-if="fileCategory(entry.name) === 'junk'" class="text-gray-400 font-sans">{{ $t('— ignored') }}</span>
+                                                            <span v-else-if="entry.is_extra" class="text-purple-400 font-sans">{{ $t('— extra file (not in PK3)') }}</span>
+                                                            <span v-else class="text-gray-400 font-sans">{{ $t('— not analyzed') }}</span>
                                                         </div>
                                                         <!-- Text file content preview -->
                                                         <div v-if="entry.text_content" class="ml-4 mt-1 mb-2 p-2 bg-black/40 rounded border border-cyan-500/20 max-h-40 overflow-y-auto">
@@ -1664,7 +1674,7 @@ const executeDryRun = async () => {
                                                         </div>
                                                         <!-- Text files found inside PK3 -->
                                                         <div v-if="entry.pk3_text_files" v-for="tf in entry.pk3_text_files" :key="tf.name" class="ml-4 mt-1 mb-2">
-                                                            <div class="text-cyan-400 text-[10px] font-semibold mb-1">{{ tf.name }} (inside PK3)</div>
+                                                            <div class="text-cyan-400 text-[10px] font-semibold mb-1">{{ $t(':name (inside PK3)', { name: tf.name }) }}</div>
                                                             <div class="p-2 bg-black/40 rounded border border-cyan-500/20 max-h-40 overflow-y-auto">
                                                                 <pre class="text-cyan-200/80 text-[11px] whitespace-pre-wrap font-mono">{{ tf.text_content }}</pre>
                                                             </div>
@@ -1678,9 +1688,9 @@ const executeDryRun = async () => {
                                                         :disabled="!!savingDesc[getCompareKey(item)]"
                                                         class="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded text-xs hover:bg-cyan-500/30 transition disabled:opacity-50"
                                                     >
-                                                        {{ savingDesc[getCompareKey(item)] ? 'Saving...' : 'Save text to model description' }}
+                                                        {{ savingDesc[getCompareKey(item)] ? $t('Saving...') : $t('Save text to model description') }}
                                                     </button>
-                                                    <span v-if="savedDesc[getCompareKey(item)]" class="ml-2 text-green-400 text-xs">Saved!</span>
+                                                    <span v-if="savedDesc[getCompareKey(item)]" class="ml-2 text-green-400 text-xs">{{ $t('Saved!') }}</span>
                                                 </div>
                                                 <!-- Build extras ZIP button -->
                                                 <div v-if="getCompareResult(item).ws_file.contents.some(e => e.is_extra) && getCompareResult(item).all_identical" class="mt-2 pt-2 border-t border-gray-700/50">
@@ -1690,12 +1700,12 @@ const executeDryRun = async () => {
                                                             :disabled="!!buildingExtras[getCompareKey(item)]"
                                                             class="px-3 py-1 bg-purple-500/20 text-purple-400 rounded text-xs hover:bg-purple-500/30 transition disabled:opacity-50"
                                                         >
-                                                            {{ buildingExtras[getCompareKey(item)] ? 'Building...' : 'Build extras ZIP (source files)' }}
+                                                            {{ buildingExtras[getCompareKey(item)] ? $t('Building...') : $t('Build extras ZIP (source files)') }}
                                                         </button>
-                                                        <span v-if="builtExtras[getCompareKey(item)]" class="text-green-400 text-xs">Built!</span>
+                                                        <span v-if="builtExtras[getCompareKey(item)]" class="text-green-400 text-xs">{{ $t('Built!') }}</span>
                                                     </div>
                                                     <div class="mt-1 text-gray-500 text-[10px]">
-                                                        {{ getCompareResult(item).ws_file.contents.filter(e => e.is_extra).length }} non-PK3 file(s):
+                                                        {{ $tc(':count non-PK3 file:|:count non-PK3 files:', getCompareResult(item).ws_file.contents.filter(e => e.is_extra).length) }}
                                                         {{ getCompareResult(item).ws_file.contents.filter(e => e.is_extra).map(e => e.name).join(', ') }}
                                                     </div>
                                                 </div>
@@ -1703,27 +1713,27 @@ const executeDryRun = async () => {
 
                                             <!-- Model Details -->
                                             <div class="mb-4">
-                                                <h4 class="text-orange-400 font-semibold text-sm mb-2">Model Analysis</h4>
+                                                <h4 class="text-orange-400 font-semibold text-sm mb-2">{{ $t('Model Analysis') }}</h4>
 
                                                 <div class="mt-2">
                                                     <template v-for="(entry, ei) in collectModelEntries(getCompareResult(item).ws_file.contents)" :key="'ws-'+ei">
                                                             <div class="mb-3 p-2 bg-gray-800/60 rounded border border-gray-700/50">
                                                                 <div class="text-xs text-yellow-400 font-semibold mb-1">
                                                                     {{ entry.name }}
-                                                                    <span v-if="entry.nested_in_pk3" class="ml-1 px-1 bg-purple-500/20 text-purple-400 rounded text-[10px]">nested PK3</span>
+                                                                    <span v-if="entry.nested_in_pk3" class="ml-1 px-1 bg-purple-500/20 text-purple-400 rounded text-[10px]">{{ $t('nested PK3') }}</span>
                                                                 </div>
                                                                 <!-- Nested PK3 comparison with parent -->
                                                                 <div v-if="entry.nested_comparison" class="text-[11px] mb-1">
                                                                     <span v-if="entry.nested_comparison.identical" class="text-green-400">
-                                                                        Identical copy of parent PK3 ({{ entry.nested_comparison.matching }}/{{ entry.nested_comparison.total }} files match)
+                                                                        {{ $t('Identical copy of parent PK3 (:matching/:total files match)', { matching: entry.nested_comparison.matching, total: entry.nested_comparison.total }) }}
                                                                     </span>
                                                                     <span v-else class="text-yellow-400">
-                                                                        Differs from parent PK3: {{ entry.nested_comparison.matching }}/{{ entry.nested_comparison.total }} files match
+                                                                        {{ $t('Differs from parent PK3: :matching/:total files match', { matching: entry.nested_comparison.matching, total: entry.nested_comparison.total }) }}
                                                                         <span v-if="entry.nested_comparison.diff_files.length" class="text-red-400 ml-1">
-                                                                            changed: {{ entry.nested_comparison.diff_files.join(', ') }}
+                                                                            {{ $t('changed: :files', { files: entry.nested_comparison.diff_files.join(', ') }) }}
                                                                         </span>
                                                                         <span v-if="entry.nested_comparison.extra_files.length" class="text-orange-400 ml-1">
-                                                                            extra: {{ entry.nested_comparison.extra_files.join(', ') }}
+                                                                            {{ $t('extra: :files', { files: entry.nested_comparison.extra_files.join(', ') }) }}
                                                                         </span>
                                                                     </span>
                                                                 </div>
@@ -1734,16 +1744,16 @@ const executeDryRun = async () => {
                                                                         <span class="font-semibold" :class="mf.all_identical ? 'text-green-400' : mf.all_in_db ? 'text-yellow-400' : 'text-orange-400'">
                                                                             {{ mf.model_name }}
                                                                         </span>
-                                                                        <span v-if="mf.all_identical" class="ml-1 px-1 bg-green-500/20 text-green-400 rounded text-[10px]">identical</span>
-                                                                        <span v-else-if="mf.all_in_db" class="ml-1 px-1 bg-yellow-500/20 text-yellow-400 rounded text-[10px]">in DB but differs</span>
-                                                                        <span v-else class="ml-1 px-1 bg-orange-500/20 text-orange-400 rounded text-[10px]">new</span>
+                                                                        <span v-if="mf.all_identical" class="ml-1 px-1 bg-green-500/20 text-green-400 rounded text-[10px]">{{ $t('identical') }}</span>
+                                                                        <span v-else-if="mf.all_in_db" class="ml-1 px-1 bg-yellow-500/20 text-yellow-400 rounded text-[10px]">{{ $t('in DB but differs') }}</span>
+                                                                        <span v-else class="ml-1 px-1 bg-orange-500/20 text-orange-400 rounded text-[10px]">{{ $t('new') }}</span>
                                                                         <button
                                                                             v-if="!mf.all_in_db"
                                                                             @click="importPk3(item, entry.name)"
                                                                             :disabled="!!importingPk3[item.download_file + ':' + entry.name]"
                                                                             class="ml-2 px-1.5 py-0.5 bg-purple-500/20 text-purple-400 rounded text-[10px] hover:bg-purple-500/30 transition disabled:opacity-50 font-semibold"
                                                                         >
-                                                                            {{ importingPk3[item.download_file + ':' + entry.name] ? 'Importing...' : 'Import PK3' }}
+                                                                            {{ importingPk3[item.download_file + ':' + entry.name] ? $t('Importing...') : $t('Import PK3') }}
                                                                         </button>
                                                                         <div class="ml-4">
                                                                             <div v-for="(sk, si) in mf.skins" :key="'sk-'+si" class="mb-1">
@@ -1779,19 +1789,19 @@ const executeDryRun = async () => {
 
                                             <!-- Local File Info -->
                                             <div v-if="getCompareResult(item).local_file" class="mb-4">
-                                                <h4 class="text-green-400 font-semibold text-sm mb-2">Local File</h4>
+                                                <h4 class="text-green-400 font-semibold text-sm mb-2">{{ $t('Local File') }}</h4>
                                                 <div v-if="getCompareResult(item).local_file.error" class="text-red-400 text-xs">
                                                     {{ getCompareResult(item).local_file.error }}
                                                 </div>
                                                 <template v-else>
                                                     <div class="text-xs text-gray-400 space-y-1">
-                                                        <div>Path: <span class="text-gray-300 font-mono">{{ getCompareResult(item).local_file.path }}</span></div>
-                                                        <div>Size: <span class="text-gray-300">{{ getCompareResult(item).local_file.size_human }}</span></div>
+                                                        <div>{{ $t('Path:') }} <span class="text-gray-300 font-mono">{{ getCompareResult(item).local_file.path }}</span></div>
+                                                        <div>{{ $t('Size:') }} <span class="text-gray-300">{{ getCompareResult(item).local_file.size_human }}</span></div>
                                                         <div>MD5: <span class="text-gray-300 font-mono">{{ getCompareResult(item).local_file.md5 }}</span></div>
                                                     </div>
 
                                                     <div class="mt-2">
-                                                        <h5 class="text-gray-400 text-xs font-semibold mb-1">Contents:</h5>
+                                                        <h5 class="text-gray-400 text-xs font-semibold mb-1">{{ $t('Contents:') }}</h5>
                                                         <div class="bg-black/40 rounded p-2 max-h-[600px] overflow-y-auto">
                                                             <template v-for="(entry, ei) in getCompareResult(item).local_file.contents" :key="'local-'+ei">
                                                                 <div class="text-xs font-mono py-0.5 flex justify-between">
@@ -1816,12 +1826,12 @@ const executeDryRun = async () => {
 
                                             <!-- Differences -->
                                             <div v-if="getCompareResult(item).differences && getCompareResult(item).differences.length > 0">
-                                                <h4 class="text-red-400 font-semibold text-sm mb-2">Differences ({{ getCompareResult(item).differences.length }})</h4>
+                                                <h4 class="text-red-400 font-semibold text-sm mb-2">{{ $t('Differences (:count)', { count: getCompareResult(item).differences.length }) }}</h4>
                                                 <div class="bg-black/40 rounded p-2 max-h-[600px] overflow-y-auto">
                                                     <div v-for="(diff, di) in getCompareResult(item).differences" :key="'diff-'+di" class="text-xs font-mono py-1 border-b border-white/5 last:border-0">
-                                                        <span v-if="diff.type === 'only_in_ws'" class="text-orange-400">+ WS only:</span>
-                                                        <span v-else-if="diff.type === 'only_in_local'" class="text-green-400">- Local only:</span>
-                                                        <span v-else class="text-red-400">~ Different:</span>
+                                                        <span v-if="diff.type === 'only_in_ws'" class="text-orange-400">{{ $t('+ WS only:') }}</span>
+                                                        <span v-else-if="diff.type === 'only_in_local'" class="text-green-400">{{ $t('- Local only:') }}</span>
+                                                        <span v-else class="text-red-400">{{ $t('~ Different:') }}</span>
                                                         <span class="text-gray-300 ml-2">{{ diff.file }}</span>
                                                         <div v-if="diff.type === 'different'" class="pl-4 text-gray-500 mt-0.5">
                                                             WS: {{ diff.ws_size }}B ({{ diff.ws_md5 }}) | Local: {{ diff.local_size }}B ({{ diff.local_md5 }})
@@ -1830,7 +1840,7 @@ const executeDryRun = async () => {
                                                 </div>
                                             </div>
                                             <div v-else-if="getCompareResult(item).local_file && !getCompareResult(item).local_file.error && getCompareResult(item).differences">
-                                                <span class="text-green-400 text-sm font-semibold">No differences found - files are identical!</span>
+                                                <span class="text-green-400 text-sm font-semibold">{{ $t('No differences found - files are identical!') }}</span>
                                             </div>
                                         </template>
                                     </div>
@@ -1838,7 +1848,7 @@ const executeDryRun = async () => {
                             </tr>
                         </template>
                         <tr v-if="filteredResults.length === 0">
-                            <td colspan="8" class="py-8 text-center text-gray-500">No results found</td>
+                            <td colspan="8" class="py-8 text-center text-gray-500">{{ $t('No results found') }}</td>
                         </tr>
                     </tbody>
                 </table>
