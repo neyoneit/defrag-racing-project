@@ -4,6 +4,7 @@ import { ref, nextTick, onBeforeUnmount } from 'vue';
 import ModelViewer from '@/Components/ModelViewer.vue';
 import ShadowViewer from '@/Components/ShadowViewer.vue';
 import { generateAllGifs, waitForTextures } from '@/utils/gifGenerator.js';
+import { t } from '@/utils/i18n';
 
 const DEBUG = false;
 
@@ -76,7 +77,7 @@ async function submitUpload() {
         const data = await response.json();
 
         if (!data.success) {
-            uploadError.value = data.message || 'Upload failed.';
+            uploadError.value = data.message || t('Upload failed.');
             uploading.value = false;
             return;
         }
@@ -90,7 +91,7 @@ async function submitUpload() {
         await nextTick();
         startGifGeneration();
     } catch (e) {
-        uploadError.value = 'Network error: ' + e.message;
+        uploadError.value = t('Network error: :error', { error: e.message });
         uploading.value = false;
     }
 }
@@ -101,11 +102,11 @@ async function startGifGeneration() {
         currentModelIndex.value = i;
         const modelInfo = detectedModels.value[i];
         if (DEBUG) console.log('[Create] Model', i, ':', modelInfo.display_name, 'viewer_path:', modelInfo.viewer_path, 'category:', modelInfo.category);
-        gifProgress.value = `Model ${i + 1}/${detectedModels.value.length}: ${modelInfo.display_name}`;
+        gifProgress.value = t('Model :index/:total: :name', { index: i + 1, total: detectedModels.value.length, name: modelInfo.display_name });
 
         if (!modelInfo.viewer_path) {
             if (DEBUG) console.warn('[Create] No viewer_path, skipping GIF generation');
-            gifStatus.value = 'No viewer path - skipping GIF generation';
+            gifStatus.value = t('No viewer path - skipping GIF generation');
             generatedGifs.value[i] = { rotateBlob: null, idleBlob: null, gestureBlob: null, headIconBlob: null, thumbnailBlob: null };
             continue;
         }
@@ -113,7 +114,7 @@ async function startGifGeneration() {
         // Load model in viewer
         viewerLoaded.value = false;
         viewerError.value = null;
-        gifStatus.value = 'Loading model in 3D viewer...';
+        gifStatus.value = t('Loading model in 3D viewer...');
 
         await nextTick();
 
@@ -126,7 +127,7 @@ async function startGifGeneration() {
                 await new Promise(resolve => setTimeout(resolve, 1500));
             }
 
-            gifStatus.value = 'Generating GIFs...';
+            gifStatus.value = t('Generating GIFs...');
             if (DEBUG) {
                 console.log('[Create] Starting GIF generation for:', modelInfo.display_name, 'category:', modelInfo.category);
                 console.log('[Create] Viewer ref:', viewer3D.value ? 'present' : 'null');
@@ -146,10 +147,10 @@ async function startGifGeneration() {
             if (gifs.headIconBlob) parts.push('head');
             if (gifs.thumbnailBlob) parts.push('still');
             if (DEBUG) console.log('[Create] GIF results:', parts.length > 0 ? parts.join(', ') : 'NONE generated');
-            gifStatus.value = parts.length > 0 ? `Done: ${parts.join(', ')}` : 'Warning: No GIFs were generated';
+            gifStatus.value = parts.length > 0 ? t('Done: :list', { list: parts.join(', ') }) : t('Warning: No GIFs were generated');
         } catch (e) {
             if (DEBUG) console.error('[Create] GIF generation error:', e.message, e.stack);
-            gifStatus.value = 'Error: ' + e.message;
+            gifStatus.value = t('Error: :error', { error: e.message });
             generatedGifs.value[i] = { rotateBlob: null, idleBlob: null, gestureBlob: null, headIconBlob: null, thumbnailBlob: null };
         }
 
@@ -165,9 +166,9 @@ async function startGifGeneration() {
     // Check if any GIFs were actually generated
     const hasAnyGifs = Object.values(generatedGifs.value).some(g => g && (g.rotateBlob || g.idleBlob || g.gestureBlob || g.thumbnailBlob || g.headIconBlob));
     if (hasAnyGifs) {
-        gifProgress.value = 'All thumbnails generated! Click "Save Model" to complete the upload.';
+        gifProgress.value = t('All thumbnails generated! Click "Save Model" to complete the upload.');
     } else {
-        gifProgress.value = 'GIF generation failed. You can still save the model and regenerate GIFs later.';
+        gifProgress.value = t('GIF generation failed. You can still save the model and regenerate GIFs later.');
         console.warn('No GIFs were generated for any model');
     }
     gifStatus.value = '';
@@ -176,14 +177,14 @@ async function startGifGeneration() {
 function waitForViewerLoaded() {
     return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
-            reject(new Error('Model load timed out (60s)'));
+            reject(new Error(t('Model load timed out (60s)')));
         }, 60000);
 
         const interval = setInterval(() => {
             if (viewerError.value) {
                 clearInterval(interval);
                 clearTimeout(timeout);
-                reject(new Error('Model load failed: ' + viewerError.value));
+                reject(new Error(t('Model load failed: :error', { error: viewerError.value })));
                 return;
             }
             if (viewerLoaded.value) {
@@ -207,7 +208,7 @@ const onViewerError = (err) => {
 // Step 2 → 3: Save model with GIFs
 async function saveModel() {
     saving.value = true;
-    gifStatus.value = 'Saving model...';
+    gifStatus.value = t('Saving model...');
 
     const formData = new FormData();
     formData.append('slug', tempSlug.value);
@@ -237,7 +238,7 @@ async function saveModel() {
         const data = await response.json();
 
         if (!data.success) {
-            gifStatus.value = 'Error: ' + (data.message || 'Save failed');
+            gifStatus.value = t('Error: :error', { error: data.message || t('Save failed') });
             saving.value = false;
             return;
         }
@@ -247,7 +248,7 @@ async function saveModel() {
         step.value = 3;
         saving.value = false;
     } catch (e) {
-        gifStatus.value = 'Network error: ' + e.message;
+        gifStatus.value = t('Network error: :error', { error: e.message });
         saving.value = false;
     }
 }
@@ -310,13 +311,13 @@ function currentViewerModel() {
 </script>
 
 <template>
-    <Head title="Upload Model" />
+    <Head :title="$t('Upload Model')" />
     <div class="">
         <!-- Header -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-4 pb-96 pointer-events-none">
             <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h1 class="text-2xl md:text-3xl font-black text-white mb-2">Upload Model</h1>
-                <p class="text-gray-400">Share your custom Quake 3 models with the community</p>
+                <h1 class="text-2xl md:text-3xl font-black text-white mb-2">{{ $t('Upload Model') }}</h1>
+                <p class="text-gray-400">{{ $t('Share your custom Quake 3 models with the community') }}</p>
             </div>
         </div>
 
@@ -326,17 +327,17 @@ function currentViewerModel() {
             <div class="flex items-center justify-center gap-4 mb-6">
                 <div class="flex items-center gap-2">
                     <div :class="[step >= 1 ? 'bg-blue-500' : 'bg-white/10', 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white']">1</div>
-                    <span class="text-sm" :class="step >= 1 ? 'text-white' : 'text-gray-500'">Upload</span>
+                    <span class="text-sm" :class="step >= 1 ? 'text-white' : 'text-gray-500'">{{ $t('Upload') }}</span>
                 </div>
                 <div class="w-12 h-px" :class="step >= 2 ? 'bg-blue-500' : 'bg-white/10'"></div>
                 <div class="flex items-center gap-2">
                     <div :class="[step >= 2 ? 'bg-blue-500' : 'bg-white/10', 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white']">2</div>
-                    <span class="text-sm" :class="step >= 2 ? 'text-white' : 'text-gray-500'">Preview & GIFs</span>
+                    <span class="text-sm" :class="step >= 2 ? 'text-white' : 'text-gray-500'">{{ $t('Preview & GIFs') }}</span>
                 </div>
                 <div class="w-12 h-px" :class="step >= 3 ? 'bg-blue-500' : 'bg-white/10'"></div>
                 <div class="flex items-center gap-2">
                     <div :class="[step >= 3 ? 'bg-green-500' : 'bg-white/10', 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white']">3</div>
-                    <span class="text-sm" :class="step >= 3 ? 'text-green-400' : 'text-gray-500'">Done</span>
+                    <span class="text-sm" :class="step >= 3 ? 'text-green-400' : 'text-gray-500'">{{ $t('Done') }}</span>
                 </div>
             </div>
 
@@ -356,7 +357,7 @@ function currentViewerModel() {
                     <!-- Model Name -->
                     <div>
                         <label for="name" class="block text-sm font-bold text-white mb-2">
-                            Model Name <span class="text-red-400">*</span>
+                            {{ $t('Model Name') }} <span class="text-red-400">*</span>
                         </label>
                         <input
                             id="name"
@@ -364,22 +365,22 @@ function currentViewerModel() {
                             type="text"
                             required
                             class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                            placeholder="e.g., Custom Player Model">
+                            :placeholder="$t('e.g., Custom Player Model')">
                     </div>
 
                     <!-- Category -->
                     <div>
                         <label for="category" class="block text-sm font-bold text-white mb-2">
-                            Category <span class="text-red-400">*</span>
+                            {{ $t('Category') }} <span class="text-red-400">*</span>
                         </label>
                         <select
                             id="category"
                             v-model="formCategory"
                             required
                             class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all [&>option]:bg-gray-900 [&>option]:text-white">
-                            <option value="player">Player Model</option>
-                            <option value="weapon">Weapon Model</option>
-                            <option value="shadow">Player Shadow</option>
+                            <option value="player">{{ $t('Player Model') }}</option>
+                            <option value="weapon">{{ $t('Weapon Model') }}</option>
+                            <option value="shadow">{{ $t('Player Shadow') }}</option>
                         </select>
                     </div>
 
@@ -390,46 +391,46 @@ function currentViewerModel() {
                                 type="checkbox"
                                 v-model="formIsNsfw"
                                 class="w-5 h-5 rounded border-white/20 bg-white/5 text-red-500 focus:ring-red-500 focus:ring-offset-0 cursor-pointer">
-                            <span class="text-sm font-bold text-white group-hover:text-red-400 transition-colors">Mark as NSFW (18+)</span>
+                            <span class="text-sm font-bold text-white group-hover:text-red-400 transition-colors">{{ $t('Mark as NSFW (18+)') }}</span>
                         </label>
-                        <p class="mt-1 text-xs text-gray-500 ml-8">Content will be blurred and require age confirmation to view</p>
+                        <p class="mt-1 text-xs text-gray-500 ml-8">{{ $t('Content will be blurred and require age confirmation to view') }}</p>
                     </div>
 
                     <!-- Author -->
                     <div>
-                        <label class="block text-sm font-bold text-white mb-2">Author</label>
+                        <label class="block text-sm font-bold text-white mb-2">{{ $t('Author') }}</label>
                         <label class="flex items-center gap-3 cursor-pointer group mb-3">
                             <input
                                 type="checkbox"
                                 v-model="formIsAuthor"
                                 class="w-5 h-5 rounded border-white/20 bg-white/5 text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer">
-                            <span class="text-sm text-white group-hover:text-blue-400 transition-colors">I am the author</span>
+                            <span class="text-sm text-white group-hover:text-blue-400 transition-colors">{{ $t('I am the author') }}</span>
                         </label>
                         <input
                             v-if="!formIsAuthor"
                             v-model="formAuthor"
                             type="text"
                             class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                            placeholder="Original author name">
+                            :placeholder="$t('Original author name')">
                     </div>
 
                     <!-- Description -->
                     <div>
                         <label for="description" class="block text-sm font-bold text-white mb-2">
-                            Description
+                            {{ $t('Description') }}
                         </label>
                         <textarea
                             id="description"
                             v-model="formDescription"
                             rows="4"
                             class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                            placeholder="Describe your model, its features, and any special requirements..."></textarea>
+                            :placeholder="$t('Describe your model, its features, and any special requirements...')"></textarea>
                     </div>
 
                     <!-- File Upload -->
                     <div>
                         <label class="block text-sm font-bold text-white mb-2">
-                            Model File (ZIP or PK3) <span class="text-red-400">*</span>
+                            {{ $t('Model File (ZIP or PK3)') }} <span class="text-red-400">*</span>
                         </label>
                         <div class="relative">
                             <input
@@ -449,9 +450,9 @@ function currentViewerModel() {
                                     </svg>
                                     <div>
                                         <p class="text-white font-semibold">
-                                            {{ selectedFileName || 'Click to select ZIP or PK3 file' }}
+                                            {{ selectedFileName || $t('Click to select ZIP or PK3 file') }}
                                         </p>
-                                        <p class="text-gray-400 text-sm">Maximum file size: 50MB</p>
+                                        <p class="text-gray-400 text-sm">{{ $t('Maximum file size: 50MB') }}</p>
                                     </div>
                                 </div>
                             </button>
@@ -467,14 +468,14 @@ function currentViewerModel() {
                                 </svg>
                             </div>
                             <div class="text-sm text-gray-300">
-                                <p class="font-semibold text-white mb-2">Upload Requirements:</p>
+                                <p class="font-semibold text-white mb-2">{{ $t('Upload Requirements:') }}</p>
                                 <ul class="list-disc list-inside space-y-1">
-                                    <li>ZIP or PK3 file containing model files (MD3 format)</li>
-                                    <li>Include textures (TGA/JPG format)</li>
-                                    <li>Optional: README.txt with author info and model details</li>
-                                    <li>Optional: Custom sounds (WAV format)</li>
-                                    <li>Optional: CTF team skins (red/blue variants)</li>
-                                    <li>Models will be reviewed before being publicly visible</li>
+                                    <li>{{ $t('ZIP or PK3 file containing model files (MD3 format)') }}</li>
+                                    <li>{{ $t('Include textures (TGA/JPG format)') }}</li>
+                                    <li>{{ $t('Optional: README.txt with author info and model details') }}</li>
+                                    <li>{{ $t('Optional: Custom sounds (WAV format)') }}</li>
+                                    <li>{{ $t('Optional: CTF team skins (red/blue variants)') }}</li>
+                                    <li>{{ $t('Models will be reviewed before being publicly visible') }}</li>
                                 </ul>
                             </div>
                         </div>
@@ -491,20 +492,20 @@ function currentViewerModel() {
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
-                                Uploading & Extracting...
+                                {{ $t('Uploading & Extracting...') }}
                             </span>
                             <span v-else class="flex items-center justify-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15m0-3l-3-3m0 0l-3 3m3-3V15" />
                                 </svg>
-                                Upload & Continue
+                                {{ $t('Upload & Continue') }}
                             </span>
                         </button>
 
                         <Link
                             :href="route('models.index')"
                             class="px-6 py-4 bg-white/5 border border-white/10 text-white font-bold rounded-xl hover:bg-white/10 transition-all text-center flex items-center justify-center">
-                            Cancel
+                            {{ $t('Cancel') }}
                         </Link>
                     </div>
                 </form>
@@ -516,10 +517,10 @@ function currentViewerModel() {
                 <div class="bg-black/40 rounded-xl border border-white/5 p-6 shadow-2xl">
                     <div class="flex items-center justify-between mb-4">
                         <div>
-                            <h2 class="text-xl font-bold text-white">Preview & Generate Thumbnails</h2>
+                            <h2 class="text-xl font-bold text-white">{{ $t('Preview & Generate Thumbnails') }}</h2>
                             <p class="text-gray-400 text-sm mt-1">
-                                Found {{ detectedModels.length }} model{{ detectedModels.length > 1 ? ' variations' : '' }}.
-                                Generating preview GIFs automatically...
+                                {{ $tc('Found :count model.|Found :count model variations.', detectedModels.length) }}
+                                {{ $t('Generating preview GIFs automatically...') }}
                             </p>
                         </div>
                         <div v-if="!allGifsReady" class="flex items-center gap-2 text-blue-400">
@@ -527,7 +528,7 @@ function currentViewerModel() {
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            <span class="text-sm font-medium">Processing...</span>
+                            <span class="text-sm font-medium">{{ $t('Processing...') }}</span>
                         </div>
                     </div>
 
@@ -545,7 +546,7 @@ function currentViewerModel() {
 
                     <!-- Done message -->
                     <div v-if="allGifsReady" class="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                        <p class="text-green-400 font-medium">All thumbnails generated! Click "Save Model" to complete the upload.</p>
+                        <p class="text-green-400 font-medium">{{ $t('All thumbnails generated! Click "Save Model" to complete the upload.') }}</p>
                     </div>
                 </div>
 
@@ -589,19 +590,19 @@ function currentViewerModel() {
                         <!-- GIF preview thumbnails -->
                         <div v-if="generatedGifs[idx]" class="grid grid-cols-3 gap-2">
                             <div v-if="generatedGifs[idx].rotateBlob" class="aspect-square rounded-lg overflow-hidden bg-black border border-white/10">
-                                <img :src="createObjectURL(generatedGifs[idx].rotateBlob)" class="w-full h-full object-cover" alt="Rotate">
+                                <img :src="createObjectURL(generatedGifs[idx].rotateBlob)" class="w-full h-full object-cover" :alt="$t('Rotate')">
                             </div>
                             <div v-if="generatedGifs[idx].idleBlob" class="aspect-square rounded-lg overflow-hidden bg-black border border-white/10">
-                                <img :src="createObjectURL(generatedGifs[idx].idleBlob)" class="w-full h-full object-cover" alt="Idle">
+                                <img :src="createObjectURL(generatedGifs[idx].idleBlob)" class="w-full h-full object-cover" :alt="$t('Idle')">
                             </div>
                             <div v-if="generatedGifs[idx].gestureBlob" class="aspect-square rounded-lg overflow-hidden bg-black border border-white/10">
-                                <img :src="createObjectURL(generatedGifs[idx].gestureBlob)" class="w-full h-full object-cover" alt="Gesture">
+                                <img :src="createObjectURL(generatedGifs[idx].gestureBlob)" class="w-full h-full object-cover" :alt="$t('Gesture')">
                             </div>
                             <div v-if="generatedGifs[idx].thumbnailBlob" class="aspect-square rounded-lg overflow-hidden bg-black border border-white/10">
-                                <img :src="createObjectURL(generatedGifs[idx].thumbnailBlob)" class="w-full h-full object-cover" alt="Still">
+                                <img :src="createObjectURL(generatedGifs[idx].thumbnailBlob)" class="w-full h-full object-cover" :alt="$t('Still')">
                             </div>
                             <div v-if="generatedGifs[idx].headIconBlob" class="aspect-square rounded-lg overflow-hidden bg-black border border-white/10 flex items-center justify-center">
-                                <img :src="createObjectURL(generatedGifs[idx].headIconBlob)" class="w-16 h-16" alt="Head">
+                                <img :src="createObjectURL(generatedGifs[idx].headIconBlob)" class="w-16 h-16" :alt="$t('Head')">
                             </div>
                         </div>
                     </div>
@@ -656,13 +657,13 @@ function currentViewerModel() {
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            Saving...
+                            {{ $t('Saving...') }}
                         </span>
                         <span v-else class="flex items-center justify-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            Save Model
+                            {{ $t('Save Model') }}
                         </span>
                     </button>
 
@@ -670,13 +671,13 @@ function currentViewerModel() {
                         @click="goBackToUpload"
                         :disabled="saving"
                         class="px-6 py-4 bg-white/5 border border-white/10 text-white font-bold rounded-xl hover:bg-white/10 transition-all disabled:opacity-50">
-                        ← Back
+                        {{ $t('← Back') }}
                     </button>
                     <button
                         @click="cancelUpload"
                         :disabled="saving"
                         class="px-6 py-4 bg-white/5 border border-white/10 text-red-400 font-bold rounded-xl hover:bg-red-500/10 transition-all disabled:opacity-50">
-                        Cancel
+                        {{ $t('Cancel') }}
                     </button>
                 </div>
             </div>
@@ -686,18 +687,18 @@ function currentViewerModel() {
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-16 h-16 text-green-400 mx-auto mb-4">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <h2 class="text-2xl font-black text-white mb-2">Upload Complete!</h2>
+                <h2 class="text-2xl font-black text-white mb-2">{{ $t('Upload Complete!') }}</h2>
                 <p class="text-gray-400 mb-6">{{ successMessage }}</p>
                 <div class="flex gap-4 justify-center">
                     <Link
                         :href="route('models.index', { my_uploads: 1, approval_status: 'pending' })"
                         class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg">
-                        Show My Uploads
+                        {{ $t('Show My Uploads') }}
                     </Link>
                     <Link
                         :href="route('models.create')"
                         class="px-6 py-3 bg-white/5 border border-white/10 text-white font-bold rounded-xl hover:bg-white/10 transition-all">
-                        Upload Another
+                        {{ $t('Upload Another') }}
                     </Link>
                 </div>
             </div>

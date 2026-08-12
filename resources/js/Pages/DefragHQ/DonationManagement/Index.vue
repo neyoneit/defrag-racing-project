@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import { t } from '@/utils/i18n';
 
 const props = defineProps({
     donations: Array,
@@ -104,14 +105,14 @@ const editSelfRaised = (item) => {
 
 // Delete donation
 const deleteDonation = (id) => {
-    if (confirm('Are you sure you want to delete this donation?')) {
+    if (confirm(t('Are you sure you want to delete this donation?'))) {
         router.delete(route('defraghq.donations.delete', id));
     }
 };
 
 // Delete self-raised
 const deleteSelfRaised = (id) => {
-    if (confirm('Are you sure you want to delete this entry?')) {
+    if (confirm(t('Are you sure you want to delete this entry?'))) {
         router.delete(route('defraghq.selfraised.delete', id));
     }
 };
@@ -146,19 +147,19 @@ const totalSelfRaised = computed(() => {
 </script>
 
 <template>
-    <Head title="Donation Management - DefragHQ" />
+    <Head :title="$t('Donation Management') + ' - DefragHQ'" />
 
     <MainLayout>
         <div class="max-w-7xl mx-auto py-8 px-4">
-            <h1 class="text-2xl md:text-3xl font-bold text-white mb-8">Donation Management</h1>
+            <h1 class="text-2xl md:text-3xl font-bold text-white mb-8">{{ $t('Donation Management') }}</h1>
 
             <!-- Donation Goal Section -->
             <div class="bg-gray-800/50 border border-white/10 rounded-xl p-6 mb-8">
-                <h2 class="text-xl font-bold text-white mb-4">Yearly Goal</h2>
+                <h2 class="text-xl font-bold text-white mb-4">{{ $t('Yearly Goal') }}</h2>
                 <form @submit.prevent="submitGoal" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Year</label>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Year') }}</label>
                             <input
                                 v-model.number="goalForm.year"
                                 type="number"
@@ -167,7 +168,7 @@ const totalSelfRaised = computed(() => {
                             />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Goal Amount</label>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Goal Amount') }}</label>
                             <input
                                 v-model.number="goalForm.yearly_goal"
                                 type="number"
@@ -177,7 +178,7 @@ const totalSelfRaised = computed(() => {
                             />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Currency</label>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Currency') }}</label>
                             <select
                                 v-model="goalForm.currency"
                                 class="w-full px-4 py-2 bg-gray-900/50 border border-white/10 rounded-lg text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -193,7 +194,7 @@ const totalSelfRaised = computed(() => {
                         :disabled="goalForm.processing"
                         class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                     >
-                        Update Goal
+                        {{ $t('Update Goal') }}
                     </button>
                 </form>
             </div>
@@ -201,12 +202,12 @@ const totalSelfRaised = computed(() => {
             <!-- Donations Section -->
             <div class="bg-gray-800/50 border border-white/10 rounded-xl p-6 mb-8">
                 <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-xl font-bold text-white">Donations (Total: {{ totalDonations }} EUR)</h2>
+                    <h2 class="text-xl font-bold text-white">{{ $t('Donations (Total: :total EUR)', { total: totalDonations }) }}</h2>
                     <button
                         @click="showDonationForm = !showDonationForm"
                         class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
                     >
-                        {{ showDonationForm ? 'Cancel' : 'Add Donation' }}
+                        {{ showDonationForm ? $t('Cancel') : $t('Add Donation') }}
                     </button>
                 </div>
 
@@ -214,7 +215,7 @@ const totalSelfRaised = computed(() => {
                 <form v-if="showDonationForm" @submit.prevent="submitDonation" class="bg-gray-900/50 border border-white/10 rounded-lg p-4 mb-6 space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Donor Name (optional)</label>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Donor Name (optional)') }}</label>
                             <input
                                 v-model="donationForm.donor_name"
                                 type="text"
@@ -222,7 +223,7 @@ const totalSelfRaised = computed(() => {
                             />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Amount *</label>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Amount') }} *</label>
                             <input
                                 v-model.number="donationForm.amount"
                                 type="number"
@@ -232,7 +233,7 @@ const totalSelfRaised = computed(() => {
                             />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Currency *</label>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Currency') }} *</label>
                             <select
                                 v-model="donationForm.currency"
                                 class="w-full px-4 py-2 bg-gray-900/50 border border-white/10 rounded-lg text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -243,7 +244,7 @@ const totalSelfRaised = computed(() => {
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Date *</label>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Date') }} *</label>
                             <input
                                 v-model="donationForm.donation_date"
                                 type="date"
@@ -252,7 +253,7 @@ const totalSelfRaised = computed(() => {
                             />
                         </div>
                         <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Note (optional)</label>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Note (optional)') }}</label>
                             <textarea
                                 v-model="donationForm.note"
                                 rows="2"
@@ -266,14 +267,14 @@ const totalSelfRaised = computed(() => {
                             :disabled="donationForm.processing"
                             class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                         >
-                            {{ editingDonation ? 'Update' : 'Add' }} Donation
+                            {{ editingDonation ? $t('Update Donation') : $t('Add Donation') }}
                         </button>
                         <button
                             type="button"
                             @click="resetDonationForm"
                             class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
                         >
-                            Cancel
+                            {{ $t('Cancel') }}
                         </button>
                     </div>
                 </form>
@@ -283,18 +284,18 @@ const totalSelfRaised = computed(() => {
                     <table class="w-full">
                         <thead>
                             <tr class="border-b border-white/10">
-                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Date</th>
-                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Donor</th>
-                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Amount</th>
-                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Currency</th>
-                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Note</th>
-                                <th class="px-4 py-3 text-right text-sm font-medium text-gray-300">Actions</th>
+                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">{{ $t('Date') }}</th>
+                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">{{ $t('Donor') }}</th>
+                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">{{ $t('Amount') }}</th>
+                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">{{ $t('Currency') }}</th>
+                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">{{ $t('Note') }}</th>
+                                <th class="px-4 py-3 text-right text-sm font-medium text-gray-300">{{ $t('Actions') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="donation in donations" :key="donation.id" class="border-b border-white/5 hover:bg-white/5">
                                 <td class="px-4 py-3 text-sm text-gray-300">{{ donation.donation_date }}</td>
-                                <td class="px-4 py-3 text-sm text-white">{{ donation.donor_name || 'Anonymous' }}</td>
+                                <td class="px-4 py-3 text-sm text-white">{{ donation.donor_name || $t('Anonymous') }}</td>
                                 <td class="px-4 py-3 text-sm font-bold text-green-400">{{ donation.amount }}</td>
                                 <td class="px-4 py-3 text-sm text-gray-300">{{ donation.currency }}</td>
                                 <td class="px-4 py-3 text-sm text-gray-400">{{ donation.note || '-' }}</td>
@@ -303,13 +304,13 @@ const totalSelfRaised = computed(() => {
                                         @click="editDonation(donation)"
                                         class="text-blue-400 hover:text-blue-300"
                                     >
-                                        Edit
+                                        {{ $t('Edit') }}
                                     </button>
                                     <button
                                         @click="deleteDonation(donation.id)"
                                         class="text-red-400 hover:text-red-300"
                                     >
-                                        Delete
+                                        {{ $t('Delete') }}
                                     </button>
                                 </td>
                             </tr>
@@ -321,12 +322,12 @@ const totalSelfRaised = computed(() => {
             <!-- Self-Raised Money Section -->
             <div class="bg-gray-800/50 border border-white/10 rounded-xl p-6">
                 <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-xl font-bold text-white">Self-Raised Money (Total: {{ totalSelfRaised }} EUR)</h2>
+                    <h2 class="text-xl font-bold text-white">{{ $t('Self-Raised Money (Total: :total EUR)', { total: totalSelfRaised }) }}</h2>
                     <button
                         @click="showSelfRaisedForm = !showSelfRaisedForm"
                         class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
                     >
-                        {{ showSelfRaisedForm ? 'Cancel' : 'Add Entry' }}
+                        {{ showSelfRaisedForm ? $t('Cancel') : $t('Add Entry') }}
                     </button>
                 </div>
 
@@ -334,17 +335,17 @@ const totalSelfRaised = computed(() => {
                 <form v-if="showSelfRaisedForm" @submit.prevent="submitSelfRaised" class="bg-gray-900/50 border border-white/10 rounded-lg p-4 mb-6 space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Source *</label>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Source') }} *</label>
                             <input
                                 v-model="selfRaisedForm.source"
                                 type="text"
-                                placeholder="YouTube, Twitch, etc."
+                                :placeholder="$t('YouTube, Twitch, etc.')"
                                 class="w-full px-4 py-2 bg-gray-900/50 border border-white/10 rounded-lg text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                                 required
                             />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Amount *</label>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Amount') }} *</label>
                             <input
                                 v-model.number="selfRaisedForm.amount"
                                 type="number"
@@ -354,7 +355,7 @@ const totalSelfRaised = computed(() => {
                             />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Currency *</label>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Currency') }} *</label>
                             <select
                                 v-model="selfRaisedForm.currency"
                                 class="w-full px-4 py-2 bg-gray-900/50 border border-white/10 rounded-lg text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -365,7 +366,7 @@ const totalSelfRaised = computed(() => {
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Date *</label>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Date') }} *</label>
                             <input
                                 v-model="selfRaisedForm.earned_date"
                                 type="date"
@@ -374,7 +375,7 @@ const totalSelfRaised = computed(() => {
                             />
                         </div>
                         <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Description (optional)</label>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Description (optional)') }}</label>
                             <textarea
                                 v-model="selfRaisedForm.description"
                                 rows="2"
@@ -388,14 +389,14 @@ const totalSelfRaised = computed(() => {
                             :disabled="selfRaisedForm.processing"
                             class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                         >
-                            {{ editingSelfRaised ? 'Update' : 'Add' }} Entry
+                            {{ editingSelfRaised ? $t('Update Entry') : $t('Add Entry') }}
                         </button>
                         <button
                             type="button"
                             @click="resetSelfRaisedForm"
                             class="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
                         >
-                            Cancel
+                            {{ $t('Cancel') }}
                         </button>
                     </div>
                 </form>
@@ -405,12 +406,12 @@ const totalSelfRaised = computed(() => {
                     <table class="w-full">
                         <thead>
                             <tr class="border-b border-white/10">
-                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Date</th>
-                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Source</th>
-                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Amount</th>
-                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Currency</th>
-                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Description</th>
-                                <th class="px-4 py-3 text-right text-sm font-medium text-gray-300">Actions</th>
+                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">{{ $t('Date') }}</th>
+                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">{{ $t('Source') }}</th>
+                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">{{ $t('Amount') }}</th>
+                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">{{ $t('Currency') }}</th>
+                                <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">{{ $t('Description') }}</th>
+                                <th class="px-4 py-3 text-right text-sm font-medium text-gray-300">{{ $t('Actions') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -425,13 +426,13 @@ const totalSelfRaised = computed(() => {
                                         @click="editSelfRaised(item)"
                                         class="text-blue-400 hover:text-blue-300"
                                     >
-                                        Edit
+                                        {{ $t('Edit') }}
                                     </button>
                                     <button
                                         @click="deleteSelfRaised(item.id)"
                                         class="text-red-400 hover:text-red-300"
                                     >
-                                        Delete
+                                        {{ $t('Delete') }}
                                     </button>
                                 </td>
                             </tr>
