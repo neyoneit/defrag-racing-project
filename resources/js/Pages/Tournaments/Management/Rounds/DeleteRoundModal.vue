@@ -30,22 +30,22 @@
         <ConfirmationModal :show="show" maxWidth="xl" :closeable="true" @close="close">
             <template #title>
                 <div class="flex justify-between items-center">
-                    <div>Delete Round ?</div>
+                    <div>{{ $t('Delete Round?') }}</div>
                 </div>
             </template>
 
             <template #content>
-                Are you sure you want to delete this round ?
+                {{ $t('Are you sure you want to delete this round?') }}
             </template>
                 
             <template #footer>
                 <div class="flex w-full justify-between">
                     <PrimaryButton @click="submitForm" class="bg-red-600 hover:bg-red-500">
-                        Delete Round
+                        {{ $t('Delete Round') }}
                     </PrimaryButton>
     
                     <PrimaryButton @click="props.close" class="bg-gray-600 hover:bg-gray-500">
-                        Cancel
+                        {{ $t('Cancel') }}
                     </PrimaryButton>
                 </div>
             </template>
