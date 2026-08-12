@@ -1,8 +1,9 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import StatusBadge from '@/Components/Marketplace/StatusBadge.vue';
 import ReviewSection from '@/Components/Marketplace/ReviewSection.vue';
+import { t, currentLocale } from '@/utils/i18n';
 
 const props = defineProps({
     listing: Object,
@@ -14,12 +15,12 @@ const props = defineProps({
 
 const processing = ref(false);
 
-const workTypeLabels = {
-    map: 'Map',
-    player_model: 'Player Model',
-    weapon_model: 'Weapon Model',
-    shadow_model: 'Shadow Model',
-};
+const workTypeLabels = computed(() => ({
+    map: t('Map'),
+    player_model: t('Player Model'),
+    weapon_model: t('Weapon Model'),
+    shadow_model: t('Shadow Model'),
+}));
 
 const workTypeColors = {
     map: 'text-emerald-400 bg-emerald-500/20 border-emerald-500/30',
@@ -28,11 +29,16 @@ const workTypeColors = {
     shadow_model: 'text-cyan-400 bg-cyan-500/20 border-cyan-500/30',
 };
 
+const listingTypeLabels = computed(() => ({
+    request: t('Request'),
+    offer: t('Offer'),
+}));
+
 const isOwner = $page => $page.props.auth.user?.id === props.listing.user_id;
 const isAssigned = $page => $page.props.auth.user?.id === props.listing.assigned_to_user_id;
 
 const updateStatus = (status) => {
-    if (!confirm(`Are you sure you want to mark this listing as "${status}"?`)) return;
+    if (!confirm(t('Are you sure you want to mark this listing as ":status"?', { status }))) return;
     processing.value = true;
     router.post(route('marketplace.status', props.listing.id), { status }, {
         preserveScroll: true,
@@ -41,7 +47,7 @@ const updateStatus = (status) => {
 };
 
 const assignToMe = () => {
-    if (!confirm('Take this commission? The listing owner will be notified.')) return;
+    if (!confirm(t('Take this commission? The listing owner will be notified.'))) return;
     processing.value = true;
     router.post(route('marketplace.assign', props.listing.id), {}, {
         preserveScroll: true,
@@ -51,7 +57,7 @@ const assignToMe = () => {
 
 const formatDate = (date) => {
     if (!date) return '';
-    return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    return new Date(date).toLocaleDateString(currentLocale(), { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
 const renderStars = (rating) => {
@@ -62,13 +68,13 @@ const renderStars = (rating) => {
 
 <template>
     <div class="pb-4">
-        <Head :title="listing.title + ' - Marketplace'" />
+        <Head :title="$t(':title - Marketplace', { title: listing.title })" />
 
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <Link :href="route('marketplace.index')" class="text-gray-400 hover:text-white text-sm transition mb-4 inline-flex items-center gap-1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
-                    Back to Marketplace
+                    {{ $t('Back to Marketplace') }}
                 </Link>
             </div>
         </div>
@@ -81,7 +87,7 @@ const renderStars = (rating) => {
                     <div class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-xl p-6">
                         <div class="flex items-center gap-3 mb-3 flex-wrap">
                             <span :class="`px-2 py-0.5 text-xs font-semibold rounded uppercase ${listing.listing_type === 'request' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}`">
-                                {{ listing.listing_type }}
+                                {{ listingTypeLabels[listing.listing_type] }}
                             </span>
                             <span :class="`px-2 py-0.5 text-xs font-semibold rounded border ${workTypeColors[listing.work_type]}`">
                                 {{ workTypeLabels[listing.work_type] }}
@@ -99,18 +105,18 @@ const renderStars = (rating) => {
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-green-400">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                             </svg>
-                            <span class="text-green-400 font-bold">Budget: {{ listing.budget }}</span>
+                            <span class="text-green-400 font-bold">{{ $t('Budget: :budget', { budget: listing.budget }) }}</span>
                         </div>
 
                         <div class="flex items-center gap-4 mt-4 text-sm text-gray-500">
-                            <span>Posted {{ formatDate(listing.created_at) }}</span>
-                            <span v-if="listing.completed_at">Completed {{ formatDate(listing.completed_at) }}</span>
+                            <span>{{ $t('Posted :when', { when: formatDate(listing.created_at) }) }}</span>
+                            <span v-if="listing.completed_at">{{ $t('Completed :when', { when: formatDate(listing.completed_at) }) }}</span>
                         </div>
                     </div>
 
                     <!-- Actions (owner) -->
                     <div v-if="$page.props.auth.user?.id === listing.user_id && listing.status !== 'completed' && listing.status !== 'cancelled'" class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-xl p-4">
-                        <h3 class="text-sm font-bold text-white mb-3">Manage Listing</h3>
+                        <h3 class="text-sm font-bold text-white mb-3">{{ $t('Manage Listing') }}</h3>
                         <div class="flex gap-2 flex-wrap">
                             <button
                                 v-if="listing.status === 'in_progress'"
@@ -118,7 +124,7 @@ const renderStars = (rating) => {
                                 :disabled="processing"
                                 class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition"
                             >
-                                Mark Completed
+                                {{ $t('Mark Completed') }}
                             </button>
                             <button
                                 v-if="listing.status === 'open'"
@@ -126,14 +132,14 @@ const renderStars = (rating) => {
                                 :disabled="processing"
                                 class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition"
                             >
-                                Mark In Progress
+                                {{ $t('Mark In Progress') }}
                             </button>
                             <button
                                 @click="updateStatus('cancelled')"
                                 :disabled="processing"
                                 class="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-gray-300 text-sm font-semibold rounded-lg transition"
                             >
-                                Cancel Listing
+                                {{ $t('Cancel Listing') }}
                             </button>
                         </div>
                     </div>
@@ -148,9 +154,9 @@ const renderStars = (rating) => {
                             :disabled="processing"
                             class="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 text-white font-bold rounded-lg transition-all shadow-lg"
                         >
-                            {{ processing ? 'Processing...' : 'Take This Commission' }}
+                            {{ processing ? $t('Processing...') : $t('Take This Commission') }}
                         </button>
-                        <p class="text-xs text-gray-400 text-center mt-2">The listing owner will be notified</p>
+                        <p class="text-xs text-gray-400 text-center mt-2">{{ $t('The listing owner will be notified') }}</p>
                     </div>
 
                     <!-- Reviews -->
@@ -168,7 +174,7 @@ const renderStars = (rating) => {
                 <div class="space-y-4">
                     <!-- Posted By -->
                     <div class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-xl p-4">
-                        <h3 class="text-xs font-bold text-gray-400 uppercase mb-3">Posted by</h3>
+                        <h3 class="text-xs font-bold text-gray-400 uppercase mb-3">{{ $t('Posted by') }}</h3>
                         <Link v-if="listing.user" :href="route('profile.index', listing.user.id)" class="flex items-center gap-3 group">
                             <img
                                 :src="listing.user?.profile_photo_path ? '/storage/' + listing.user.profile_photo_path : '/images/null.jpg'"
@@ -190,7 +196,7 @@ const renderStars = (rating) => {
 
                     <!-- Assigned To -->
                     <div v-if="listing.assigned_to" class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-xl p-4">
-                        <h3 class="text-xs font-bold text-gray-400 uppercase mb-3">Assigned to</h3>
+                        <h3 class="text-xs font-bold text-gray-400 uppercase mb-3">{{ $t('Assigned to') }}</h3>
                         <Link :href="route('profile.index', listing.assigned_to.id)" class="flex items-center gap-3 group">
                             <img
                                 :src="listing.assigned_to?.profile_photo_path ? '/storage/' + listing.assigned_to.profile_photo_path : '/images/null.jpg'"
@@ -212,22 +218,22 @@ const renderStars = (rating) => {
 
                     <!-- Listing Info -->
                     <div class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-xl p-4">
-                        <h3 class="text-xs font-bold text-gray-400 uppercase mb-3">Details</h3>
+                        <h3 class="text-xs font-bold text-gray-400 uppercase mb-3">{{ $t('Details') }}</h3>
                         <div class="space-y-2 text-sm">
                             <div class="flex justify-between">
-                                <span class="text-gray-400">Type</span>
-                                <span class="text-white capitalize">{{ listing.listing_type }}</span>
+                                <span class="text-gray-400">{{ $t('Type') }}</span>
+                                <span class="text-white capitalize">{{ listingTypeLabels[listing.listing_type] }}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-400">Category</span>
+                                <span class="text-gray-400">{{ $t('Category') }}</span>
                                 <span class="text-white">{{ workTypeLabels[listing.work_type] }}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-400">Status</span>
+                                <span class="text-gray-400">{{ $t('Status') }}</span>
                                 <StatusBadge :status="listing.status" />
                             </div>
                             <div v-if="listing.budget" class="flex justify-between">
-                                <span class="text-gray-400">Budget</span>
+                                <span class="text-gray-400">{{ $t('Budget') }}</span>
                                 <span class="text-green-400 font-semibold">{{ listing.budget }}</span>
                             </div>
                         </div>
