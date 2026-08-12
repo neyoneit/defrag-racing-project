@@ -59,7 +59,7 @@
 
 <template>
     <div class="">
-        <Head :title="clan.plain_name + ' - Clan'" />
+        <Head :title="clan.plain_name + ' - ' + $t('Clan')" />
 
         <!-- Hero Section with Background -->
         <div class="relative h-[400px] overflow-hidden">
@@ -241,7 +241,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
                             </svg>
                             <span class="text-white font-bold">{{ players.length }}</span>
-                            <span class="text-gray-300 text-sm">Members</span>
+                            <span class="text-gray-300 text-sm">{{ $t('Members') }}</span>
                         </div>
                     </div>
 
@@ -254,7 +254,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM4 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 10.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
                         </svg>
-                        Request to Join
+                        {{ $t('Request to Join') }}
                     </button>
 
                     <!-- Pending Request Status -->
@@ -266,12 +266,12 @@
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                             </svg>
-                            Request Pending
+                            {{ $t('Request Pending') }}
                         </div>
                         <button
                             @click="showCancelConfirm = true"
                             class="flex items-center gap-1 px-3 py-3 rounded-full bg-white/5 hover:bg-red-600/20 text-gray-400 hover:text-red-400 border border-white/10 hover:border-red-500/30 transition-all duration-300"
-                            title="Cancel request"
+                            :title="$t('Cancel request')"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -296,7 +296,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 text-blue-400">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
                         </svg>
-                        <span>Roster</span>
+                        <span>{{ $t('Roster') }}</span>
                     </h2>
                 </div>
 
@@ -346,7 +346,7 @@
                                 <!-- Member Note -->
                                 <div class="mt-4 pt-4 border-t border-white/10">
                                     <div v-if="player.pivot?.note" class="text-sm text-gray-300 leading-relaxed prose prose-invert prose-sm max-w-none max-h-[4.5rem] group-hover:max-h-[500px] overflow-hidden transition-all duration-500 ease-in-out" v-html="player.pivot.note"></div>
-                                    <div v-else class="text-sm text-gray-500 italic">Player doesn't have a public note filled in yet.</div>
+                                    <div v-else class="text-sm text-gray-500 italic">{{ $t('Player doesn\'t have a public note filled in yet.') }}</div>
                                 </div>
 
                                 <!-- Config File Download -->
@@ -359,7 +359,7 @@
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                                         </svg>
-                                        <span class="text-sm font-medium">Download Config</span>
+                                        <span class="text-sm font-medium">{{ $t('Download Config') }}</span>
                                     </a>
                                 </div>
                             </div>
@@ -382,10 +382,10 @@
                 <!-- Section Header -->
                 <div class="bg-gradient-to-r from-red-600/20 to-orange-800/20 border-b border-white/10 px-8 py-6">
                     <h2 class="text-3xl font-black text-white flex items-center gap-3">
-                        <img src="/images/weapons/iconw_rocket.svg" class="w-8 h-8" alt="Rivals" />
-                        <span>Rival Clans</span>
+                        <img src="/images/weapons/iconw_rocket.svg" class="w-8 h-8" :alt="$t('Rivals')" />
+                        <span>{{ $t('Rival Clans') }}</span>
                     </h2>
-                    <div class="text-sm text-gray-400 mt-2">Top clans ranked by World Records and Top 3 finishes</div>
+                    <div class="text-sm text-gray-400 mt-2">{{ $t('Top clans ranked by World Records and Top 3 finishes') }}</div>
                 </div>
 
                 <!-- Rival Clans Grid -->
@@ -424,11 +424,11 @@
                                 <!-- Stats -->
                                 <div class="space-y-2 text-sm">
                                     <div class="flex items-center justify-between p-2 bg-black/20 rounded-lg">
-                                        <span class="text-gray-400">World Records:</span>
+                                        <span class="text-gray-400">{{ $t('World Records:') }}</span>
                                         <span class="font-bold text-yellow-400">{{ rival.total_wrs }}</span>
                                     </div>
                                     <div class="flex items-center justify-between p-2 bg-black/20 rounded-lg">
-                                        <span class="text-gray-400">Top 3:</span>
+                                        <span class="text-gray-400">{{ $t('Top 3:') }}</span>
                                         <span class="font-bold text-purple-400">{{ rival.total_top3 }}</span>
                                     </div>
                                 </div>
@@ -457,24 +457,23 @@
                 <div v-if="showJoinConfirm" class="fixed inset-0 z-[100] flex items-center justify-center p-4" @click.self="showJoinConfirm = false">
                     <div class="fixed inset-0 bg-black/60"></div>
                     <div class="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6">
-                        <h3 class="text-xl font-bold text-white mb-3">Request to Join Clan</h3>
-                        <p class="text-gray-300 mb-2">
-                            Send a join request to <span class="font-semibold text-white" v-html="q3tohtml(clan.name)"></span>?
-                        </p>
-                        <p class="text-gray-500 text-sm mb-6">The clan admin will be notified and can accept or decline your request.</p>
+                        <h3 class="text-xl font-bold text-white mb-3">{{ $t('Request to Join Clan') }}</h3>
+                        <p class="text-gray-300 mb-2 [&>span]:font-semibold [&>span]:text-white"
+                           v-html="$t('Send a join request to <span>:name</span>?', { name: q3tohtml(clan.name) })"></p>
+                        <p class="text-gray-500 text-sm mb-6">{{ $t('The clan admin will be notified and can accept or decline your request.') }}</p>
                         <div class="flex gap-3">
                             <button
                                 @click="submitJoinRequest"
                                 :disabled="joinForm.processing"
                                 class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors"
                             >
-                                {{ joinForm.processing ? 'Sending...' : 'Send Request' }}
+                                {{ joinForm.processing ? $t('Sending...') : $t('Send Request') }}
                             </button>
                             <button
                                 @click="showJoinConfirm = false"
                                 class="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 font-semibold rounded-xl border border-white/10 transition-colors"
                             >
-                                Cancel
+                                {{ $t('Cancel') }}
                             </button>
                         </div>
                     </div>
@@ -493,21 +492,21 @@
                 <div v-if="showCancelConfirm" class="fixed inset-0 z-[100] flex items-center justify-center p-4" @click.self="showCancelConfirm = false">
                     <div class="fixed inset-0 bg-black/60"></div>
                     <div class="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6">
-                        <h3 class="text-xl font-bold text-white mb-3">Cancel Join Request</h3>
-                        <p class="text-gray-300 mb-6">Are you sure you want to cancel your request to join this clan?</p>
+                        <h3 class="text-xl font-bold text-white mb-3">{{ $t('Cancel Join Request') }}</h3>
+                        <p class="text-gray-300 mb-6">{{ $t('Are you sure you want to cancel your request to join this clan?') }}</p>
                         <div class="flex gap-3">
                             <button
                                 @click="submitCancelRequest"
                                 :disabled="cancelForm.processing"
                                 class="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors"
                             >
-                                {{ cancelForm.processing ? 'Cancelling...' : 'Cancel Request' }}
+                                {{ cancelForm.processing ? $t('Cancelling...') : $t('Cancel Request') }}
                             </button>
                             <button
                                 @click="showCancelConfirm = false"
                                 class="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 font-semibold rounded-xl border border-white/10 transition-colors"
                             >
-                                Go Back
+                                {{ $t('Go Back') }}
                             </button>
                         </div>
                     </div>

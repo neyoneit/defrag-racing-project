@@ -1,5 +1,6 @@
 <script setup>
     import { ref, shallowRef, onMounted, computed, onBeforeUnmount } from 'vue';
+    import { currentLocale } from '@/utils/i18n';
     import { Link } from '@inertiajs/vue3';
     import { markRaw } from 'vue';
 
@@ -182,8 +183,8 @@
         <!-- No Models State -->
         <div v-else-if="modelsData.total === 0" class="text-center py-20">
             <div class="text-6xl mb-4 opacity-50">&#x1F3AD;</div>
-            <div class="text-xl font-bold text-gray-400">No models found for this creator</div>
-            <div class="text-sm text-gray-500 mt-2">Claim your model author names in Settings to display your models here</div>
+            <div class="text-xl font-bold text-gray-400">{{ $t('No models found for this creator') }}</div>
+            <div class="text-sm text-gray-500 mt-2">{{ $t('Claim your model author names in Settings to display your models here') }}</div>
         </div>
 
         <!-- Main Content -->
@@ -217,8 +218,8 @@
                                 {{ pinned.name }}
                             </Link>
                             <div class="flex items-center gap-3 text-xs text-gray-500">
-                                <span>{{ formatNumber(pinned.downloads) }} downloads</span>
-                                <span>{{ formatNumber(pinned.views || 0) }} views</span>
+                                <span>{{ $tc(':count download|:count downloads', pinned.downloads, { count: formatNumber(pinned.downloads) }) }}</span>
+                                <span>{{ $tc(':count view|:count views', pinned.views || 0, { count: formatNumber(pinned.views || 0) }) }}</span>
                             </div>
                         </div>
                     </div>
@@ -229,23 +230,23 @@
             <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
                 <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/5 text-center">
                     <div class="text-2xl font-black text-blue-400">{{ modelsData.total }}</div>
-                    <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">Models</div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">{{ $t('Models') }}</div>
                 </div>
                 <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/5 text-center">
                     <div class="text-2xl font-black text-purple-400">{{ formatNumber(modelsData.total_downloads) }}</div>
-                    <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">Downloads</div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">{{ $t('Downloads') }}</div>
                 </div>
                 <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/5 text-center">
                     <div class="text-2xl font-black text-cyan-400">{{ formatNumber(modelsData.total_views) }}</div>
-                    <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">Views</div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">{{ $t('Views') }}</div>
                 </div>
                 <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/5 text-center">
                     <div class="text-2xl font-black text-emerald-400">{{ playerModels.length }}</div>
-                    <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">Player</div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">{{ $t('Player') }}</div>
                 </div>
                 <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/5 text-center">
                     <div class="text-2xl font-black text-orange-400">{{ weaponModels.length }}</div>
-                    <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">Weapon</div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">{{ $t('Weapon') }}</div>
                 </div>
             </div>
 
@@ -254,7 +255,7 @@
                 <!-- Most Popular Model (3/5) -->
                 <div v-if="modelsData.highlighted" class="lg:col-span-3 bg-gradient-to-br from-blue-500/5 via-purple-500/10 to-blue-500/5 backdrop-blur-sm border border-blue-500/20 rounded-xl p-4 relative overflow-hidden">
                     <div class="absolute top-3 right-3">
-                        <span class="text-xs font-black px-2 py-0.5 rounded bg-blue-500/20 border border-blue-500/30 text-blue-400">MOST POPULAR</span>
+                        <span class="text-xs font-black px-2 py-0.5 rounded bg-blue-500/20 border border-blue-500/30 text-blue-400">{{ $t('MOST POPULAR') }}</span>
                     </div>
                     <div class="flex items-center gap-4">
                         <Link :href="route('models.show', modelsData.highlighted.id)"
@@ -271,22 +272,17 @@
                             </Link>
                             <div class="text-xs text-gray-500 mt-0.5">
                                 <span :class="modelsData.highlighted.category === 'player' ? 'text-emerald-400' : 'text-orange-400'" class="font-bold uppercase">{{ modelsData.highlighted.category }}</span>
-                                <span v-if="modelsData.highlighted.base_model && modelsData.highlighted.base_model !== modelsData.highlighted.name" class="ml-2">
-                                    based on <span class="text-gray-400">{{ modelsData.highlighted.base_model }}</span>
-                                </span>
+                                <span v-if="modelsData.highlighted.base_model && modelsData.highlighted.base_model !== modelsData.highlighted.name" class="ml-2 [&_span]:text-gray-400"
+                                    v-html="$t('based on <span>:model</span>', { model: modelsData.highlighted.base_model })"></span>
                             </div>
                             <div class="flex items-center gap-4 mt-2">
-                                <div>
-                                    <span class="text-xl font-black text-purple-400">{{ formatNumber(modelsData.highlighted.downloads) }}</span>
-                                    <span class="text-xs text-gray-500 ml-1">downloads</span>
-                                </div>
-                                <div>
-                                    <span class="text-xl font-black text-cyan-400">{{ formatNumber(modelsData.highlighted.views || 0) }}</span>
-                                    <span class="text-xs text-gray-500 ml-1">views</span>
-                                </div>
+                                <div class="text-xs text-gray-500 [&_span]:text-xl [&_span]:font-black [&_span]:text-purple-400 [&_span]:mr-1"
+                                    v-html="$tc('<span>:count</span> download|<span>:count</span> downloads', modelsData.highlighted.downloads, { count: formatNumber(modelsData.highlighted.downloads) })"></div>
+                                <div class="text-xs text-gray-500 [&_span]:text-xl [&_span]:font-black [&_span]:text-cyan-400 [&_span]:mr-1"
+                                    v-html="$tc('<span>:count</span> view|<span>:count</span> views', modelsData.highlighted.views || 0, { count: formatNumber(modelsData.highlighted.views || 0) })"></div>
                             </div>
                             <div class="text-[10px] text-gray-600 mt-1">
-                                Added {{ modelsData.highlighted.created_at ? new Date(modelsData.highlighted.created_at).toLocaleDateString() : 'unknown' }}
+                                {{ $t('Added :date', { date: modelsData.highlighted.created_at ? new Date(modelsData.highlighted.created_at).toLocaleDateString(currentLocale()) : $t('unknown') }) }}
                             </div>
                         </div>
                     </div>
@@ -294,7 +290,7 @@
 
                 <!-- Models Timeline (2/5) -->
                 <div class="lg:col-span-2 bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/5">
-                    <h3 class="text-sm font-black text-white uppercase tracking-wider mb-3">Models Timeline</h3>
+                    <h3 class="text-sm font-black text-white uppercase tracking-wider mb-3">{{ $t('Models Timeline') }}</h3>
                     <div v-if="timelineYears.length > 0" class="space-y-1.5">
                         <div v-for="year in timelineYears" :key="year" class="flex items-center gap-2">
                             <span class="text-[10px] font-bold text-gray-500 w-8 flex-shrink-0 text-right">{{ year }}</span>
@@ -306,7 +302,7 @@
                             </div>
                         </div>
                     </div>
-                    <div v-else class="text-xs text-gray-600 text-center py-4">No timeline data</div>
+                    <div v-else class="text-xs text-gray-600 text-center py-4">{{ $t('No timeline data') }}</div>
                 </div>
             </div>
 
@@ -316,13 +312,13 @@
                     <div class="flex items-center justify-between px-4 pt-3 pb-2">
                         <div class="flex items-center gap-2">
                             <Link :href="route('models.show', getGroupLinkId(group))" class="text-sm font-black text-white uppercase tracking-wider hover:text-blue-400 transition">{{ group.base }}</Link>
-                            <span v-if="group.hasCustomBase" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">CUSTOM BASE</span>
-                            <span v-else-if="group.isBuiltOnExisting" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-400">SKIN PACK</span>
-                            <span class="text-[10px] text-gray-500">({{ group.models.length }} {{ group.models.length === 1 ? 'model' : 'models' }})</span>
+                            <span v-if="group.hasCustomBase" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">{{ $t('CUSTOM BASE') }}</span>
+                            <span v-else-if="group.isBuiltOnExisting" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-400">{{ $t('SKIN PACK') }}</span>
+                            <span class="text-[10px] text-gray-500">({{ $tc(':count model|:count models', group.models.length) }})</span>
                         </div>
                         <div class="flex items-center gap-3 text-[10px] text-gray-500">
-                            <span>{{ formatNumber(group.totalDownloads) }} dl</span>
-                            <span>{{ formatNumber(group.totalViews) }} views</span>
+                            <span>{{ $t(':count dl', { count: formatNumber(group.totalDownloads) }) }}</span>
+                            <span>{{ $tc(':count view|:count views', group.totalViews, { count: formatNumber(group.totalViews) }) }}</span>
                         </div>
                     </div>
                     <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 p-3 pt-0">
@@ -335,7 +331,7 @@
                             <div class="aspect-square flex items-center justify-center overflow-hidden relative"
                                 :class="model.category === 'weapon' ? 'bg-gradient-to-br from-orange-500/10 to-red-500/10' : 'bg-gradient-to-br from-blue-500/10 to-purple-500/10'">
                                 <div v-if="model.model_type === 'complete'" class="absolute top-1 left-1 z-10">
-                                    <span class="text-[7px] font-black px-1 py-0.5 rounded bg-emerald-500/30 text-emerald-300">BASE</span>
+                                    <span class="text-[7px] font-black px-1 py-0.5 rounded bg-emerald-500/30 text-emerald-300">{{ $t('BASE') }}</span>
                                 </div>
                                 <img v-if="model.idle_gif || model.thumbnail"
                                     :src="`/storage/${model.idle_gif || model.thumbnail}`"
@@ -347,11 +343,11 @@
                             <div class="px-1.5 py-1">
                                 <div class="text-[10px] font-bold text-white truncate">{{ model.name }}</div>
                                 <div class="flex items-center justify-between text-[9px] text-gray-600">
-                                    <span>{{ formatNumber(model.downloads) }} dl</span>
-                                    <span>{{ formatNumber(model.views || 0) }} views</span>
+                                    <span>{{ $t(':count dl', { count: formatNumber(model.downloads) }) }}</span>
+                                    <span>{{ $tc(':count view|:count views', model.views || 0, { count: formatNumber(model.views || 0) }) }}</span>
                                 </div>
                                 <div class="text-[8px] text-gray-700 mt-0.5">
-                                    {{ model.created_at ? new Date(model.created_at).toLocaleDateString() : '' }}
+                                    {{ model.created_at ? new Date(model.created_at).toLocaleDateString(currentLocale()) : '' }}
                                 </div>
                             </div>
                         </Link>
