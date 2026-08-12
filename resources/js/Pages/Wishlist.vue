@@ -9,6 +9,7 @@ export default {
 <script setup>
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { currentLocale, t } from '@/utils/i18n';
 
 const props = defineProps({
     wishes: { type: Array, default: () => [] },
@@ -112,7 +113,7 @@ const vote = (wish, value) => {
 // Asking, not deleting. Other people have voted on this by now, so taking it
 // down is the admin's call and the wish stays up meanwhile.
 const askRemoval = (wish) => {
-    const reason = prompt('Ask an admin to remove this wish. Why? (optional)');
+    const reason = prompt(t('Ask an admin to remove this wish. Why? (optional)'));
     if (reason === null) return;
 
     router.post(`/wishlist/${wish.id}/request-removal`, { reason }, { preserveScroll: true });
@@ -152,11 +153,11 @@ const statusClass = (status) => ({
     rejected: 'bg-red-500/15 border-red-400/30 text-red-300',
 }[status] || 'bg-white/5 border-white/15 text-gray-300');
 
-const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
+const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(currentLocale()) : '';
 </script>
 
 <template>
-    <Head title="Wishlist" />
+    <Head :title="$t('Wishlist')" />
 
     <div class="">
         <!-- Header Section - same shape as Servers, Records and Ranking: the
@@ -167,25 +168,24 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">
-                        Wishlist
+                        {{ $t('Wishlist') }}
                     </h1>
 
                     <button v-if="user" @click="showForm = !showForm"
                         class="px-5 py-2.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-bold transition-colors">
-                        {{ showForm ? 'Close' : 'Add a wish' }}
+                        {{ showForm ? $t('Close') : $t('Add a wish') }}
                     </button>
                     <Link v-else href="/login"
                         class="px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-200 font-bold transition-colors">
-                        Log in to add or vote
+                        {{ $t('Log in to add or vote') }}
                     </Link>
                 </div>
 
                 <p class="text-gray-400 mt-2 max-w-3xl">
-                    Ask for something to be added or changed, and vote on what other people asked for.
-                    The more votes a request has, the sooner it gets done.
+                    {{ $t('Ask for something to be added or changed, and vote on what other people asked for. The more votes a request has, the sooner it gets done.') }}
                 </p>
                 <p class="text-gray-500 text-sm italic mt-1">
-                    Yours truly, <Link href="/profile/8" class="not-italic font-semibold hover:text-gray-300 transition-colors">neyo</Link>
+                    {{ $t('Yours truly,') }} <Link href="/profile/8" class="not-italic font-semibold hover:text-gray-300 transition-colors">neyo</Link>
                 </p>
             </div>
         </div>
@@ -195,7 +195,7 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
             <form v-if="showForm && user" @submit.prevent="submit"
                 class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl p-5 mb-6 space-y-4">
                 <div>
-                    <label class="block text-sm text-gray-300 mb-2">Which project is it about?</label>
+                    <label class="block text-sm text-gray-300 mb-2">{{ $t('Which project is it about?') }}</label>
                     <div class="flex flex-wrap gap-2">
                         <button v-for="(label, key) in projects" :key="key" type="button" @click="form.project = key"
                             class="px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors"
@@ -208,17 +208,17 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                     <div v-if="form.errors.project" class="text-red-400 text-sm mt-1">{{ form.errors.project }}</div>
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-300 mb-1">Title</label>
+                    <label class="block text-sm text-gray-300 mb-1">{{ $t('Title') }}</label>
                     <input v-model="form.title" type="text" maxlength="120"
                         class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-400/50"
-                        placeholder="One line - what do you want?" />
+                        :placeholder="$t('One line - what do you want?')" />
                     <div v-if="form.errors.title" class="text-red-400 text-sm mt-1">{{ form.errors.title }}</div>
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-300 mb-1">Description</label>
+                    <label class="block text-sm text-gray-300 mb-1">{{ $t('Description') }}</label>
                     <textarea v-model="form.body" rows="4" maxlength="2000"
                         class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-400/50"
-                        placeholder="Briefly: what it does, and why it would help."></textarea>
+                        :placeholder="$t('Briefly: what it does, and why it would help.')"></textarea>
                     <div v-if="form.errors.body" class="text-red-400 text-sm mt-1">{{ form.errors.body }}</div>
                 </div>
 
@@ -228,7 +228,7 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                 <div class="grid sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm text-gray-300 mb-1">
-                            Screenshot <span class="text-gray-600 font-normal">optional</span>
+                            {{ $t('Screenshot') }} <span class="text-gray-600 font-normal">{{ $t('optional') }}</span>
                         </label>
 
                         <div v-if="imagePreview" class="flex items-start gap-3">
@@ -236,7 +236,7 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                                 class="w-24 h-16 object-cover rounded-lg border border-white/10" />
                             <button type="button" @click="clearImage"
                                 class="text-sm text-gray-400 hover:text-red-300 transition-colors">
-                                Remove
+                                {{ $t('Remove') }}
                             </button>
                         </div>
 
@@ -245,29 +245,28 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                             class="w-full text-sm text-gray-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-white/10 file:text-gray-200 file:font-semibold hover:file:bg-white/20 file:cursor-pointer" />
 
                         <div v-if="form.errors.image" class="text-red-400 text-sm mt-1">{{ form.errors.image }}</div>
-                        <p v-else class="text-xs text-gray-600 mt-1">jpg, png, webp or gif, up to 4 MB.</p>
+                        <p v-else class="text-xs text-gray-600 mt-1">{{ $t('jpg, png, webp or gif, up to 4 MB.') }}</p>
                     </div>
 
                     <div>
                         <label class="block text-sm text-gray-300 mb-1">
-                            YouTube link <span class="text-gray-600 font-normal">optional</span>
+                            {{ $t('YouTube link') }} <span class="text-gray-600 font-normal">{{ $t('optional') }}</span>
                         </label>
                         <input v-model="form.youtube_url" type="text" maxlength="255"
                             class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-400/50"
                             placeholder="https://youtube.com/watch?v=..." />
                         <div v-if="form.errors.youtube_url" class="text-red-400 text-sm mt-1">{{ form.errors.youtube_url }}</div>
-                        <p v-else class="text-xs text-gray-600 mt-1">Any YouTube link works - watch, youtu.be or shorts.</p>
+                        <p v-else class="text-xs text-gray-600 mt-1">{{ $t('Any YouTube link works - watch, youtu.be or shorts.') }}</p>
                     </div>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3">
                     <button type="submit" :disabled="form.processing"
                         class="px-5 py-2.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-bold transition-colors disabled:opacity-50">
-                        Post it
+                        {{ $t('Post it') }}
                     </button>
                     <span class="text-sm text-gray-500">
-                        An admin reads it before it goes on the list. You will see it here with a
-                        "waiting" mark until then.
+                        {{ $t('An admin reads it before it goes on the list. You will see it here with a "waiting" mark until then.') }}
                     </span>
                 </div>
             </form>
@@ -279,7 +278,7 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
 
                 <aside class="mb-4 lg:mb-0">
                     <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl p-2 lg:sticky lg:top-4">
-                        <div class="px-2 py-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Projects</div>
+                        <div class="px-2 py-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">{{ $t('Projects') }}</div>
 
                         <!-- Horizontal scroll on small screens, a list on wide
                              ones: the same buttons either way. -->
@@ -287,7 +286,7 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                             <button @click="setProject(null)"
                                 class="shrink-0 lg:w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap"
                                 :class="!projectFilter ? 'bg-blue-500/20 text-blue-100' : 'text-gray-400 hover:text-white hover:bg-white/10'">
-                                <span>All projects</span>
+                                <span>{{ $t('All projects') }}</span>
                                 <span class="text-xs opacity-50">{{ totalWishes }}</span>
                             </button>
                             <button v-for="(label, key) in projects" :key="key" @click="setProject(key)"
@@ -306,7 +305,7 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                             <button @click="setFilter('open')"
                                 class="px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
                                 :class="filter === 'open' ? 'bg-purple-500/25 text-purple-100' : 'text-gray-400 hover:text-white hover:bg-white/10'">
-                                Open
+                                {{ $t('Open') }}
                             </button>
                             <button v-for="[key, label] in openStatuses" :key="key" @click="setFilter(key)"
                                 class="px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
@@ -333,18 +332,17 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                                 {{ votesLeft }}
                             </span>
                             <span class="text-xs text-gray-500">
-                                of {{ budget.total }} votes left
+                                {{ $tc('of :count vote left|of :count votes left', budget.total) }}
                             </span>
                         </div>
 
                         <div class="ml-auto text-xs text-gray-500">
-                            {{ wishes.length }} request<span v-if="wishes.length !== 1">s</span>
+                            {{ $tc(':count request|:count requests', wishes.length) }}
                         </div>
                     </div>
 
                     <div v-if="budget && budget.total && !votesLeft" class="mb-4 text-xs text-gray-500">
-                        You have spent all your votes. Take one back from a wish you care less about to
-                        free it up - downvotes and your own wishes never cost you anything.
+                        {{ $t('You have spent all your votes. Take one back from a wish you care less about to free it up - downvotes and your own wishes never cost you anything.') }}
                     </div>
 
                     <div v-if="voteError"
@@ -353,7 +351,7 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                     </div>
 
             <div v-if="!wishes.length" class="bg-black/40 border border-white/10 rounded-2xl p-10 text-center text-gray-500">
-                Nothing here yet. Be the first.
+                {{ $t('Nothing here yet. Be the first.') }}
             </div>
 
             <div v-else class="space-y-3">
@@ -365,7 +363,7 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                          so a contested wish does not read like an ignored one. -->
                     <div class="flex flex-col items-center gap-1 w-16 shrink-0" :class="wish.pending ? 'opacity-40' : ''">
                         <button @click="vote(wish, 1)" :disabled="!canUpvote(wish)"
-                            :title="user && !canUpvote(wish) ? 'No votes left - take one back from another wish' : ''"
+                            :title="user && !canUpvote(wish) ? $t('No votes left - take one back from another wish') : ''"
                             class="w-9 h-9 rounded-lg flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             :class="wish.my_vote === 1 ? 'bg-green-500/25 text-green-300' : 'bg-white/5 text-gray-400 hover:bg-white/10'">
                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l8 10h-6v6h-4v-6H4z"/></svg>
@@ -385,7 +383,7 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                         <div class="flex flex-wrap items-center gap-2 mb-1">
                             <span v-if="wish.pending"
                                 class="text-[11px] px-2 py-0.5 rounded border border-amber-400/40 bg-amber-500/15 text-amber-200 font-bold">
-                                Waiting for approval
+                                {{ $t('Waiting for approval') }}
                             </span>
                             <button type="button" @click="setProject(wish.project)"
                                 class="text-[11px] px-2 py-0.5 rounded border border-blue-400/30 bg-blue-500/15 text-blue-200 font-bold hover:bg-blue-500/25 transition-colors">
@@ -404,14 +402,14 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                         <div v-if="wish.image_url || wish.youtube_id" class="mt-3 flex items-center gap-2">
                             <button v-if="wish.image_url" type="button" @click="openLightbox(wish)"
                                 class="group relative rounded-lg overflow-hidden border border-white/10 hover:border-purple-400/50 transition-colors"
-                                title="Click to enlarge">
+                                :title="$t('Click to enlarge')">
                                 <img :src="wish.image_url" alt="" loading="lazy"
                                     class="w-20 h-14 object-cover group-hover:opacity-80 transition-opacity" />
                             </button>
 
                             <button v-if="wish.youtube_id" type="button" @click="openLightbox(wish)"
                                 class="group relative w-20 h-14 rounded-lg overflow-hidden border border-white/10 hover:border-purple-400/50 transition-colors"
-                                title="Click to play">
+                                :title="$t('Click to play')">
                                 <img :src="`https://i.ytimg.com/vi/${wish.youtube_id}/mqdefault.jpg`" alt="" loading="lazy"
                                     class="w-full h-full object-cover group-hover:opacity-80 transition-opacity" />
                                 <span class="absolute inset-0 flex items-center justify-center">
@@ -430,13 +428,13 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                             <Link v-if="wish.author" :href="`/profile/${wish.author.id}`" class="hover:underline">
                                 {{ wish.author.name }}
                             </Link>
-                            <span v-else>deleted account</span>
+                            <span v-else>{{ $t('deleted account') }}</span>
                             <span>{{ fmtDate(wish.created_at) }}</span>
                             <span v-if="wish.mine && wish.removal_requested" class="text-amber-300">
-                                Removal requested - waiting for an admin
+                                {{ $t('Removal requested - waiting for an admin') }}
                             </span>
                             <button v-else-if="wish.mine" @click="askRemoval(wish)" class="text-red-400 hover:underline">
-                                Ask an admin to remove it
+                                {{ $t('Ask an admin to remove it') }}
                             </button>
                         </div>
                     </div>
@@ -457,7 +455,7 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                     <div class="flex items-start justify-between gap-4 mb-2">
                         <h3 class="text-white font-bold">{{ lightbox.title }}</h3>
                         <button type="button" @click="closeLightbox"
-                            class="shrink-0 text-gray-400 hover:text-white transition-colors" aria-label="Close">
+                            class="shrink-0 text-gray-400 hover:text-white transition-colors" :aria-label="$t('Close')">
                             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                             </svg>
