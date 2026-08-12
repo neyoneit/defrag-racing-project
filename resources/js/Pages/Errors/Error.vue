@@ -29,13 +29,13 @@
                         @click="goBack"
                         class="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors font-semibold"
                     >
-                        Go Back
+                        {{ $t('Go Back') }}
                     </button>
                     <a
                         href="/"
                         class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors font-semibold"
                     >
-                        Go to Home
+                        {{ $t('Go to Home') }}
                     </a>
                 </div>
             </div>

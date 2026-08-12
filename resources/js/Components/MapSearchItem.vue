@@ -47,7 +47,7 @@
         <div class="flex-1 min-w-0">
             <div class="text-base font-black text-white group-hover:text-green-400 transition-colors truncate mb-0.5">{{ map.name }}</div>
             <div class="text-xs text-gray-400 font-semibold truncate">
-                <span class="text-gray-500">by</span> {{ map?.author ?? 'Unknown' }}
+                <span class="text-gray-500">{{ $t('by') }}</span> {{ map?.author ?? $t('Unknown') }}
             </div>
         </div>
 
@@ -74,7 +74,7 @@
             <div class="flex-1 min-w-0">
                 <div class="text-base font-black text-white group-hover:text-green-400 transition-colors truncate mb-0.5">{{ map.name }}</div>
                 <div class="text-xs text-gray-400 font-semibold truncate">
-                    <span class="text-gray-500">by</span> {{ map?.author ?? 'Unknown' }}
+                    <span class="text-gray-500">{{ $t('by') }}</span> {{ map?.author ?? $t('Unknown') }}
                 </div>
             </div>
             <svg class="w-5 h-5 text-gray-600 group-hover:text-green-400 group-hover:translate-x-1 transition-all shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

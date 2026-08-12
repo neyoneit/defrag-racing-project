@@ -32,15 +32,15 @@
                         <div class="text-xl text-white">{{ formatTime(demo.time) }}</div>
                     </div>
                     <div>
-                        <div class="text-sm text-gray-500">Uploaded <b>{{ timeSince(demo.created_at) }} ago</b></div>
-                        <div class="text-red-500" v-if="demo.rejected">Rejected: {{ demo.reason }}</div>
+                        <div class="text-sm text-gray-500" v-html="$t('Uploaded <b>:time</b> ago', { time: timeSince(demo.created_at) })"></div>
+                        <div class="text-red-500" v-if="demo.rejected">{{ $t('Rejected: :reason', { reason: demo.reason }) }}</div>
                     </div>
                 </div>
             </div>
 
             <div class="flex-1 justify-center flex-wrap items-center flex">
                 <a :href="route('tournaments.demos.download', demo.id)" download class="font-black text-lg leading-none mb-1 text-indigo-100 hover:underline cursor-pointer">
-                    Download
+                    {{ $t('Download') }}
                 </a>
             </div>
         </div>
