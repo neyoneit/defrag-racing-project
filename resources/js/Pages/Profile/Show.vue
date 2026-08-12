@@ -23,6 +23,7 @@ import SecondaryButton from '@/Components/Laravel/SecondaryButton.vue';
 import { Cropper } from 'vue-advanced-cropper';
 import draggable from 'vuedraggable';
 import 'vue-advanced-cropper/dist/style.css';
+import { t } from '@/utils/i18n';
 
 const props = defineProps({
     confirmsTwoFactorAuthentication: Boolean,
@@ -207,24 +208,24 @@ const updatePhysicsOrder = () => {
 };
 
 // Global Profile Preferences Form
-const profileSections = [
-    { id: 'activity_history', label: 'Activity History' },
-    { id: 'records', label: 'Records' },
-    { id: 'rendered_videos', label: 'Rendered Videos' },
-    { id: 'similar_skill_rivals', label: 'Similar Skill Rivals' },
-    { id: 'competitor_comparison', label: 'Competitor Comparison' },
-    { id: 'known_aliases', label: 'Known Aliases' },
-    { id: 'featured_maplists', label: 'Featured Maplists' },
-    { id: 'map_completionist', label: 'Map Completionist' },
-];
+const profileSections = computed(() => [
+    { id: 'activity_history', label: t('Activity History') },
+    { id: 'records', label: t('Records') },
+    { id: 'rendered_videos', label: t('Rendered Videos') },
+    { id: 'similar_skill_rivals', label: t('Similar Skill Rivals') },
+    { id: 'competitor_comparison', label: t('Competitor Comparison') },
+    { id: 'known_aliases', label: t('Known Aliases') },
+    { id: 'featured_maplists', label: t('Featured Maplists') },
+    { id: 'map_completionist', label: t('Map Completionist') },
+]);
 
-const statBoxItems = [
-    { id: 'performance', label: 'Performance' },
-    { id: 'activity', label: 'Activity' },
-    { id: 'record_types', label: 'Record Types' },
-    { id: 'map_features', label: 'Map Features' },
-    { id: 'renders', label: 'Renders' },
-];
+const statBoxItems = computed(() => [
+    { id: 'performance', label: t('Performance') },
+    { id: 'activity', label: t('Activity') },
+    { id: 'record_types', label: t('Record Types') },
+    { id: 'map_features', label: t('Map Features') },
+    { id: 'renders', label: t('Renders') },
+]);
 
 const aboutMeForm = useForm({ content: user.value.about_me || '' });
 const submitAboutMeSettings = () => {
@@ -275,61 +276,61 @@ const updateGlobalProfilePreferences = () => {
     globalProfileForm.post(route('settings.global-profile-preferences'), { preserveScroll: true });
 };
 
-const avatarEffects = [
-    { id: 'none', name: 'None', icon: '⭕' },
-    { id: 'glow', name: 'Glow', icon: '✨' },
-    { id: 'pulse', name: 'Pulse', icon: '💓' },
-    { id: 'spin', name: 'Spin', icon: '🌀' },
-    { id: 'bounce', name: 'Bounce', icon: '⬆️' },
-    { id: 'shake', name: 'Shake', icon: '📳' },
-    { id: 'ring', name: 'Ring', icon: '💍' },
-    { id: 'fire', name: 'Fire', icon: '🔥' },
-    { id: 'electric', name: 'Electric', icon: '⚡' },
-    { id: 'rainbow', name: 'Rainbow', icon: '🌈' },
-    { id: 'portal', name: 'Portal', icon: '🌌' },
-    { id: 'hologram', name: 'Hologram', icon: '👾' },
-    { id: 'glitch', name: 'Glitch', icon: '📺' },
-    { id: 'frost', name: 'Frost', icon: '❄️' },
-    { id: 'neon', name: 'Neon', icon: '💡' },
-    { id: 'orbit', name: 'Orbit', icon: '🪐' },
-    { id: 'matrix', name: 'Matrix', icon: '🟢' },
-    { id: 'vortex', name: 'Vortex', icon: '🌪️' },
-    { id: 'quantum', name: 'Quantum', icon: '⚛️' },
-    { id: 'nebula', name: 'Nebula', icon: '☁️' },
-    { id: 'supernova', name: 'Supernova', icon: '💥' },
-    { id: 'digital', name: 'Digital', icon: '💾' },
-    { id: 'cosmic', name: 'Cosmic', icon: '🌠' },
-    { id: 'plasma', name: 'Plasma', icon: '🔮' }
-];
+const avatarEffects = computed(() => [
+    { id: 'none', name: t('None'), icon: '⭕' },
+    { id: 'glow', name: t('Glow'), icon: '✨' },
+    { id: 'pulse', name: t('Pulse'), icon: '💓' },
+    { id: 'spin', name: t('Spin'), icon: '🌀' },
+    { id: 'bounce', name: t('Bounce'), icon: '⬆️' },
+    { id: 'shake', name: t('Shake'), icon: '📳' },
+    { id: 'ring', name: t('Ring'), icon: '💍' },
+    { id: 'fire', name: t('Fire'), icon: '🔥' },
+    { id: 'electric', name: t('Electric'), icon: '⚡' },
+    { id: 'rainbow', name: t('Rainbow'), icon: '🌈' },
+    { id: 'portal', name: t('Portal'), icon: '🌌' },
+    { id: 'hologram', name: t('Hologram'), icon: '👾' },
+    { id: 'glitch', name: t('Glitch'), icon: '📺' },
+    { id: 'frost', name: t('Frost'), icon: '❄️' },
+    { id: 'neon', name: t('Neon'), icon: '💡' },
+    { id: 'orbit', name: t('Orbit'), icon: '🪐' },
+    { id: 'matrix', name: t('Matrix'), icon: '🟢' },
+    { id: 'vortex', name: t('Vortex'), icon: '🌪️' },
+    { id: 'quantum', name: t('Quantum'), icon: '⚛️' },
+    { id: 'nebula', name: t('Nebula'), icon: '☁️' },
+    { id: 'supernova', name: t('Supernova'), icon: '💥' },
+    { id: 'digital', name: t('Digital'), icon: '💾' },
+    { id: 'cosmic', name: t('Cosmic'), icon: '🌠' },
+    { id: 'plasma', name: t('Plasma'), icon: '🔮' }
+]);
 
-const nameEffects = [
-    { id: 'none', name: 'None', icon: '⭕' },
-    { id: 'wave', name: 'Wave', icon: '🌊' },
-    { id: 'bounce', name: 'Bounce', icon: '⬆️' },
-    { id: 'shake', name: 'Shake', icon: '📳' },
-    { id: 'glitch', name: 'Glitch', icon: '📺' },
-    { id: 'rainbow', name: 'Rainbow', icon: '🌈' },
-    { id: 'neon', name: 'Neon', icon: '💡' },
-    { id: 'typewriter', name: 'Typewriter', icon: '⌨️' },
-    { id: 'slide', name: 'Slide', icon: '➡️' },
-    { id: 'fade', name: 'Fade', icon: '👻' },
-    { id: 'zoom', name: 'Zoom', icon: '🔍' },
-    { id: 'flip', name: 'Flip', icon: '🔄' },
-    { id: 'shadow', name: 'Shadow', icon: '🌑' },
-    { id: 'gradient', name: 'Gradient', icon: '🎨' },
-    { id: 'electric', name: 'Electric', icon: '⚡' },
-    { id: 'fire', name: 'Fire Text', icon: '🔥' },
-    { id: 'matrix', name: 'Matrix', icon: '🟢' },
-    { id: 'cyber', name: 'Cyber', icon: '🤖' },
-    { id: 'vortex', name: 'Vortex', icon: '🌪️' },
-    { id: 'quantum', name: 'Quantum', icon: '⚛️' },
-    { id: 'nebula', name: 'Nebula', icon: '☁️' },
-    { id: 'wave-distort', name: 'Wave Distort', icon: '〰️' },
-    { id: 'plasma', name: 'Plasma', icon: '🔮' },
-    { id: 'cosmic', name: 'Cosmic', icon: '🌠' },
-    { id: 'shockwave', name: 'Shockwave', icon: '💥' },
-    { id: 'fractal', name: 'Fractal', icon: '🔺' }
-];
+const nameEffects = computed(() => [
+    { id: 'none', name: t('None'), icon: '⭕' },
+    { id: 'wave', name: t('Wave'), icon: '🌊' },
+    { id: 'bounce', name: t('Bounce'), icon: '⬆️' },
+    { id: 'shake', name: t('Shake'), icon: '📳' },
+    { id: 'glitch', name: t('Glitch'), icon: '📺' },
+    { id: 'rainbow', name: t('Rainbow'), icon: '🌈' },
+    { id: 'neon', name: t('Neon'), icon: '💡' },
+    { id: 'typewriter', name: t('Typewriter'), icon: '⌨️' },
+    { id: 'slide', name: t('Slide'), icon: '➡️' },
+    { id: 'fade', name: t('Fade'), icon: '👻' },
+    { id: 'zoom', name: t('Zoom'), icon: '🔍' },
+    { id: 'flip', name: t('Flip'), icon: '🔄' },
+    { id: 'shadow', name: t('Shadow'), icon: '🌑' },
+    { id: 'gradient', name: t('Gradient'), icon: '🎨' },
+    { id: 'electric', name: t('Electric'), icon: '⚡' },
+    { id: 'fire', name: t('Fire Text'), icon: '🔥' },
+    { id: 'matrix', name: t('Matrix'), icon: '🟢' },
+    { id: 'cyber', name: t('Cyber'), icon: '🤖' },
+    { id: 'vortex', name: t('Vortex'), icon: '🌪️' },
+    { id: 'quantum', name: t('Quantum'), icon: '⚛️' },
+    { id: 'nebula', name: t('Nebula'), icon: '☁️' },
+    { id: 'wave-distort', name: t('Wave Distort'), icon: '〰️' },
+    { id: 'plasma', name: t('Plasma'), icon: '🔮' },
+    { id: 'cosmic', name: t('Cosmic'), icon: '🌠' },
+    { id: 'shockwave', name: t('Shockwave'), icon: '💥' },
+    { id: 'fractal', name: t('Fractal'), icon: '🔺' }
+]);
 
 // Notifications Form
 const notifsForm = useForm({
@@ -368,27 +369,27 @@ const initialTab = validTabs.includes(urlParams.get('tab')) ? urlParams.get('tab
 const activeTab = ref(initialTab);
 
 // Creator sub-sections (for left nav scroll)
-const creatorSections = [
-    { id: 'creator-names', label: 'Creator Names' },
-    { id: 'creator-maps', label: 'Map Selector' },
-    { id: 'creator-pinned', label: 'Pinned Models' },
-    { id: 'creator-order', label: 'Model Order' },
-];
+const creatorSections = computed(() => [
+    { id: 'creator-names', label: t('Creator Names') },
+    { id: 'creator-maps', label: t('Map Selector') },
+    { id: 'creator-pinned', label: t('Pinned Models') },
+    { id: 'creator-order', label: t('Model Order') },
+]);
 
-const customizeSections = [
-    { id: 'customize-effects', label: 'Effects' },
-    { id: 'customize-intensity', label: 'Intensity' },
-    { id: 'customize-layout', label: 'Profile Layout' },
-];
+const customizeSections = computed(() => [
+    { id: 'customize-effects', label: t('Effects') },
+    { id: 'customize-intensity', label: t('Intensity') },
+    { id: 'customize-layout', label: t('Profile Layout') },
+]);
 
-const globalCustomizeSections = [
-    { id: 'gc-map-view', label: 'Map View Defaults' },
-    { id: 'gc-physics-order', label: 'Physics Order' },
-    { id: 'gc-date-format', label: 'Date Format' },
-    { id: 'gc-time-format', label: 'Time Format' },
-    { id: 'gc-hide-stats', label: 'Hide Stat Boxes' },
-    { id: 'gc-hide-sections', label: 'Hide Sections' },
-];
+const globalCustomizeSections = computed(() => [
+    { id: 'gc-map-view', label: t('Map View Defaults') },
+    { id: 'gc-physics-order', label: t('Physics Order') },
+    { id: 'gc-date-format', label: t('Date Format') },
+    { id: 'gc-time-format', label: t('Time Format') },
+    { id: 'gc-hide-stats', label: t('Hide Stat Boxes') },
+    { id: 'gc-hide-sections', label: t('Hide Sections') },
+]);
 
 const switchTab = (tabId) => {
     activeTab.value = tabId;
@@ -866,31 +867,31 @@ onMounted(() => {
     fetchCreatorProfile();
 });
 
-const tabs = [
-    { id: 'profile', label: 'Profile', icon: 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z' },
-    { id: 'global-customize', label: 'Global Customize', icon: 'M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75' },
-    { id: 'marketplace', label: 'Marketplace', icon: 'M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z' },
-    { id: 'notifications', label: 'Notifications', icon: 'M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0' },
-    { id: 'security', label: 'Security', icon: 'M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z' },
-    { id: 'streamer', label: 'Streamer', icon: 'm15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z', requiresTwitch: true },
-];
+const tabs = computed(() => [
+    { id: 'profile', label: t('Profile'), icon: 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z' },
+    { id: 'global-customize', label: t('Global Customize'), icon: 'M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75' },
+    { id: 'marketplace', label: t('Marketplace'), icon: 'M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z' },
+    { id: 'notifications', label: t('Notifications'), icon: 'M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0' },
+    { id: 'security', label: t('Security'), icon: 'M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z' },
+    { id: 'streamer', label: t('Streamer'), icon: 'm15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z', requiresTwitch: true },
+]);
 
-const profileSubTabs = [
-    { id: 'creator', label: 'Creator', icon: 'M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z' },
-    { id: 'customize', label: 'Customize', icon: 'M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42' },
-];
+const profileSubTabs = computed(() => [
+    { id: 'creator', label: t('Creator'), icon: 'M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z' },
+    { id: 'customize', label: t('Customize'), icon: 'M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42' },
+]);
 
 const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(tabId);
 const filteredTabs = computed(() => {
-    let t = isVerified.value ? tabs : tabs.filter(t => ['profile', 'security'].includes(t.id));
-    return t.filter(tab => !tab.requiresTwitch || hasTwitch.value);
+    const visible = isVerified.value ? tabs.value : tabs.value.filter(tab => ['profile', 'security'].includes(tab.id));
+    return visible.filter(tab => !tab.requiresTwitch || hasTwitch.value);
 });
-const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs : []);
+const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs.value : []);
 </script>
 
 <template>
     <div class="min-h-screen pb-4 relative">
-        <Head title="Settings" />
+        <Head :title="$t('Settings')" />
 
         <!-- Fade shadow at top (absolute positioned behind everything) -->
         <div class="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/25 via-black/10 to-transparent pointer-events-none" style="height: 600px; z-index: 0;"></div>
@@ -899,8 +900,8 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
         <div class="relative pt-6 pb-8" style="z-index: 10;">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div>
-                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">Settings</h1>
-                    <p class="text-sm text-gray-400">Customize your profile and preferences</p>
+                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">{{ $t('Settings') }}</h1>
+                    <p class="text-sm text-gray-400">{{ $t('Customize your profile and preferences') }}</p>
                 </div>
             </div>
         </div>
@@ -1044,8 +1045,8 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                         </svg>
                     </div>
                     <div class="flex-1">
-                        <p class="text-white font-bold text-lg">Link your MDD Account</p>
-                        <p class="text-gray-400 text-sm">Connect your Q3DF.org profile to unlock records, rankings, tournaments and more.</p>
+                        <p class="text-white font-bold text-lg">{{ $t('Link your MDD Account') }}</p>
+                        <p class="text-gray-400 text-sm">{{ $t('Connect your Q3DF.org profile to unlock records, rankings, tournaments and more.') }}</p>
                     </div>
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6 text-gray-400 group-hover:text-white group-hover:translate-x-1 transition-all shrink-0">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
@@ -1064,24 +1065,24 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                                     </svg>
                                 </div>
-                                <h2 class="text-sm font-bold text-white">Profile</h2>
+                                <h2 class="text-sm font-bold text-white">{{ $t('Profile') }}</h2>
                             </div>
                             <div class="flex items-center gap-2">
                                 <div v-if="profileForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
                                     <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                     </svg>
-                                    <span class="text-xs font-medium text-green-400">Saved</span>
+                                    <span class="text-xs font-medium text-green-400">{{ $t('Saved') }}</span>
                                 </div>
                                 <PrimaryButton type="button" @click="updateProfile" :disabled="profileForm.processing">
-                                    Save
+                                    {{ $t('Save') }}
                                 </PrimaryButton>
                             </div>
                         </div>
 
                         <form @submit.prevent="updateProfile" class="grid grid-cols-2 md:grid-cols-4 gap-3" data-lpignore="true" data-1p-ignore data-bwignore>
                             <div>
-                                <InputLabel for="username" value="Username" />
+                                <InputLabel for="username" :value="$t('Username')" />
                                 <TextInput
                                     id="username"
                                     type="text"
@@ -1092,7 +1093,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                             </div>
 
                             <div>
-                                <InputLabel for="email" value="Email" />
+                                <InputLabel for="email" :value="$t('Email')" />
                                 <TextInput
                                     id="email"
                                     v-model="profileForm.email"
@@ -1103,7 +1104,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
 
                             <div>
                                 <InputLabel for="name">
-                                    Display Name <span v-html="'(' + q3tohtml(profileForm.name) + ')'"></span>
+                                    {{ $t('Display Name') }} <span v-html="'(' + q3tohtml(profileForm.name) + ')'"></span>
                                 </InputLabel>
                                 <TextInput
                                     id="name"
@@ -1115,7 +1116,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                             </div>
 
                             <div>
-                                <InputLabel for="country" value="Country" />
+                                <InputLabel for="country" :value="$t('Country')" />
                                 <CountrySelect :setCountry="setCountry" :selectedCountry="profileForm.country" class="mt-1" />
                             </div>
                         </form>
@@ -1138,17 +1139,17 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
                                 </svg>
                             </div>
-                            <h2 class="text-sm font-bold text-white">Profile Images</h2>
+                            <h2 class="text-sm font-bold text-white">{{ $t('Profile Images') }}</h2>
                         </div>
                         <div class="flex items-center gap-2">
                             <div v-if="profileForm.recentlySuccessful || backgroundForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
                                 <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>
-                                <span class="text-xs font-medium text-green-400">Saved</span>
+                                <span class="text-xs font-medium text-green-400">{{ $t('Saved') }}</span>
                             </div>
                             <PrimaryButton type="button" @click="updateProfile" :disabled="profileForm.processing">
-                                Save
+                                {{ $t('Save') }}
                             </PrimaryButton>
                         </div>
                     </div>
@@ -1157,8 +1158,8 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                         <!-- Avatar Upload -->
                         <div>
                             <input ref="photoInput" type="file" class="hidden" @change="updatePhotoPreview" accept="image/*" />
-                            <InputLabel value="Avatar" class="text-sm font-medium mb-2" />
-                            <div class="text-xs text-gray-400 mb-4">Max 1MB. GIF supported.</div>
+                            <InputLabel :value="$t('Avatar')" class="text-sm font-medium mb-2" />
+                            <div class="text-xs text-gray-400 mb-4">{{ $t('Max 1MB. GIF supported.') }}</div>
                             <div class="flex flex-col items-center gap-4">
                                 <div v-if="photoPreview" class="shrink-0">
                                     <img :src="photoPreview" class="rounded-full h-32 w-32 object-cover border-2 border-white/20 shadow-lg">
@@ -1167,14 +1168,14 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                     <img :src="'/storage/' + user.profile_photo_path" class="rounded-full h-32 w-32 object-cover border-2 border-white/20 shadow-lg">
                                 </div>
                                 <div v-else class="shrink-0 w-32 h-32 rounded-full bg-gray-700 border-2 border-dashed border-white/20 flex items-center justify-center">
-                                    <span class="text-xs text-gray-500">No avatar</span>
+                                    <span class="text-xs text-gray-500">{{ $t('No avatar') }}</span>
                                 </div>
                                 <div class="flex gap-2">
                                     <button type="button" @click="selectNewPhoto" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-md transition">
-                                        Change
+                                        {{ $t('Change') }}
                                     </button>
                                     <button v-if="user.profile_photo_path" type="button" @click="deletePhoto" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold rounded-md transition">
-                                        Remove
+                                        {{ $t('Remove') }}
                                     </button>
                                 </div>
                             </div>
@@ -1184,21 +1185,21 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                         <!-- Background Upload -->
                         <div>
                             <input ref="backgroundInput" type="file" class="hidden" @change="updateBackgroundPreview" accept="image/*" />
-                            <InputLabel value="Background" class="text-sm font-medium mb-2" />
-                            <div class="text-xs text-gray-400 mb-4">Recommended: 1920x400px. Max 5MB. GIF supported.</div>
+                            <InputLabel :value="$t('Background')" class="text-sm font-medium mb-2" />
+                            <div class="text-xs text-gray-400 mb-4">{{ $t('Recommended: 1920x400px. Max 5MB. GIF supported.') }}</div>
                             <div class="space-y-4">
                                 <div v-if="backgroundPreview || user.profile_background_path" class="w-full h-32 rounded-lg overflow-hidden border-2 border-white/20 shadow-lg">
                                     <img :src="backgroundPreview || '/storage/' + user.profile_background_path" class="w-full h-full object-cover" />
                                 </div>
                                 <div v-else class="w-full h-32 rounded-lg bg-gray-700 border-2 border-dashed border-white/20 flex items-center justify-center">
-                                    <span class="text-xs text-gray-500">No background image</span>
+                                    <span class="text-xs text-gray-500">{{ $t('No background image') }}</span>
                                 </div>
                                 <div class="flex gap-2">
                                     <button type="button" @click="selectNewBackground" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-md transition">
-                                        Change
+                                        {{ $t('Change') }}
                                     </button>
                                     <button v-if="user.profile_background_path" type="button" @click="deleteBackground" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold rounded-md transition">
-                                        Remove
+                                        {{ $t('Remove') }}
                                     </button>
                                 </div>
                             </div>
@@ -1226,10 +1227,10 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                         </div>
                         <div class="flex gap-2 mt-4">
                             <PrimaryButton type="button" @click="handleBackgroundCrop">
-                                Crop & Upload
+                                {{ $t('Crop & Upload') }}
                             </PrimaryButton>
                             <SecondaryButton type="button" @click="cancelBackgroundCrop">
-                                Cancel
+                                {{ $t('Cancel') }}
                             </SecondaryButton>
                         </div>
                     </div>
@@ -1251,20 +1252,20 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                             </svg>
                         </div>
                         <div>
-                            <h2 class="text-sm font-bold text-white">About Me</h2>
-                            <p class="text-xs text-gray-500">Visible on hover over your name on your profile. All changes reviewed by moderators.</p>
+                            <h2 class="text-sm font-bold text-white">{{ $t('About Me') }}</h2>
+                            <p class="text-xs text-gray-500">{{ $t('Visible on hover over your name on your profile. All changes reviewed by moderators.') }}</p>
                         </div>
                     </div>
                     <div>
                         <textarea v-model="aboutMeForm.content"
                             class="w-full bg-gray-800/60 border border-gray-700/50 rounded-lg p-3 text-sm text-white placeholder-gray-600 focus:border-amber-500/50 focus:outline-none resize-none"
                             rows="3" maxlength="500"
-                            placeholder="Write something about yourself..."></textarea>
+                            :placeholder="$t('Write something about yourself...')"></textarea>
                         <div class="flex items-center justify-between mt-2">
                             <span class="text-[10px] text-gray-600">{{ aboutMeForm.content?.length || 0 }}/500</span>
                             <button @click="submitAboutMeSettings" :disabled="aboutMeForm.processing || !aboutMeForm.content?.trim()"
                                 class="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-xs font-bold rounded-lg transition-colors">
-                                {{ aboutMeForm.processing ? 'Submitting...' : 'Submit for Review' }}
+                                {{ aboutMeForm.processing ? $t('Submitting...') : $t('Submit for Review') }}
                             </button>
                         </div>
                     </div>
@@ -1286,26 +1287,26 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                             </svg>
                         </div>
                         <div>
-                            <h2 class="text-lg font-black text-white mb-1">Creator Profile</h2>
+                            <h2 class="text-lg font-black text-white mb-1">{{ $t('Creator Profile') }}</h2>
                             <p class="text-sm text-gray-400 leading-relaxed">
-                                Link your mapper or model author names to your account. A <span class="text-green-400 font-bold">Mapper</span> and/or <span class="text-blue-400 font-bold">Modeler</span> tab will appear on your profile showcasing your work.
+                                {{ $t('Link your mapper or model author names to your account. A') }} <span class="text-green-400 font-bold">{{ $t('Mapper') }}</span> {{ $t('and/or') }} <span class="text-blue-400 font-bold">{{ $t('Modeler') }}</span> {{ $t('tab will appear on your profile showcasing your work.') }}
                             </p>
                             <div class="mt-3 space-y-1.5 text-xs text-gray-500">
                                 <div class="flex items-start gap-2">
                                     <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                    <span>Your claimed name matches maps where the author field contains your name as a <span class="text-gray-300">standalone word</span>. Collaboration separators (spaces, &amp;, -, +, @, commas, etc.) are recognized - e.g. claiming <span class="text-orange-400">"Foo"</span> will match <span class="text-gray-300">"Foo"</span>, <span class="text-gray-300">"Foo &amp; Bar"</span>, or <span class="text-gray-300">"Foo@Bar"</span>, but <span class="text-red-400">NOT</span> <span class="text-gray-300">"SgtFoo"</span> or <span class="text-gray-300">"Foobar"</span></span>
+                                    <span>{{ $t('Your claimed name matches maps where the author field contains your name as a') }} <span class="text-gray-300">{{ $t('standalone word') }}</span>{{ $t('. Collaboration separators (spaces, &, -, +, @, commas, etc.) are recognized - e.g. claiming') }} <span class="text-orange-400">"Foo"</span> <span class="text-gray-300">{{ $t('will match "Foo", "Foo & Bar", or "Foo@Bar", but') }}</span> <span class="text-red-400">{{ $t('NOT') }}</span> <span class="text-gray-300">{{ $t('"SgtFoo" or "Foobar"') }}</span></span>
                                 </div>
                                 <div class="flex items-start gap-2">
                                     <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                    <span>If another user claims a more specific name (e.g. <span class="text-orange-400">"Foo@Bar"</span>), those maps <span class="text-gray-300">automatically move</span> to their profile since it's a more precise match</span>
+                                    <span>{{ $t('If another user claims a more specific name (e.g.') }} <span class="text-orange-400">"Foo@Bar"</span>{{ $t('), those maps') }} <span class="text-gray-300">{{ $t('automatically move') }}</span> {{ $t("to their profile since it's a more precise match") }}</span>
                                 </div>
                                 <div class="flex items-start gap-2">
                                     <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                    <span>New maps added to the database are <span class="text-gray-300">automatically included</span> - no need to re-claim</span>
+                                    <span>{{ $t('New maps added to the database are') }} <span class="text-gray-300">{{ $t('automatically included') }}</span> {{ $t('- no need to re-claim') }}</span>
                                 </div>
                                 <div class="flex items-start gap-2">
                                     <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                    <span>You can claim multiple names if you've published under different aliases</span>
+                                    <span>{{ $t("You can claim multiple names if you've published under different aliases") }}</span>
                                 </div>
                             </div>
                         </div>
@@ -1321,21 +1322,21 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                     <div class="p-4">
                         <!-- Add New Claim (at the top) -->
                         <div class="bg-black/20 rounded-lg border border-white/5 p-4 mb-4">
-                            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Add Creator Name</div>
+                            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">{{ $t('Add Creator Name') }}</div>
                             <div class="flex items-center gap-1 mb-3">
                                 <button @click="newClaimType = 'map'; previewClaim()" type="button"
                                     class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all"
                                     :class="newClaimType === 'map' ? 'bg-green-600/30 text-green-400 border border-green-500/40' : 'bg-black/30 text-gray-500 border border-white/5 hover:text-gray-300'">
-                                    Map Author
+                                    {{ $t('Map Author') }}
                                 </button>
                                 <button @click="newClaimType = 'model'; previewClaim()" type="button"
                                     class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all"
                                     :class="newClaimType === 'model' ? 'bg-blue-600/30 text-blue-400 border border-blue-500/40' : 'bg-black/30 text-gray-500 border border-white/5 hover:text-gray-300'">
-                                    Model Author
+                                    {{ $t('Model Author') }}
                                 </button>
                             </div>
                             <div class="flex items-center gap-2">
-                                <input v-model="newClaimName" type="text" placeholder="Type author name to search..."
+                                <input v-model="newClaimName" type="text" :placeholder="$t('Type author name to search...')"
                                     @input="previewClaim"
                                     @keyup.enter="addMapperClaim"
                                     class="flex-1 px-3 py-2.5 rounded-lg bg-black/40 border border-white/10 text-sm text-white placeholder-gray-500 focus:border-green-500/50 focus:outline-none">
@@ -1343,50 +1344,50 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                     :disabled="!newClaimName.trim() || (claimPreview && claimPreview.count === 0) || claimPreview?.claimed_by"
                                     class="px-5 py-2.5 rounded-lg text-sm font-bold transition disabled:opacity-30 disabled:cursor-not-allowed"
                                     :class="claimPreview && claimPreview.count > 0 && !claimPreview.claimed_by ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-gray-700 text-gray-400'">
-                                    Add
+                                    {{ $t('Add') }}
                                 </button>
                             </div>
                             <div v-if="loadingPreview" class="mt-3 flex items-center gap-2 text-xs text-gray-500">
                                 <div class="animate-spin rounded-full h-3 w-3 border-t border-b border-green-500"></div>
-                                Searching...
+                                {{ $t('Searching...') }}
                             </div>
                             <div v-else-if="claimPreview" class="mt-3">
                                 <div v-if="claimPreview.claimed_by" class="mb-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                                     <div class="flex items-center justify-between gap-2">
                                         <div class="flex items-center gap-2 text-sm text-yellow-400">
                                             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
-                                            <span>Already claimed by
+                                            <span>{{ $t('Already claimed by') }}
                                                 <a :href="`/profile/${claimPreview.claimed_by.user_id}`" class="font-bold hover:underline inline" v-html="q3tohtml(claimPreview.claimed_by.user_name)"></a>
                                             </span>
                                         </div>
                                         <button v-if="!reportSent" @click="showReportForm = !showReportForm"
                                             class="text-xs px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 font-medium transition shrink-0 border border-red-500/20">
-                                            Dispute Claim
+                                            {{ $t('Dispute Claim') }}
                                         </button>
-                                        <span v-else class="text-xs text-green-400 font-medium shrink-0">Reported</span>
+                                        <span v-else class="text-xs text-green-400 font-medium shrink-0">{{ $t('Reported') }}</span>
                                     </div>
                                     <div v-if="showReportForm && !reportSent" class="mt-3 pt-3 border-t border-yellow-500/20">
-                                        <p class="text-xs text-gray-400 mb-2">If you believe this name was claimed incorrectly, describe why you are the rightful author:</p>
-                                        <textarea v-model="reportReason" rows="2" placeholder="e.g. I am the original author..."
+                                        <p class="text-xs text-gray-400 mb-2">{{ $t('If you believe this name was claimed incorrectly, describe why you are the rightful author:') }}</p>
+                                        <textarea v-model="reportReason" rows="2" :placeholder="$t('e.g. I am the original author...')"
                                             class="w-full bg-black/30 border border-white/10 text-white rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-red-500 placeholder-gray-500 mb-2"></textarea>
                                         <div v-if="reportError" class="text-xs text-red-400 mb-2">{{ reportError }}</div>
                                         <div class="flex items-center gap-2">
                                             <button @click="reportClaim" :disabled="reportingClaim"
                                                 class="px-3 py-1.5 bg-red-600 hover:bg-red-500 disabled:bg-gray-700 text-white text-xs font-medium rounded-lg transition">
-                                                {{ reportingClaim ? 'Submitting...' : 'Submit Dispute' }}
+                                                {{ reportingClaim ? $t('Submitting...') : $t('Submit Dispute') }}
                                             </button>
-                                            <button @click="showReportForm = false" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-400 text-xs rounded-lg transition">Cancel</button>
+                                            <button @click="showReportForm = false" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-400 text-xs rounded-lg transition">{{ $t('Cancel') }}</button>
                                         </div>
                                     </div>
                                 </div>
                                 <div v-if="claimPreview.count === 0" class="text-xs text-red-400 flex items-center gap-1.5">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                                    No {{ newClaimType === 'model' ? 'models' : 'maps' }} found with this author name
+                                    {{ newClaimType === 'model' ? $t('No models found with this author name') : $t('No maps found with this author name') }}
                                 </div>
                                 <div v-else>
                                     <div class="text-xs font-bold mb-2 flex items-center gap-1.5" :class="claimPreview.claimed_by ? 'text-gray-400' : 'text-green-400'">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                        {{ claimPreview.count }} {{ newClaimType === 'model' ? 'models' : 'maps' }} found
+                                        {{ newClaimType === 'model' ? $tc(':count model found|:count models found', claimPreview.count) : $tc(':count map found|:count maps found', claimPreview.count) }}
                                     </div>
                                     <!-- Map previews -->
                                     <div v-if="claimPreview.maps?.length" class="grid grid-cols-4 gap-2">
@@ -1395,7 +1396,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                             <div class="h-16 bg-cover bg-center" :style="`background-image: url('/storage/${map.thumbnail}')`"></div>
                                             <div class="px-2 py-1.5">
                                                 <div class="text-[11px] font-bold text-white truncate">{{ map.name }}</div>
-                                                <div class="text-[10px] text-gray-500 truncate">by {{ map.author }}</div>
+                                                <div class="text-[10px] text-gray-500 truncate">{{ $t('by :author', { author: map.author }) }}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -1406,12 +1407,12 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                             <div class="h-16 bg-cover bg-center" :style="`background-image: url('/storage/${model.thumbnail}')`"></div>
                                             <div class="px-2 py-1.5">
                                                 <div class="text-[11px] font-bold text-white truncate">{{ model.name }}</div>
-                                                <div class="text-[10px] text-gray-500 truncate">by {{ model.author }}</div>
+                                                <div class="text-[10px] text-gray-500 truncate">{{ $t('by :author', { author: model.author }) }}</div>
                                             </div>
                                         </div>
                                     </div>
                                     <div v-if="claimPreview.count > 8" class="text-[10px] text-gray-500 mt-1.5">
-                                        ...and {{ claimPreview.count - 8 }} more
+                                        {{ $t('...and :count more', { count: claimPreview.count - 8 }) }}
                                     </div>
                                 </div>
                             </div>
@@ -1423,13 +1424,13 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                         </div>
                         <div v-else-if="mapperClaims.length" class="space-y-2 mt-4">
                             <div class="flex items-center justify-between mb-2">
-                                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Your Claims</h4>
+                                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">{{ $t('Your Claims') }}</h4>
                                 <div class="flex items-center gap-2">
                                     <div v-if="mapperClaimsSaved" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
                                         <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                        <span class="text-xs font-medium text-green-400">Saved</span>
+                                        <span class="text-xs font-medium text-green-400">{{ $t('Saved') }}</span>
                                     </div>
-                                    <PrimaryButton type="button" @click="saveMapperClaims" :disabled="savingMapperClaims" class="text-xs">Save</PrimaryButton>
+                                    <PrimaryButton type="button" @click="saveMapperClaims" :disabled="savingMapperClaims" class="text-xs">{{ $t('Save') }}</PrimaryButton>
                                 </div>
                             </div>
                             <div v-for="(claim, idx) in mapperClaims" :key="idx"
@@ -1443,8 +1444,8 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                         </span>
                                     </div>
                                     <div v-if="claim.matching_count !== undefined" class="text-xs text-gray-500 mt-0.5">
-                                        <span class="text-green-400 font-bold">{{ claim.matching_count }}</span> matching {{ claim.type === 'model' ? 'models' : 'maps' }}
-                                        <span v-if="claim.exclusions_count" class="text-yellow-400 ml-1">({{ claim.exclusions_count }} excluded)</span>
+                                        <span class="text-green-400 font-bold">{{ claim.matching_count }}</span> {{ claim.type === 'model' ? $t('matching models') : $t('matching maps') }}
+                                        <span v-if="claim.exclusions_count" class="text-yellow-400 ml-1">({{ $t(':count excluded', { count: claim.exclusions_count }) }})</span>
                                     </div>
                                 </div>
                                 <button @click="removeMapperClaim(idx)" class="text-red-400 hover:text-red-300 transition p-1.5 rounded hover:bg-red-500/10 flex-shrink-0">
@@ -1455,7 +1456,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                             </div>
                         </div>
                         <div v-else-if="!loadingMapperClaims" class="text-center py-4 text-sm text-gray-500 mt-4">
-                            No creator names claimed yet
+                            {{ $t('No creator names claimed yet') }}
                         </div>
                     </div>
                 </div>
@@ -1465,21 +1466,21 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
             <div id="creator-maps" class="mt-4">
                 <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
                     <div class="p-4">
-                        <h3 class="text-sm font-bold text-white mb-1">Map Selector</h3>
-                        <p class="text-xs text-gray-500 mb-4">Include or exclude specific maps from your Mapper profile tab. Click a map to toggle it.</p>
+                        <h3 class="text-sm font-bold text-white mb-1">{{ $t('Map Selector') }}</h3>
+                        <p class="text-xs text-gray-500 mb-4">{{ $t('Include or exclude specific maps from your Mapper profile tab. Click a map to toggle it.') }}</p>
 
                         <div v-if="!mapperClaims.filter(c => c.type === 'map').length" class="text-center py-8 text-sm text-gray-500">
-                            No map author claims yet. Add one in the "Your Creator Names" tab first.
+                            {{ $t('No map author claims yet. Add one in the "Your Creator Names" tab first.') }}
                         </div>
 
                         <div v-for="(claim, idx) in mapperClaims.filter(c => c.type === 'map')" :key="idx" class="mb-4 last:mb-0">
                             <div class="flex items-center gap-2 mb-3">
                                 <span class="text-xs font-bold text-green-400">{{ claim.name }}</span>
                                 <div v-if="claim.id && claimMapsById[claim.id]" class="text-xs text-gray-400">
-                                    <span class="text-green-400 font-bold">{{ (claimMapsById[claim.id] || []).filter(m => !m.excluded).length }}</span> included,
-                                    <span class="text-red-400 font-bold">{{ (claimMapsById[claim.id] || []).filter(m => m.excluded).length }}</span> excluded
+                                    <span class="text-green-400 font-bold">{{ (claimMapsById[claim.id] || []).filter(m => !m.excluded).length }}</span> {{ $t('included,') }}
+                                    <span class="text-red-400 font-bold">{{ (claimMapsById[claim.id] || []).filter(m => m.excluded).length }}</span> {{ $t('excluded') }}
                                 </div>
-                                <input v-if="claim.id" v-model="claimSearches[claim.id]" @input="searchClaimMaps(claim.id)" type="text" placeholder="Search..."
+                                <input v-if="claim.id" v-model="claimSearches[claim.id]" @input="searchClaimMaps(claim.id)" type="text" :placeholder="$t('Search...')"
                                     class="ml-auto px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white placeholder-gray-500 focus:border-blue-500/50 focus:outline-none w-48">
                             </div>
 
@@ -1505,8 +1506,8 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                         </div>
                                         <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
                                             :class="map.excluded ? 'bg-green-900/60' : 'bg-red-900/60'">
-                                            <span v-if="map.excluded" class="text-xs font-bold text-green-300 bg-black/50 px-3 py-1 rounded-full">Click to Include</span>
-                                            <span v-else class="text-xs font-bold text-red-300 bg-black/50 px-3 py-1 rounded-full">Click to Exclude</span>
+                                            <span v-if="map.excluded" class="text-xs font-bold text-green-300 bg-black/50 px-3 py-1 rounded-full">{{ $t('Click to Include') }}</span>
+                                            <span v-else class="text-xs font-bold text-red-300 bg-black/50 px-3 py-1 rounded-full">{{ $t('Click to Exclude') }}</span>
                                         </div>
                                     </div>
                                     <div class="px-2 py-1.5" :class="map.excluded ? 'bg-red-950/40' : 'bg-black/60'">
@@ -1526,36 +1527,36 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                     <div class="p-4">
                         <div class="mb-3">
                             <div class="flex items-center justify-between">
-                                <h3 class="text-sm font-bold text-white">Pinned Models</h3>
+                                <h3 class="text-sm font-bold text-white">{{ $t('Pinned Models') }}</h3>
                                 <div class="flex items-center gap-2 flex-shrink-0">
                                     <div v-if="pinnedModelsSaved" class="flex items-center gap-1 px-2 py-0.5 rounded bg-green-500/10 border border-green-500/20">
                                         <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                        <span class="text-[10px] text-green-400">Saved</span>
+                                        <span class="text-[10px] text-green-400">{{ $t('Saved') }}</span>
                                     </div>
-                                    <span class="text-xs text-gray-400"><span class="text-blue-400 font-bold">{{ pinnedModelIds.length }}</span>/2 pinned</span>
+                                    <span class="text-xs text-gray-400"><span class="text-blue-400 font-bold">{{ pinnedModelIds.length }}</span>{{ $t('/2 pinned') }}</span>
                                 </div>
                             </div>
-                            <p class="text-xs text-gray-500 mt-1">Select up to 2 models to feature in an interactive 3D viewer at the top of your Modeler profile tab. The first pinned model appears on the left, the second on the right.</p>
+                            <p class="text-xs text-gray-500 mt-1">{{ $t('Select up to 2 models to feature in an interactive 3D viewer at the top of your Modeler profile tab. The first pinned model appears on the left, the second on the right.') }}</p>
                         </div>
 
                         <div v-if="!mapperClaims.some(c => c.type === 'model')" class="text-center py-8 text-sm text-gray-500">
-                            No model author claims yet. Add one in the "Your Creator Names" tab first.
+                            {{ $t('No model author claims yet. Add one in the "Your Creator Names" tab first.') }}
                         </div>
 
                         <template v-else-if="allCreatorModels.length > 0">
                             <!-- Current pins summary -->
                             <div class="flex items-center gap-4 mb-3 p-2 rounded-lg bg-blue-950/20 border border-blue-500/10" style="min-height: 36px;">
-                                <span v-if="pinnedModelIds.length === 0" class="text-[10px] text-gray-600 mx-auto">No models pinned yet. Hover left/right on a model to pin it.</span>
+                                <span v-if="pinnedModelIds.length === 0" class="text-[10px] text-gray-600 mx-auto">{{ $t('No models pinned yet. Hover left/right on a model to pin it.') }}</span>
                                 <div v-for="(id, idx) in pinnedModelIds" :key="id" class="flex items-center gap-1.5">
-                                    <span class="text-[10px] font-bold uppercase" :class="idx === 0 ? 'text-cyan-400' : 'text-orange-400'">{{ idx === 0 ? 'Left' : 'Right' }}:</span>
+                                    <span class="text-[10px] font-bold uppercase" :class="idx === 0 ? 'text-cyan-400' : 'text-orange-400'">{{ idx === 0 ? $t('Left') : $t('Right') }}:</span>
                                     <span class="text-[10px] font-bold text-blue-300">{{ allCreatorModels.find(m => m.id === id)?.name || '?' }}</span>
-                                    <button @click.stop="unpinModel(id)" class="text-red-400 hover:text-red-300 ml-0.5" title="Unpin">
+                                    <button @click.stop="unpinModel(id)" class="text-red-400 hover:text-red-300 ml-0.5" :title="$t('Unpin')">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                                     </button>
                                 </div>
-                                <button v-if="pinnedModelIds.length === 2" @click.stop="pinnedModelIds.reverse(); savePinnedModels()" class="text-gray-400 hover:text-white ml-auto text-[10px] font-bold flex items-center gap-1 px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition" title="Swap positions">
+                                <button v-if="pinnedModelIds.length === 2" @click.stop="pinnedModelIds.reverse(); savePinnedModels()" class="text-gray-400 hover:text-white ml-auto text-[10px] font-bold flex items-center gap-1 px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition" :title="$t('Swap positions')">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>
-                                    Swap
+                                    {{ $t('Swap') }}
                                 </button>
                             </div>
 
@@ -1583,7 +1584,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                                 :class="getPinSide(model.id) === 'L' ? 'bg-red-900/60' : 'bg-cyan-900/60'">
                                                 <span class="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-black/50"
                                                     :class="getPinSide(model.id) === 'L' ? 'text-red-300' : 'text-cyan-300'">
-                                                    {{ getPinSide(model.id) === 'L' ? 'UNPIN' : 'LEFT' }}
+                                                    {{ getPinSide(model.id) === 'L' ? $t('UNPIN') : $t('LEFT') }}
                                                 </span>
                                             </div>
                                         </div>
@@ -1595,7 +1596,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                                 :class="getPinSide(model.id) === 'R' ? 'bg-red-900/60' : 'bg-orange-900/60'">
                                                 <span class="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-black/50"
                                                     :class="getPinSide(model.id) === 'R' ? 'text-red-300' : 'text-orange-300'">
-                                                    {{ getPinSide(model.id) === 'R' ? 'UNPIN' : 'RIGHT' }}
+                                                    {{ getPinSide(model.id) === 'R' ? $t('UNPIN') : $t('RIGHT') }}
                                                 </span>
                                             </div>
                                         </div>
@@ -1611,7 +1612,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
 
                                     <div class="px-1.5 py-1" :class="getPinSide(model.id) === 'L' ? 'bg-cyan-950/40' : getPinSide(model.id) === 'R' ? 'bg-orange-950/40' : 'bg-black/60'">
                                         <div class="text-[10px] font-bold truncate" :class="getPinSide(model.id) === 'L' ? 'text-cyan-300' : getPinSide(model.id) === 'R' ? 'text-orange-300' : 'text-white'">{{ model.name }}</div>
-                                        <div class="text-[9px] text-gray-600">{{ model.downloads }} dl</div>
+                                        <div class="text-[9px] text-gray-600">{{ $t(':count dl', { count: model.downloads }) }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -1630,17 +1631,17 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                     <div class="p-4">
                         <div class="flex items-center justify-between mb-3">
                             <div>
-                                <h3 class="text-sm font-bold text-white mb-1">Model Group Order</h3>
-                                <p class="text-xs text-gray-500">Drag to reorder how model groups appear on your Modeler profile tab. Groups are organized by base model name.</p>
+                                <h3 class="text-sm font-bold text-white mb-1">{{ $t('Model Group Order') }}</h3>
+                                <p class="text-xs text-gray-500">{{ $t('Drag to reorder how model groups appear on your Modeler profile tab. Groups are organized by base model name.') }}</p>
                             </div>
                             <div v-if="groupOrderSaved" class="flex items-center gap-1 px-2 py-0.5 rounded bg-green-500/10 border border-green-500/20">
                                 <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                <span class="text-[10px] text-green-400">Saved</span>
+                                <span class="text-[10px] text-green-400">{{ $t('Saved') }}</span>
                             </div>
                         </div>
 
                         <div v-if="!mapperClaims.some(c => c.type === 'model')" class="text-center py-8 text-sm text-gray-500">
-                            No model author claims yet. Add one in the "Your Creator Names" tab first.
+                            {{ $t('No model author claims yet. Add one in the "Your Creator Names" tab first.') }}
                         </div>
 
                         <div v-else-if="draggableGroupList.length > 0">
@@ -1652,7 +1653,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                         </div>
                                         <span class="text-[10px] font-bold text-gray-600 w-4 text-right">{{ index + 1 }}</span>
                                         <span class="text-xs font-bold text-white flex-1">{{ element.name }}</span>
-                                        <span class="text-[10px] text-gray-500">{{ element.count }} models</span>
+                                        <span class="text-[10px] text-gray-500">{{ $tc(':count model|:count models', element.count) }}</span>
                                     </div>
                                 </template>
                             </draggable>
@@ -1679,7 +1680,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z" />
                                 </svg>
                             </div>
-                            <h2 class="text-sm font-bold text-white">Marketplace Creator Profile</h2>
+                            <h2 class="text-sm font-bold text-white">{{ $t('Marketplace Creator Profile') }}</h2>
                         </div>
                         <div v-if="mpSuccess" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
                             <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
@@ -1688,10 +1689,10 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                     </div>
 
                     <div class="text-xs text-gray-400 mb-6">
-                        Set up your creator profile to appear in the Creator Directory. Players can browse creators and commission work directly.
+                        {{ $t('Set up your creator profile to appear in the Creator Directory. Players can browse creators and commission work directly.') }}
                     </div>
 
-                    <div v-if="mpLoading" class="text-center py-8 text-gray-500">Loading...</div>
+                    <div v-if="mpLoading" class="text-center py-8 text-gray-500">{{ $t('Loading...') }}</div>
 
                     <div v-else class="space-y-5">
                         <!-- Toggles -->
@@ -1699,25 +1700,25 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                             <label class="flex items-center gap-3 p-3 rounded-lg bg-black/20 border border-white/5 cursor-pointer hover:border-white/10 transition">
                                 <input type="checkbox" v-model="mpProfile.is_listed" class="rounded border-gray-600 bg-black/40 text-blue-600 focus:ring-blue-500/50" />
                                 <div>
-                                    <div class="text-sm font-semibold text-white">List in Directory</div>
-                                    <div class="text-xs text-gray-500">Show your profile in the Creator Directory</div>
+                                    <div class="text-sm font-semibold text-white">{{ $t('List in Directory') }}</div>
+                                    <div class="text-xs text-gray-500">{{ $t('Show your profile in the Creator Directory') }}</div>
                                 </div>
                             </label>
                             <label class="flex items-center gap-3 p-3 rounded-lg bg-black/20 border border-white/5 cursor-pointer hover:border-white/10 transition">
                                 <input type="checkbox" v-model="mpProfile.accepting_commissions" class="rounded border-gray-600 bg-black/40 text-green-600 focus:ring-green-500/50" />
                                 <div>
-                                    <div class="text-sm font-semibold text-white">Accepting Commissions</div>
-                                    <div class="text-xs text-gray-500">Show as available for work</div>
+                                    <div class="text-sm font-semibold text-white">{{ $t('Accepting Commissions') }}</div>
+                                    <div class="text-xs text-gray-500">{{ $t('Show as available for work') }}</div>
                                 </div>
                             </label>
                         </div>
 
                         <!-- Specialties -->
                         <div>
-                            <label class="block text-sm font-bold text-white mb-2">Specialties</label>
+                            <label class="block text-sm font-bold text-white mb-2">{{ $t('Specialties') }}</label>
                             <div class="flex flex-wrap gap-2">
                                 <button
-                                    v-for="spec in [{v:'map',l:'Mapping'},{v:'player_model',l:'Player Models'},{v:'weapon_model',l:'Weapon Models'},{v:'shadow_model',l:'Shadow Models'}]"
+                                    v-for="spec in [{v:'map',l:$t('Mapping')},{v:'player_model',l:$t('Player Models')},{v:'weapon_model',l:$t('Weapon Models')},{v:'shadow_model',l:$t('Shadow Models')}]"
                                     :key="spec.v"
                                     type="button"
                                     @click="toggleMpSpecialty(spec.v)"
@@ -1732,20 +1733,20 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                         <!-- Rates -->
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-gray-400 mb-1">Rate for Maps</label>
+                                <label class="block text-xs font-bold text-gray-400 mb-1">{{ $t('Rate for Maps') }}</label>
                                 <input
                                     v-model="mpProfile.rate_maps"
                                     type="text"
-                                    placeholder="e.g., 15 EUR/hour"
+                                    :placeholder="$t('e.g., 15 EUR/hour')"
                                     class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                                 />
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-gray-400 mb-1">Rate for Models</label>
+                                <label class="block text-xs font-bold text-gray-400 mb-1">{{ $t('Rate for Models') }}</label>
                                 <input
                                     v-model="mpProfile.rate_models"
                                     type="text"
-                                    placeholder="e.g., 10 EUR/hour"
+                                    :placeholder="$t('e.g., 10 EUR/hour')"
                                     class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                                 />
                             </div>
@@ -1753,11 +1754,11 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
 
                         <!-- Bio -->
                         <div>
-                            <label class="block text-xs font-bold text-gray-400 mb-1">Bio / Portfolio Description</label>
+                            <label class="block text-xs font-bold text-gray-400 mb-1">{{ $t('Bio / Portfolio Description') }}</label>
                             <textarea
                                 v-model="mpProfile.bio"
                                 rows="4"
-                                placeholder="Tell potential clients about your experience and work..."
+                                :placeholder="$t('Tell potential clients about your experience and work...')"
                                 maxlength="2000"
                                 class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 resize-none"
                             ></textarea>
@@ -1766,7 +1767,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
 
                         <!-- Featured Maps -->
                         <div>
-                            <label class="block text-xs font-bold text-gray-400 mb-2">Featured Maps (up to 5)</label>
+                            <label class="block text-xs font-bold text-gray-400 mb-2">{{ $t('Featured Maps (up to 5)') }}</label>
                             <div v-if="mpProfile.featured_maps && mpProfile.featured_maps.length > 0" class="flex flex-wrap gap-2 mb-3">
                                 <div
                                     v-for="map in mpProfile.featured_maps"
@@ -1788,7 +1789,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                     v-model="mpMapSearch"
                                     @input="searchMapsForFeatured"
                                     type="text"
-                                    placeholder="Search maps to feature..."
+                                    :placeholder="$t('Search maps to feature...')"
                                     class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                                 />
                                 <div v-if="mpMapResults.length > 0" class="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-white/10 rounded-lg max-h-48 overflow-y-auto z-50 shadow-2xl">
@@ -1811,13 +1812,13 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
 
                         <!-- Portfolio URLs -->
                         <div>
-                            <label class="block text-xs font-bold text-gray-400 mb-2">Portfolio Links (optional)</label>
+                            <label class="block text-xs font-bold text-gray-400 mb-2">{{ $t('Portfolio Links (optional)') }}</label>
                             <div class="space-y-2">
                                 <div v-for="(url, i) in (mpProfile.portfolio_urls || [])" :key="i" class="flex gap-2">
                                     <input
                                         v-model="mpProfile.portfolio_urls[i]"
                                         type="url"
-                                        placeholder="https://..."
+                                        :placeholder="$t('https://...')"
                                         class="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                                     />
                                     <button @click="mpProfile.portfolio_urls.splice(i, 1)" class="text-red-400 hover:text-red-300 px-2">
@@ -1831,7 +1832,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                 type="button"
                                 class="mt-2 text-sm text-blue-400 hover:text-blue-300 transition"
                             >
-                                + Add link
+                                {{ $t('+ Add link') }}
                             </button>
                         </div>
 
@@ -1842,7 +1843,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                 :disabled="mpSaving"
                                 class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-500 text-white text-sm font-bold rounded-lg transition"
                             >
-                                {{ mpSaving ? 'Saving...' : 'Save Marketplace Profile' }}
+                                {{ mpSaving ? $t('Saving...') : $t('Save Marketplace Profile') }}
                             </button>
                         </div>
                     </div>
@@ -1862,17 +1863,17 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
                                 </svg>
                             </div>
-                            <h2 class="text-sm font-bold text-white">Avatar & Name Effects</h2>
+                            <h2 class="text-sm font-bold text-white">{{ $t('Avatar & Name Effects') }}</h2>
                         </div>
                         <div class="flex items-center gap-2">
                             <div v-if="prefsForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
                                 <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>
-                                <span class="text-xs font-medium text-green-400">Saved</span>
+                                <span class="text-xs font-medium text-green-400">{{ $t('Saved') }}</span>
                             </div>
                             <PrimaryButton type="button" @click="updatePreferences" :disabled="prefsForm.processing">
-                                Save
+                                {{ $t('Save') }}
                             </PrimaryButton>
                         </div>
                     </div>
@@ -1883,19 +1884,19 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                             <div class="space-y-3">
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
-                                        <InputLabel for="effect_color" value="Effect Color" />
+                                        <InputLabel for="effect_color" :value="$t('Effect Color')" />
                                         <input v-model="prefsForm.color" id="effect_color" type="color" class="mt-1 w-full h-8 rounded border-2 border-grayop-700 bg-grayop-900 cursor-pointer" />
                                     </div>
 
                                     <div>
-                                        <InputLabel for="border_color" value="Border Color" />
+                                        <InputLabel for="border_color" :value="$t('Border Color')" />
                                         <input v-model="prefsForm.avatar_border_color" id="border_color" type="color" class="mt-1 w-full h-8 rounded border-2 border-grayop-700 bg-grayop-900 cursor-pointer" />
                                     </div>
                                 </div>
 
                                 <div>
                                     <InputLabel for="avatar_effect">
-                                        Avatar Effect <span class="text-xs text-purple-400">({{ avatarEffects.find(e => e.id === prefsForm.avatar_effect)?.name }})</span>
+                                        {{ $t('Avatar Effect') }} <span class="text-xs text-purple-400">({{ avatarEffects.find(e => e.id === prefsForm.avatar_effect)?.name }})</span>
                                     </InputLabel>
                                     <div class="mt-1 grid grid-cols-8 gap-1">
                                         <button
@@ -1918,7 +1919,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
 
                                 <div>
                                     <InputLabel for="name_effect">
-                                        Name Effect <span class="text-xs text-pink-400">({{ nameEffects.find(e => e.id === prefsForm.name_effect)?.name }})</span>
+                                        {{ $t('Name Effect') }} <span class="text-xs text-pink-400">({{ nameEffects.find(e => e.id === prefsForm.name_effect)?.name }})</span>
                                     </InputLabel>
                                     <div class="mt-1 grid grid-cols-8 gap-1">
                                         <button
@@ -1942,7 +1943,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
 
                             <!-- Right: Preview -->
                             <div>
-                                <InputLabel value="Preview" />
+                                <InputLabel :value="$t('Preview')" />
                                 <div class="mt-1 p-4 rounded-lg bg-gradient-to-br from-black/40 to-black/20 border border-white/5 h-full flex items-center justify-center">
                                     <div class="flex flex-col items-center gap-3">
                                         <div :class="'avatar-effect-' + prefsForm.avatar_effect" :style="`--effect-color: ${prefsForm.color}; --border-color: ${prefsForm.avatar_border_color}`">
@@ -1973,7 +1974,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
 
                 <!-- ==================== GLOBAL CUSTOMIZE TAB ==================== -->
                 <template v-if="activeTab === 'global-customize'">
-            <p class="text-sm text-gray-400 mb-4">These settings affect how content is displayed across the entire site.</p>
+            <p class="text-sm text-gray-400 mb-4">{{ $t('These settings affect how content is displayed across the entire site.') }}</p>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Map View Defaults Card -->
@@ -1986,43 +1987,43 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
                                 </svg>
                             </div>
-                            <h2 class="text-sm font-bold text-white">Map Records Default View</h2>
+                            <h2 class="text-sm font-bold text-white">{{ $t('Map Records Default View') }}</h2>
                         </div>
                         <div class="flex items-center gap-2">
                             <div v-if="mapViewForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
                                 <svg class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                                <span class="text-xs text-green-400 font-medium">Saved</span>
+                                <span class="text-xs text-green-400 font-medium">{{ $t('Saved') }}</span>
                             </div>
                             <PrimaryButton type="button" @click="updateMapViewPreferences" :disabled="mapViewForm.processing">
-                                <span class="text-xs">Save</span>
+                                <span class="text-xs">{{ $t('Save') }}</span>
                             </PrimaryButton>
                         </div>
                     </div>
 
-                    <p class="text-xs text-gray-500 mb-3">Choose which record sources are shown by default on map detail pages. Online records are always visible.</p>
+                    <p class="text-xs text-gray-500 mb-3">{{ $t('Choose which record sources are shown by default on map detail pages. Online records are always visible.') }}</p>
 
                     <div class="space-y-2">
                         <label class="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/10 cursor-not-allowed opacity-60">
                             <input type="checkbox" checked disabled class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
                             <div>
-                                <p class="text-sm font-medium text-gray-300">Online Records</p>
-                                <p class="text-xs text-gray-500">Always shown</p>
+                                <p class="text-sm font-medium text-gray-300">{{ $t('Online Records') }}</p>
+                                <p class="text-xs text-gray-500">{{ $t('Always shown') }}</p>
                             </div>
                         </label>
 
                         <label class="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer">
                             <input v-model="mapViewForm.default_show_oldtop" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-teal-600" />
                             <div>
-                                <p class="text-sm font-medium text-gray-300">Oldtop Records</p>
-                                <p class="text-xs text-gray-500">Historical records from q3df.org archive</p>
+                                <p class="text-sm font-medium text-gray-300">{{ $t('Oldtop Records') }}</p>
+                                <p class="text-xs text-gray-500">{{ $t('Historical records from q3df.org archive') }}</p>
                             </div>
                         </label>
 
                         <label class="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer">
                             <input v-model="mapViewForm.default_show_offline" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-teal-600" />
                             <div>
-                                <p class="text-sm font-medium text-gray-300">Demos Top</p>
-                                <p class="text-xs text-gray-500">Records from uploaded demo files</p>
+                                <p class="text-sm font-medium text-gray-300">{{ $t('Demos Top') }}</p>
+                                <p class="text-xs text-gray-500">{{ $t('Records from uploaded demo files') }}</p>
                             </div>
                         </label>
                     </div>
@@ -2039,20 +2040,20 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
                                 </svg>
                             </div>
-                            <h2 class="text-sm font-bold text-white">Physics Column Order</h2>
+                            <h2 class="text-sm font-bold text-white">{{ $t('Physics Column Order') }}</h2>
                         </div>
                         <div class="flex items-center gap-2">
                             <div v-if="physicsOrderForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
                                 <svg class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                                <span class="text-xs text-green-400 font-medium">Saved</span>
+                                <span class="text-xs text-green-400 font-medium">{{ $t('Saved') }}</span>
                             </div>
                             <PrimaryButton type="button" @click="updatePhysicsOrder" :disabled="physicsOrderForm.processing">
-                                <span class="text-xs">Save</span>
+                                <span class="text-xs">{{ $t('Save') }}</span>
                             </PrimaryButton>
                         </div>
                     </div>
 
-                    <p class="text-xs text-gray-500 mb-3">Choose which physics mode appears on the left side across all pages (records, rankings, profile stats).</p>
+                    <p class="text-xs text-gray-500 mb-3">{{ $t('Choose which physics mode appears on the left side across all pages (records, rankings, profile stats).') }}</p>
 
                     <div class="space-y-2">
                         <label class="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer" :class="physicsOrderForm.default_physics_order === 'vq3_first' ? 'border-blue-500/30 bg-blue-500/10' : ''">
@@ -2061,7 +2062,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                 <span class="text-xs font-black text-blue-400 uppercase bg-blue-400/20 border border-blue-400/30 px-2 py-0.5 rounded">VQ3</span>
                                 <span class="text-xs text-gray-500">/</span>
                                 <span class="text-xs font-black text-purple-400 uppercase bg-purple-400/20 border border-purple-400/30 px-2 py-0.5 rounded">CPM</span>
-                                <span class="text-xs text-gray-500 ml-1">(default)</span>
+                                <span class="text-xs text-gray-500 ml-1">{{ $t('(default)') }}</span>
                             </div>
                         </label>
 
@@ -2087,8 +2088,8 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                             </svg>
                         </div>
                         <div>
-                            <h2 class="text-sm font-bold text-white">Date Format</h2>
-                            <p class="text-xs text-gray-500">Choose how dates are displayed in record tables</p>
+                            <h2 class="text-sm font-bold text-white">{{ $t('Date Format') }}</h2>
+                            <p class="text-xs text-gray-500">{{ $t('Choose how dates are displayed in record tables') }}</p>
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
@@ -2130,26 +2131,26 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                             </svg>
                         </div>
                         <div>
-                            <h2 class="text-sm font-bold text-white">Time Format</h2>
-                            <p class="text-xs text-gray-500">What separates the milliseconds in a run time</p>
+                            <h2 class="text-sm font-bold text-white">{{ $t('Time Format') }}</h2>
+                            <p class="text-xs text-gray-500">{{ $t('What separates the milliseconds in a run time') }}</p>
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <button @click="globalProfileForm.time_format = 'colon'; saveGlobalPreferencesDebounced()"
                             class="px-3 py-2 rounded-lg text-xs font-bold border transition-all"
                             :class="globalProfileForm.time_format === 'colon' ? 'bg-cyan-600/20 text-cyan-300 border-cyan-500/40' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'">
-                            Colon
+                            {{ $t('Colon') }}
                             <div class="text-[10px] font-normal mt-0.5 opacity-70">12:20:108</div>
                         </button>
                         <button @click="globalProfileForm.time_format = 'dot'; saveGlobalPreferencesDebounced()"
                             class="px-3 py-2 rounded-lg text-xs font-bold border transition-all"
                             :class="globalProfileForm.time_format === 'dot' ? 'bg-cyan-600/20 text-cyan-300 border-cyan-500/40' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'">
-                            Decimal point
+                            {{ $t('Decimal point') }}
                             <div class="text-[10px] font-normal mt-0.5 opacity-70">12:20.108</div>
                         </button>
                     </div>
                     <p class="text-[10px] text-gray-600 mt-2">
-                        Colon is what the in-game timer prints. The point reads the milliseconds as a fraction of a second.
+                        {{ $t('Colon is what the in-game timer prints. The point reads the milliseconds as a fraction of a second.') }}
                     </p>
                 </div>
             </div>
@@ -2165,14 +2166,14 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                 </svg>
                             </div>
                             <div>
-                                <h2 class="text-sm font-bold text-white">Hide Stat Boxes</h2>
-                                <p class="text-xs text-gray-500">Hide stat boxes on other players' profiles (uncustomized only)</p>
+                                <h2 class="text-sm font-bold text-white">{{ $t('Hide Stat Boxes') }}</h2>
+                                <p class="text-xs text-gray-500">{{ $t("Hide stat boxes on other players' profiles (uncustomized only)") }}</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
                             <div v-if="globalProfileForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
                                 <svg class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                                <span class="text-xs text-green-400 font-medium">Saved</span>
+                                <span class="text-xs text-green-400 font-medium">{{ $t('Saved') }}</span>
                             </div>
                         </div>
                     </div>
@@ -2204,14 +2205,14 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                 </svg>
                             </div>
                             <div>
-                                <h2 class="text-sm font-bold text-white">Hide Profile Sections</h2>
-                                <p class="text-xs text-gray-500">Hide sections on other players' profiles (uncustomized only)</p>
+                                <h2 class="text-sm font-bold text-white">{{ $t('Hide Profile Sections') }}</h2>
+                                <p class="text-xs text-gray-500">{{ $t("Hide sections on other players' profiles (uncustomized only)") }}</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
                             <div v-if="globalProfileForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
                                 <svg class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                                <span class="text-xs text-green-400 font-medium">Saved</span>
+                                <span class="text-xs text-green-400 font-medium">{{ $t('Saved') }}</span>
                             </div>
                         </div>
                     </div>
@@ -2247,25 +2248,23 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
                                     </svg>
                                 </div>
-                                <h2 class="text-sm font-bold text-white">Notifications</h2>
+                                <h2 class="text-sm font-bold text-white">{{ $t('Notifications') }}</h2>
                             </div>
                             <div class="flex items-center gap-2">
                                 <div v-if="notifsForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
                                     <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                     </svg>
-                                    <span class="text-xs font-medium text-green-400">Saved</span>
+                                    <span class="text-xs font-medium text-green-400">{{ $t('Saved') }}</span>
                                 </div>
                                 <PrimaryButton type="button" @click="updateNotifications" :disabled="notifsForm.processing">
-                                    Save
+                                    {{ $t('Save') }}
                                 </PrimaryButton>
                             </div>
                         </div>
 
                         <p class="text-xs text-gray-400 mb-3">
-                            What reaches you at all. Switch one off and that notification is never made - it will not be
-                            waiting in the bell later. To keep getting something but stop it appearing in the header, use
-                            Header Preview below instead.
+                            {{ $t('What reaches you at all. Switch one off and that notification is never made - it will not be waiting in the bell later. To keep getting something but stop it appearing in the header, use Header Preview below instead.') }}
                         </p>
 
                         <form @submit.prevent="updateNotifications" class="space-y-1.5">
@@ -2275,72 +2274,70 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                             <label class="flex items-center gap-2 p-2 rounded-lg bg-amber-500/5 border border-amber-500/20 hover:border-amber-500/40 cursor-pointer transition-all">
                                 <input v-model="notifsForm.defrag_news" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-amber-600" />
                                 <div class="flex-1">
-                                    <p class="text-sm font-medium text-gray-200">Announcements</p>
-                                    <p class="text-xs text-gray-400">Site news, rules and changelog. Takes over the header until read.</p>
+                                    <p class="text-sm font-medium text-gray-200">{{ $t('Announcements') }}</p>
+                                    <p class="text-xs text-gray-400">{{ $t('Site news, rules and changelog. Takes over the header until read.') }}</p>
                                 </div>
                             </label>
                             <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">
                                 <input v-model="notifsForm.tournament_news" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
                                 <div class="flex-1">
-                                    <p class="text-sm font-medium text-gray-300">Tournament News</p>
-                                    <p class="text-xs text-gray-400">A round opens or closes, and the results when it does.</p>
+                                    <p class="text-sm font-medium text-gray-300">{{ $t('Tournament News') }}</p>
+                                    <p class="text-xs text-gray-400">{{ $t('A round opens or closes, and the results when it does.') }}</p>
                                 </div>
                             </label>
                             <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">
                                 <input v-model="notifsForm.map_news" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
                                 <div class="flex-1">
-                                    <p class="text-sm font-medium text-gray-300">New Maps</p>
-                                    <p class="text-xs text-gray-400">A map is released. Maps published together arrive as one line, not one each.</p>
+                                    <p class="text-sm font-medium text-gray-300">{{ $t('New Maps') }}</p>
+                                    <p class="text-xs text-gray-400">{{ $t('A map is released. Maps published together arrive as one line, not one each.') }}</p>
                                 </div>
                             </label>
                             <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">
                                 <input v-model="notifsForm.clan_notifications" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
                                 <div class="flex-1">
-                                    <p class="text-sm font-medium text-gray-300">Clan Notifications</p>
-                                    <p class="text-xs text-gray-400">Your clan invites you, removes you, hands over ownership, or someone asks to join.</p>
+                                    <p class="text-sm font-medium text-gray-300">{{ $t('Clan Notifications') }}</p>
+                                    <p class="text-xs text-gray-400">{{ $t('Your clan invites you, removes you, hands over ownership, or someone asks to join.') }}</p>
                                 </div>
                             </label>
                             <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 opacity-50 cursor-not-allowed">
                                 <input type="checkbox" checked disabled class="w-4 h-4 rounded bg-white/10 border-white/20" />
                                 <div class="flex-1">
-                                    <p class="text-sm font-medium text-gray-300">Team Invitations <span class="text-xs text-yellow-400">(Required)</span></p>
-                                    <p class="text-xs text-gray-400">Somebody invites you into their tournament team. There is nothing to answer if you never see it.</p>
+                                    <p class="text-sm font-medium text-gray-300">{{ $t('Team Invitations') }} <span class="text-xs text-yellow-400">{{ $t('(Required)') }}</span></p>
+                                    <p class="text-xs text-gray-400">{{ $t('Somebody invites you into their tournament team. There is nothing to answer if you never see it.') }}</p>
                                 </div>
                             </label>
 
                             <div class="pt-3">
-                                <p class="text-sm font-medium text-gray-300">Somebody beats one of your times</p>
+                                <p class="text-sm font-medium text-gray-300">{{ $t('Somebody beats one of your times') }}</p>
                                 <p class="text-xs text-gray-400 mb-2">
-                                    Set per physics. <span class="text-gray-300">All</span> is every time of yours that
-                                    gets taken back; <span class="text-gray-300">WR Only</span> is just the ones where
-                                    what they took off you was the world record.
+                                    {{ $t('Set per physics.') }} <span class="text-gray-300">{{ $t('All') }}</span> {{ $t('is every time of yours that gets taken back;') }} <span class="text-gray-300">{{ $t('WR Only') }}</span> {{ $t('is just the ones where what they took off you was the world record.') }}
                                 </p>
                             </div>
 
                             <div class="grid grid-cols-2 gap-2">
                                 <div class="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/20">
-                                    <p class="text-sm font-bold text-blue-400 mb-2">VQ3 Records</p>
+                                    <p class="text-sm font-bold text-blue-400 mb-2">{{ $t('VQ3 Records') }}</p>
                                     <div class="space-y-1.5">
                                         <label class="flex items-center gap-1.5 cursor-pointer">
                                             <input v-model="notifsForm.records_vq3" type="radio" value="all" class="w-4 h-4 text-blue-600 focus:ring-0 focus:ring-offset-0" />
-                                            <span class="text-sm text-gray-300">All</span>
+                                            <span class="text-sm text-gray-300">{{ $t('All') }}</span>
                                         </label>
                                         <label class="flex items-center gap-1.5 cursor-pointer">
                                             <input v-model="notifsForm.records_vq3" type="radio" value="wr" class="w-4 h-4 text-blue-600 focus:ring-0 focus:ring-offset-0" />
-                                            <span class="text-sm text-gray-300">WR Only</span>
+                                            <span class="text-sm text-gray-300">{{ $t('WR Only') }}</span>
                                         </label>
                                     </div>
                                 </div>
                                 <div class="p-2.5 rounded-lg bg-green-500/5 border border-green-500/20">
-                                    <p class="text-sm font-bold text-green-400 mb-2">CPM Records</p>
+                                    <p class="text-sm font-bold text-green-400 mb-2">{{ $t('CPM Records') }}</p>
                                     <div class="space-y-1.5">
                                         <label class="flex items-center gap-1.5 cursor-pointer">
                                             <input v-model="notifsForm.records_cpm" type="radio" value="all" class="w-4 h-4 text-green-600 focus:ring-0 focus:ring-offset-0" />
-                                            <span class="text-sm text-gray-300">All</span>
+                                            <span class="text-sm text-gray-300">{{ $t('All') }}</span>
                                         </label>
                                         <label class="flex items-center gap-1.5 cursor-pointer">
                                             <input v-model="notifsForm.records_cpm" type="radio" value="wr" class="w-4 h-4 text-green-600 focus:ring-0 focus:ring-offset-0" />
-                                            <span class="text-sm text-gray-300">WR Only</span>
+                                            <span class="text-sm text-gray-300">{{ $t('WR Only') }}</span>
                                         </label>
                                     </div>
                                 </div>
@@ -2359,63 +2356,59 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                                 </svg>
                             </div>
-                            <h2 class="text-sm font-bold text-white">Header Preview</h2>
+                            <h2 class="text-sm font-bold text-white">{{ $t('Header Preview') }}</h2>
                         </div>
                         <p class="text-xs text-gray-400 mb-3">
-                            The strip beside the bell that cycles through what is new. Nothing here stops a notification
-                            arriving - it only decides what gets shown up there. Whatever you switch off is still in the
-                            bell, and unread until you open it.
+                            {{ $t('The strip beside the bell that cycles through what is new. Nothing here stops a notification arriving - it only decides what gets shown up there. Whatever you switch off is still in the bell, and unread until you open it.') }}
                         </p>
 
                         <div class="space-y-3">
                             <div class="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/20">
-                                <p class="text-xs font-bold text-blue-400 mb-1">System Preview</p>
+                                <p class="text-xs font-bold text-blue-400 mb-1">{{ $t('System Preview') }}</p>
                                 <p class="text-[11px] text-gray-500 mb-2">
-                                    An unread announcement takes the strip for itself and holds everything else back,
-                                    including the records ticker, until you have read it.
+                                    {{ $t('An unread announcement takes the strip for itself and holds everything else back, including the records ticker, until you have read it.') }}
                                 </p>
                                 <div class="space-y-1.5">
                                     <label class="flex items-center gap-1.5 opacity-50 cursor-not-allowed">
                                         <input type="checkbox" checked disabled class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
-                                        <span class="text-xs text-gray-300">Announcements <span class="text-amber-400">(always first)</span></span>
+                                        <span class="text-xs text-gray-300">{{ $t('Announcements') }} <span class="text-amber-400">{{ $t('(always first)') }}</span></span>
                                     </label>
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input type="checkbox" :checked="notifsForm.preview_system.includes('clan')" @change="togglePreviewSystem('clan')" class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
-                                        <span class="text-xs text-gray-300">Clan Notifications</span>
+                                        <span class="text-xs text-gray-300">{{ $t('Clan Notifications') }}</span>
                                     </label>
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input type="checkbox" :checked="notifsForm.preview_system.includes('tournament')" @change="togglePreviewSystem('tournament')" class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
-                                        <span class="text-xs text-gray-300">Tournament Notifications</span>
+                                        <span class="text-xs text-gray-300">{{ $t('Tournament Notifications') }}</span>
                                     </label>
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input type="checkbox" :checked="notifsForm.preview_system.includes('map')" @change="togglePreviewSystem('map')" class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
-                                        <span class="text-xs text-gray-300">New Map Notifications</span>
+                                        <span class="text-xs text-gray-300">{{ $t('New Map Notifications') }}</span>
                                     </label>
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input type="checkbox" :checked="notifsForm.preview_system.includes('render')" @change="togglePreviewSystem('render')" class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
-                                        <span class="text-xs text-gray-300">Render Notifications <span class="text-gray-500">(your demo finished rendering)</span></span>
+                                        <span class="text-xs text-gray-300">{{ $t('Render Notifications') }} <span class="text-gray-500">{{ $t('(your demo finished rendering)') }}</span></span>
                                     </label>
                                 </div>
                             </div>
 
                             <div class="p-2.5 rounded-lg bg-orange-500/5 border border-orange-500/20">
-                                <p class="text-xs font-bold text-orange-400 mb-1">Record Preview</p>
+                                <p class="text-xs font-bold text-orange-400 mb-1">{{ $t('Record Preview') }}</p>
                                 <p class="text-[11px] text-gray-500 mb-2">
-                                    How much of "somebody beat your time" the strip shows. This is the header only -
-                                    which ones you get is the Notifications card above.
+                                    {{ $t('How much of "somebody beat your time" the strip shows. This is the header only - which ones you get is the Notifications card above.') }}
                                 </p>
                                 <div class="space-y-1.5">
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input v-model="notifsForm.preview_records" type="radio" value="all" class="w-3.5 h-3.5 focus:ring-0 focus:ring-offset-0" />
-                                        <span class="text-xs text-gray-300">Show All Records</span>
+                                        <span class="text-xs text-gray-300">{{ $t('Show All Records') }}</span>
                                     </label>
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input v-model="notifsForm.preview_records" type="radio" value="wr" class="w-3.5 h-3.5 focus:ring-0 focus:ring-offset-0" />
-                                        <span class="text-xs text-gray-300">World Records Only</span>
+                                        <span class="text-xs text-gray-300">{{ $t('World Records Only') }}</span>
                                     </label>
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input v-model="notifsForm.preview_records" type="radio" value="none" class="w-3.5 h-3.5 focus:ring-0 focus:ring-offset-0" />
-                                        <span class="text-xs text-gray-300">Don't Show Preview</span>
+                                        <span class="text-xs text-gray-300">{{ $t("Don't Show Preview") }}</span>
                                     </label>
                                 </div>
                             </div>
