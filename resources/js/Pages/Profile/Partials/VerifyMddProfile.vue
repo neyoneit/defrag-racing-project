@@ -53,7 +53,7 @@ const verifyImage = () => {
         profile_link: profile_link.value
     }).then((response) => {
         if (response.data.success == false) {
-            error.value = t('Verification failed, are you sure you set your profile image to the provided image ?');
+            error.value = t('Verification failed, are you sure you set your profile image to the provided image?');
             return;
         }
 

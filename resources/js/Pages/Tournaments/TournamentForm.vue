@@ -268,7 +268,7 @@
                             <p class="text-white">{{ $t('Donations support') }}</p>
                         </div>
                         <p class="text-sm text-gray-500">
-                            {{ $t('Does this tournament support player donation ?') }}
+                            {{ $t('Does this tournament support player donation?') }}
                         </p>
                         <InputError :message="form.errors.has_donations" class="mt-2" />
                     </div>

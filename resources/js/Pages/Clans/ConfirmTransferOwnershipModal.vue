@@ -25,7 +25,7 @@
         <ConfirmationModal :show="show" maxWidth="xl" :closeable="true" @close="close">
             <template #title>
                 <div class="flex justify-between items-center">
-                    <div>{{ $t('Are you sure ?') }}</div>
+                    <div>{{ $t('Are you sure?') }}</div>
 
                     <div class="text-gray-200 cursor-pointer rounded-full hover:bg-grayop-700 p-1" @click="close">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
@@ -39,7 +39,7 @@
                 <!-- Same as the accept-invitation modal: names as placeholders,
                      and no colour wrapper, because q3tohtml colours every
                      character itself. -->
-                <span v-html="$t('Are you sure you want to transfer the clan [:clan] to the player [:player] ? This action is irreversible !!!', { clan: q3tohtml(clan.name), player: q3tohtml(player.name) })"></span>
+                <span v-html="$t('Are you sure you want to transfer the clan [:clan] to the player [:player]? This action is irreversible!!!', { clan: q3tohtml(clan.name), player: q3tohtml(player.name) })"></span>
             </template>
                 
             <template #footer>

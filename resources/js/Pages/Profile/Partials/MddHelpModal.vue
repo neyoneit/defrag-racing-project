@@ -11,7 +11,7 @@
 <template>
     <DialogModal :show="show" @close="closeModal">
         <template #title>
-            {{ $t('How to get profile link ?') }}
+            {{ $t('How to get profile link?') }}
         </template>
 
         <template #content>

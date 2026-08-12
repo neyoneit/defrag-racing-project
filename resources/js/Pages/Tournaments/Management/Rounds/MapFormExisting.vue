@@ -141,7 +141,7 @@
                                 </div>
 
                                 <div v-if="maps.data?.length == 0">
-                                    {{ $t('There are no results !') }}
+                                    {{ $t('There are no results!') }}
                                 </div>
                             </div>
                         </div>

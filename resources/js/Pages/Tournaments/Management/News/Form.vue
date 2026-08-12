@@ -174,7 +174,7 @@
                     <div class="mb-3">
                         <label class="flex items-center">
                             <Checkbox v-model:checked="form.pinned" name="pinned" />
-                            <span class="ms-2 text-sm text-gray-600 dark:text-gray-400">{{ $t('Pin this news ?') }}</span>
+                            <span class="ms-2 text-sm text-gray-600 dark:text-gray-400">{{ $t('Pin this news?') }}</span>
                         </label>
                         <div class="ml-6 mt-2 text-sm text-gray-500">{{ $t('(Pinned news will be shown in all pages of the tournaments) e.g Used for major announcements.') }}</div>
                     </div>

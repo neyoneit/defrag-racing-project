@@ -28,7 +28,7 @@
         <ConfirmationModal :show="show" maxWidth="xl" :closeable="true" @close="close">
             <template #title>
                 <div class="flex justify-between items-center">
-                    <div>{{ $t('Leave Clan ?') }}</div>
+                    <div>{{ $t('Leave Clan?') }}</div>
 
                     <div class="text-gray-200 cursor-pointer rounded-full hover:bg-grayop-700 p-1" @click="close">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
@@ -39,7 +39,7 @@
             </template>
 
             <template #content>
-                {{ $t('Are you sure you want to leave the clan ? To join again you will need to be invited by the clan\'s admin !') }}
+                {{ $t('Are you sure you want to leave the clan? To join again you will need to be invited by the clan\'s admin!') }}
             </template>
                 
             <template #footer>

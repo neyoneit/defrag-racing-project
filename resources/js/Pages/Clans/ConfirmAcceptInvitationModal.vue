@@ -20,7 +20,7 @@
         <ConfirmationModal :show="show" maxWidth="xl" :closeable="true" @close="close">
             <template #title>
                 <div class="flex justify-between items-center">
-                    <div>{{ $t('Leave clan and join the new clan ?') }}</div>
+                    <div>{{ $t('Leave clan and join the new clan?') }}</div>
 
                     <div class="text-gray-200 cursor-pointer rounded-full hover:bg-grayop-700 p-1" @click="close">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
@@ -35,7 +35,7 @@
                      sentence into fragments. q3tohtml escapes the name and gives
                      every character its own colour span, so the text-gray-200
                      wrapper this line used to have was doing nothing. -->
-                <span v-html="$t('Are you sure you want to leave clan [:oldClan] and join clan [:newClan] ? To join again you will need to be invited by the clan\'s admin !', { oldClan: q3tohtml(myClan.name), newClan: q3tohtml(clan.name) })"></span>
+                <span v-html="$t('Are you sure you want to leave clan [:oldClan] and join clan [:newClan]? To join again you will need to be invited by the clan\'s admin!', { oldClan: q3tohtml(myClan.name), newClan: q3tohtml(clan.name) })"></span>
             </template>
                 
             <template #footer>

@@ -117,7 +117,7 @@
                             <div class="px-4 py-2 rounded-md bg-blackop-80">
                                 <div class="text-gray-400">
                                     <span v-if="!copyState">{{ $t('Copy') }}</span>
-                                    <span v-else class="text-green-400">{{ $t('Copied !') }}</span>
+                                    <span v-else class="text-green-400">{{ $t('Copied!') }}</span>
                                 </div>
                             </div>
                         </template>
