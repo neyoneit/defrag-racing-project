@@ -43,17 +43,17 @@
     <div>
         <FormSection @submitted="finishBasicInformation">
             <template #title>
-                <div>Create new Team</div>
+                <div>{{ $t('Create new Team') }}</div>
             </template>
     
             <template #description>
-                <div>A Team consists of two players, a cpm player and a vq3 player. The teams score is calculating by adding the time of both players together.</div>
+                <div>{{ $t('A Team consists of two players, a cpm player and a vq3 player. The teams score is calculating by adding the time of both players together.') }}</div>
             </template>
     
             <template #form>
                 <div class="col-span-6">
                     <div class="mb-4">
-                        <InputLabel for="name" v-html="'Team Name: ' + q3tohtml(form.name)" />
+                        <InputLabel for="name" v-html="$t('Team Name:') + ' ' + q3tohtml(form.name)" />
                         <TextInput
                             id="name"
                             v-model="form.name"
@@ -64,16 +64,16 @@
                             autocomplete="name"
                         />
                         <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            You can use Quake3 color codes, such as: ^1Red^2Green.
+                            {{ $t('You can use Quake3 color codes, such as:') }} ^1Red^2Green.
                         </div>
                         <InputError class="mt-2" :message="form.errors.name" />
                     </div>
 
                     <div class="mb-4">
-                        <InputLabel for="type" value="Assign yourself as" />
+                        <InputLabel for="type" :value="$t('Assign yourself as')" />
                         <select id="type" v-model="form.type" class="border-2 border-grayop-700 bg-grayop-900 text-gray-300 focus:border-blue-600 focus:ring-blue-600 rounded-md shadow-sm w-full">
-                            <option value="cpm">CPM Player</option>
-                            <option value="vq3">VQ3 Player</option>
+                            <option value="cpm">{{ $t('CPM Player') }}</option>
+                            <option value="vq3">{{ $t('VQ3 Player') }}</option>
                         </select>
                         <InputError class="mt-2" :message="form.errors.type" />
                     </div>
@@ -82,7 +82,7 @@
     
             <template #actions>
                 <div class="flex justify-between w-full">
-                    <PrimaryButton>Submit</PrimaryButton>
+                    <PrimaryButton>{{ $t('Submit') }}</PrimaryButton>
                 </div>
             </template>
         </FormSection>

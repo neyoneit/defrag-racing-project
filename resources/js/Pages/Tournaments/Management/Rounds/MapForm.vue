@@ -7,6 +7,7 @@
     import PrimaryButton from '@/Components/Laravel/PrimaryButton.vue';
     import TextInput from '@/Components/Laravel/TextInput.vue';
     import SecondaryButton from '@/Components/Laravel/SecondaryButton.vue';
+    import { t } from '@/utils/i18n';
 
     const props = defineProps({
         tournament: Object,
@@ -42,7 +43,7 @@
         const pk3 = pk3Input.value.files[0];
 
         if (! pk3) {
-            form.errors.pk3 = 'The pk3 field is required.';
+            form.errors.pk3 = t('The pk3 field is required.');
             return;
         };
 
@@ -54,16 +55,16 @@
 
 <template>
     <div>
-        <div class="text-2xl text-center text-gray-300 mb-3">Add New Map</div>
+        <div class="text-2xl text-center text-gray-300 mb-3">{{ $t('Add New Map') }}</div>
         <form enctype="multipart/form-data" @submit.prevent="finishBasicInformation" class="flex justify-center">
             <div class="w-80">
                 <div class="mb-3">
-                    <InputLabel for="name" value="Map name (without extensions, must match the bsp name)" />
+                    <InputLabel for="name" :value="$t('Map name (without extensions, must match the bsp name)')" />
                     <TextInput
                         id="name"
                         v-model="form.name"
                         placeholder="mapname"
-                        title="without extensions, must match the bsp name"
+                        :title="$t('without extensions, must match the bsp name')"
                         type="text"
                         class="mt-1 block w-full"
                         :class="{ 'border-red-500': form.errors.name }"
@@ -77,7 +78,7 @@
                         id="crc"
                         v-model="form.crc"
                         type="text"
-                        placeholder="Leave empty if unknown."
+                        :placeholder="$t('Leave empty if unknown.')"
                         class="mt-1 block w-full"
                         :class="{ 'border-red-500': form.errors.crc }"
                     />
@@ -94,16 +95,16 @@
                         @change="updateFile"
                     >
     
-                    <InputLabel for="pk3" value="PK3 File" />
+                    <InputLabel for="pk3" :value="$t('PK3 File')" />
     
                     <SecondaryButton class="mt-2 me-2" type="button" @click.prevent="selectPk3File">
-                        Select PK3 File
+                        {{ $t('Select PK3 File') }}
                     </SecondaryButton>
                     <InputError :message="form.errors.pk3" class="mt-2" />
                 </div>
     
                 <div class="flex justify-between w-full">
-                    <PrimaryButton>Submit</PrimaryButton>
+                    <PrimaryButton>{{ $t('Submit') }}</PrimaryButton>
                 </div>
             </div>
         </form>

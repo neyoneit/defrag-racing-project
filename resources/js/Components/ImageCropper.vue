@@ -1,6 +1,7 @@
 <script setup>
     import { ref, watch, nextTick } from 'vue';
     import VueCropper from 'vue-cropperjs';
+    import { t } from '@/utils/i18n';
 
     const props = defineProps({
         show: Boolean,
@@ -11,7 +12,7 @@
         },
         title: {
             type: String,
-            default: 'Crop Image'
+            default: () => t('Crop Image')
         }
     });
 
@@ -86,7 +87,7 @@
                 <!-- Cropper -->
                 <div class="p-6">
                     <div v-if="!showCropper" class="cropper-wrapper flex items-center justify-center">
-                        <div class="text-gray-400">Loading cropper...</div>
+                        <div class="text-gray-400">{{ $t('Loading cropper...') }}</div>
                     </div>
                     <div v-else class="cropper-wrapper">
                         <vue-cropper
@@ -112,8 +113,8 @@
                     <!-- Instructions -->
                     <div class="mt-4 p-4 bg-blue-600/10 border border-blue-500/20 rounded-lg">
                         <p class="text-sm text-gray-300">
-                            <span class="font-semibold text-blue-400">Instructions:</span>
-                            Drag the image to move it, use the corners to resize the crop area, and scroll to zoom in/out.
+                            <span class="font-semibold text-blue-400">{{ $t('Instructions:') }}</span>
+                            {{ $t('Drag the image to move it, use the corners to resize the crop area, and scroll to zoom in/out.') }}
                         </p>
                     </div>
                 </div>
@@ -125,13 +126,13 @@
                             @click="handleClose"
                             class="px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg text-white transition-all duration-300"
                         >
-                            Cancel
+                            {{ $t('Cancel') }}
                         </button>
                         <button
                             @click="cropImage"
                             class="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded-lg text-white font-bold transition-all duration-300 shadow-lg hover:shadow-blue-500/50"
                         >
-                            Crop & Upload
+                            {{ $t('Crop & Upload') }}
                         </button>
                     </div>
                 </div>

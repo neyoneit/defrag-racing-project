@@ -41,20 +41,20 @@
 <template>
     <FormSection @submitted="updateProfilePreferences" id="preferences">
         <template #title>
-            Profile Preferences
+            {{ $t('Profile Preferences') }}
         </template>
 
         <template #description>
-            Customize your profile.
+            {{ $t('Customize your profile.') }}
         </template>
 
         <template #topActions>
             <ActionMessage :on="form.recentlySuccessful" class="me-3">
-                Saved.
+                {{ $t('Saved.') }}
             </ActionMessage>
 
             <PrimaryButton type="button" @click="updateProfilePreferences" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                Save
+                {{ $t('Save') }}
             </PrimaryButton>
         </template>
 
@@ -78,7 +78,7 @@
             </div>
 
             <div class="col-span-6 flex flex-col items-center">
-                <div class="text-white mb-2">Profile Color</div>
+                <div class="text-white mb-2">{{ $t('Profile Color') }}</div>
                 <div class="flex justify-center">
                     <v-color-picker show-swatches color="#1F2937" v-model="form.color" hide-inputs />
                 </div>
