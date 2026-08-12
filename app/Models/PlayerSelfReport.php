@@ -84,20 +84,20 @@ class PlayerSelfReport extends Model
     public function stateLabel(): string
     {
         if ($this->wasBeaten()) {
-            return 'Beaten - resolved';
+            return __('Beaten - resolved');
         }
 
         if ($this->wasRestored()) {
-            return 'Put back on the board';
+            return __('Put back on the board');
         }
 
         if ($this->isProcessed()) {
-            return 'Off the board';
+            return __('Off the board');
         }
 
         return $this->handling === 'immediate'
-            ? 'Waiting for an admin'
-            : 'Queued for the MDD merge';
+            ? __('Waiting for an admin')
+            : __('Queued for the MDD merge');
     }
 
     /**

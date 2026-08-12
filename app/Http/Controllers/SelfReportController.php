@@ -60,7 +60,7 @@ class SelfReportController extends Controller
                     'reason' => $user->amnesty_blocked_reason,
                 ],
                 'records' => ['data' => []],
-                'reasons' => RecordFlagController::FLAG_TYPES,
+                'reasons' => array_map(fn ($label) => __($label), RecordFlagController::FLAG_TYPES),
                 'mine' => ['data' => []],
                 'mineCounts' => [],
                 'mineState' => 'all',
@@ -160,12 +160,12 @@ class SelfReportController extends Controller
             'search' => $search,
             'sort' => $sort,
             'totalRecords' => $total,
-            'reasons' => RecordFlagController::FLAG_TYPES,
+            'reasons' => array_map(fn ($label) => __($label), RecordFlagController::FLAG_TYPES),
             // Your own withdrawals, with the reason you gave. Private like the
             // rest of it, but you are allowed to see what you did and why -
             // months later "which runs did I take down" is a fair question and
             // the answer should not only exist in the admin panel.
-            'handlingOptions' => PlayerSelfReport::HANDLING,
+            'handlingOptions' => array_map(fn ($label) => __($label), PlayerSelfReport::HANDLING),
             'mineState' => $mineState,
             'mineCounts' => $mineCounts,
             'mine' => $mine
@@ -175,7 +175,7 @@ class SelfReportController extends Controller
                     'physics' => $report->physics,
                     'mode' => $report->mode,
                     'time' => $report->time,
-                    'reason' => RecordFlagController::FLAG_TYPES[$report->reason] ?? $report->reason,
+                    'reason' => __(RecordFlagController::FLAG_TYPES[$report->reason] ?? $report->reason),
                     'handling' => $report->handling,
                     'note' => $report->note,
                     'processed' => $report->isProcessed(),

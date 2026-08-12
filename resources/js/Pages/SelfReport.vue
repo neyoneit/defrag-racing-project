@@ -10,6 +10,7 @@ export default {
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { computed, getCurrentInstance, onMounted, onUnmounted, ref, watch } from 'vue';
 import Pagination from '@/Components/Basic/Pagination.vue';
+import { t, currentLocale } from '@/utils/i18n';
 
 const props = defineProps({
     hasMddAccount: { type: Boolean, default: false },
@@ -31,13 +32,13 @@ const rows = computed(() => props.records?.data ?? []);
 
 // Your own withdrawals: same states the admin sees, in the words a player
 // would use for them.
-const MINE_STATES = {
-    all: 'All',
-    waiting: 'Waiting',
-    queued: 'Queued for the merge',
-    done: 'Off the board',
-    restored: 'Put back',
-};
+const MINE_STATES = computed(() => ({
+    all: t('All'),
+    waiting: t('Waiting'),
+    queued: t('Queued for the merge'),
+    done: t('Off the board'),
+    restored: t('Put back'),
+}));
 
 const mineRows = computed(() => props.mine?.data ?? []);
 
@@ -53,12 +54,12 @@ const setMineState = (state) => {
 const { proxy } = getCurrentInstance();
 const formatTime = proxy.formatTime;
 
-const SORTS = {
-    date: 'Date of run',
-    rank: 'Rank',
-    name: 'Map name',
-    map_added: 'Map release date',
-};
+const SORTS = computed(() => ({
+    date: t('Date of run'),
+    rank: t('Rank'),
+    name: t('Map name'),
+    map_added: t('Map release date'),
+}));
 
 const search = ref(props.search);
 const sort = ref(props.sort);
@@ -123,7 +124,7 @@ const confirming = ref(false);
 
 const askConfirm = () => {
     if (!form.confirm) {
-        form.setError('confirm', 'Tick the box first.');
+        form.setError('confirm', t('Tick the box first.'));
         return;
     }
     confirming.value = true;
@@ -175,12 +176,12 @@ const pickReason = (key) => {
     reasonOpen.value = false;
 };
 
-const fmtDate = (value) => value ? new Date(value).toLocaleDateString() : '';
+const fmtDate = (value) => value ? new Date(value).toLocaleDateString(currentLocale()) : '';
 const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
 </script>
 
 <template>
-    <Head title="Amnesty - self report" />
+    <Head :title="$t('Amnesty - self report')" />
 
     <div class="">
         <!-- Header Section - same shape as Servers, Records and Ranking. -->
@@ -188,15 +189,12 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">
-                        Amnesty
+                        {{ $t('Amnesty') }}
                     </h1>
                 </div>
 
                 <p class="text-gray-400 mt-2 max-w-3xl">
-                    You cheated, and you have worked out which of your times should not be standing.
-                    This is where you put it right, privately. Send them one at a time or all at once,
-                    but the reason you give has to be true for every run in the batch - anything you did
-                    differently goes in a batch of its own.
+                    {{ $t('You cheated, and you have worked out which of your times should not be standing. This is where you put it right, privately. Send them one at a time or all at once, but the reason you give has to be true for every run in the batch - anything you did differently goes in a batch of its own.') }}
                 </p>
             </div>
         </div>
@@ -214,13 +212,9 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
                 </svg>
                 <div>
-                    <h2 class="text-emerald-200 font-black text-lg mb-1">This is private, and it is your right</h2>
+                    <h2 class="text-emerald-200 font-black text-lg mb-1">{{ $t('This is private, and it is your right') }}</h2>
                     <p class="text-gray-200 leading-relaxed">
-                        Nobody is told that you withdrew a run, and nobody is told why. Not the validators,
-                        not the public, not the log, nowhere on the site - only the site admin can see it.
-                        Anyone can use this, at any time, on any of their own runs. You need no permission,
-                        you owe nobody an explanation, and nothing about it is ever held against you.
-                        That is what an amnesty means.
+                        {{ $t('Nobody is told that you withdrew a run, and nobody is told why. Not the validators, not the public, not the log, nowhere on the site - only the site admin can see it. Anyone can use this, at any time, on any of their own runs. You need no permission, you owe nobody an explanation, and nothing about it is ever held against you. That is what an amnesty means.') }}
                     </p>
                 </div>
             </div>
@@ -229,14 +223,9 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                  complaint would otherwise be "I sent it and my run is still
                  there, on q3df too". -->
             <div class="rounded-2xl border border-amber-400/35 bg-amber-500/[0.08] p-5 mb-4">
-                <h2 class="text-amber-200 font-black text-lg mb-1">Nothing disappears the moment you send it</h2>
+                <h2 class="text-amber-200 font-black text-lg mb-1">{{ $t('Nothing disappears the moment you send it') }}</h2>
                 <p class="text-gray-200 leading-relaxed">
-                    These requests are handled when the MDD databases are merged. That merge is planned
-                    but not done, and until it happens a run taken off this site still stands on
-                    q3df.org - we cannot reach that database yet. So you choose which you want: have it
-                    hidden here as soon as an admin approves it and accept that q3df still shows it for
-                    now, or leave it queued and have both handled together at the merge. Either way an
-                    admin approves the hide, and your run stays on the board until they do.
+                    {{ $t('These requests are handled when the MDD databases are merged. That merge is planned but not done, and until it happens a run taken off this site still stands on q3df.org - we cannot reach that database yet. So you choose which you want: have it hidden here as soon as an admin approves it and accept that q3df still shows it for now, or leave it queued and have both handled together at the merge. Either way an admin approves the hide, and your run stays on the board until they do.') }}
                 </p>
             </div>
 
@@ -244,32 +233,28 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                  do it now rather than later. -->
             <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-4 mb-8">
                 <div class="rounded-xl border border-white/10 bg-black/40 p-4">
-                    <div class="text-white font-bold text-sm mb-1">You cannot take it back</div>
+                    <div class="text-white font-bold text-sm mb-1">{{ $t('You cannot take it back') }}</div>
                     <p class="text-gray-400 text-sm leading-relaxed">
-                        Once a run is handled it is off the board, and undoing that is not yours to do.
-                        Check what you have ticked before you send it.
+                        {{ $t('Once a run is handled it is off the board, and undoing that is not yours to do. Check what you have ticked before you send it.') }}
                     </p>
                 </div>
                 <div class="rounded-xl border border-white/10 bg-black/40 p-4">
-                    <div class="text-white font-bold text-sm mb-1">No case, no review</div>
+                    <div class="text-white font-bold text-sm mb-1">{{ $t('No case, no review') }}</div>
                     <p class="text-gray-400 text-sm leading-relaxed">
-                        A withdrawn run is not reported and not judged by anybody. It is treated as
-                        putting the leaderboard right, because that is what it is.
+                        {{ $t('A withdrawn run is not reported and not judged by anybody. It is treated as putting the leaderboard right, because that is what it is.') }}
                     </p>
                 </div>
                 <div class="rounded-xl border border-white/10 bg-black/40 p-4">
-                    <div class="text-white font-bold text-sm mb-1">Beating it settles it</div>
+                    <div class="text-white font-bold text-sm mb-1">{{ $t('Beating it settles it') }}</div>
                     <p class="text-gray-400 text-sm leading-relaxed">
-                        Go back and run the map properly, and the new time replaces the old one on its
-                        own. Your request closes itself as beaten - no admin, no waiting.
+                        {{ $t('Go back and run the map properly, and the new time replaces the old one on its own. Your request closes itself as beaten - no admin, no waiting.') }}
                     </p>
                 </div>
 
                 <div class="rounded-xl border border-red-400/25 bg-red-500/[0.07] p-4">
-                    <div class="text-red-300 font-bold text-sm mb-1">Only while you are ahead of a report</div>
+                    <div class="text-red-300 font-bold text-sm mb-1">{{ $t('Only while you are ahead of a report') }}</div>
                     <p class="text-gray-400 text-sm leading-relaxed">
-                        Once somebody else reports the run it becomes a case, and when validators decide
-                        it, the outcome is published with your name on it.
+                        {{ $t('Once somebody else reports the run it becomes a case, and when validators decide it, the outcome is published with your name on it.') }}
                     </p>
                 </div>
             </div>
@@ -278,33 +263,29 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                  stated as plainly as the promise itself, because a rule people
                  only meet when it is used on them reads as an excuse. -->
             <div class="rounded-xl border border-amber-400/30 bg-amber-500/[0.07] p-4 mb-8">
-                <span class="text-amber-300 font-bold">Abusing this loses you the amnesty.</span>
+                <span class="text-amber-300 font-bold">{{ $t('Abusing this loses you the amnesty.') }}</span>
                 <span class="text-gray-300">
-                    It is here to put the leaderboard right, not to launder anything. If it is shown that
-                    somebody used it to game the system, that player loses access to the amnesty programme
-                    and from then on their runs go through reports and validators like anybody else's.
+                    {{ $t("It is here to put the leaderboard right, not to launder anything. If it is shown that somebody used it to game the system, that player loses access to the amnesty programme and from then on their runs go through reports and validators like anybody else's.") }}
                 </span>
             </div>
 
             <div v-if="blocked" class="bg-black/40 border border-red-400/40 rounded-2xl p-6 mb-8">
-                <h2 class="text-red-300 font-black text-lg mb-1">You no longer have access to the amnesty</h2>
+                <h2 class="text-red-300 font-black text-lg mb-1">{{ $t('You no longer have access to the amnesty') }}</h2>
                 <p class="text-gray-300 leading-relaxed">
-                    Withdrawn on {{ fmtDate(blocked.since) }}<span v-if="blocked.reason">: {{ blocked.reason }}</span>.
-                    Your runs are handled through the normal reporting and validation process from here on.
-                    Take it up with the admin if you think this is wrong.
+                    {{ $t('Withdrawn on :date', { date: fmtDate(blocked.since) }) }}<span v-if="blocked.reason">: {{ blocked.reason }}</span>.
+                    {{ $t('Your runs are handled through the normal reporting and validation process from here on. Take it up with the admin if you think this is wrong.') }}
                 </p>
             </div>
 
             <div v-if="!blocked && !hasMddAccount" class="bg-black/40 border border-yellow-400/30 rounded-2xl p-6 text-yellow-200">
-                Your account is not linked to an MDD profile, so there are no records tied to it here.
-                Link it in your settings first.
+                {{ $t('Your account is not linked to an MDD profile, so there are no records tied to it here. Link it in your settings first.') }}
             </div>
 
             <template v-else-if="!blocked">
                 <!-- The list -->
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
                     <div class="p-4 border-b border-white/5 flex flex-wrap items-center gap-3">
-                        <input v-model="search" type="text" placeholder="Search your maps..."
+                        <input v-model="search" type="text" :placeholder="$t('Search your maps...')"
                             class="flex-1 min-w-[12rem] bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-emerald-400/50" />
 
                         <!-- Buttons rather than a <select> for the same reason
@@ -312,7 +293,7 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                              worth four buttons, and the browser cannot repaint
                              these in system colours. -->
                         <div class="flex items-center gap-1 p-1 rounded-lg bg-black/40 border border-white/10">
-                            <span class="text-xs uppercase tracking-wide text-gray-500 px-2">Sort</span>
+                            <span class="text-xs uppercase tracking-wide text-gray-500 px-2">{{ $t('Sort') }}</span>
                             <button v-for="(label, key) in SORTS" :key="key" type="button" @click="sort = key"
                                 class="px-3 py-1.5 rounded-md text-sm font-semibold transition-colors"
                                 :class="sort === key ? 'bg-emerald-500/20 text-emerald-200' : 'text-gray-400 hover:text-white hover:bg-white/10'">
@@ -322,18 +303,18 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
 
                         <button type="button" @click="toggleAllShown" :disabled="!rows.length"
                             class="px-3 py-2 rounded-lg text-sm font-bold bg-white/5 hover:bg-white/10 text-gray-200 transition-colors disabled:opacity-40">
-                            {{ allShownPicked ? 'Unselect this page' : 'Select this page' }}
+                            {{ allShownPicked ? $t('Unselect this page') : $t('Select this page') }}
                         </button>
 
                         <span class="text-xs text-gray-500 whitespace-nowrap">
-                            {{ records.total ?? rows.length }} run<span v-if="(records.total ?? rows.length) !== 1">s</span>
-                            <span v-if="search"> found</span>
-                            <span v-else> in total</span>
+                            {{ search
+                                ? $tc(':count run found|:count runs found', records.total ?? rows.length)
+                                : $tc(':count run in total|:count runs in total', records.total ?? rows.length) }}
                         </span>
                     </div>
 
                     <div v-if="!rows.length" class="p-10 text-center text-gray-500">
-                        No runs found.
+                        {{ $t('No runs found.') }}
                     </div>
 
                     <div v-else class="divide-y divide-white/5">
@@ -352,13 +333,13 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                                 <div class="font-semibold text-white truncate">{{ record.mapname }}</div>
                                 <div class="text-xs text-gray-500 mt-0.5 flex flex-wrap gap-x-3">
                                     <span class="uppercase">{{ record.physics }} {{ record.mode }}</span>
-                                    <span>run {{ fmtDate(record.date_set) }}</span>
-                                    <span v-if="record.map_added">map {{ fmtDate(record.map_added) }}</span>
+                                    <span>{{ $t('run :date', { date: fmtDate(record.date_set) }) }}</span>
+                                    <span v-if="record.map_added">{{ $t('map :date', { date: fmtDate(record.map_added) }) }}</span>
                                 </div>
                             </div>
 
                             <div v-if="record.rank" class="text-center shrink-0 w-14">
-                                <div class="text-[10px] uppercase tracking-wide text-gray-600">Rank</div>
+                                <div class="text-[10px] uppercase tracking-wide text-gray-600">{{ $t('Rank') }}</div>
                                 <div class="font-black" :class="record.rank === 1 ? 'text-yellow-400' : record.rank <= 3 ? 'text-gray-300' : 'text-gray-400'">
                                     {{ record.rank }}
                                 </div>
@@ -379,9 +360,9 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
 
                 <div v-if="mineCounts.all" class="mt-6 bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
                     <div class="p-4 border-b border-white/5 flex flex-wrap items-baseline gap-x-3">
-                        <span class="text-white font-bold">Runs you have sent</span>
-                        <span class="text-gray-500 text-sm">{{ mineCounts.all }} in total, and why</span>
-                        <span class="ml-auto text-xs text-gray-600">Visible to you and the site admin. Nobody else.</span>
+                        <span class="text-white font-bold">{{ $t('Runs you have sent') }}</span>
+                        <span class="text-gray-500 text-sm">{{ $t(':count in total, and why', { count: mineCounts.all }) }}</span>
+                        <span class="ml-auto text-xs text-gray-600">{{ $t('Visible to you and the site admin. Nobody else.') }}</span>
                     </div>
 
                     <!-- Same split the admin panel uses, so what you are told
@@ -401,7 +382,7 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
 
                     <div class="divide-y divide-white/5 mt-3">
                         <div v-if="!mineRows.length" class="p-6 text-center text-gray-500 text-sm">
-                            Nothing in this one.
+                            {{ $t('Nothing in this one.') }}
                         </div>
                         <div v-for="row in mineRows" :key="row.id" class="p-4 flex flex-wrap items-center gap-x-4 gap-y-1">
                             <div class="min-w-0 flex-1">
@@ -447,15 +428,15 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                         <div class="shrink-0">
                             <div class="text-2xl font-black text-emerald-300 leading-none">{{ pickedCount }}</div>
                             <button type="button" @click="clearPicked" class="text-xs text-gray-500 hover:text-white">
-                                run<span v-if="pickedCount !== 1">s</span> picked - clear
+                                {{ $tc('run picked - clear|runs picked - clear', pickedCount) }}
                             </button>
                         </div>
 
                         <div ref="reasonBox" class="relative min-w-[16rem] flex-1">
                             <label class="block text-xs text-gray-400 mb-1">
-                                What you did in
-                                <span v-if="pickedCount === 1">this run</span>
-                                <span v-else>all {{ pickedCount }} of these runs</span>
+                                {{ $t('What you did in') }}
+                                <span v-if="pickedCount === 1">{{ $t('this run') }}</span>
+                                <span v-else>{{ $t('all :count of these runs', { count: pickedCount }) }}</span>
                             </label>
                             <button type="button" @click="reasonOpen = !reasonOpen"
                                 class="w-full flex items-center justify-between gap-2 bg-black/50 border rounded-lg px-3 py-2 text-left text-white transition-colors"
@@ -487,14 +468,14 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                         </div>
 
                         <div class="min-w-[14rem] flex-1">
-                            <label class="block text-xs text-gray-400 mb-1">Note (optional, admin only)</label>
+                            <label class="block text-xs text-gray-400 mb-1">{{ $t('Note (optional, admin only)') }}</label>
                             <input v-model="form.note" type="text" maxlength="500"
                                 class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-emerald-400/50"
-                                placeholder="Only the site admin reads this." />
+                                :placeholder="$t('Only the site admin reads this.')" />
                         </div>
 
                         <div class="min-w-[18rem] flex-1">
-                            <label class="block text-xs text-gray-400 mb-1">When</label>
+                            <label class="block text-xs text-gray-400 mb-1">{{ $t('When') }}</label>
                             <div class="flex flex-col gap-1">
                                 <button v-for="(label, key) in handlingOptions" :key="key" type="button"
                                     @click="form.handling = key"
@@ -515,14 +496,13 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                             <label class="flex items-start gap-2 text-sm text-gray-300 max-w-sm">
                                 <input type="checkbox" v-model="form.confirm" class="mt-0.5 w-5 h-5 shrink-0 rounded bg-black/50 border-white/20 text-emerald-500" />
                                 <span>
-                                    To the best of my knowledge and conscience, what I have said about
-                                    these runs is true.
+                                    {{ $t('To the best of my knowledge and conscience, what I have said about these runs is true.') }}
                                 </span>
                             </label>
 
                             <button type="submit" :disabled="form.processing"
                                 class="px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-bold transition-colors disabled:opacity-50 whitespace-nowrap">
-                                Withdraw {{ pickedCount }} run<span v-if="pickedCount !== 1">s</span>
+                                {{ $tc('Withdraw :count run|Withdraw :count runs', pickedCount) }}
                             </button>
                         </div>
 
@@ -541,40 +521,30 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
 
                     <div class="relative w-full max-w-lg rounded-2xl border border-red-400/40 bg-gray-950 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.8)]">
                         <h2 class="text-xl md:text-2xl font-black text-red-300 mb-3">
-                            Are you sure you want to do this?
+                            {{ $t('Are you sure you want to do this?') }}
                         </h2>
 
-                        <p class="text-gray-200 leading-relaxed mb-3">
-                            You are sending <span class="font-bold text-white">{{ pickedCount }}</span> of your
-                            own run<span v-if="pickedCount !== 1">s</span> to be taken off the board. This step
-                            is irreversible - once they are handled you cannot bring them back.
-                        </p>
+                        <p class="text-gray-200 leading-relaxed mb-3 [&_span]:font-bold [&_span]:text-white"
+                           v-html="$tc('You are sending <span>:count</span> of your own run to be taken off the board. This step is irreversible - once they are handled you cannot bring them back.|You are sending <span>:count</span> of your own runs to be taken off the board. This step is irreversible - once they are handled you cannot bring them back.', pickedCount)"></p>
 
-                        <p class="text-gray-300 leading-relaxed mb-3">
-                            You are declaring, to the best of your knowledge and conscience, that
-                            <span class="font-semibold text-white">{{ reasons[form.reason] }}</span> is what
-                            happened in
-                            <span v-if="pickedCount === 1">this run</span>
-                            <span v-else>every one of these {{ pickedCount }} runs</span>. If it is not
-                            true of all of them, go back and send them in separate batches.
-                        </p>
+                        <p class="text-gray-300 leading-relaxed mb-3 [&_span]:font-semibold [&_span]:text-white"
+                           v-html="$tc('You are declaring, to the best of your knowledge and conscience, that <span>:reason</span> is what happened in this run. If it is not true of all of them, go back and send them in separate batches.|You are declaring, to the best of your knowledge and conscience, that <span>:reason</span> is what happened in every one of these :count runs. If it is not true of all of them, go back and send them in separate batches.', pickedCount, { reason: reasons[form.reason] })"></p>
 
                         <p class="text-gray-300 leading-relaxed mb-5">
-                            This exists for runs that should never have counted. Abusing it to delete times
-                            you are simply not happy with costs you access to this section permanently.
+                            {{ $t('This exists for runs that should never have counted. Abusing it to delete times you are simply not happy with costs you access to this section permanently.') }}
                         </p>
 
                         <div class="rounded-xl border border-white/10 bg-black/40 p-3 mb-5 text-sm">
                             <div class="flex justify-between gap-3 py-0.5">
-                                <span class="text-gray-500">Runs</span>
+                                <span class="text-gray-500">{{ $t('Runs') }}</span>
                                 <span class="text-white font-semibold">{{ pickedCount }}</span>
                             </div>
                             <div class="flex justify-between gap-3 py-0.5">
-                                <span class="text-gray-500">Reason</span>
+                                <span class="text-gray-500">{{ $t('Reason') }}</span>
                                 <span class="text-white font-semibold text-right">{{ reasons[form.reason] }}</span>
                             </div>
                             <div class="flex justify-between gap-3 py-0.5">
-                                <span class="text-gray-500">When</span>
+                                <span class="text-gray-500">{{ $t('When') }}</span>
                                 <span class="text-white font-semibold text-right">{{ handlingOptions[form.handling] }}</span>
                             </div>
                         </div>
@@ -582,11 +552,11 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                         <div class="flex flex-wrap gap-3 justify-end">
                             <button type="button" @click="confirming = false"
                                 class="px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-200 font-bold transition-colors">
-                                No, take me back
+                                {{ $t('No, take me back') }}
                             </button>
                             <button type="button" @click="submit" :disabled="form.processing"
                                 class="px-5 py-2.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold transition-colors disabled:opacity-50">
-                                Yes, send {{ pickedCount }} run<span v-if="pickedCount !== 1">s</span>
+                                {{ $tc('Yes, send :count run|Yes, send :count runs', pickedCount) }}
                             </button>
                         </div>
                     </div>
