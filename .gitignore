@@ -100,3 +100,6 @@ __pycache__/
 
 # Which pages have been translated. A working note, not part of the app.
 /i18n-progress.md
+
+# Throwaway helpers for the translation pass, same reason.
+/.i18n-tools/
