@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import { t } from '@/utils/i18n';
 
 const props = defineProps({
     categoryStats: { type: Object, default: () => ({}) },
@@ -11,6 +12,26 @@ const props = defineProps({
 // Display order — matches the rust service and ranking UI.
 const STATS_CATEGORIES = ['overall', 'strafe', 'lg', 'rocket', 'plasma', 'grenade', 'slick', 'tele', 'bfg'];
 const CTF_MODES = ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5', 'ctf6', 'ctf7'];
+
+// Display label for a category code - the code itself stays the lookup key,
+// this is only what the live table prints. Same wording as section 9 below.
+// Written as literal t() calls rather than t(LABELS[cat]): lang:sync collects
+// only the keys it can see, so a variable key would never reach cs.json.
+function categoryLabel(cat) {
+    const labels = {
+        overall: t('Overall'),
+        strafe: t('Strafe'),
+        lg: t('LG'),
+        rocket: t('Rocket'),
+        plasma: t('Plasma'),
+        grenade: t('Grenade'),
+        slick: t('Slick'),
+        tele: t('Tele'),
+        bfg: t('BFG'),
+    };
+
+    return labels[cat] ?? cat;
+}
 
 // Categories that actually have data for the 'run' mode (skip empty rows).
 const runCategoriesWithData = computed(() => {
@@ -435,7 +456,7 @@ const top200Share = computed(() => topNWeightShare(200));
                                 </thead>
                                 <tbody>
                                     <tr v-for="cat in runCategoriesWithData" :key="cat" class="border-b border-gray-800/60 last:border-0">
-                                        <td class="py-1.5 pr-3 text-gray-300 capitalize">{{ cat }}</td>
+                                        <td class="py-1.5 pr-3 text-gray-300 capitalize">{{ categoryLabel(cat) }}</td>
                                         <td class="py-1.5 px-3 text-right font-mono">
                                             <template v-if="statCell('run', cat, 'vq3')">
                                                 <span class="text-white">{{ statCell('run', cat, 'vq3').median.toFixed(1) }}</span>
