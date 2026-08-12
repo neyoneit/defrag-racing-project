@@ -1049,7 +1049,7 @@ const getParticipantStatusLabel = (status) => {
                                     v-model="rejectForm.rejection_reason"
                                     rows="3"
                                     required
-                                    :placeholder="$t(&quot;Explain why you're rejecting this submission...&quot;)"
+                                    :placeholder="$t('Explain why you\'re rejecting this submission...')"
                                     class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50"
                                 ></textarea>
                                 <div v-if="rejectForm.errors.rejection_reason" class="text-red-400 text-sm mt-1">{{ rejectForm.errors.rejection_reason }}</div>
@@ -1094,7 +1094,7 @@ const getParticipantStatusLabel = (status) => {
                                     v-model="disputeForm.reason"
                                     rows="3"
                                     required
-                                    :placeholder="$t(&quot;Describe why you're filing this dispute...&quot;)"
+                                    :placeholder="$t('Describe why you\'re filing this dispute...')"
                                     class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50"
                                 ></textarea>
                                 <div v-if="disputeForm.errors.reason" class="text-red-400 text-sm mt-1">{{ disputeForm.errors.reason }}</div>
