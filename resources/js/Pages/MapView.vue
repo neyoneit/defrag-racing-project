@@ -1,11 +1,9 @@
 <script setup>
     import { Head, Link, router, usePage } from '@inertiajs/vue3';
     import { formatTime } from '@/utils/time';
-    import MapCardLine from '@/Components/MapCardLine.vue';
     import MapRecord from '@/Components/MapRecord.vue';
     import TimeHistoryExpand from '@/Components/TimeHistoryExpand.vue';
     // import MapRecordSmall from '@/Components/MapRecordSmall.vue'; // Obsolete - using MapRecord for all screen sizes now
-    import MapCardLineSmall from '@/Components/MapCardLineSmall.vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import AssignDemoToUserModal from '@/Components/AssignDemoToUserModal.vue';
     import ToggleButton from '@/Components/Basic/ToggleButton.vue';
