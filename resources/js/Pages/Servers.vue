@@ -6,6 +6,7 @@ import OnlinePlayer from '@/Components/OnlinePlayer.vue';
 import CopyButton from '@/Components/Basic/CopyButton.vue';
 import LauncherBanner from '@/Components/LauncherBanner.vue';
 import CheatsBanner from '@/Components/CheatsBanner.vue';
+import { t } from '@/utils/i18n';
 const AddToMaplistModal = defineAsyncComponent(() => import('@/Components/Maplists/AddToMaplistModal.vue'));
 
 const page = usePage();
@@ -35,7 +36,7 @@ const pingClass = (ms) => ms < 50
     : ms < 100
         ? 'bg-yellow-500/25 border-yellow-400/50 text-yellow-200'
         : 'bg-red-500/25 border-red-400/50 text-red-300';
-const pingTitle = 'Estimated ping from your location (approximate - excludes your local connection)';
+const pingTitle = computed(() => t('Estimated ping from your location (approximate - excludes your local connection)'));
 
 const formatRecordDate = (value) => {
     if (!value) return '';
@@ -370,22 +371,22 @@ const getFunctionIcon = (abbr) => {
 
 const getFunctionName = (abbr) => {
     const functions = {
-        'tele': 'Teleporter',
-        'teleporter': 'Teleporter',
-        'slick': 'Slick Surface',
-        'timer': 'Timer',
-        'fog': 'Fog',
-        'water': 'Water',
-        'lava': 'Lava',
-        'moving': 'Moving Platforms',
-        'door': 'Doors',
-        'button': 'Buttons',
-        'push': 'Push Trigger',
-        'break': 'Breakable',
-        'slime': 'Slime',
-        'shootergl': 'Grenade Shooter',
-        'shooterpg': 'Plasma Shooter',
-        'shooterrl': 'Rocket Shooter'
+        'tele': t('Teleporter'),
+        'teleporter': t('Teleporter'),
+        'slick': t('Slick Surface'),
+        'timer': t('Timer'),
+        'fog': t('Fog'),
+        'water': t('Water'),
+        'lava': t('Lava'),
+        'moving': t('Moving Platforms'),
+        'door': t('Doors'),
+        'button': t('Buttons'),
+        'push': t('Push Trigger'),
+        'break': t('Breakable'),
+        'slime': t('Slime'),
+        'shootergl': t('Grenade Shooter'),
+        'shooterpg': t('Plasma Shooter'),
+        'shooterrl': t('Rocket Shooter')
     };
     return functions[abbr.toLowerCase().trim()] || abbr;
 };
@@ -393,14 +394,14 @@ const getFunctionName = (abbr) => {
 
 <template>
     <div class="">
-        <Head title="Servers" />
+        <Head :title="$t('Servers')" />
 
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">
-                        Live Servers
+                        {{ $t('Live Servers') }}
                     </h1>
 
                     <Link :href="route('launcher')"
@@ -410,8 +411,8 @@ const getFunctionName = (abbr) => {
                             <polyline points="7 10 12 15 17 10"/>
                             <line x1="12" y1="15" x2="12" y2="3"/>
                         </svg>
-                        <span class="font-bold text-white whitespace-nowrap">Get the launcher</span>
-                        <span class="hidden sm:inline text-blue-200/80 font-semibold text-xs">connect to servers in 1 click + many more features</span>
+                        <span class="font-bold text-white whitespace-nowrap">{{ $t('Get the launcher') }}</span>
+                        <span class="hidden sm:inline text-blue-200/80 font-semibold text-xs">{{ $t('connect to servers in 1 click + many more features') }}</span>
                     </Link>
 
                     <!-- The rules belong where people are about to join a
@@ -423,8 +424,8 @@ const getFunctionName = (abbr) => {
                         <svg class="w-5 h-5 text-amber-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 0 1-2.031.352 5.988 5.988 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971Zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 0 1-2.031.352 5.989 5.989 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971Z" />
                         </svg>
-                        <span class="font-bold text-white whitespace-nowrap">Rules</span>
-                        <span class="hidden sm:inline text-amber-200/80 font-semibold text-xs">read before you set a record</span>
+                        <span class="font-bold text-white whitespace-nowrap">{{ $t('Rules') }}</span>
+                        <span class="hidden sm:inline text-amber-200/80 font-semibold text-xs">{{ $t('read before you set a record') }}</span>
                     </Link>
 
                     <div class="flex items-center gap-3 text-sm">
@@ -433,7 +434,7 @@ const getFunctionName = (abbr) => {
                                 <path d="M4.5 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM14.25 8.625a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0ZM1.5 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122ZM17.25 19.128l-.001.144a2.25 2.25 0 0 1-.233.96 10.088 10.088 0 0 0 5.06-1.01.75.75 0 0 0 .42-.643 4.875 4.875 0 0 0-6.957-4.611 8.586 8.586 0 0 1 1.71 5.157v.003Z" />
                             </svg>
                             <span class="font-bold text-blue-300">{{ players }}</span>
-                            <span class="text-gray-300 font-semibold">Players Online</span>
+                            <span class="text-gray-300 font-semibold">{{ $t('Players Online') }}</span>
                         </div>
                         <div class="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/10">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-gray-300">
@@ -441,7 +442,7 @@ const getFunctionName = (abbr) => {
                                 <path fill-rule="evenodd" d="M22.5 9.75h-21v7.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3v-7.5Zm-18 3.75a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3a.75.75 0 0 0 0-1.5h-3Z" clip-rule="evenodd" />
                             </svg>
                             <span class="font-bold text-white">{{ serverCount }}</span>
-                            <span class="text-gray-300 font-semibold">Active Servers</span>
+                            <span class="text-gray-300 font-semibold">{{ $t('Active Servers') }}</span>
                         </div>
 
                     </div>
@@ -453,32 +454,32 @@ const getFunctionName = (abbr) => {
                 <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
                     <!-- Gametype Filter -->
                     <div class="flex items-center gap-2 flex-wrap">
-                        <label class="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">Gametype:</label>
+                        <label class="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">{{ $t('Gametype:') }}</label>
                         <div class="flex gap-1.5 flex-wrap">
                             <button @click="filters.gametype = 'all'" :class="filters.gametype === 'all' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all">
-                                All
+                                {{ $t('All') }}
                             </button>
                             <button @click="filters.gametype = 'run'" :class="filters.gametype === 'run' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all">
-                                Run
+                                {{ $t('Run') }}
                             </button>
                             <button @click="filters.gametype = 'ctf'" :class="filters.gametype === 'ctf' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all">
                                 CTF
                             </button>
                             <button @click="filters.gametype = 'freestyle'" :class="filters.gametype === 'freestyle' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all">
-                                Freestyle
+                                {{ $t('Freestyle') }}
                             </button>
                             <button @click="filters.gametype = 'teamrun'" :class="filters.gametype === 'teamrun' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all">
-                                Teamrun
+                                {{ $t('Teamrun') }}
                             </button>
                         </div>
                     </div>
 
                     <!-- Physics Filter -->
                     <div class="flex items-center gap-2">
-                        <label class="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">Physics:</label>
+                        <label class="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">{{ $t('Physics:') }}</label>
                         <div class="flex gap-1.5">
                             <button @click="filters.physics = 'all'" :class="filters.physics === 'all' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="flex-1 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all">
-                                All
+                                {{ $t('All') }}
                             </button>
                             <button @click="filters.physics = 'cpm'" :class="filters.physics === 'cpm' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="flex-1 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all">
                                 CPM
@@ -491,10 +492,10 @@ const getFunctionName = (abbr) => {
 
                     <!-- Sort Options -->
                     <div class="flex items-center gap-2">
-                        <label class="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">Sort:</label>
+                        <label class="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">{{ $t('Sort:') }}</label>
                         <div class="flex gap-1.5">
                             <button @click="toggleSort('popularity')" :class="sorting === 'popularity' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="flex-1 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center justify-center gap-1">
-                                Popularity
+                                {{ $t('Popularity') }}
                                 <svg v-if="sorting === 'popularity'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" :class="sortingOrder === 'desc' ? 'rotate-0' : 'rotate-180'" class="w-3 h-3 transition-transform">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                                 </svg>
@@ -510,24 +511,24 @@ const getFunctionName = (abbr) => {
 
                     <!-- Additional Options -->
                     <div class="flex items-center gap-1.5 flex-wrap">
-                        <label class="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">Options:</label>
+                        <label class="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">{{ $t('Options:') }}</label>
                         <button @click="filters.hideEmpty = !filters.hideEmpty" :class="filters.hideEmpty ? 'bg-red-600 text-white border-red-500' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
                             </svg>
-                            Hide Empty
+                            {{ $t('Hide Empty') }}
                         </button>
                         <button @click="filters.showDetails = !filters.showDetails" :class="!filters.showDetails ? 'bg-blue-600 text-white border-blue-500' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
                             </svg>
-                            Hide Details
+                            {{ $t('Hide Details') }}
                         </button>
                         <button @click="toggleLayout" :class="layout !== 'large' ? 'bg-blue-600 text-white border-blue-500' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
                             </svg>
-                            Compact
+                            {{ $t('Compact') }}
                         </button>
                     </div>
                 </div>
@@ -597,7 +598,7 @@ const getFunctionName = (abbr) => {
                             <div :class="['flex items-center gap-2 mb-3 map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
                                 <img :src="`/images/flags/${server.location}.png`" class="w-5 h-3.5 rounded" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1)) drop-shadow(0 0 8px rgba(0,0,0,0.8));" :title="server.location" @error="$event.target.style.display='none'">
                                 <h3 class="text-xl font-bold text-white flex-1" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);" v-html="q3tohtml(server.name)"></h3>
-                                <CopyButton :text="server.ip + ':' + server.port" size="sm" label="Copy IP" />
+                                <CopyButton :text="server.ip + ':' + server.port" size="sm" :label="$t('Copy IP')" />
                             </div>
 
                             <!-- Map Info with hover group -->
@@ -606,7 +607,7 @@ const getFunctionName = (abbr) => {
                                     <div class="flex items-center justify-between gap-2">
                                         <div class="flex items-center gap-2">
                                             <div class="flex items-center gap-2" @mouseenter="hoveredMapServer = server.id" @mouseleave="hoveredMapServer = null">
-                                                <a :href="`/maps/${encodeURIComponent(server.map)}`" class="text-gray-300 text-base font-semibold hover:text-blue-400 transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">Map:</a>
+                                                <a :href="`/maps/${encodeURIComponent(server.map)}`" class="text-gray-300 text-base font-semibold hover:text-blue-400 transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ $t('Map:') }}</a>
                                                 <a :href="`/maps/${encodeURIComponent(server.map)}`" class="font-bold text-white text-lg hover:text-blue-400 transition-colors map-name-highlight" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ server.map }}</a>
                                             </div>
                                             <!-- Copy map name -->
@@ -624,12 +625,12 @@ const getFunctionName = (abbr) => {
                                                 v-if="page.props.auth.user && server.mapdata?.id"
                                                 @click.stop="openAddToMaplist(server.mapdata.id)"
                                                 class="save-maplist-btn"
-                                                title="Save to Maplist"
+                                                :title="$t('Save to Maplist')"
                                             >
                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" />
                                                 </svg>
-                                                <span class="text-[10px] font-semibold">Save</span>
+                                                <span class="text-[10px] font-semibold">{{ $t('Save') }}</span>
                                             </button>
                                         </div>
                                     </div>
@@ -639,7 +640,7 @@ const getFunctionName = (abbr) => {
                                         <div class="flex flex-wrap gap-2 pt-2 border-t border-white/10 mt-2">
                                             <!-- Weapons -->
                                             <div v-if="server.mapdata.weapons && server.mapdata.weapons.length > 0" class="flex items-center gap-1.5">
-                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,1)] drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]">Weapons:</span>
+                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,1)] drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]">{{ $t('Weapons:') }}</span>
                                                 <div class="flex gap-1">
                                                     <img v-for="weapon in server.mapdata.weapons.split(',')" :key="weapon"
                                                          :src="getWeaponIcon(weapon)"
@@ -651,7 +652,7 @@ const getFunctionName = (abbr) => {
 
                                             <!-- Items -->
                                             <div v-if="server.mapdata.items && server.mapdata.items.length > 0" class="flex items-center gap-1.5">
-                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,1)] drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]">Items:</span>
+                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,1)] drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]">{{ $t('Items:') }}</span>
                                                 <div class="flex gap-1">
                                                     <img v-for="item in server.mapdata.items.split(',')" :key="item"
                                                          :src="getItemIcon(item)"
@@ -663,7 +664,7 @@ const getFunctionName = (abbr) => {
 
                                             <!-- Functions -->
                                             <div v-if="server.mapdata.functions && server.mapdata.functions.length > 0" class="flex items-center gap-1.5">
-                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,1)] drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]">Functions:</span>
+                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,1)] drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]">{{ $t('Functions:') }}</span>
                                                 <div class="flex gap-1">
                                                     <img v-for="func in server.mapdata.functions.split(',')" :key="func"
                                                          :src="getFunctionIcon(func)"
@@ -686,7 +687,7 @@ const getFunctionName = (abbr) => {
                                 </a>
                                 <div v-if="server.mytime_time && server.mytime_time > 0" :class="['flex items-center gap-2 text-sm map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
                                     <span v-if="server.myrank_position && server.myrank_total" class="text-sm text-gray-400 font-bold flex-shrink-0" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ server.myrank_position }}/{{ server.myrank_total }}</span>
-                                    <span class="font-bold flex-1 text-white text-sm" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">My Time</span>
+                                    <span class="font-bold flex-1 text-white text-sm" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ $t('My Time') }}</span>
                                     <span v-if="server.mytime_date" class="text-sm text-gray-400 font-mono leading-none" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1);">{{ formatRecordDate(server.mytime_date) }}</span>
                                     <span :class="server.defrag.toLowerCase().includes('cpm') ? 'text-purple-400' : 'text-blue-400'" class="font-bold font-mono text-sm leading-none" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ formatTime(server.mytime_time) }}</span>
                                 </div>
@@ -712,7 +713,7 @@ const getFunctionName = (abbr) => {
                         </div>
                         <div v-else :class="['mb-4 mt-2 map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
                             <div class="p-3 rounded-lg border border-white/10 text-center backdrop-blur-[4px]" style="background: rgba(71,85,105,0.55);">
-                                <span class="text-sm text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">No players online</span>
+                                <span class="text-sm text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ $t('No players online') }}</span>
                             </div>
                         </div>
 
@@ -723,7 +724,7 @@ const getFunctionName = (abbr) => {
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
                                     </svg>
-                                    Connect
+                                    {{ $t('Connect') }}
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <span v-if="server.estimated_ping != null" :class="pingClass(server.estimated_ping)" :title="pingTitle"
@@ -752,8 +753,8 @@ const getFunctionName = (abbr) => {
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-xl font-black text-white">VQ3 Servers</h3>
-                            <p class="text-sm text-gray-500">{{ filteredAndSortedServers.filter(s => !s.defrag.toLowerCase().includes('cpm')).length }} servers</p>
+                            <h3 class="text-xl font-black text-white">{{ $t('VQ3 Servers') }}</h3>
+                            <p class="text-sm text-gray-500">{{ $tc(':count server|:count servers', filteredAndSortedServers.filter(s => !s.defrag.toLowerCase().includes('cpm')).length) }}</p>
                         </div>
                     </div>
 
@@ -808,7 +809,7 @@ const getFunctionName = (abbr) => {
                                                     <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clip-rule="evenodd" />
                                                 </svg>
                                                 <span v-if="server.myrank_position && server.myrank_total" class="text-xs font-bold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ server.myrank_position }}/{{ server.myrank_total }}</span>
-                                                <span v-else class="text-xs font-bold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">Me</span>
+                                                <span v-else class="text-xs font-bold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ $t('Me') }}</span>
                                             </div>
                                             <span class="text-xs font-bold text-blue-400 font-mono" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ formatTime(server.mytime_time) }}</span>
                                         </div>
@@ -835,9 +836,9 @@ const getFunctionName = (abbr) => {
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
                                         </svg>
-                                        <span class="text-xs font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">Play</span>
+                                        <span class="text-xs font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ $t('Play') }}</span>
                                     </a>
-                                    <CopyButton :text="server.ip + ':' + server.port" size="sm" label="Copy IP" />
+                                    <CopyButton :text="server.ip + ':' + server.port" size="sm" :label="$t('Copy IP')" />
                                 </div>
                             </div>
 
@@ -851,7 +852,7 @@ const getFunctionName = (abbr) => {
                     </div>
 
                     <div v-if="filteredAndSortedServers.filter(s => !s.defrag.toLowerCase().includes('cpm')).length === 0" class="text-center py-8  bg-white/5 rounded-xl border border-white/10">
-                        <p class="text-gray-500 text-sm">No VQ3 servers found</p>
+                        <p class="text-gray-500 text-sm">{{ $t('No VQ3 servers found') }}</p>
                     </div>
                 </div>
 
@@ -864,8 +865,8 @@ const getFunctionName = (abbr) => {
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-xl font-black text-white">CPM Servers</h3>
-                            <p class="text-sm text-gray-500">{{ filteredAndSortedServers.filter(s => s.defrag.toLowerCase().includes('cpm')).length }} servers</p>
+                            <h3 class="text-xl font-black text-white">{{ $t('CPM Servers') }}</h3>
+                            <p class="text-sm text-gray-500">{{ $tc(':count server|:count servers', filteredAndSortedServers.filter(s => s.defrag.toLowerCase().includes('cpm')).length) }}</p>
                         </div>
                     </div>
 
@@ -919,7 +920,7 @@ const getFunctionName = (abbr) => {
                                                     <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clip-rule="evenodd" />
                                                 </svg>
                                                 <span v-if="server.myrank_position && server.myrank_total" class="text-xs font-bold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ server.myrank_position }}/{{ server.myrank_total }}</span>
-                                                <span v-else class="text-xs font-bold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">Me</span>
+                                                <span v-else class="text-xs font-bold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ $t('Me') }}</span>
                                             </div>
                                             <span class="text-xs font-bold text-purple-400 font-mono" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ formatTime(server.mytime_time) }}</span>
                                         </div>
@@ -946,9 +947,9 @@ const getFunctionName = (abbr) => {
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
                                         </svg>
-                                        <span class="text-xs font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">Play</span>
+                                        <span class="text-xs font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ $t('Play') }}</span>
                                     </a>
-                                    <CopyButton :text="server.ip + ':' + server.port" size="sm" label="Copy IP" />
+                                    <CopyButton :text="server.ip + ':' + server.port" size="sm" :label="$t('Copy IP')" />
                                 </div>
                             </div>
 
@@ -962,7 +963,7 @@ const getFunctionName = (abbr) => {
                     </div>
 
                     <div v-if="filteredAndSortedServers.filter(s => s.defrag.toLowerCase().includes('cpm')).length === 0" class="text-center py-8  bg-white/5 rounded-xl border border-white/10">
-                        <p class="text-gray-500 text-sm">No CPM servers found</p>
+                        <p class="text-gray-500 text-sm">{{ $t('No CPM servers found') }}</p>
                     </div>
                 </div>
             </div>
@@ -973,8 +974,8 @@ const getFunctionName = (abbr) => {
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-gray-500 mx-auto mb-4">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
                     </svg>
-                    <h3 class="text-xl font-bold text-white mb-2">No servers found</h3>
-                    <p class="text-gray-400">Try adjusting your filters</p>
+                    <h3 class="text-xl font-bold text-white mb-2">{{ $t('No servers found') }}</h3>
+                    <p class="text-gray-400">{{ $t('Try adjusting your filters') }}</p>
                 </div>
             </div>
         </div>

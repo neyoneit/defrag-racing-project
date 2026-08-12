@@ -5,6 +5,7 @@
     import ApplicationMark from '@/Components/Laravel/ApplicationMark.vue';
     import Dropdown from '@/Components/Laravel/Dropdown.vue';
     import LanguageSwitcher from '@/Components/LanguageSwitcher.vue';
+    import { t } from '@/utils/i18n';
     import DropdownLink from '@/Components/Laravel/DropdownLink.vue';
     import NavLink from '@/Components/Laravel/NavLink.vue';
     import TextInput from '@/Components/Laravel/TextInput.vue';
@@ -371,12 +372,12 @@
     const systemNotificationPrefix = (notification) => {
         const type = notification?.type ?? '';
 
-        if (type === 'new_map') return notification.before || 'New map:';
-        if (type.startsWith('clan_')) return 'Clan:';
-        if (type.startsWith('tournament_') || type.startsWith('round_')) return 'Tournament:';
-        if (type.startsWith('render_')) return 'Render:';
+        if (type === 'new_map') return notification.before || t('New map:');
+        if (type.startsWith('clan_')) return t('Clan:');
+        if (type.startsWith('tournament_') || type.startsWith('round_')) return t('Tournament:');
+        if (type.startsWith('render_')) return t('Render:');
 
-        return 'Announcement:';
+        return t('Announcement:');
     };
 
     const cycleSystemNotification = () => {
@@ -510,7 +511,7 @@
                                         @focus="onSearchFocus"
                                         type="text"
                                         class="h-8 sm:h-9 pl-8 sm:pl-9 pr-7 sm:pr-8 w-full bg-white/[0.08] border-white/[0.12] text-xs sm:text-sm placeholder:text-gray-400 focus:bg-white/[0.12] focus:border-white/25 transition-all"
-                                        placeholder="Search..."
+                                        :placeholder="$t('Search...')"
                                         @input="performSearch"
                                     />
                                     <button v-if="search.length > 0" @click="search = ''; closeSearch();" class="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 p-0.5 text-gray-500 hover:text-white transition-colors">
@@ -532,20 +533,20 @@
                                          @click.stop>
 
                                     <div v-if="search.length == 0" class="text-center py-20 text-gray-500 text-sm">
-                                        Start typing to search...
+                                        {{ $t('Start typing to search...') }}
                                     </div>
 
                                     <div v-else class="flex flex-col h-full">
                                         <!-- Mobile Tabs (< lg) -->
                                         <div class="lg:hidden flex border-b border-white/10">
                                             <button @click="activeSearchTab = 'maps'" :class="['flex-1 py-2.5 text-xs font-bold transition-colors', activeSearchTab === 'maps' ? 'text-green-400 border-b-2 border-green-400' : 'text-gray-500 hover:text-gray-300']">
-                                                MAPS<span v-if="maps.data?.length > 0" class="ml-1 opacity-60">({{ maps.data.length }})</span>
+                                                {{ $t('MAPS') }}<span v-if="maps.data?.length > 0" class="ml-1 opacity-60">({{ maps.data.length }})</span>
                                             </button>
                                             <button @click="activeSearchTab = 'players'" :class="['flex-1 py-2.5 text-xs font-bold transition-colors', activeSearchTab === 'players' ? 'text-purple-400 border-b-2 border-purple-400' : 'text-gray-500 hover:text-gray-300']">
-                                                PLAYERS<span v-if="players?.length > 0" class="ml-1 opacity-60">({{ players.length }})</span>
+                                                {{ $t('PLAYERS') }}<span v-if="players?.length > 0" class="ml-1 opacity-60">({{ players.length }})</span>
                                             </button>
                                             <button @click="activeSearchTab = 'models'" :class="['flex-1 py-2.5 text-xs font-bold transition-colors', activeSearchTab === 'models' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-gray-300']">
-                                                MODELS<span v-if="models?.length > 0" class="ml-1 opacity-60">({{ models.length }})</span>
+                                                {{ $t('MODELS') }}<span v-if="models?.length > 0" class="ml-1 opacity-60">({{ models.length }})</span>
                                             </button>
                                         </div>
 
@@ -556,14 +557,14 @@
                                                 <div v-if="maps.data?.length > 0" class="space-y-2" @click="closeSearch">
                                                     <MapSearchItem v-for="map in maps.data" :map="map" :key="map.id" />
                                                 </div>
-                                                <div v-else class="text-xs text-gray-600 text-center py-8">No maps found</div>
+                                                <div v-else class="text-xs text-gray-600 text-center py-8">{{ $t('No maps found') }}</div>
                                             </div>
                                             <!-- Players -->
                                             <div v-if="activeSearchTab === 'players'">
                                                 <div v-if="players?.length > 0" class="space-y-2" @click="closeSearch">
                                                     <PlayerSearchItem v-for="player in players" :player="player" :key="player.id" />
                                                 </div>
-                                                <div v-else class="text-xs text-gray-600 text-center py-8">No players found</div>
+                                                <div v-else class="text-xs text-gray-600 text-center py-8">{{ $t('No players found') }}</div>
                                             </div>
                                             <!-- Models -->
                                             <div v-if="activeSearchTab === 'models'">
@@ -581,11 +582,11 @@
                                                         </div>
                                                         <div class="flex-1 min-w-0">
                                                             <div class="text-sm font-bold text-white group-hover:text-blue-400 transition-colors truncate">{{ model.name }}</div>
-                                                            <div class="text-xs text-gray-400">{{ model.author || 'Unknown' }}</div>
+                                                            <div class="text-xs text-gray-400">{{ model.author || $t('Unknown') }}</div>
                                                         </div>
                                                     </Link>
                                                 </div>
-                                                <div v-else class="text-xs text-gray-600 text-center py-8">No models found</div>
+                                                <div v-else class="text-xs text-gray-600 text-center py-8">{{ $t('No models found') }}</div>
                                             </div>
                                         </div>
 
@@ -594,31 +595,31 @@
                                             <!-- Maps Column -->
                                             <div class="flex flex-col">
                                                 <div class="text-xs font-bold text-green-400 mb-3 pb-2 border-b border-green-500/30 flex items-center justify-between">
-                                                    <span>MAPS</span>
+                                                    <span>{{ $t('MAPS') }}</span>
                                                     <span v-if="maps.data?.length > 0" class="text-[10px] opacity-60">({{ maps.data.length }})</span>
                                                 </div>
                                                 <div v-if="maps.data?.length > 0" class="space-y-2" @click="closeSearch">
                                                     <MapSearchItem v-for="map in maps.data" :map="map" :key="map.id" />
                                                 </div>
-                                                <div v-else class="text-xs text-gray-600 text-center py-8">No maps found</div>
+                                                <div v-else class="text-xs text-gray-600 text-center py-8">{{ $t('No maps found') }}</div>
                                             </div>
 
                                             <!-- Players Column -->
                                             <div class="flex flex-col">
                                                 <div class="text-xs font-bold text-purple-400 mb-3 pb-2 border-b border-purple-500/30 flex items-center justify-between">
-                                                    <span>PLAYERS</span>
+                                                    <span>{{ $t('PLAYERS') }}</span>
                                                     <span v-if="players?.length > 0" class="text-[10px] opacity-60">({{ players.length }})</span>
                                                 </div>
                                                 <div v-if="players?.length > 0" class="space-y-2" @click="closeSearch">
                                                     <PlayerSearchItem v-for="player in players" :player="player" :key="player.id" />
                                                 </div>
-                                                <div v-else class="text-xs text-gray-600 text-center py-8">No players found</div>
+                                                <div v-else class="text-xs text-gray-600 text-center py-8">{{ $t('No players found') }}</div>
                                             </div>
 
                                             <!-- Models Column -->
                                             <div class="flex flex-col">
                                                 <div class="text-xs font-bold text-blue-400 mb-3 pb-2 border-b border-blue-500/30 flex items-center justify-between">
-                                                    <span>MODELS</span>
+                                                    <span>{{ $t('MODELS') }}</span>
                                                     <span v-if="models?.length > 0" class="text-[10px] opacity-60">({{ models.length }})</span>
                                                 </div>
                                                 <div v-if="models?.length > 0" class="space-y-2" @click="closeSearch">
@@ -635,11 +636,11 @@
                                                         </div>
                                                         <div class="flex-1 min-w-0">
                                                             <div class="text-sm font-bold text-white group-hover:text-blue-400 transition-colors truncate">{{ model.name }}</div>
-                                                            <div class="text-xs text-gray-400">{{ model.author || 'Unknown' }}</div>
+                                                            <div class="text-xs text-gray-400">{{ model.author || $t('Unknown') }}</div>
                                                         </div>
                                                     </Link>
                                                 </div>
-                                                <div v-else class="text-xs text-gray-600 text-center py-8">No models found</div>
+                                                <div v-else class="text-xs text-gray-600 text-center py-8">{{ $t('No models found') }}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -668,7 +669,7 @@
                                 <button
                                     @click.stop="dismissRecordNotification(false)"
                                     class="flex items-center px-1.5 py-1.5 bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 border-l-0 rounded-r-lg transition-all hover:bg-red-500/20 hover:border-red-500/30 text-gray-500 hover:text-red-400"
-                                    title="Dismiss"
+                                    :title="$t('Dismiss')"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -697,7 +698,7 @@
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 shrink-0 text-red-500">
                                                 <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
                                             </svg>
-                                            <span class="font-bold text-blue-400 truncate">ready</span>
+                                            <span class="font-bold text-blue-400 truncate">{{ $t('ready') }}</span>
                                         </template>
                                         <template v-else>
                                             <span class="font-bold truncate" :class="announcementMode ? 'text-amber-200' : 'text-blue-400'" v-html="q3tohtml(currentSystemNotification.headline || '')"></span>
@@ -713,7 +714,7 @@
                                     :class="announcementMode
                                         ? 'bg-gradient-to-r from-amber-500/15 to-orange-500/15 border-amber-500/40'
                                         : 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20'"
-                                    title="Dismiss"
+                                    :title="$t('Dismiss')"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -943,14 +944,14 @@
                         <!-- 10. Downloads - visible from xl -->
                         <div class="hidden xl:inline-flex">
                             <NavLink :href="route('downloads')" :active="navActive.bundles">
-                                Downloads
+                                {{ $t('Downloads') }}
                             </NavLink>
                         </div>
 
                         <!-- 11. Beta - visible from xl -->
                         <div class="hidden xl:inline-flex">
                             <NavLink href="/test-map-viewer.html?map=pornstar-cpmrun">
-                                Beta
+                                {{ $t('Beta') }}
                             </NavLink>
                         </div>
 
@@ -960,31 +961,31 @@
                                 <template #trigger="{ open }">
                                     <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
                                         :class="open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
-                                        <span>More</span>
+                                        <span>{{ $t('More') }}</span>
                                         <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                     </button>
                                 </template>
                                 <template #content>
                                     <!-- Items hidden below md (Players, Maps, Demos) -->
                                     <div class="md:hidden">
-                                        <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Players</div>
+                                        <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">{{ $t('Players') }}</div>
                                         <DropdownLink :href="route('records')" :active="navActive.records">{{ $t('Records') }}</DropdownLink>
                                         <DropdownLink :href="route('clans.index')" :active="navActive.clans">{{ $t('Clans') }}</DropdownLink>
-                                        <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider mt-1">Maps & Models</div>
+                                        <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider mt-1">{{ $t('Maps & Models') }}</div>
                                         <DropdownLink :href="route('maps')" :active="navActive.maps">{{ $t('Maps') }}</DropdownLink>
                                         <DropdownLink :href="route('maps.stats')" :active="navActive.mapsStats">{{ $t('Map Statistics') }}</DropdownLink>
                                         <DropdownLink href="/models" :active="navActive.models">{{ $t('Models') }}</DropdownLink>
-                                        <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider mt-1">Demos</div>
+                                        <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider mt-1">{{ $t('Demos') }}</div>
                                         <DropdownLink :href="route('demos.index')" :active="navActive.demosIndex">{{ $t('Upload & Browse') }}</DropdownLink>
                                         <DropdownLink :href="route('youtube')" :active="navActive.youtube">{{ $t('Rendered Demos') }}</DropdownLink>
                                         <div class="border-t border-white/10 my-1.5"></div>
                                     </div>
                                     <!-- Items hidden below lg (Rankings, Challenges) -->
                                     <div class="lg:hidden">
-                                        <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Rankings</div>
+                                        <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">{{ $t('Rankings') }}</div>
                                         <DropdownLink :href="route('ranking')" :active="navActive.ranking">{{ $t('Player Ranking') }}</DropdownLink>
                                         <DropdownLink :href="route('community')" :active="navActive.community">{{ $t('Community Leaderboard') }}</DropdownLink>
-                                        <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider mt-1">Challenges</div>
+                                        <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider mt-1">{{ $t('Challenges') }}</div>
                                         <DropdownLink :href="route('headhunter.index')" :active="navActive.headhunter">{{ $t('Headhunter') }}</DropdownLink>
                                         <DropdownLink :href="route('marketplace.index')" :active="navActive.marketplace">{{ $t('Marketplace') }}</DropdownLink>
                                         <DropdownLink :href="route('community.tasks')" :active="navActive.communityTasks">{{ $t('Community Tasks') }}</DropdownLink>
@@ -992,11 +993,11 @@
                                         <div class="border-t border-white/10 my-1.5"></div>
                                     </div>
                                     <!-- Items always in More (hidden inline below xl) -->
-                                    <DropdownLink :href="route('maplists.index')" :active="navActive.maplists">Maplists</DropdownLink>
-                                    <DropdownLink :href="route('tournaments.index')" :active="navActive.tournaments">Tournaments</DropdownLink>
-                                    <DropdownLink :href="route('wiki.index')" :active="navActive.wiki">Wiki</DropdownLink>
-                                    <DropdownLink :href="route('downloads')" :active="navActive.bundles">Downloads</DropdownLink>
-                                    <DropdownLink href="/test-map-viewer.html?map=pornstar-cpmrun">Beta</DropdownLink>
+                                    <DropdownLink :href="route('maplists.index')" :active="navActive.maplists">{{ $t('Maplists') }}</DropdownLink>
+                                    <DropdownLink :href="route('tournaments.index')" :active="navActive.tournaments">{{ $t('Tournaments') }}</DropdownLink>
+                                    <DropdownLink :href="route('wiki.index')" :active="navActive.wiki">{{ $t('Wiki') }}</DropdownLink>
+                                    <DropdownLink :href="route('downloads')" :active="navActive.bundles">{{ $t('Downloads') }}</DropdownLink>
+                                    <DropdownLink href="/test-map-viewer.html?map=pornstar-cpmrun">{{ $t('Beta') }}</DropdownLink>
                                 </template>
                             </Dropdown>
                         </div>
@@ -1013,7 +1014,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-blue-400 shrink-0">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 0 8.835-2.535m0 0A23.74 23.74 0 0 0 18.795 3m.38 1.125a23.91 23.91 0 0 1 1.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 0 0 1.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 0 1 0 3.46" />
                             </svg>
-                            <span class="text-xs font-bold text-blue-300 uppercase tracking-wider">Latest News</span>
+                            <span class="text-xs font-bold text-blue-300 uppercase tracking-wider">{{ $t('Latest News') }}</span>
                             <span class="text-sm text-gray-300 group-hover:text-white transition-colors truncate">{{ $page.props.globalLatestAnnouncement.title }}</span>
                         </div>
                         <svg class="w-4 h-4 text-blue-400/50 group-hover:translate-x-1 transition-transform shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1031,8 +1032,8 @@
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-red-400 shrink-0">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
                             </svg>
-                            <span class="text-sm font-bold text-red-400">Verify your email address</span>
-                            <span class="text-xs text-gray-400 hidden sm:inline">to unlock all features including demo uploads, map tagging, and more</span>
+                            <span class="text-sm font-bold text-red-400">{{ $t('Verify your email address') }}</span>
+                            <span class="text-xs text-gray-400 hidden sm:inline">{{ $t('to unlock all features including demo uploads, map tagging, and more') }}</span>
                         </div>
                         <svg class="w-4 h-4 text-red-400/50 group-hover:translate-x-1 transition-transform shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -1049,8 +1050,8 @@
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-yellow-400 shrink-0">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
                             </svg>
-                            <span class="text-sm font-bold text-yellow-400">Link your Q3DF profile</span>
-                            <span class="text-xs text-gray-400 hidden sm:inline">to unlock records, rankings, demo uploads, map tagging, and more</span>
+                            <span class="text-sm font-bold text-yellow-400">{{ $t('Link your Q3DF profile') }}</span>
+                            <span class="text-xs text-gray-400 hidden sm:inline">{{ $t('to unlock records, rankings, demo uploads, map tagging, and more') }}</span>
                         </div>
                         <svg class="w-4 h-4 text-yellow-400/50 group-hover:translate-x-1 transition-transform shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
