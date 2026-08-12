@@ -87,8 +87,8 @@
                         <template #content>
                             <div class="px-4 py-2 rounded-md bg-blackop-80">
                                 <div class="text-gray-400">
-                                    <span v-if="!copyState">Copy</span>
-                                    <span v-else class="text-green-400">Copied !</span>
+                                    <span v-if="!copyState">{{ $t('Copy') }}</span>
+                                    <span v-else class="text-green-400">{{ $t('Copied !') }}</span>
                                 </div>
                             </div>
                         </template>
@@ -96,11 +96,11 @@
                 </div>
 
                 <div class="flex items-center text-gray-400 text-sm">
-                    By <Link class="ml-1 hover:text-gray-300 overflow-hidden truncate" style="max-width: 120px;" :title="map?.author" :href="route('maps.filters', {author: map?.author ?? 'unknown'})">{{ map?.author ?? 'Unknown' }}</Link>
+                    {{ $t('By') }} <Link class="ml-1 hover:text-gray-300 overflow-hidden truncate" style="max-width: 120px;" :title="map?.author" :href="route('maps.filters', {author: map?.author ?? 'unknown'})">{{ map?.author ?? $t('Unknown') }}</Link>
                 </div>
 
                 <div class="flex flex-wrap items-center">
-                    <div class="text-white mr-3">Map Physics: </div>
+                    <div class="text-white mr-3">{{ $t('Map Physics:') }} </div>
                     <div class="text-white rounded-full text-xs px-2 py-0.5 uppercase font-bold" :class="{'bg-green-700': map.physics.includes('cpm'), 'bg-blue-600': map.physics.includes('vq3'), 'bg-gray-700': map.physics.includes('all')}">
                         <div>{{ map.physics }}</div>
                     </div>
@@ -122,20 +122,18 @@
                      game has nothing to download, a map with no pk3 anywhere is
                      one we would like back. -->
                 <div v-if="!map?.pk3 && map?.is_stock" class="flex justify-center text-gray-500 bg-blackop-50 py-1 px-2 rounded-md text-sm">
-                    Comes with Quake III Arena
+                    {{ $t('Comes with Quake III Arena') }}
                 </div>
 
-                <div v-else-if="!map?.pk3" class="text-gray-500 bg-blackop-50 py-1 px-2 rounded-md text-sm text-center">
-                    This map's pk3 could not be found anywhere.<br>
-                    If you have it, send it to <span class="text-gray-400">neyo</span> and it will be added.
-                </div>
+                <div v-else-if="!map?.pk3" class="text-gray-500 bg-blackop-50 py-1 px-2 rounded-md text-sm text-center [&_span]:text-gray-400"
+                    v-html="$t('This map\'s pk3 could not be found anywhere.<br>If you have it, send it to <span>neyo</span> and it will be added.')"></div>
 
                 <a v-else target="_blank" :href="'https://dl.defrag.racing/downloads/maps/' + encodeURIComponent(map?.pk3?.split('/').pop() ?? '')">
-                    <div class="flex justify-center text-gray-400 bg-blackop-50 hover:bg-blackop-80 py-1 px-2 rounded-md cursor-pointer" title="Download">
+                    <div class="flex justify-center text-gray-400 bg-blackop-50 hover:bg-blackop-80 py-1 px-2 rounded-md cursor-pointer" :title="$t('Download')">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3" />
                         </svg>
-                        <div class="ml-2">Download</div>
+                        <div class="ml-2">{{ $t('Download') }}</div>
                     </div>
                 </a>
             </div>
