@@ -30,7 +30,7 @@
                     :href="route('home')"
                     class="px-6 py-3 bg-black/40 backdrop-blur-sm hover:bg-black/50 border border-white/10 hover:border-white/20 text-white font-medium rounded-lg transition-all"
                 >
-                    ← Back to Home
+                    ← {{ $t('Back to Home') }}
                 </Link>
             </div>
         </div>

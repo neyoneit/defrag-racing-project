@@ -24,7 +24,7 @@
         </div>
 
         <div class="text-center text-gray-400 text-xl" v-if="tournament.donations.length === 0">
-            There are no donations yet.
+            {{ $t('There are no donations yet.') }}
         </div>
     </Tournament>
 </template>

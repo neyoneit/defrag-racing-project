@@ -63,7 +63,7 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="password_confirmation" value="Confirm Password" />
+                <InputLabel for="password_confirmation" :value="$t('Confirm Password')" />
                 <TextInput
                     id="password_confirmation"
                     v-model="form.password_confirmation"

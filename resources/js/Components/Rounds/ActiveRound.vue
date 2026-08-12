@@ -60,7 +60,7 @@
             <template #additional>
                 <div class="flex flex-col md:flex-row md:items-center gap-4 p-4 border-t border-white/10" v-if="active">
                     <div class="text-lg font-bold text-gray-300 md:min-w-[150px]">
-                        Upload Demo
+                        {{ $t('Upload Demo') }}
                     </div>
 
                     <form @submit.prevent="submitForm" class="flex-grow">

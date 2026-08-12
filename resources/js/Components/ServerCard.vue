@@ -75,7 +75,7 @@
                                         {{  server.ip }}:{{ server.port }}
                                     </div>
                                     <div class="transition-all duration-300 opacity-0 group-hover:opacity-100 ml-2">
-                                        <CopyButton :text="server.ip + ':' + server.port" size="xs" label="Copy IP" />
+                                        <CopyButton :text="server.ip + ':' + server.port" size="xs" :label="$t('Copy IP')" />
                                     </div>
                                 </div>
                             </div>

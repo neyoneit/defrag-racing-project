@@ -99,11 +99,11 @@ const nameEffects = computed(() => [
                 <div class="space-y-3">
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <InputLabel for="qe_color" value="Effect Color" />
+                            <InputLabel for="qe_color" :value="$t('Effect Color')" />
                             <input v-model="form.color" id="qe_color" type="color" class="mt-1 w-full h-8 rounded border-2 border-gray-700 bg-gray-900 cursor-pointer" />
                         </div>
                         <div>
-                            <InputLabel for="qe_border" value="Border Color" />
+                            <InputLabel for="qe_border" :value="$t('Border Color')" />
                             <input v-model="form.avatar_border_color" id="qe_border" type="color" class="mt-1 w-full h-8 rounded border-2 border-gray-700 bg-gray-900 cursor-pointer" />
                         </div>
                     </div>

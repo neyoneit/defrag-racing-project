@@ -16,7 +16,7 @@
     <div>
         <div class="mb-3 rounded-md mx-auto bg-blackop-30 rounded-md p-2 flex items-center">
             <span class="text-xs bg-blue-600 rounded-full text-white px-4 py-1.5 me-3">
-                <span class="font-bold">News</span>
+                <span class="font-bold">{{ $t('News') }}</span>
             </span>
             <Link :href="route('tournaments.news.index', tournament)" class="text-white font-bold text-xl hover:underline">
                 {{ title }}

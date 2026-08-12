@@ -62,7 +62,7 @@ const updatePassword = () => {
         <form @submit.prevent="updatePassword" class="space-y-3">
             <input type="text" name="username" autocomplete="username" class="hidden" aria-hidden="true" tabindex="-1" />
             <div>
-                <InputLabel for="current_password" value="Current Password" />
+                <InputLabel for="current_password" :value="$t('Current Password')" />
                 <TextInput
                     id="current_password"
                     ref="currentPasswordInput"
@@ -75,7 +75,7 @@ const updatePassword = () => {
             </div>
 
             <div>
-                <InputLabel for="password" value="New Password" />
+                <InputLabel for="password" :value="$t('New Password')" />
                 <TextInput
                     id="password"
                     ref="passwordInput"
@@ -88,7 +88,7 @@ const updatePassword = () => {
             </div>
 
             <div>
-                <InputLabel for="password_confirmation" value="Confirm Password" />
+                <InputLabel for="password_confirmation" :value="$t('Confirm Password')" />
                 <TextInput
                     id="password_confirmation"
                     v-model="form.password_confirmation"

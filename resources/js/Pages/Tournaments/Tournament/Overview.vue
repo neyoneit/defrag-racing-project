@@ -68,7 +68,7 @@
                                 </svg>
                             </div>
                             <div class="w-full h-full flex justify-center mt-20">
-                                <iframe width="90%" height="90%" :src="getYoutubeUrl(tournament.trailer)" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                                <iframe width="90%" height="90%" :src="getYoutubeUrl(tournament.trailer)" :title="$t('YouTube video player')" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
                             </div>
                         </div>
                     </div>

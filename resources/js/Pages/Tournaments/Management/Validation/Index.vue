@@ -17,7 +17,7 @@
         </div>
 
         <div class="flex justify-center mt-5 text-md text-gray-500" v-if="rounds.length === 0">
-            There are no rounds yet.
+            {{ $t('There are no rounds yet.') }}
         </div>
     </Tournament>
 </template>

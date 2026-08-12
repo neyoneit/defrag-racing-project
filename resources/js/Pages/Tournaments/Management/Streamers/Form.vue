@@ -62,7 +62,7 @@
             <template #form>
                 <div class="col-span-6">
                     <div class="mb-3">
-                        <InputLabel for="twitch_username" value="Twitch Username" />
+                        <InputLabel for="twitch_username" :value="$t('Twitch Username')" />
                         <TextInput
                             id="twitch_username"
                             v-model="form.twitch_username"
@@ -74,7 +74,7 @@
                     </div>
     
                     <div class="mb-3">
-                        <InputLabel for="user_id" value="Defrag User" />
+                        <InputLabel for="user_id" :value="$t('Defrag User')" />
                         <PlayerSelectDefrag
                             id="user_id"
                             v-model="user_id"

@@ -84,7 +84,7 @@
             </div>
             
             <div v-if="!subcomment" @click="showReplyForm = !showReplyForm" class="cursor-pointer ml-3 text-gray-300 hover:text-white text-sm font-bold">
-                Reply
+                {{ $t('Reply') }}
             </div>
         </div>
 
@@ -94,7 +94,7 @@
                 v-model="form.comment"
                 name="comment"
                 type="text"
-                placeholder="Type your reply..."
+                :placeholder="$t('Type your reply...')"
                 rows="1"
                 class="textarea mt-1 block w-full border-2 border-grayop-700 bg-grayop-900 text-gray-300 focus:border-blue-600 focus:ring-blue-600 rounded-md shadow-sm"
                 v-on:keyup.enter="onComment()"

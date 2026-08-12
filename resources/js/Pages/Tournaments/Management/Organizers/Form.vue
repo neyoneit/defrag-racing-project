@@ -98,7 +98,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <InputLabel for="user_id" value="Defrag User" />
+                        <InputLabel for="user_id" :value="$t('Defrag User')" />
                         <PlayerSelectDefrag
                             id="user_id"
                             v-model="user_id"

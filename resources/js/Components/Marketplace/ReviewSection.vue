@@ -72,7 +72,7 @@ const timeAgo = (date) => {
             <!-- Comment -->
             <textarea
                 v-model="comment"
-                placeholder="Write your review (optional)..."
+                :placeholder="$t('Write your review (optional)...')"
                 rows="3"
                 class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 resize-none"
                 maxlength="2000"
