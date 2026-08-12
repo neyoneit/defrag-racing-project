@@ -74,7 +74,7 @@
             <div class="p-5">
                 <div class="flex justify-between items-center">
                     <h2 class="font-semibold text-xl text-gray-200 leading-tight">
-                        Transfer Ownership
+                        {{ $t('Transfer Ownership') }}
                     </h2>
 
                     <div class="text-gray-200 cursor-pointer rounded-full hover:bg-grayop-700 p-1" @click="close">
@@ -98,12 +98,12 @@
                     </div>
 
                     <div class="text-gray-500 mb-3" v-if="user_id.length > 0">
-                        Selected Player: <span class="text-gray-300" v-html="q3tohtml(selectedUser())"></span>
+                        {{ $t('Selected Player:') }} <span class="text-gray-300" v-html="q3tohtml(selectedUser())"></span>
                     </div>
 
                     <div class="flex justify-center">
                         <button type="submit" class="font-semibold text-xs text-white uppercase tracking-widest text-gray-300 bg-red-700 cursor-pointer hover:bg-red-600 text-center rounded-lg px-3 py-2 mr-2 flex items-center text-sm">
-                            Transfer Ownership
+                            {{ $t('Transfer Ownership') }}
                         </button>
                     </div>
                 </form>
