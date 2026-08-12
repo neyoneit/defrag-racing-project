@@ -12,6 +12,7 @@ import { Image } from '@tiptap/extension-image';
 import { Underline } from '@tiptap/extension-underline';
 import { TextAlign } from '@tiptap/extension-text-align';
 import Placeholder from '@tiptap/extension-placeholder';
+import { t } from '@/utils/i18n';
 
 const props = defineProps({
     modelValue: { type: String, default: '' },
@@ -31,7 +32,7 @@ async function uploadAndInsert(file) {
         const { data } = await axios.post(route('wiki.uploadImage'), formData);
         editor.value.chain().focus().setImage({ src: data.url }).run();
     } catch (err) {
-        alert('Upload failed: ' + (err.response?.data?.message || err.message));
+        alert(t('Upload failed: :error', { error: err.response?.data?.message || err.message }));
     }
     imageUploading.value = false;
 }
@@ -51,7 +52,7 @@ const editor = useEditor({
         Image.configure({ inline: false, allowBase64: false }),
         Underline,
         TextAlign.configure({ types: ['heading', 'paragraph'] }),
-        Placeholder.configure({ placeholder: 'Start writing...' }),
+        Placeholder.configure({ placeholder: t('Start writing...') }),
     ],
     onUpdate: ({ editor }) => {
         emit('update:modelValue', editor.getHTML());
@@ -171,7 +172,7 @@ const insertImageFromUrl = async () => {
         imageUrl.value = '';
         showImageDialog.value = false;
     } catch (err) {
-        alert('Failed to download image: ' + (err.response?.data?.error || err.message));
+        alert(t('Failed to download image: :error', { error: err.response?.data?.error || err.message }));
     }
     imageUploading.value = false;
 };
@@ -203,51 +204,51 @@ onBeforeUnmount(() => {
         <div class="flex flex-wrap items-center gap-0.5 bg-gray-900/40 border border-gray-700/50 rounded-t-lg px-2 py-1.5">
             <template v-if="!sourceMode">
                 <!-- Text formatting -->
-                <button type="button" @click="editor?.chain().focus().toggleBold().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('bold') }" class="toolbar-btn" title="Bold"><strong>B</strong></button>
-                <button type="button" @click="editor?.chain().focus().toggleItalic().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('italic') }" class="toolbar-btn italic" title="Italic">I</button>
-                <button type="button" @click="editor?.chain().focus().toggleUnderline().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('underline') }" class="toolbar-btn underline" title="Underline">U</button>
-                <button type="button" @click="editor?.chain().focus().toggleStrike().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('strike') }" class="toolbar-btn line-through" title="Strikethrough">S</button>
+                <button type="button" @click="editor?.chain().focus().toggleBold().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('bold') }" class="toolbar-btn" :title="$t('Bold')"><strong>B</strong></button>
+                <button type="button" @click="editor?.chain().focus().toggleItalic().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('italic') }" class="toolbar-btn italic" :title="$t('Italic')">I</button>
+                <button type="button" @click="editor?.chain().focus().toggleUnderline().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('underline') }" class="toolbar-btn underline" :title="$t('Underline')">U</button>
+                <button type="button" @click="editor?.chain().focus().toggleStrike().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('strike') }" class="toolbar-btn line-through" :title="$t('Strikethrough')">S</button>
                 <div class="w-px h-5 bg-gray-700 mx-1"></div>
 
                 <!-- Headings -->
-                <button type="button" @click="editor?.chain().focus().toggleHeading({ level: 2 }).run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('heading', { level: 2 }) }" class="toolbar-btn" title="Heading 2">H2</button>
-                <button type="button" @click="editor?.chain().focus().toggleHeading({ level: 3 }).run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('heading', { level: 3 }) }" class="toolbar-btn" title="Heading 3">H3</button>
-                <button type="button" @click="editor?.chain().focus().toggleHeading({ level: 4 }).run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('heading', { level: 4 }) }" class="toolbar-btn" title="Heading 4">H4</button>
+                <button type="button" @click="editor?.chain().focus().toggleHeading({ level: 2 }).run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('heading', { level: 2 }) }" class="toolbar-btn" :title="$t('Heading 2')">H2</button>
+                <button type="button" @click="editor?.chain().focus().toggleHeading({ level: 3 }).run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('heading', { level: 3 }) }" class="toolbar-btn" :title="$t('Heading 3')">H3</button>
+                <button type="button" @click="editor?.chain().focus().toggleHeading({ level: 4 }).run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('heading', { level: 4 }) }" class="toolbar-btn" :title="$t('Heading 4')">H4</button>
                 <div class="w-px h-5 bg-gray-700 mx-1"></div>
 
                 <!-- Lists -->
-                <button type="button" @click="editor?.chain().focus().toggleBulletList().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('bulletList') }" class="toolbar-btn" title="Bullet List">
+                <button type="button" @click="editor?.chain().focus().toggleBulletList().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('bulletList') }" class="toolbar-btn" :title="$t('Bullet List')">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                 </button>
-                <button type="button" @click="editor?.chain().focus().toggleOrderedList().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('orderedList') }" class="toolbar-btn" title="Ordered List">
+                <button type="button" @click="editor?.chain().focus().toggleOrderedList().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('orderedList') }" class="toolbar-btn" :title="$t('Ordered List')">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
                 </button>
                 <div class="w-px h-5 bg-gray-700 mx-1"></div>
 
                 <!-- Block elements -->
-                <button type="button" @click="editor?.chain().focus().toggleBlockquote().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('blockquote') }" class="toolbar-btn" title="Quote">"</button>
-                <button type="button" @click="editor?.chain().focus().toggleCode().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('code') }" class="toolbar-btn font-mono" title="Inline Code">&lt;&gt;</button>
-                <button type="button" @click="editor?.chain().focus().toggleCodeBlock().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('codeBlock') }" class="toolbar-btn font-mono text-xs" title="Code Block">{ }</button>
-                <button type="button" @click="editor?.chain().focus().setHorizontalRule().run()" class="toolbar-btn" title="Horizontal Rule">--</button>
+                <button type="button" @click="editor?.chain().focus().toggleBlockquote().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('blockquote') }" class="toolbar-btn" :title="$t('Quote')">"</button>
+                <button type="button" @click="editor?.chain().focus().toggleCode().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('code') }" class="toolbar-btn font-mono" :title="$t('Inline Code')">&lt;&gt;</button>
+                <button type="button" @click="editor?.chain().focus().toggleCodeBlock().run()" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('codeBlock') }" class="toolbar-btn font-mono text-xs" :title="$t('Code Block')">{ }</button>
+                <button type="button" @click="editor?.chain().focus().setHorizontalRule().run()" class="toolbar-btn" :title="$t('Horizontal Rule')">--</button>
                 <div class="w-px h-5 bg-gray-700 mx-1"></div>
 
                 <!-- Insert -->
-                <button type="button" @click="addLink" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('link') }" class="toolbar-btn" title="Link">
+                <button type="button" @click="addLink" :class="{ 'bg-blue-600/30 text-blue-400': editor?.isActive('link') }" class="toolbar-btn" :title="$t('Link')">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
                 </button>
-                <button type="button" @click="addImage" class="toolbar-btn" title="Image">
+                <button type="button" @click="addImage" class="toolbar-btn" :title="$t('Image')">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 </button>
-                <button type="button" @click="addTable" class="toolbar-btn" title="Table">
+                <button type="button" @click="addTable" class="toolbar-btn" :title="$t('Table')">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M10 3v18M14 3v18"/></svg>
                 </button>
                 <div class="w-px h-5 bg-gray-700 mx-1"></div>
 
                 <!-- Undo/Redo -->
-                <button type="button" @click="editor?.chain().focus().undo().run()" class="toolbar-btn" title="Undo">
+                <button type="button" @click="editor?.chain().focus().undo().run()" class="toolbar-btn" :title="$t('Undo')">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v2M3 10l4-4m-4 4l4 4"/></svg>
                 </button>
-                <button type="button" @click="editor?.chain().focus().redo().run()" class="toolbar-btn" title="Redo">
+                <button type="button" @click="editor?.chain().focus().redo().run()" class="toolbar-btn" :title="$t('Redo')">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10H11a5 5 0 00-5 5v2m15-7l-4-4m4 4l-4 4"/></svg>
                 </button>
             </template>
@@ -256,7 +257,7 @@ onBeforeUnmount(() => {
 
             <!-- Source toggle -->
             <button type="button" @click="toggleSource" class="px-3 py-1 text-xs rounded transition" :class="sourceMode ? 'bg-orange-600/30 text-orange-400 font-bold' : 'text-gray-400 hover:text-white hover:bg-gray-700/50'">
-                {{ sourceMode ? 'Visual Editor' : 'Source Code' }}
+                {{ sourceMode ? $t('Visual Editor') : $t('Source Code') }}
             </button>
         </div>
 
@@ -278,7 +279,7 @@ onBeforeUnmount(() => {
             <div v-if="showLinkDialog" ref="linkDialogRef" class="fixed inset-0 z-[9999] flex items-center justify-center px-4" @click.self="showLinkDialog = false" @keydown.esc="showLinkDialog = false" tabindex="-1">
                 <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showLinkDialog = false"></div>
                 <div class="relative bg-gray-900 border border-white/15 rounded-xl shadow-2xl p-6 w-full max-w-md">
-                    <h3 class="text-lg font-bold text-gray-200 mb-4">Insert Link</h3>
+                    <h3 class="text-lg font-bold text-gray-200 mb-4">{{ $t('Insert Link') }}</h3>
                     <div class="space-y-3">
                         <input
                             v-model="linkUrl"
@@ -289,13 +290,13 @@ onBeforeUnmount(() => {
                         />
                         <div class="flex items-center gap-2">
                             <button type="button" @click="insertLink" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition">
-                                {{ linkUrl ? 'Apply Link' : 'Remove Link' }}
+                                {{ linkUrl ? $t('Apply Link') : $t('Remove Link') }}
                             </button>
                             <button v-if="editor?.isActive('link')" type="button" @click="removeLink" class="px-4 py-2 bg-red-600/60 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition">
-                                Remove
+                                {{ $t('Remove') }}
                             </button>
                             <button type="button" @click="showLinkDialog = false" class="px-4 py-2 bg-gray-700/60 hover:bg-gray-700 text-gray-300 text-sm font-medium rounded-lg transition">
-                                Cancel
+                                {{ $t('Cancel') }}
                             </button>
                         </div>
                     </div>
@@ -314,7 +315,7 @@ onBeforeUnmount(() => {
             <div v-if="showImageDialog" class="fixed inset-0 z-[9999] flex items-center justify-center px-4" @click.self="showImageDialog = false" @keydown.esc="showImageDialog = false" tabindex="-1" ref="imageDialogRef">
                 <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showImageDialog = false"></div>
                 <div class="relative bg-gray-900 border border-white/15 rounded-xl shadow-2xl p-6 w-full max-w-md">
-                    <h3 class="text-lg font-bold text-gray-200 mb-4">Insert Image</h3>
+                    <h3 class="text-lg font-bold text-gray-200 mb-4">{{ $t('Insert Image') }}</h3>
 
                     <!-- Upload button -->
                     <button
@@ -324,14 +325,14 @@ onBeforeUnmount(() => {
                         class="w-full mb-4 px-4 py-8 border-2 border-dashed border-gray-600 hover:border-blue-500 rounded-lg text-gray-400 hover:text-blue-400 transition flex flex-col items-center gap-2"
                     >
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                        <span v-if="imageUploading" class="text-sm">Uploading...</span>
-                        <span v-else class="text-sm">Click to upload an image</span>
-                        <span class="text-xs text-gray-600">Max 5MB - JPG, PNG, GIF, WebP</span>
+                        <span v-if="imageUploading" class="text-sm">{{ $t('Uploading...') }}</span>
+                        <span v-else class="text-sm">{{ $t('Click to upload an image') }}</span>
+                        <span class="text-xs text-gray-600">{{ $t('Max 5MB - JPG, PNG, GIF, WebP') }}</span>
                     </button>
 
                     <div class="flex items-center gap-3 mb-4">
                         <div class="flex-1 h-px bg-gray-700"></div>
-                        <span class="text-xs text-gray-600">or paste URL</span>
+                        <span class="text-xs text-gray-600">{{ $t('or paste URL') }}</span>
                         <div class="flex-1 h-px bg-gray-700"></div>
                     </div>
 
@@ -349,7 +350,7 @@ onBeforeUnmount(() => {
                             @click="insertImageFromUrl"
                             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition"
                         >
-                            Insert
+                            {{ $t('Insert') }}
                         </button>
                     </div>
 
