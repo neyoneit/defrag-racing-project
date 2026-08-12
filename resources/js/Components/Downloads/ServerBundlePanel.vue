@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue';
+import { currentLocale } from '@/utils/i18n';
 
 const props = defineProps({
     panel: Object,
@@ -30,7 +31,10 @@ const formatSize = (bytes) => {
 
 const formatDate = (value) => {
     if (!value) return null;
-    return new Date(value).toLocaleString('en-GB', {
+    // en-GB for English readers keeps the DD Mon YYYY shape this panel has
+    // always had; every other language follows the site. Same idiom as the two
+    // Downloads pages that render this panel, and as FamilyFriendlyPanel.
+    return new Date(value).toLocaleString(currentLocale() === 'en' ? 'en-GB' : currentLocale(), {
         day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
     });
 };
