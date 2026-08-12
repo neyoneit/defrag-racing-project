@@ -76,8 +76,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { t } from '@/utils/i18n';
 
 const props = defineProps({
     show: Boolean,
@@ -87,29 +88,33 @@ const props = defineProps({
 
 const emit = defineEmits(['close']);
 
-// Not translated, in any language. These are the in-game cvars and commands
-// the flag refers to - a player looks them up in the console, not in a
-// dictionary - and translating the few that happen to be words would leave
-// the chip row half Czech and half English.
-const FLAG_TYPES = {
-    'sv_cheats': 'cheats',
+// The object key is the cvar, and that is what gets submitted - it is never
+// translated. The label beside it is the plain-words version for whoever is
+// clicking, so it is. The exceptions are the labels that ARE the cvar or the
+// console command (timescale, fps, maxfps, pmove, msec, upmove, +left/+right):
+// a player looks those up in the console, not in a dictionary.
+//
+// A computed, not a plain object: a plain one is built once at module load
+// and would keep whichever language was loaded then.
+const FLAG_TYPES = computed(() => ({
+    'sv_cheats': t('cheats'),
     'tool_assisted': 'TAS',
-    'client_finish': 'no finish',
+    'client_finish': t('no finish'),
     'timescale': 'timescale',
-    'g_speed': 'speed',
-    'g_gravity': 'gravity',
+    'g_speed': t('speed'),
+    'g_gravity': t('gravity'),
     'sv_fps': 'fps',
     'com_maxfps': 'maxfps',
     'pmove_fixed': 'pmove',
     'pmove_msec': 'msec',
-    'df_mp_interferenceoff': 'interference',
+    'df_mp_interferenceoff': t('interference'),
     'left_right': '+left/+right',
-    'scripts': 'scripts',
+    'scripts': t('scripts'),
     'upmove': 'upmove',
-    'replay_cheat': 'replay',
-    'engine_cheat': 'engine',
-    'other': 'other',
-};
+    'replay_cheat': t('replay'),
+    'engine_cheat': t('engine'),
+    'other': t('other'),
+}));
 
 const selectedFlag = ref(null);
 const note = ref('');
