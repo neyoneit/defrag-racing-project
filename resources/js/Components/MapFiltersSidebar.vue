@@ -6,6 +6,7 @@
     import PlayerSelect from '@/Components/Basic/PlayerSelect.vue';
     import ItemsSelect from '@/Components/Basic/ItemsSelect.vue';
     import axios from 'axios';
+    import { t } from '@/utils/i18n';
 
     const props = defineProps({
         queries: Object,
@@ -22,20 +23,20 @@
         }
     });
 
-    const difficulties = {
-        '1': { value: 'Beginner', color: 'bg-green-600' },
-        '2': { value: 'Easy', color: 'bg-lime-600' },
-        '3': { value: 'Medium', color: 'bg-yellow-600' },
-        '4': { value: 'Hard', color: 'bg-orange-600' },
-        '5': { value: 'Extreme', color: 'bg-red-600' },
-    };
+    const difficulties = computed(() => ({
+        '1': { value: t('Beginner'), color: 'bg-green-600' },
+        '2': { value: t('Easy'), color: 'bg-lime-600' },
+        '3': { value: t('Medium'), color: 'bg-yellow-600' },
+        '4': { value: t('Hard'), color: 'bg-orange-600' },
+        '5': { value: t('Extreme'), color: 'bg-red-600' },
+    }));
 
-    const types = {
-        'run': { value: 'Run', color: 'bg-blue-600' },
-        'team': { value: 'Team', color: 'bg-blue-600' },
+    const types = computed(() => ({
+        'run': { value: t('Run'), color: 'bg-blue-600' },
+        'team': { value: t('Team'), color: 'bg-blue-600' },
         'freestyle': { value: 'FS', color: 'bg-blue-600' },
         'fastcaps': { value: 'FC', color: 'bg-blue-600' },
-    };
+    }));
 
     const physics = {
         'vq3': { value: 'VQ3', color: 'bg-blue-600' },
@@ -58,21 +59,21 @@
         { code: 'pml', name: 'Proximity Mine Launcher' },
     ];
 
-    const functions = [
-        { code: 'door', name: 'Door' },
-        { code: 'button', name: 'Button' },
-        { code: 'tele', name: 'Teleporter' },
-        { code: 'jumppad', name: 'Jump Pad' },
-        { code: 'moving', name: 'Moving Object' },
-        { code: 'slick', name: 'Slick' },
-        { code: 'water', name: 'Water' },
-        { code: 'fog', name: 'Fog' },
-        { code: 'slime', name: 'Slime' },
-        { code: 'lava', name: 'Lava' },
-        { code: 'break', name: 'Breakable' },
-        { code: 'sound', name: 'Sound' },
-        { code: 'timer', name: 'Timer' },
-    ];
+    const functions = computed(() => [
+        { code: 'door', name: t('Door') },
+        { code: 'button', name: t('Button') },
+        { code: 'tele', name: t('Teleporter') },
+        { code: 'jumppad', name: t('Jump Pad') },
+        { code: 'moving', name: t('Moving Object') },
+        { code: 'slick', name: t('Slick') },
+        { code: 'water', name: t('Water') },
+        { code: 'fog', name: t('Fog') },
+        { code: 'slime', name: t('Slime') },
+        { code: 'lava', name: t('Lava') },
+        { code: 'break', name: t('Breakable') },
+        { code: 'sound', name: t('Sound') },
+        { code: 'timer', name: t('Timer') },
+    ]);
 
     const items = [
         { code: 'ra', name: 'Red Armor' },
@@ -293,9 +294,9 @@
             if (e.response?.status === 422) {
                 saveError.value = e.response.data.errors?.name?.[0]
                     || e.response.data.message
-                    || 'Validation error';
+                    || t('Validation error');
             } else {
-                saveError.value = 'Failed to save filter';
+                saveError.value = t('Failed to save filter');
             }
         } finally {
             saveLoading.value = false;
@@ -339,7 +340,7 @@
     };
 
     const deleteFilter = async (filter) => {
-        if (!confirm(`Delete saved filter "${filter.name}"?`)) return;
+        if (!confirm(t('Delete saved filter ":name"?', { name: filter.name }))) return;
         try {
             await axios.delete(`/api/saved-map-filters/${filter.id}`);
             savedFilters.value = savedFilters.value.filter(f => f.id !== filter.id);
@@ -362,12 +363,12 @@
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-blue-400 flex-shrink-0">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
                 </svg>
-                <span class="text-sm font-bold text-white">Filter Maps</span>
+                <span class="text-sm font-bold text-white">{{ $t('Filter Maps') }}</span>
                 <span v-if="activeFilterCount > 0" class="bg-blue-500 text-white text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">{{ activeFilterCount }}</span>
             </div>
             <button v-if="activeFilterCount > 0" @click="resetFilters" class="text-xs text-red-400 hover:text-red-300 font-medium transition flex items-center gap-1">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
-                Reset
+                {{ $t('Reset') }}
             </button>
         </div>
 
@@ -376,7 +377,7 @@
             <button @click="openSaveModal"
                 class="flex-1 px-2 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-400/30 text-[11px] font-semibold text-blue-200 transition flex items-center justify-center gap-1.5">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 3.75V16.5L12 14.25 7.5 16.5V3.75m9 0H18A2.25 2.25 0 0 1 20.25 6v12A2.25 2.25 0 0 1 18 20.25H6A2.25 2.25 0 0 1 3.75 18V6A2.25 2.25 0 0 1 6 3.75h1.5m9 0h-9" /></svg>
-                Save filter
+                {{ $t('Save filter') }}
             </button>
             <button @click="toggleLoadDropdown"
                 :class="showLoadDropdown
@@ -384,7 +385,7 @@
                     : 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300'"
                 class="flex-1 px-2 py-1.5 rounded-md border text-[11px] font-semibold transition flex items-center justify-center gap-1.5">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" /></svg>
-                Load<span v-if="savedFiltersLoaded">&nbsp;({{ savedFilters.length }})</span>
+                {{ $t('Load') }}<span v-if="savedFiltersLoaded">&nbsp;({{ savedFilters.length }})</span>
                 <svg class="w-3 h-3 transition-transform" :class="showLoadDropdown ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
             </button>
 
@@ -393,16 +394,16 @@
                 class="absolute top-full left-3 right-3 mt-2 z-30 bg-amber-950/95 border-2 border-amber-400/60 rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.7)] ring-2 ring-amber-400/20 max-h-72 overflow-y-auto backdrop-blur-sm">
                 <div class="px-3 py-1.5 border-b border-amber-400/30 bg-amber-500/15 text-[10px] font-bold text-amber-200 uppercase tracking-wider flex items-center gap-1.5 sticky top-0">
                     <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" /></svg>
-                    Saved filters
+                    {{ $t('Saved filters') }}
                 </div>
-                <div v-if="savedFiltersLoading" class="px-3 py-3 text-[11px] text-amber-200/70 text-center">Loading…</div>
-                <div v-else-if="savedFilters.length === 0" class="px-3 py-3 text-[11px] text-amber-200/60 text-center">No saved filters yet. Configure filters above and click "Save filter".</div>
+                <div v-if="savedFiltersLoading" class="px-3 py-3 text-[11px] text-amber-200/70 text-center">{{ $t('Loading…') }}</div>
+                <div v-else-if="savedFilters.length === 0" class="px-3 py-3 text-[11px] text-amber-200/60 text-center">{{ $t('No saved filters yet. Configure filters above and click "Save filter".') }}</div>
                 <div v-else class="divide-y divide-amber-400/15">
                     <div v-for="f in savedFilters" :key="f.id"
                         class="flex items-center justify-between px-3 py-2 hover:bg-amber-500/20 transition group cursor-pointer"
                         @click="applyFilter(f)">
                         <span class="text-xs text-amber-50 truncate flex-1 mr-2 font-medium">{{ f.name }}</span>
-                        <button @click.stop="deleteFilter(f)" title="Delete"
+                        <button @click.stop="deleteFilter(f)" :title="$t('Delete')"
                             class="text-amber-200/40 hover:text-red-400 transition flex-shrink-0">
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                         </button>
@@ -418,10 +419,10 @@
             <div class="px-3 py-2.5 space-y-2 border-b border-white/5">
                 <div class="flex gap-1">
                     <button v-for="opt in [
-                        { value: 'newest', label: 'Newest' },
-                        { value: 'oldest', label: 'Oldest' },
-                        { value: 'most_records', label: 'Popular' },
-                        { value: 'name_asc', label: 'A-Z' },
+                        { value: 'newest', label: $t('Newest') },
+                        { value: 'oldest', label: $t('Oldest') },
+                        { value: 'most_records', label: $t('Popular') },
+                        { value: 'name_asc', label: $t('A-Z') },
                     ]" :key="opt.value"
                         @click="form.sort = opt.value"
                         :class="form.sort === opt.value ? 'bg-blue-500/30 border-blue-400/50 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'"
@@ -429,8 +430,8 @@
                         {{ opt.label }}
                     </button>
                 </div>
-                <TextInput type="text" v-model="form.search" class="block w-full" placeholder="Map name..." v-on:keyup.enter="onFilterSubmit" />
-                <TextInput type="text" v-model="form.author" class="block w-full" placeholder="Author..." v-on:keyup.enter="onFilterSubmit" />
+                <TextInput type="text" v-model="form.search" class="block w-full" :placeholder="$t('Map name...')" v-on:keyup.enter="onFilterSubmit" />
+                <TextInput type="text" v-model="form.author" class="block w-full" :placeholder="$t('Author...')" v-on:keyup.enter="onFilterSubmit" />
             </div>
 
             <!-- Difficulty, Gametype & Physics -->
@@ -447,7 +448,7 @@
                 <button @click="toggleSection('players')" class="accordion-btn">
                     <div class="flex items-center gap-2">
                         <svg class="w-4 h-4 text-purple-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" /></svg>
-                        <span>Player Records</span>
+                        <span>{{ $t('Player Records') }}</span>
                     </div>
                     <div class="flex items-center gap-1.5">
                         <span v-if="form.has_records.length + form.have_no_records.length + form.world_record.length > 0"
@@ -460,20 +461,20 @@
                 <div v-show="openSections.players" class="accordion-content">
                     <div class="space-y-2">
                         <div>
-                            <label class="field-label">Has Record</label>
+                            <label class="field-label">{{ $t('Has Record') }}</label>
                             <PlayerSelect :options="profiles" :multi="true" v-model="form.has_records" :values="form.has_records" />
                         </div>
                         <div>
-                            <label class="field-label">No Record</label>
+                            <label class="field-label">{{ $t('No Record') }}</label>
                             <PlayerSelect :options="profiles" :multi="true" v-model="form.have_no_records" :values="form.have_no_records" />
                         </div>
                         <div>
-                            <label class="field-label">World Record</label>
+                            <label class="field-label">{{ $t('World Record') }}</label>
                             <PlayerSelect :options="profiles" :multi="false" v-model="form.world_record" :values="form.world_record" />
                         </div>
                         <div class="slider-group pt-2 border-t border-white/5">
                             <div class="flex items-center justify-between mb-1">
-                                <label class="field-label !mb-0">Rank Range</label>
+                                <label class="field-label !mb-0">{{ $t('Rank Range') }}</label>
                                 <span class="slider-value">{{ form.rank_min }} - {{ form.rank_max === 999 ? '&infin;' : form.rank_max }}</span>
                             </div>
                             <div class="slider-track">
@@ -490,15 +491,15 @@
                 <button @click="toggleSection('content')" class="accordion-btn">
                     <div class="flex items-center gap-2">
                         <svg class="w-4 h-4 text-orange-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" /></svg>
-                        <span>Map Content</span>
+                        <span>{{ $t('Map Content') }}</span>
                     </div>
                     <svg class="chevron" :class="{ open: openSections.content }" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" /></svg>
                 </button>
                 <div v-show="openSections.content" class="accordion-content">
                     <div class="space-y-2">
-                        <ItemsSelect :options="weapons" :multi="false" v-model="form.weapons" :values="form.weapons" placeholder="Weapons" />
-                        <ItemsSelect :options="functions" :multi="false" v-model="form.functions" :values="form.functions" placeholder="Functions" />
-                        <ItemsSelect :options="items" :multi="false" v-model="form.items" :values="form.items" placeholder="Items" />
+                        <ItemsSelect :options="weapons" :multi="false" v-model="form.weapons" :values="form.weapons" :placeholder="$t('Weapons')" />
+                        <ItemsSelect :options="functions" :multi="false" v-model="form.functions" :values="form.functions" :placeholder="$t('Functions')" />
+                        <ItemsSelect :options="items" :multi="false" v-model="form.items" :values="form.items" :placeholder="$t('Items')" />
                     </div>
                 </div>
             </div>
@@ -508,7 +509,7 @@
                 <button @click="toggleSection('advanced')" class="accordion-btn">
                     <div class="flex items-center gap-2">
                         <svg class="w-4 h-4 text-cyan-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
-                        <span>Advanced</span>
+                        <span>{{ $t('Advanced') }}</span>
                     </div>
                     <svg class="chevron" :class="{ open: openSections.advanced }" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" /></svg>
                 </button>
@@ -516,7 +517,7 @@
                     <div class="space-y-5">
                         <div class="slider-group">
                             <div class="flex items-center justify-between mb-1">
-                                <label class="field-label !mb-0">Number of Records</label>
+                                <label class="field-label !mb-0">{{ $t('Number of Records') }}</label>
                                 <span class="slider-value">{{ form.records_count[0] }} - {{ form.records_count[1] === 1000 ? '&infin;' : form.records_count[1] }}</span>
                             </div>
                             <div class="slider-track">
@@ -526,7 +527,7 @@
                         </div>
                         <div class="slider-group">
                             <div class="flex items-center justify-between mb-1">
-                                <label class="field-label !mb-0">Map Length (sec)</label>
+                                <label class="field-label !mb-0">{{ $t('Map Length (sec)') }}</label>
                                 <span class="slider-value">{{ form.average_length[0] }} - {{ form.average_length[1] === 1000 ? '&infin;' : form.average_length[1] }}</span>
                             </div>
                             <div class="slider-track">
@@ -548,7 +549,7 @@
                 <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                 </svg>
-                {{ form.processing ? 'Searching...' : 'Search Maps' }}
+                {{ form.processing ? $t('Searching...') : $t('Search Maps') }}
             </button>
         </div>
     </div>
@@ -559,19 +560,19 @@
             class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm"
             @click.self="showSaveModal = false">
             <div class="bg-gray-900 border border-white/10 rounded-xl shadow-2xl p-5 w-full max-w-sm mx-4">
-                <h3 class="text-lg font-bold text-white mb-1">Save filter</h3>
-                <p class="text-xs text-gray-400 mb-4">Stores the current filter setup so you can recall it later with one click. Private to you.</p>
+                <h3 class="text-lg font-bold text-white mb-1">{{ $t('Save filter') }}</h3>
+                <p class="text-xs text-gray-400 mb-4">{{ $t('Stores the current filter setup so you can recall it later with one click. Private to you.') }}</p>
                 <input v-model="newFilterName" type="text" maxlength="80"
-                    placeholder='e.g. "Easy CPM trickjumps"'
+                    :placeholder='$t("e.g. \"Easy CPM trickjumps\"")'
                     class="w-full px-3 py-2 rounded-md bg-black/40 border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-400/60"
                     @keyup.enter="saveCurrentFilter" />
                 <div v-if="saveError" class="mt-2 text-xs text-red-400">{{ saveError }}</div>
                 <div class="mt-4 flex gap-2 justify-end">
                     <button @click="showSaveModal = false"
-                        class="px-4 py-1.5 rounded-md bg-white/5 hover:bg-white/10 text-sm text-gray-300 transition">Cancel</button>
+                        class="px-4 py-1.5 rounded-md bg-white/5 hover:bg-white/10 text-sm text-gray-300 transition">{{ $t('Cancel') }}</button>
                     <button @click="saveCurrentFilter" :disabled="saveLoading || !newFilterName.trim()"
                         class="px-4 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-sm font-semibold text-white transition">
-                        {{ saveLoading ? 'Saving…' : 'Save' }}
+                        {{ saveLoading ? $t('Saving…') : $t('Save') }}
                     </button>
                 </div>
             </div>
