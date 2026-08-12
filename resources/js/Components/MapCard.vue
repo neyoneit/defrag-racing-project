@@ -4,6 +4,7 @@
     import { Link, usePage } from '@inertiajs/vue3';
     import CopyButton from '@/Components/Basic/CopyButton.vue';
     import AddToMaplistModal from '@/Components/Maplists/AddToMaplistModal.vue';
+    import { t } from '@/utils/i18n';
     const page = usePage();
     const showMaplistModal = ref(false);
 
@@ -39,19 +40,19 @@
         }
     }
 
-    const difficultyLabels = [
-        { level: 1, label: 'Beginner', color: 'bg-green-600' },
-        { level: 2, label: 'Easy', color: 'bg-lime-600' },
-        { level: 3, label: 'Medium', color: 'bg-yellow-600' },
-        { level: 4, label: 'Hard', color: 'bg-orange-600' },
-        { level: 5, label: 'Extreme', color: 'bg-red-600' },
-    ];
+    const difficultyLabels = computed(() => [
+        { level: 1, label: t('Beginner'), color: 'bg-green-600' },
+        { level: 2, label: t('Easy'), color: 'bg-lime-600' },
+        { level: 3, label: t('Medium'), color: 'bg-yellow-600' },
+        { level: 4, label: t('Hard'), color: 'bg-orange-600' },
+        { level: 5, label: t('Extreme'), color: 'bg-red-600' },
+    ]);
 
     const difficultyBadge = computed(() => {
         const avg = props.map.difficulty_ratings_avg_rating;
         if (!avg || !props.map.difficulty_ratings_count) return null;
         const level = Math.round(avg);
-        return difficultyLabels[level - 1] || null;
+        return difficultyLabels.value[level - 1] || null;
     });
 
     // The pill itself stays dark, because every hue on a card is taken -
@@ -147,7 +148,7 @@
                 <div v-if="map.played" class="absolute top-2 left-1/2 -translate-x-1/2">
                     <div :class="`${playedBadge} flex items-center gap-1 px-2.5 py-1 rounded border border-white/25 backdrop-blur-sm text-[12px] font-black uppercase tracking-wide text-white`">
                         <span>&check;</span>
-                        Played
+                        {{ $t('Played') }}
                         <span v-for="dot in playedDots" :key="dot" :class="['w-2 h-2 rounded-full ring-1 ring-black/30', dot]"></span>
                     </div>
                 </div>
@@ -189,12 +190,12 @@
                             v-if="page.props.auth.user"
                             @click.prevent.stop="showMaplistModal = true"
                             class="save-maplist-btn"
-                            title="Save to Maplist"
+                            :title="$t('Save to Maplist')"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" />
                             </svg>
-                            <span class="text-[9px] font-semibold">Save</span>
+                            <span class="text-[9px] font-semibold">{{ $t('Save') }}</span>
                         </button>
 
                         <!-- Download Button. Hidden for maps that ship with the
@@ -205,7 +206,7 @@
                             target="_blank"
                             :href="'https://dl.defrag.racing/downloads/maps/' + encodeURIComponent(map?.pk3?.split('/').pop() ?? '')"
                             class="p-0.5 text-gray-400 hover:text-blue-400 rounded transition-colors"
-                            title="Download"
+                            :title="$t('Download')"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />

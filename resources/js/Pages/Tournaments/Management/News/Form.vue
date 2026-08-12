@@ -8,6 +8,7 @@
     import TextInput from '@/Components/Laravel/TextInput.vue';
     import SecondaryButton from '@/Components/Laravel/SecondaryButton.vue';
     import Checkbox from '@/Components/Laravel/Checkbox.vue';
+    import { t } from '@/utils/i18n';
 
     const props = defineProps({
         item: Object,
@@ -28,14 +29,14 @@
 
     const finishBasicInformation = () => {
         if (form.title.length < 1) {
-            form.errors.title = 'Title is required.';
+            form.errors.title = t('Title is required.');
             return;
         }
 
         form.errors.title = null;
 
         if (form.content.length < 1) {
-            form.errors.content = 'Content is required.';
+            form.errors.content = t('Content is required.');
             return;
         }
 
@@ -44,7 +45,7 @@
         const photo = photoInput?.value?.files[0];
 
         if (photo && ! photo.type.startsWith('image/')) {
-            form.errors.image = 'The file must be an Image.';
+            form.errors.image = t('The file must be an Image.');
             return;
         }
 
@@ -79,12 +80,12 @@
         const photo = photoInput.value.files[0];
 
         if (! photo) {
-            form.errors.image = 'The image field is required.';
+            form.errors.image = t('The image field is required.');
             return;
         };
 
         if (! photo.type.startsWith('image/')) {
-            form.errors.image = 'The file must be an Image.';
+            form.errors.image = t('The file must be an Image.');
             photoInput.value = '';
             return;
         }
@@ -106,17 +107,17 @@
     <div>
         <FormSection @submitted="finishBasicInformation">
             <template #title>
-                <div>Add news</div>
+                <div>{{ $t('Add news') }}</div>
             </template>
     
             <template #description>
-                <div>Add tournament news that people will be notified by.</div>
+                <div>{{ $t('Add tournament news that people will be notified by.') }}</div>
             </template>
     
             <template #form>
                 <div class="col-span-6">
                     <div class="mb-3">
-                        <InputLabel for="title" value="Title" />
+                        <InputLabel for="title" :value="$t('Title')" />
                         <TextInput
                             id="title"
                             v-model="form.title"
@@ -128,7 +129,7 @@
                     </div>
     
                     <div class="mb-3">
-                        <InputLabel for="user_id" value="Content" />
+                        <InputLabel for="user_id" :value="$t('Content')" />
                         <textarea
                             id="content"
                             v-model="form.content"
@@ -148,7 +149,7 @@
                             @change="updatePhotoPreview"
                         >
         
-                        <InputLabel for="photo" value="News Image (optional)" />
+                        <InputLabel for="photo" :value="$t('News Image (optional)')" />
 
                         <div v-if="photoPreview" class="mt-2">
                             <span
@@ -165,7 +166,7 @@
                         </div>
         
                         <SecondaryButton class="mt-2 me-2" type="button" @click.prevent="selectNewPhoto">
-                            Select A New Photo
+                            {{ $t('Select A New Photo') }}
                         </SecondaryButton>
                         <InputError :message="form.errors.image" class="mt-2" />
                     </div>
@@ -173,16 +174,16 @@
                     <div class="mb-3">
                         <label class="flex items-center">
                             <Checkbox v-model:checked="form.pinned" name="pinned" />
-                            <span class="ms-2 text-sm text-gray-600 dark:text-gray-400">Pin this news ?</span>
+                            <span class="ms-2 text-sm text-gray-600 dark:text-gray-400">{{ $t('Pin this news ?') }}</span>
                         </label>
-                        <div class="ml-6 mt-2 text-sm text-gray-500">(Pinned news will be shown in all pages of the tournaments) e.g Used for major announcements.</div>
+                        <div class="ml-6 mt-2 text-sm text-gray-500">{{ $t('(Pinned news will be shown in all pages of the tournaments) e.g Used for major announcements.') }}</div>
                     </div>
                 </div>
             </template>
     
             <template #actions>
                 <div class="flex justify-between w-full">
-                    <PrimaryButton>Submit</PrimaryButton>
+                    <PrimaryButton>{{ $t('Submit') }}</PrimaryButton>
                 </div>
             </template>
         </FormSection>

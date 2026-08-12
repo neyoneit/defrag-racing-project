@@ -7,14 +7,20 @@
  * spending a download on it, and this is the decoding half of that.
  */
 
+import { t } from '@/utils/i18n';
+
+// The mode word is a thunk rather than a string: this table is built once at
+// module load, and a string here would freeze in whichever language happened
+// to load first. Written as literal t() calls so lang:sync can see them - a
+// key it cannot read as a literal never reaches the language files.
 const GAMETYPES = {
-    df: { mode: 'Defrag run', online: false },
-    mdf: { mode: 'Defrag run', online: true },
-    fc: { mode: 'Fastcap', online: false },
-    mfc: { mode: 'Fastcap', online: true },
-    fs: { mode: 'Freestyle', online: false },
-    mfs: { mode: 'Freestyle', online: true },
-    unlagged: { mode: 'Unlagged', online: true },
+    df: { mode: () => t('Defrag run'), online: false },
+    mdf: { mode: () => t('Defrag run'), online: true },
+    fc: { mode: () => t('Fastcap'), online: false },
+    mfc: { mode: () => t('Fastcap'), online: true },
+    fs: { mode: () => t('Freestyle'), online: false },
+    mfs: { mode: () => t('Freestyle'), online: true },
+    unlagged: { mode: () => t('Unlagged'), online: true },
 };
 
 /**
@@ -38,9 +44,12 @@ export const describeGametype = (gametype) => {
         };
     }
 
+    const mode = known.mode();
+
     return {
-        ...known,
-        label: `${known.mode}, ${known.online ? 'online' : 'offline'}`,
+        mode,
+        online: known.online,
+        label: known.online ? t(':mode, online', { mode }) : t(':mode, offline', { mode }),
     };
 };
 
@@ -72,21 +81,24 @@ export const describePhysics = (physics) => {
  * are the things that were flagged. Which of them voids a record is a rule,
  * and rules live on /rules, not in a tooltip.
  */
+// Thunks for the same reason as GAMETYPES above, and literal keys so the
+// extractor can find them. The cvar names inside the sentences are cvar
+// names, so they stay as they are in every language.
 const VALIDITY_NOTES = {
-    sv_cheats: 'Cheats were enabled on the server',
-    sv_fps: 'Server tickrate, normally 125',
-    df_mp_interferenceoff: 'Player interference setting, normally 3',
-    timescale: 'Game speed, normally 1',
-    com_maxfps: 'Client framerate cap, normally 125',
-    client_finish: 'The client never registered the finish',
-    tool_assisted: 'The run looks tool-assisted',
-    pmove_fixed: 'pmove_fixed, normally 1',
-    g_speed: 'Movement speed, normally 320',
-    g_gravity: 'Gravity, normally 800',
-    g_knockback: 'Knockback, normally 1000',
-    pmove_msec: 'pmove_msec, normally 8',
-    handicap: 'Handicap, normally 100',
-    g_killWallbug: 'Wallbug kill setting, normally 1',
+    sv_cheats: () => t('Cheats were enabled on the server'),
+    sv_fps: () => t('Server tickrate, normally 125'),
+    df_mp_interferenceoff: () => t('Player interference setting, normally 3'),
+    timescale: () => t('Game speed, normally 1'),
+    com_maxfps: () => t('Client framerate cap, normally 125'),
+    client_finish: () => t('The client never registered the finish'),
+    tool_assisted: () => t('The run looks tool-assisted'),
+    pmove_fixed: () => t('pmove_fixed, normally 1'),
+    g_speed: () => t('Movement speed, normally 320'),
+    g_gravity: () => t('Gravity, normally 800'),
+    g_knockback: () => t('Knockback, normally 1000'),
+    pmove_msec: () => t('pmove_msec, normally 8'),
+    handicap: () => t('Handicap, normally 100'),
+    g_killWallbug: () => t('Wallbug kill setting, normally 1'),
 };
 
 export const describeValidity = (validity) => {
@@ -99,6 +111,6 @@ export const describeValidity = (validity) => {
         // The parser stores everything as a float, so 1.0 and 120.0 come back
         // for what are conceptually a flag and a whole number.
         value: String(value).replace(/\.0$/, ''),
-        note: VALIDITY_NOTES[key] ?? null,
+        note: VALIDITY_NOTES[key]?.() ?? null,
     }));
 };
