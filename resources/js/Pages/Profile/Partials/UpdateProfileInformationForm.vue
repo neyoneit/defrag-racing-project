@@ -7,7 +7,7 @@ import PrimaryButton from '@/Components/Laravel/PrimaryButton.vue';
 import SecondaryButton from '@/Components/Laravel/SecondaryButton.vue';
 import TextInput from '@/Components/Laravel/TextInput.vue';
 import CountrySelect from '@/Components/Basic/CountrySelect.vue';
-import countries from '@/Components/stubs/countries'
+import { countryName } from '@/Components/stubs/countries'
 import { t } from '@/utils/i18n';
 
 const props = defineProps({
@@ -196,7 +196,7 @@ const setCountry = (country) => {
                     <InputLabel for="name" :value="$t('Country')" />
 
                     <div class="flex items-center text-xs text-gray-400">
-                        {{ countries[user.country] }}
+                        {{ countryName(user.country) }}
                         <img :src="`/images/flags/${user.country}.png`" class="w-6 ml-3">
                     </div>
                 </div>

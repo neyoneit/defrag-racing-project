@@ -2,7 +2,6 @@
 import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, nextTick } from 'vue';
 import CountrySelect from '@/Components/Basic/CountrySelect.vue';
-import countries from '@/Components/stubs/countries';
 import DeleteUserForm from '@/Pages/Profile/Partials/DeleteUserForm.vue';
 import LogoutOtherBrowserSessionsForm from '@/Pages/Profile/Partials/LogoutOtherBrowserSessionsForm.vue';
 import TwoFactorAuthenticationForm from '@/Pages/Profile/Partials/TwoFactorAuthenticationForm.vue';
