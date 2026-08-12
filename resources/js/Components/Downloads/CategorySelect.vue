@@ -109,7 +109,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside));
                 <span v-if="selected.depth > 0" class="text-gray-700"> / </span>
                 <span class="text-white">{{ selected.name }}</span>
             </span>
-            <span v-else class="text-gray-600">Pick a category...</span>
+            <span v-else class="text-gray-600">{{ $t('Pick a category...') }}</span>
 
             <svg class="w-4 h-4 flex-shrink-0 text-gray-600 transition-transform" :class="open ? 'rotate-180' : ''"
                  fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -125,7 +125,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside));
                     ref="searchInput"
                     v-model="search"
                     type="text"
-                    placeholder="Filter..."
+                    :placeholder="$t('Filter...')"
                     @keydown.down.prevent="move(1)"
                     @keydown.up.prevent="move(-1)"
                     @keydown.enter.prevent="onEnter"

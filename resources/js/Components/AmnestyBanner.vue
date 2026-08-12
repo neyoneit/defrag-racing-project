@@ -13,7 +13,7 @@ import { Link } from '@inertiajs/vue3';
         <svg class="w-5 h-5 text-emerald-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
         </svg>
-        <span class="font-bold text-white whitespace-nowrap">Amnesty</span>
-        <span class="hidden sm:inline text-emerald-200/80 font-semibold text-xs">take your own invalid times down, privately</span>
+        <span class="font-bold text-white whitespace-nowrap">{{ $t('Amnesty') }}</span>
+        <span class="hidden sm:inline text-emerald-200/80 font-semibold text-xs">{{ $t('take your own invalid times down, privately') }}</span>
     </Link>
 </template>
