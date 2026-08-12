@@ -13,9 +13,9 @@
                             <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
                             </svg>
-                            Flag Record
+                            {{ $t('Flag Record') }}
                         </h3>
-                        <p class="text-sm text-gray-400 mt-1">Select the validity issue for this record</p>
+                        <p class="text-sm text-gray-400 mt-1">{{ $t('Select the validity issue for this record') }}</p>
                     </div>
 
                     <!-- Body -->
@@ -39,13 +39,13 @@
                         <!-- Optional note -->
                         <div v-if="selectedFlag">
                             <label class="block text-sm font-semibold text-gray-300 mb-2">
-                                Note (optional)
+                                {{ $t('Note (optional)') }}
                             </label>
                             <textarea
                                 v-model="note"
                                 rows="2"
                                 maxlength="500"
-                                placeholder="Any additional details..."
+                                :placeholder="$t('Any additional details...')"
                                 class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-red-500 focus:outline-none resize-none text-sm"
                             ></textarea>
                         </div>
@@ -58,7 +58,7 @@
                             type="button"
                             class="px-6 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors"
                         >
-                            Cancel
+                            {{ $t('Cancel') }}
                         </button>
                         <button
                             @click="submitFlag"
@@ -66,7 +66,7 @@
                             :disabled="!selectedFlag || submitting"
                             class="px-6 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {{ submitting ? 'Submitting...' : 'Submit Flag' }}
+                            {{ submitting ? $t('Submitting...') : $t('Submit Flag') }}
                         </button>
                     </div>
                 </div>
@@ -87,6 +87,10 @@ const props = defineProps({
 
 const emit = defineEmits(['close']);
 
+// Not translated, in any language. These are the in-game cvars and commands
+// the flag refers to - a player looks them up in the console, not in a
+// dictionary - and translating the few that happen to be words would leave
+// the chip row half Czech and half English.
 const FLAG_TYPES = {
     'sv_cheats': 'cheats',
     'tool_assisted': 'TAS',
