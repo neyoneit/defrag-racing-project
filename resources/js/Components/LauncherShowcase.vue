@@ -96,11 +96,11 @@ watch([hovering, lightbox, index], schedule);
 
             <!-- Prev / Next -->
             <template v-if="count > 1">
-                <button type="button" @click.stop="prev" aria-label="Previous"
+                <button type="button" @click.stop="prev" :aria-label="$t('Previous')"
                         class="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                 </button>
-                <button type="button" @click.stop="next" aria-label="Next"
+                <button type="button" @click.stop="next" :aria-label="$t('Next')"
                         class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                 </button>
@@ -123,7 +123,7 @@ watch([hovering, lightbox, index], schedule);
                      class="max-w-full max-h-full rounded-lg shadow-2xl" @click.stop />
                 <video v-else :src="current.src" :poster="current.poster" autoplay muted loop playsinline controls
                        class="max-w-full max-h-full rounded-lg shadow-2xl" @click.stop></video>
-                <button type="button" aria-label="Close"
+                <button type="button" :aria-label="$t('Close')"
                         class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>

@@ -80,7 +80,8 @@
 <template>
     <Tournament :tournament="tournament" tab="ManageTournament">
         <div class="text-center w-full mb-5 text-lg text-white">
-            The tournament is <span v-if="tournament.published" class="text-green-500">published</span><span v-else class="text-red-500">not published</span>.
+            <span v-if="tournament.published" class="[&_span]:text-green-500" v-html="$t('The tournament is <span>published</span>.')"></span>
+            <span v-else class="[&_span]:text-red-500" v-html="$t('The tournament is <span>not published</span>.')"></span>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 justify-between gap-3">
@@ -99,7 +100,7 @@
         <div class="flex gap-2 justify-center mt-10">
             <div class="text-red-500 font-bold bg-grayop-700 cursor-pointer hover:bg-grayop-600 text-center rounded-lg">
                 <Link v-if="myroles.includes('admin')" :href="route('tournaments.delete.index', tournament.id)" class="block p-3">
-                    Delete Tournament
+                    {{ $t('Delete Tournament') }}
                 </Link>
             </div>
 

@@ -57,7 +57,7 @@ const connect = async () => {
             <div class="fixed inset-0 bg-black/60"></div>
 
             <div class="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6">
-                <h3 class="text-lg font-bold text-white mb-1">Connect and load the map?</h3>
+                <h3 class="text-lg font-bold text-white mb-1">{{ $t('Connect and load the map?') }}</h3>
                 <p class="text-sm text-gray-500 mb-4">{{ mapName }}</p>
 
                 <div class="bg-white/5 border border-white/10 rounded-lg p-3 mb-4">
@@ -72,7 +72,7 @@ const connect = async () => {
                 </div>
 
                 <p class="text-gray-300 text-sm mb-2">
-                    The game opens and this lands on your clipboard, ready to paste into the console:
+                    {{ $t('The game opens and this lands on your clipboard, ready to paste into the console:') }}
                 </p>
                 <code class="block bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-green-400 mb-4 break-all">{{ command }}</code>
 
@@ -87,7 +87,7 @@ const connect = async () => {
                         @click="emit('close')"
                         class="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 font-semibold rounded-xl border border-white/10 transition-colors"
                     >
-                        Cancel
+                        {{ $t('Cancel') }}
                     </button>
                 </div>
             </div>

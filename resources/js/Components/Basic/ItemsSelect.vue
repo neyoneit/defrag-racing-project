@@ -86,7 +86,7 @@
             <div class="flex items-center gap-1">
                 <button
                     @click="includeAll()"
-                    title="Include All"
+                    :title="$t('Include All')"
                     class="bulk-btn bulk-include"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
@@ -95,7 +95,7 @@
                 </button>
                 <button
                     @click="excludeAll()"
-                    title="Exclude All"
+                    :title="$t('Exclude All')"
                     class="bulk-btn bulk-exclude"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
@@ -104,7 +104,7 @@
                 </button>
                 <button
                     @click="clearAll()"
-                    title="Clear All"
+                    :title="$t('Clear All')"
                     class="bulk-btn bulk-neutral"
                     :class="{'active': totalSelected === 0}"
                 >
