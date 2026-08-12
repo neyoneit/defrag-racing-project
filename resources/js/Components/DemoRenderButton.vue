@@ -1,6 +1,7 @@
 <script setup>
     import { ref } from 'vue';
     import { router, usePage } from '@inertiajs/vue3';
+    import { t } from '@/utils/i18n';
 
     const page = usePage();
 
@@ -26,11 +27,23 @@
         return `${String(minutes).padStart(2, '0')}.${seconds.padStart(6, '0')}`;
     };
 
+    // Sent to the server with the report and printed into the admin's
+    // English mail, so this stays English. The modal shows recordSourceLabel().
     const recordSource = () => {
         if (!props.record) return '-';
         if (props.record.uploaded_demos?.length > 0) return 'Uploaded demo';
         if (props.record.demo) return 'Online demo';
         return 'Offline record';
+    };
+
+    // Spelled out rather than t(recordSource()) - lang:sync only collects keys
+    // written as literals, so a variable key would never reach the language file.
+    const recordSourceLabel = () => {
+        const source = recordSource();
+        if (source === 'Uploaded demo') return t('Uploaded demo');
+        if (source === 'Online demo') return t('Online demo');
+        if (source === 'Offline record') return t('Offline record');
+        return source;
     };
 
     const emit = defineEmits(['confirm-render', 'toggle-youtube']);
@@ -55,11 +68,11 @@
 
     const statusTitle = () => {
         const status = videoStatus();
-        if (status === 'completed') return 'Watch on YouTube';
-        if (status === 'pending') return 'Video is in queue to be processed. Click to see more info.';
-        if (status === 'rendering') return 'Video is currently being rendered. Click to see more info.';
-        if (status === 'uploading') return 'Video is being uploaded to YouTube. Click to see more info.';
-        if (status === 'failed') return 'Render failed. Click to report this issue.';
+        if (status === 'completed') return t('Watch on YouTube');
+        if (status === 'pending') return t('Video is in queue to be processed. Click to see more info.');
+        if (status === 'rendering') return t('Video is currently being rendered. Click to see more info.');
+        if (status === 'uploading') return t('Video is being uploaded to YouTube. Click to see more info.');
+        if (status === 'failed') return t('Render failed. Click to report this issue.');
         return '';
     };
 
@@ -140,7 +153,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
         </svg>
 
-        <span v-if="videoStatus() === 'completed'" class="text-[10px] font-bold">video</span>
+        <span v-if="videoStatus() === 'completed'" class="text-[10px] font-bold">{{ $t('video') }}</span>
     </button>
 
         <!-- Tooltip teleported to body (avoids overflow:hidden clipping) -->
@@ -162,9 +175,9 @@
         @click.stop
         class="inline-flex items-center gap-0.5 py-0.5 px-1.5 border-l transition-all bg-red-500/15 text-red-400 hover:bg-red-500/25 hover:text-red-300 text-[10px] font-bold"
         :class="borderColor"
-        title="Verify email to request renders"
+        :title="$t('Verify email to request renders')"
     >
-        verify
+        {{ $t('verify') }}
     </a>
 
     <!-- No rendered video - request render.
@@ -177,7 +190,7 @@
         :disabled="renderRequesting"
         class="inline-flex items-center justify-center py-0.5 px-1.5 border-l transition-all"
         :class="[borderColor, renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300']"
-        :title="renderError || 'Request YouTube render'"
+        :title="renderError || $t('Request YouTube render')"
     >
         <svg
             v-if="!renderRequested && !renderError"
@@ -188,7 +201,7 @@
         <span
             class="text-[10px] font-bold whitespace-nowrap"
             :class="(renderRequested || renderError) ? '' : 'hidden group-hover:inline-block'"
-        >{{ renderRequesting ? '...' : renderRequested ? 'queued' : renderError ? 'error' : 'render' }}</span>
+        >{{ renderRequesting ? '...' : renderRequested ? $t('queued') : renderError ? $t('error') : $t('render') }}</span>
     </button>
 
     <!-- Failed render report modal -->
@@ -197,27 +210,26 @@
             <div class="fixed inset-0 bg-black/60" @click="closeReport"></div>
             <div class="relative z-10 bg-gray-800 border border-gray-600 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
                 <template v-if="!reportSent">
-                    <h3 class="text-lg font-bold text-white mb-2">Video Render Failed</h3>
+                    <h3 class="text-lg font-bold text-white mb-2">{{ $t('Video Render Failed') }}</h3>
                     <p class="text-gray-300 text-sm mb-4">
-                        The video render for this record failed during processing.
-                        You can notify the admin to investigate and fix the issue.
+                        {{ $t('The video render for this record failed during processing. You can notify the admin to investigate and fix the issue.') }}
                     </p>
 
                     <div class="bg-gray-900/50 rounded-lg p-3 mb-4 text-xs text-gray-400 space-y-1">
-                        <div><span class="text-gray-500">Map:</span> {{ renderedVideo?.map_name }}</div>
-                        <div><span class="text-gray-500">Player:</span> {{ renderedVideo?.player_name }}</div>
-                        <div v-if="renderedVideo?.physics"><span class="text-gray-500">Physics:</span> {{ renderedVideo?.physics?.toUpperCase() }}</div>
-                        <div v-if="renderedVideo?.time_ms"><span class="text-gray-500">Time:</span> {{ formatTime(renderedVideo.time_ms) }}</div>
-                        <div><span class="text-gray-500">Source:</span> {{ recordSource() }}</div>
-                        <div v-if="record?.date_set"><span class="text-gray-500">Date:</span> {{ record.date_set }}</div>
+                        <div><span class="text-gray-500">{{ $t('Map:') }}</span> {{ renderedVideo?.map_name }}</div>
+                        <div><span class="text-gray-500">{{ $t('Player:') }}</span> {{ renderedVideo?.player_name }}</div>
+                        <div v-if="renderedVideo?.physics"><span class="text-gray-500">{{ $t('Physics:') }}</span> {{ renderedVideo?.physics?.toUpperCase() }}</div>
+                        <div v-if="renderedVideo?.time_ms"><span class="text-gray-500">{{ $t('Time:') }}</span> {{ formatTime(renderedVideo.time_ms) }}</div>
+                        <div><span class="text-gray-500">{{ $t('Source:') }}</span> {{ recordSourceLabel() }}</div>
+                        <div v-if="record?.date_set"><span class="text-gray-500">{{ $t('Date:') }}</span> {{ record.date_set }}</div>
                     </div>
 
-                    <label class="block text-sm text-gray-400 mb-1">Additional info (optional)</label>
+                    <label class="block text-sm text-gray-400 mb-1">{{ $t('Additional info (optional)') }}</label>
                     <textarea
                         v-model="reportMessage"
                         class="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 resize-none"
                         rows="2"
-                        placeholder="Any extra details..."
+                        :placeholder="$t('Any extra details...')"
                     ></textarea>
 
                     <div class="flex gap-3 mt-4">
@@ -226,13 +238,13 @@
                             :disabled="reportSending"
                             class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
                         >
-                            {{ reportSending ? 'Sending...' : 'Send Report to Admin' }}
+                            {{ reportSending ? $t('Sending...') : $t('Send Report to Admin') }}
                         </button>
                         <button
                             @click="closeReport"
                             class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded-lg transition-colors"
                         >
-                            Cancel
+                            {{ $t('Cancel') }}
                         </button>
                     </div>
                 </template>
@@ -242,13 +254,13 @@
                         <svg class="w-12 h-12 text-green-400 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                         </svg>
-                        <h3 class="text-lg font-bold text-white mb-1">Report Sent</h3>
-                        <p class="text-gray-400 text-sm">The admin has been notified and will look into it.</p>
+                        <h3 class="text-lg font-bold text-white mb-1">{{ $t('Report Sent') }}</h3>
+                        <p class="text-gray-400 text-sm">{{ $t('The admin has been notified and will look into it.') }}</p>
                         <button
                             @click="closeReport"
                             class="mt-4 px-6 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm rounded-lg transition-colors"
                         >
-                            Close
+                            {{ $t('Close') }}
                         </button>
                     </div>
                 </template>
