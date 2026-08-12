@@ -65,16 +65,16 @@ const submit = () => {
 
 <template>
     <div>
-        <Head title="Upload" />
+        <Head :title="$t('Upload')" />
 
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex items-center gap-2 text-xs text-gray-400 mb-2">
-                    <Link href="/downloads" class="hover:text-cyan-400 transition-colors">Downloads</Link>
+                    <Link href="/downloads" class="hover:text-cyan-400 transition-colors">{{ $t('Downloads') }}</Link>
                     <span class="text-gray-700">/</span>
-                    <span class="text-gray-500">Upload</span>
+                    <span class="text-gray-500">{{ $t('Upload') }}</span>
                 </div>
-                <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">Upload</h1>
+                <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('Upload') }}</h1>
             </div>
         </div>
 
@@ -84,18 +84,18 @@ const submit = () => {
                 <!-- Basics -->
                 <div class="bg-black/45 backdrop-blur-xl rounded-xl border border-white/[0.08] p-5 space-y-4">
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1.5">Name</label>
+                        <label class="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1.5">{{ $t('Name') }}</label>
                         <input
                             v-model="form.name"
                             type="text"
                             maxlength="150"
-                            placeholder="What is it?"
+                            :placeholder="$t('What is it?')"
                             class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-cyan-500/50 focus:ring-0 transition-colors" />
                         <p v-if="form.errors.name" class="text-xs text-red-400 mt-1">{{ form.errors.name }}</p>
                     </div>
 
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1.5">Category</label>
+                        <label class="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1.5">{{ $t('Category') }}</label>
                         <CategorySelect
                             v-model="form.category_id"
                             :categories="categories"
@@ -104,43 +104,41 @@ const submit = () => {
                     </div>
 
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1.5">
-                            Description <span class="text-gray-700 normal-case tracking-normal">(optional)</span>
-                        </label>
+                        <label class="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1.5 [&_span]:text-gray-700 [&_span]:normal-case [&_span]:tracking-normal"
+                               v-html="$t('Description <span>(optional)</span>')"></label>
                         <textarea
                             v-model="form.description"
                             rows="5"
                             maxlength="5000"
-                            placeholder="What it does, how to install it, who made it..."
+                            :placeholder="$t('What it does, how to install it, who made it...')"
                             class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-cyan-500/50 focus:ring-0 transition-colors resize-y"></textarea>
                         <p class="text-[11px] text-gray-600 mt-1">{{ form.description.length }} / 5000</p>
                         <p v-if="form.errors.description" class="text-xs text-red-400 mt-1">{{ form.errors.description }}</p>
                     </div>
 
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1.5">
-                            YouTube URL <span class="text-gray-700 normal-case tracking-normal">(optional)</span>
-                        </label>
+                        <label class="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1.5 [&_span]:text-gray-700 [&_span]:normal-case [&_span]:tracking-normal"
+                               v-html="$t('YouTube URL <span>(optional)</span>')"></label>
                         <input
                             v-model="form.youtube_url"
                             type="url"
                             placeholder="https://www.youtube.com/watch?v=..."
                             class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-cyan-500/50 focus:ring-0 transition-colors" />
-                        <p class="text-[11px] text-gray-600 mt-1">Embeds a player on the detail page.</p>
+                        <p class="text-[11px] text-gray-600 mt-1">{{ $t('Embeds a player on the detail page.') }}</p>
                         <p v-if="form.errors.youtube_url" class="text-xs text-red-400 mt-1">{{ form.errors.youtube_url }}</p>
                     </div>
 
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input v-model="form.defrag_only" type="checkbox"
                                class="rounded bg-black/40 border-white/20 text-cyan-500 focus:ring-0 focus:ring-offset-0" />
-                        <span class="text-sm text-gray-400">Only works with the DeFRaG mod</span>
+                        <span class="text-sm text-gray-400">{{ $t('Only works with the DeFRaG mod') }}</span>
                     </label>
                 </div>
 
                 <!-- Files -->
                 <div class="bg-black/45 backdrop-blur-xl rounded-xl border border-white/[0.08] p-5 space-y-3">
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1.5">Files</label>
+                        <label class="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1.5">{{ $t('Files') }}</label>
                         <input
                             ref="fileInput"
                             type="file"
@@ -149,8 +147,8 @@ const submit = () => {
                             @change="pickFiles"
                             class="block w-full text-sm text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-cyan-500/30 file:text-xs file:font-semibold file:bg-cyan-500/15 file:text-cyan-300 hover:file:bg-cyan-500/25 file:cursor-pointer" />
                         <p class="text-[11px] text-gray-600 mt-1.5">
-                            Up to 10 files, {{ maxFileMb }} MB each, {{ maxTotalMb }} MB in total.
-                            Allowed: {{ allowedExtensions.join(', ') }}
+                            {{ $t('Up to 10 files, :max MB each, :total MB in total.', { max: maxFileMb, total: maxTotalMb }) }}
+                            {{ $t('Allowed: :list', { list: allowedExtensions.join(', ') }) }}
                         </p>
                         <p v-for="(msg, i) in errorsFor('files')" :key="'fe' + i" class="text-xs text-red-400 mt-1">{{ msg }}</p>
                     </div>
@@ -162,7 +160,7 @@ const submit = () => {
                             <span class="flex items-center gap-2 flex-shrink-0">
                                 <span class="text-[11px] text-gray-600">{{ formatSize(f.size) }}</span>
                                 <button type="button" @click="dropFile(i)"
-                                        class="text-gray-600 hover:text-red-400 transition-colors text-xs">remove</button>
+                                        class="text-gray-600 hover:text-red-400 transition-colors text-xs">{{ $t('remove') }}</button>
                             </span>
                         </li>
                     </ul>
@@ -171,9 +169,8 @@ const submit = () => {
                 <!-- Screenshots -->
                 <div class="bg-black/45 backdrop-blur-xl rounded-xl border border-white/[0.08] p-5 space-y-3">
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1.5">
-                            Screenshots <span class="text-gray-700 normal-case tracking-normal">(optional)</span>
-                        </label>
+                        <label class="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1.5 [&_span]:text-gray-700 [&_span]:normal-case [&_span]:tracking-normal"
+                               v-html="$t('Screenshots <span>(optional)</span>')"></label>
                         <input
                             ref="shotInput"
                             type="file"
@@ -181,7 +178,7 @@ const submit = () => {
                             accept=".jpg,.jpeg,.png,.webp,.gif"
                             @change="pickShots"
                             class="block w-full text-sm text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-white/10 file:text-xs file:font-semibold file:bg-white/5 file:text-gray-400 hover:file:bg-white/10 file:cursor-pointer" />
-                        <p class="text-[11px] text-gray-600 mt-1.5">Up to 6 images, 5 MB each.</p>
+                        <p class="text-[11px] text-gray-600 mt-1.5">{{ $t('Up to 6 images, 5 MB each.') }}</p>
                         <p v-for="(msg, i) in errorsFor('screenshots')" :key="'se' + i" class="text-xs text-red-400 mt-1">{{ msg }}</p>
                     </div>
 
@@ -192,7 +189,7 @@ const submit = () => {
                             <span class="flex items-center gap-2 flex-shrink-0">
                                 <span class="text-[11px] text-gray-600">{{ formatSize(f.size) }}</span>
                                 <button type="button" @click="dropShot(i)"
-                                        class="text-gray-600 hover:text-red-400 transition-colors text-xs">remove</button>
+                                        class="text-gray-600 hover:text-red-400 transition-colors text-xs">{{ $t('remove') }}</button>
                             </span>
                         </li>
                     </ul>
@@ -202,30 +199,30 @@ const submit = () => {
                 <div class="bg-black/45 backdrop-blur-xl rounded-xl border border-white/[0.08] p-5">
                     <div v-if="overTotal"
                          class="mb-3 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 text-xs text-red-300">
-                        Total is {{ formatSize(totalBytes) }}, over the {{ maxTotalMb }} MB limit. Remove something first.
+                        {{ $t('Total is :size, over the :limit MB limit. Remove something first.', { size: formatSize(totalBytes), limit: maxTotalMb }) }}
                     </div>
 
                     <div v-if="form.progress" class="mb-3">
                         <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
                             <div class="h-full bg-cyan-500 transition-all" :style="{ width: form.progress.percentage + '%' }"></div>
                         </div>
-                        <p class="text-[11px] text-gray-500 mt-1">Uploading {{ form.progress.percentage }}%</p>
+                        <p class="text-[11px] text-gray-500 mt-1">{{ $t('Uploading :percent%', { percent: form.progress.percentage }) }}</p>
                     </div>
 
                     <div class="flex items-center justify-between gap-3 flex-wrap">
                         <p class="text-xs text-gray-600">
-                            <span v-if="totalBytes">{{ formatSize(totalBytes) }} total</span>
+                            <span v-if="totalBytes">{{ $t(':size total', { size: formatSize(totalBytes) }) }}</span>
                         </p>
                         <div class="flex items-center gap-2">
                             <Link href="/downloads"
                                   class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-500 hover:text-white transition-colors">
-                                Cancel
+                                {{ $t('Cancel') }}
                             </Link>
                             <button
                                 type="submit"
                                 :disabled="form.processing || overTotal || !form.files.length"
                                 class="px-5 py-2 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-sm font-bold text-cyan-300 hover:bg-cyan-500/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-                                {{ form.processing ? 'Uploading...' : 'Publish' }}
+                                {{ form.processing ? $t('Uploading...') : $t('Publish') }}
                             </button>
                         </div>
                     </div>

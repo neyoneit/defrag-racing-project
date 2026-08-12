@@ -3392,7 +3392,7 @@
                                     v-model="reportReason"
                                     rows="4"
                                     class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-indigo-500 focus:outline-none resize-none"
-                                    placeholder="Please explain why this alias is incorrect or fake..."
+                                    :placeholder="$t('Please explain why this alias is incorrect or fake...')"
                                     required
                                     maxlength="500"
                                 ></textarea>
@@ -3459,7 +3459,7 @@
                                     v-model="suggestionNote"
                                     rows="3"
                                     class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-indigo-500 focus:outline-none resize-none"
-                                    placeholder="Add context about where you've seen this alias..."
+                                    :placeholder="$t('Add context about where you\'ve seen this alias...')"
                                     maxlength="500"
                                 ></textarea>
                                 <p class="text-xs text-gray-500 mt-1">{{ suggestionNote.length }}/500 characters</p>

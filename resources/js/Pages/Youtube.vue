@@ -2,6 +2,7 @@
     import { ref, computed, onMounted, onUnmounted } from 'vue';
     import { Head, Link, router } from '@inertiajs/vue3';
     import Pagination from '@/Components/Basic/Pagination.vue';
+    import { t } from '@/utils/i18n';
 
     const props = defineProps({
         stats: Object,
@@ -86,7 +87,7 @@
     };
 
     const sourceLabel = (source) => {
-        return { discord: 'Discord', web: 'Web', auto: 'Auto' }[source] || source;
+        return { discord: 'Discord', web: t('Web'), auto: t('Auto') }[source] || source;
     };
 
     const sourceColor = (source) => {
@@ -98,7 +99,7 @@
     };
 
     const priorityLabel = (p) => {
-        return { 1: 'WR', 2: 'Verified', 3: 'Normal' }[p] || '';
+        return { 1: 'WR', 2: t('Verified'), 3: t('Normal') }[p] || '';
     };
 
     const estimateRender = (timeMs) => {
@@ -124,31 +125,31 @@
         const date = new Date(dateStr);
         const diffMs = now - date;
         const diffMin = Math.floor(diffMs / 60000);
-        if (diffMin < 1) return 'just now';
-        if (diffMin < 60) return `${diffMin}m ago`;
+        if (diffMin < 1) return t('just now');
+        if (diffMin < 60) return t(':count m ago', { count: diffMin });
         const diffH = Math.floor(diffMin / 60);
-        if (diffH < 24) return `${diffH}h ago`;
-        return `${Math.floor(diffH / 24)}d ago`;
+        if (diffH < 24) return t(':count h ago', { count: diffH });
+        return t(':count d ago', { count: Math.floor(diffH / 24) });
     };
 </script>
 
 <template>
     <div class="">
-        <Head title="Rendered Demos" />
+        <Head :title="$t('Rendered Demos')" />
 
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-8">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
                     <div class="flex items-center gap-3">
-                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">Rendered Demos</h1>
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('Rendered Demos') }}</h1>
                         <span v-if="demomeOnline" class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/10 border border-green-500/30">
                             <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-                            <span class="text-xs font-medium text-green-400">Renderer Online</span>
+                            <span class="text-xs font-medium text-green-400">{{ $t('Renderer Online') }}</span>
                         </span>
                         <span v-else class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-500/10 border border-gray-500/30">
                             <span class="w-2 h-2 rounded-full bg-gray-500"></span>
-                            <span class="text-xs font-medium text-gray-500">Renderer Offline</span>
+                            <span class="text-xs font-medium text-gray-500">{{ $t('Renderer Offline') }}</span>
                         </span>
                     </div>
 
@@ -156,15 +157,15 @@
                     <div class="flex items-center gap-3">
                         <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg px-4 py-2 text-center">
                             <div class="text-lg font-bold text-white leading-tight">{{ stats.total_renders }}</div>
-                            <div class="text-[10px] text-gray-400">Videos</div>
+                            <div class="text-[10px] text-gray-400">{{ $t('Videos') }}</div>
                         </div>
                         <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg px-4 py-2 text-center">
                             <div class="text-lg font-bold text-white leading-tight">{{ stats.total_render_hours }}h</div>
-                            <div class="text-[10px] text-gray-400">Render Time</div>
+                            <div class="text-[10px] text-gray-400">{{ $t('Render Time') }}</div>
                         </div>
                         <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg px-4 py-2 text-center">
                             <div class="text-lg font-bold text-white leading-tight">{{ stats.total_maps }}</div>
-                            <div class="text-[10px] text-gray-400">Maps</div>
+                            <div class="text-[10px] text-gray-400">{{ $t('Maps') }}</div>
                         </div>
                     </div>
                 </div>
@@ -176,7 +177,7 @@
                             v-model="searchMap"
                             @input="doSearch()"
                             type="text"
-                            placeholder="Map name..."
+                            :placeholder="$t('Map name...')"
                             class="w-40 bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/30"
                         />
                         <button v-if="searchMap" @click="searchMap = ''; doSearch()" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
@@ -189,7 +190,7 @@
                             v-model="searchPlayer"
                             @input="doSearch()"
                             type="text"
-                            placeholder="Player name..."
+                            :placeholder="$t('Player name...')"
                             class="w-40 bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/30"
                         />
                         <button v-if="searchPlayer" @click="searchPlayer = ''; doSearch()" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
@@ -209,7 +210,7 @@
                 <div v-if="currentlyRendering" class="bg-gradient-to-r from-red-500/10 to-orange-500/10 backdrop-blur-sm border border-red-500/30 rounded-xl p-5">
                     <div class="flex items-center gap-3 mb-3">
                         <div class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
-                        <span class="text-sm font-bold text-white uppercase tracking-wide">Currently Rendering</span>
+                        <span class="text-sm font-bold text-white uppercase tracking-wide">{{ $t('Currently Rendering') }}</span>
                     </div>
                     <div class="flex items-center justify-between">
                         <div>
@@ -227,9 +228,7 @@
                             <span :class="sourceColor(currentlyRendering.source)" class="text-xs px-2 py-0.5 rounded font-medium">
                                 {{ sourceLabel(currentlyRendering.source) }}
                             </span>
-                            <div v-if="currentlyRendering.requested_by" class="text-xs text-gray-500 mt-1">
-                                by <span v-html="q3tohtml(currentlyRendering.requested_by)"></span>
-                            </div>
+                            <div v-if="currentlyRendering.requested_by" class="text-xs text-gray-500 mt-1" v-html="$t('by :name', { name: q3tohtml(currentlyRendering.requested_by) })"></div>
                         </div>
                     </div>
                     <!-- Progress bar (indeterminate for now) -->
@@ -237,16 +236,16 @@
                         <div class="h-full bg-gradient-to-r from-red-500 to-orange-500 rounded-full animate-progress-indeterminate"></div>
                     </div>
                     <div class="text-xs text-gray-500 mt-1.5">
-                        Started {{ timeSince(currentlyRendering.updated_at) }}
-                        <span v-if="estimateRender(currentlyRendering.time_ms)" class="ml-2">- Est. {{ estimateRender(currentlyRendering.time_ms) }} (if demo has prerun, this may be off)</span>
+                        {{ $t('Started :time', { time: timeSince(currentlyRendering.updated_at) }) }}
+                        <span v-if="estimateRender(currentlyRendering.time_ms)" class="ml-2">- {{ $t('Est. :time (if demo has prerun, this may be off)', { time: estimateRender(currentlyRendering.time_ms) }) }}</span>
                     </div>
                 </div>
 
                 <!-- Pending Queue (right) -->
                 <div v-if="pendingQueue && pendingQueue.length > 0" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden" :class="{ 'lg:col-start-2': !currentlyRendering }">
                     <div class="px-3 py-2 border-b border-white/5 flex items-center justify-between">
-                        <span class="text-sm font-bold text-white">Queue</span>
-                        <span class="text-xs text-gray-500">{{ pendingTotal }} pending</span>
+                        <span class="text-sm font-bold text-white">{{ $t('Queue') }}</span>
+                        <span class="text-xs text-gray-500">{{ $t(':count pending', { count: pendingTotal }) }}</span>
                     </div>
                     <div class="divide-y divide-white/5 max-h-64 overflow-y-auto">
                         <div v-for="(item, i) in pendingQueue" :key="item.id" class="px-3 py-1.5 flex items-center justify-between">
@@ -314,12 +313,12 @@
 
             <!-- Video Grid -->
             <div v-else-if="videos && videos.data.length === 0 && !currentlyRendering && (!pendingQueue || pendingQueue.length === 0)" class="text-center py-20 text-gray-400">
-                No rendered videos yet.
+                {{ $t('No rendered videos yet.') }}
             </div>
 
             <div v-else-if="videos && videos.data.length > 0">
                 <div class="flex items-center justify-between mb-4">
-                    <h2 v-if="currentlyRendering || (pendingQueue && pendingQueue.length > 0)" class="text-lg font-bold text-white">Completed</h2>
+                    <h2 v-if="currentlyRendering || (pendingQueue && pendingQueue.length > 0)" class="text-lg font-bold text-white">{{ $t('Completed') }}</h2>
                     <div class="flex items-center gap-1 bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg p-1">
                         <button v-for="n in [3, 4]" :key="n" @click="gridSize = n"
                             class="px-2.5 py-1 text-xs font-medium rounded-md transition-all"
@@ -343,8 +342,8 @@
                                     <svg class="w-8 h-8 text-red-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                                     </svg>
-                                    <div class="text-xs text-red-400 font-medium">Render failed</div>
-                                    <div class="text-xs text-gray-500 mt-1">Reported to admin</div>
+                                    <div class="text-xs text-red-400 font-medium">{{ $t('Render failed') }}</div>
+                                    <div class="text-xs text-gray-500 mt-1">{{ $t('Reported to admin') }}</div>
                                 </div>
                             </div>
                         </template>
@@ -408,12 +407,10 @@
                                 <div class="flex items-center justify-between">
                                     <span class="uppercase">{{ video.physics }}</span>
                                     <span v-if="video.render_duration_seconds" class="text-gray-500">
-                                        Render time: {{ formatDuration(video.render_duration_seconds) }}
+                                        {{ $t('Render time: :duration', { duration: formatDuration(video.render_duration_seconds) }) }}
                                     </span>
                                 </div>
-                                <div v-if="video.requested_by" class="text-gray-500 truncate">
-                                    by <span v-html="q3tohtml(video.requested_by)"></span>
-                                </div>
+                                <div v-if="video.requested_by" class="text-gray-500 truncate" v-html="$t('by :name', { name: q3tohtml(video.requested_by) })"></div>
                             </div>
 
                             <div class="mt-2 flex items-center justify-between">
@@ -428,7 +425,7 @@
                                         <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
                                         <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/>
                                     </svg>
-                                    Watch on YouTube
+                                    {{ $t('Watch on YouTube') }}
                                 </a>
                                 <a
                                     v-if="video.demo_id"
@@ -438,11 +435,11 @@
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                                     </svg>
-                                    Download Demo
+                                    {{ $t('Download Demo') }}
                                 </a>
                             </div>
                             <div v-if="!video.youtube_url && video.status === 'failed'" class="mt-2 text-xs text-red-400/60">
-                                Waiting for admin fix
+                                {{ $t('Waiting for admin fix') }}
                             </div>
                         </div>
                     </div>

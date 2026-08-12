@@ -7,6 +7,7 @@
     import Modal from '@/Components/Laravel/Modal.vue';
     import SecondaryButton from '@/Components/Laravel/SecondaryButton.vue';
     import { ref } from 'vue';
+    import { t } from '@/utils/i18n';
 
     const props = defineProps({
         clan: Object,
@@ -53,7 +54,7 @@
         };
 
         if (! image.type.startsWith('image/')) {
-            form.errors.image = 'The file must be an Image.';
+            form.errors.image = t('The file must be an Image.');
             imageInput.value = '';
             return;
         }
@@ -82,7 +83,7 @@
         };
 
         if (! background.type.startsWith('image/')) {
-            form.errors.background = 'The file must be an Image.';
+            form.errors.background = t('The file must be an Image.');
             backgroundInput.value = '';
             return;
         }
@@ -106,7 +107,7 @@
             <div class="p-5">
                 <div class="flex justify-between items-center">
                     <h2 class="font-semibold text-xl text-gray-200 leading-tight">
-                        Invite Player
+                        {{ $t('Invite Player') }}
                     </h2>
 
                     <div class="text-gray-200 cursor-pointer rounded-full hover:bg-grayop-700 p-1" @click="close">
@@ -119,7 +120,7 @@
 
                 <form @submit.prevent="submitForm">
                     <div class="my-3">
-                        <InputLabel for="name" v-html="'Clan Name: ' + q3tohtml(form.name)" />
+                        <InputLabel for="name" v-html="$t('Clan Name:') + ' ' + q3tohtml(form.name)" />
                         <TextInput
                             id="name"
                             v-model="form.name"
@@ -130,7 +131,7 @@
                             autocomplete="name"
                         />
                         <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            You can use Quake3 color codes, such as: ^1Red^2Green.
+                            {{ $t('You can use Quake3 color codes, such as:') }} ^1Red^2Green.
                         </div>
                         <InputError class="mt-2" :message="form.errors.name" />
                     </div>
@@ -145,10 +146,10 @@
                             @change="updateimagePreview"
                         >
 
-                        <InputLabel for="image" value="Clan Avatar" />
+                        <InputLabel for="image" :value="$t('Clan Avatar')" />
 
                         <SecondaryButton class="mt-2 me-2" type="button" @click.prevent="selectNewImage">
-                            Select an Image
+                            {{ $t('Select an Image') }}
                         </SecondaryButton>
 
                         <div v-if="imagePreview" class="mt-2">
@@ -172,14 +173,14 @@
                             @change="updateBackgroundPreview"
                         >
 
-                        <InputLabel for="background" value="Clan Background Image" />
+                        <InputLabel for="background" :value="$t('Clan Background Image')" />
 
                         <div class="text-sm text-gray-600 dark:text-gray-400 mt-1 mb-2">
-                            Recommended size: 1920x400px (wide banner format)
+                            {{ $t('Recommended size: 1920x400px (wide banner format)') }}
                         </div>
 
                         <SecondaryButton class="mt-2 me-2" type="button" @click.prevent="selectNewBackground">
-                            Select Background Image
+                            {{ $t('Select Background Image') }}
                         </SecondaryButton>
 
                         <div v-if="backgroundPreview" class="mt-2">
@@ -194,10 +195,10 @@
                     </div>
 
                     <div class="mb-3">
-                        <InputLabel for="name_effect" value="Clan Name Effect" />
+                        <InputLabel for="name_effect" :value="$t('Clan Name Effect')" />
 
                         <div class="text-sm text-gray-600 dark:text-gray-400 mt-1 mb-2">
-                            Choose an animated effect to highlight your clan name
+                            {{ $t('Choose an animated effect to highlight your clan name') }}
                         </div>
 
                         <select
@@ -205,22 +206,22 @@
                             v-model="form.name_effect"
                             class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
                         >
-                            <option value="particles">Particles (Blue dots)</option>
-                            <option value="orbs">Orbs (Floating blobs)</option>
-                            <option value="lines">Lines (Horizontal pulses)</option>
-                            <option value="matrix">Matrix (Green code rain)</option>
-                            <option value="glitch">Glitch (Cyberpunk effect)</option>
-                            <option value="none">None (Minimal)</option>
+                            <option value="particles">{{ $t('Particles (Blue dots)') }}</option>
+                            <option value="orbs">{{ $t('Orbs (Floating blobs)') }}</option>
+                            <option value="lines">{{ $t('Lines (Horizontal pulses)') }}</option>
+                            <option value="matrix">{{ $t('Matrix (Green code rain)') }}</option>
+                            <option value="glitch">{{ $t('Glitch (Cyberpunk effect)') }}</option>
+                            <option value="none">{{ $t('None (Minimal)') }}</option>
                         </select>
 
                         <InputError :message="form.errors.name_effect" class="mt-2" />
                     </div>
 
                     <div class="mb-3">
-                        <InputLabel for="name_shadow_color" value="Clan Name Shadow Color" />
+                        <InputLabel for="name_shadow_color" :value="$t('Clan Name Shadow Color')" />
 
                         <div class="text-sm text-gray-600 dark:text-gray-400 mt-1 mb-2">
-                            Choose the color for your clan name's text shadow
+                            {{ $t('Choose the color for your clan name\'s text shadow') }}
                         </div>
 
                         <div class="flex items-center gap-3 mt-2">
@@ -242,10 +243,10 @@
                     </div>
 
                     <div class="mb-3">
-                        <InputLabel for="featured_stats" value="Featured Stats (Select up to 3)" />
+                        <InputLabel for="featured_stats" :value="$t('Featured Stats (Select up to 3)')" />
 
                         <div class="text-sm text-gray-600 dark:text-gray-400 mt-1 mb-2">
-                            Choose which stats to display on your clan card. You can select 1-3 stats or none.
+                            {{ $t('Choose which stats to display on your clan card. You can select 1-3 stats or none.') }}
                         </div>
 
                         <div class="mt-2 space-y-2">
@@ -262,8 +263,8 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
                                     </svg>
                                     <div>
-                                        <div class="text-sm font-medium text-gray-200">Total Records</div>
-                                        <div class="text-xs text-gray-500">Display total number of records</div>
+                                        <div class="text-sm font-medium text-gray-200">{{ $t('Total Records') }}</div>
+                                        <div class="text-xs text-gray-500">{{ $t('Display total number of records') }}</div>
                                     </div>
                                 </div>
                             </label>
@@ -281,8 +282,8 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
                                     </svg>
                                     <div>
-                                        <div class="text-sm font-medium text-gray-200">World Records</div>
-                                        <div class="text-xs text-gray-500">Display #1 world record positions</div>
+                                        <div class="text-sm font-medium text-gray-200">{{ $t('World Records') }}</div>
+                                        <div class="text-xs text-gray-500">{{ $t('Display #1 world record positions') }}</div>
                                     </div>
                                 </div>
                             </label>
@@ -300,15 +301,15 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
                                     </svg>
                                     <div>
-                                        <div class="text-sm font-medium text-gray-200">Top 3 Positions</div>
-                                        <div class="text-xs text-gray-500">Display podium finishes (1st, 2nd, 3rd)</div>
+                                        <div class="text-sm font-medium text-gray-200">{{ $t('Top 3 Positions') }}</div>
+                                        <div class="text-xs text-gray-500">{{ $t('Display podium finishes (1st, 2nd, 3rd)') }}</div>
                                     </div>
                                 </div>
                             </label>
                         </div>
 
                         <div class="text-xs text-gray-500 mt-2">
-                            Selected: {{ form.featured_stats.length }}/3
+                            {{ $t('Selected: :count/3', { count: form.featured_stats.length }) }}
                         </div>
 
                         <InputError :message="form.errors.featured_stats" class="mt-2" />
@@ -316,7 +317,7 @@
 
                     <div class="flex justify-center">
                         <PrimaryButton type="submit" class="w-32 justify-center">
-                            Edit
+                            {{ $t('Edit') }}
                         </PrimaryButton>
                     </div>
                 </form>
