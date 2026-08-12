@@ -14,6 +14,7 @@ import Pagination from '@/Components/Basic/Pagination.vue';
 import LauncherBanner from '@/Components/LauncherBanner.vue';
 import DemoDetails from '@/Components/DemoDetails.vue';
 import DemoPhysicsBadges from '@/Components/DemoPhysicsBadges.vue';
+import { t } from '@/utils/i18n';
 
 const $page = usePage();
 
@@ -49,11 +50,11 @@ const successExpanded = ref(false);
 const categorizedErrors = computed(() => {
     const cats = {};
     uploadErrors.value.forEach(err => {
-        let category = 'Other';
-        if (err.includes('Duplicate file content')) category = 'Duplicates';
-        else if (err.includes('Invalid demo file format')) category = 'Invalid Format';
-        else if (err.includes('Filename already uploaded')) category = 'Duplicate Filename';
-        else if (err.includes('Upload failed') || err.includes('Failed to queue')) category = 'Upload Failed';
+        let category = t('Other');
+        if (err.includes('Duplicate file content')) category = t('Duplicates');
+        else if (err.includes('Invalid demo file format')) category = t('Invalid Format');
+        else if (err.includes('Filename already uploaded')) category = t('Duplicate Filename');
+        else if (err.includes('Upload failed') || err.includes('Failed to queue')) category = t('Upload Failed');
         if (!cats[category]) cats[category] = [];
         cats[category].push(err);
     });
@@ -139,12 +140,12 @@ const globalQueueExpanded = ref(true);
 const processingSummary = computed(() => {
     if (recentlyProcessed.value.length === 0) return null;
     const groups = {
-        assigned: { label: 'Assigned', color: 'green', demos: [] },
-        'fallback-assigned': { label: 'Fallback', color: 'blue', demos: [] },
-        processed: { label: 'Processed', color: 'green', demos: [] },
-        failed: { label: 'Failed', color: 'red', demos: [] },
-        'failed-validity': { label: 'Invalid', color: 'orange', demos: [] },
-        'unsupported-version': { label: 'Unsupported', color: 'purple', demos: [] },
+        assigned: { label: t('Assigned'), color: 'green', demos: [] },
+        'fallback-assigned': { label: t('Fallback'), color: 'blue', demos: [] },
+        processed: { label: t('Processed'), color: 'green', demos: [] },
+        failed: { label: t('Failed'), color: 'red', demos: [] },
+        'failed-validity': { label: t('Invalid'), color: 'orange', demos: [] },
+        'unsupported-version': { label: t('Unsupported'), color: 'purple', demos: [] },
     };
     recentlyProcessed.value.forEach(d => {
         if (groups[d.status]) groups[d.status].demos.push(d);
@@ -174,7 +175,7 @@ const reprocessAllFailed = async () => {
         startStatusPolling();
         router.reload({ only: ['userDemos', 'publicDemos', 'demoCounts'], preserveState: true });
     } catch (error) {
-        reprocessMessage.value = 'Failed: ' + (error.response?.data?.message || error.message);
+        reprocessMessage.value = t('Failed: :message', { message: error.response?.data?.message || error.message });
     } finally {
         reprocessingFailed.value = false;
     }
@@ -253,17 +254,17 @@ const clearBrowseUploadedBy = () => {
     applyBrowseUploadedBy();
 };
 
-const confidenceOptions = [
-    { value: '', label: 'All Confidence Levels' },
+const confidenceOptions = computed(() => [
+    { value: '', label: t('All Confidence Levels') },
     { value: '90-99', label: '90-99%' },
     { value: '80-89', label: '80-89%' },
     { value: '70-79', label: '70-79%' },
     { value: '60-69', label: '60-69%' },
     { value: '50-59', label: '50-59%' },
-    { value: 'below-50', label: 'Below 50%' },
-];
+    { value: 'below-50', label: t('Below 50%') },
+]);
 
-const selectedConfidenceLabel = () => confidenceOptions.find(c => c.value === confidenceFilterValue.value)?.label || 'All Confidence Levels';
+const selectedConfidenceLabel = () => confidenceOptions.value.find(c => c.value === confidenceFilterValue.value)?.label || t('All Confidence Levels');
 
 // Tooltip state
 const hoveredDemo = ref(null);
@@ -341,12 +342,12 @@ const uploadRestrictionMessage = computed(() => {
     if (!user) return '';
 
     if (user.upload_restricted) {
-        return 'Your account has been restricted from uploading demos. Please contact an administrator.';
+        return t('Your account has been restricted from uploading demos. Please contact an administrator.');
     }
 
     const recordsCount = $page.props.recordsCount || 0;
     const needed = 30 - recordsCount;
-    return `You need at least 30 records to upload demos. You currently have ${recordsCount} record(s). ${needed} more needed.`;
+    return t('You need at least 30 records to upload demos. You currently have :count record(s). :needed more needed.', { count: recordsCount, needed });
 });
 
 // Function to change tab filter (ONLINE/OFFLINE/ALL)
@@ -595,8 +596,9 @@ const handleFileSelect = (event) => {
     if (validFiles.length !== files.length) {
         const skipped = files.length - validFiles.length;
         showUploadInfoModal(
-            'Files Filtered',
-            `Found ${validFiles.length} demo file(s). Skipped ${skipped} non-demo file(s).\n\nOnly demo files (.dm_68, .dm_66, etc.) and archives (.zip, .rar, .7z) are accepted.`,
+            t('Files Filtered'),
+            t('Found :found demo file(s). Skipped :skipped non-demo file(s).', { found: validFiles.length, skipped })
+                + '\n\n' + t('Only demo files (.dm_68, .dm_66, etc.) and archives (.zip, .rar, .7z) are accepted.'),
             'info'
         );
     }
@@ -644,8 +646,9 @@ const handleDrop = async (e) => {
         if (validFiles.length !== files.length) {
             const skipped = files.length - validFiles.length;
             showUploadInfoModal(
-                'Files Filtered',
-                `Found ${validFiles.length} demo file(s). Skipped ${skipped} non-demo file(s).\n\nOnly demo files (.dm_68, .dm_66, etc.) and archives (.zip, .rar, .7z) are accepted.`,
+                t('Files Filtered'),
+                t('Found :found demo file(s). Skipped :skipped non-demo file(s).', { found: validFiles.length, skipped })
+                    + '\n\n' + t('Only demo files (.dm_68, .dm_66, etc.) and archives (.zip, .rar, .7z) are accepted.'),
                 'info'
             );
         }
@@ -671,7 +674,7 @@ const BATCH_SIZE = 100;
 
 const uploadDemos = async () => {
     if (selectedFiles.value.length === 0) {
-        showUploadInfoModal('No Files Selected', 'Please select demo files to upload.', 'warning');
+        showUploadInfoModal(t('No Files Selected'), t('Please select demo files to upload.'), 'warning');
         return;
     }
 
@@ -843,7 +846,7 @@ const uploadDemos = async () => {
         // Results stay visible until user dismisses them
     } catch (error) {
         console.error('Upload error:', error);
-        uploadErrors.value = [...allErrors, 'Upload failed: ' + (error.response?.data?.message || error.message)];
+        uploadErrors.value = [...allErrors, t('Upload failed: :message', { message: error.response?.data?.message || error.message })];
     } finally {
         uploading.value = false;
         setTimeout(() => {
@@ -853,9 +856,9 @@ const uploadDemos = async () => {
 };
 
 const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return '0 ' + t('Bytes');
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB'];
+    const sizes = [t('Bytes'), 'KB', 'MB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
@@ -920,20 +923,20 @@ const matchMethodLabel = (method) => {
 };
 
 const matchMethodTooltip = (demo) => {
-    const alias = demo.matched_alias ? ` — matched alias: ${demo.matched_alias}` : '';
+    const alias = demo.matched_alias ? ' ' + t('- matched alias: :alias', { alias: demo.matched_alias }) : '';
     switch (demo.match_method) {
         case 'q3df_colored_record':
-            return `Matched via colored q3df login + time to record${alias}`;
+            return t('Matched via colored q3df login + time to record') + alias;
         case 'q3df_plain_record':
-            return `Matched via plain q3df login + time to record${alias}`;
+            return t('Matched via plain q3df login + time to record') + alias;
         case 'q3df_colored_profile':
-            return `Matched via colored q3df login to profile (no record for this time)${alias}`;
+            return t('Matched via colored q3df login to profile (no record for this time)') + alias;
         case 'q3df_plain_profile':
-            return `Matched via plain q3df login to profile (no record for this time, alias is globally unique)${alias}`;
+            return t('Matched via plain q3df login to profile (no record for this time, alias is globally unique)') + alias;
         case 'uploader_record':
-            return `Uploader has a record with this exact time — no name check needed`;
+            return t('Uploader has a record with this exact time - no name check needed');
         case 'fuzzy_nick':
-            return `Matched via fuzzy nickname comparison${alias}`;
+            return t('Matched via fuzzy nickname comparison') + alias;
         default: return '';
     }
 };
@@ -1040,7 +1043,7 @@ const getStatusColor = (status) => {
 };
 
 const reprocessDemo = async (demoId) => {
-    if (!confirm('Are you sure you want to reprocess this demo?')) {
+    if (!confirm(t('Are you sure you want to reprocess this demo?'))) {
         return;
     }
 
@@ -1053,12 +1056,12 @@ const reprocessDemo = async (demoId) => {
             router.reload({ only: ['userDemos', 'publicDemos', 'demoCounts'], preserveState: true });
         }
     } catch (error) {
-        alert('Failed to reprocess demo: ' + (error.response?.data?.message || error.message));
+        alert(t('Failed to reprocess demo: :message', { message: error.response?.data?.message || error.message }));
     }
 };
 
 const deleteDemo = async (demoId) => {
-    if (!confirm('Are you sure you want to delete this demo?')) {
+    if (!confirm(t('Are you sure you want to delete this demo?'))) {
         return;
     }
 
@@ -1066,7 +1069,7 @@ const deleteDemo = async (demoId) => {
         await axios.delete(route('demos.destroy', demoId));
         router.reload({ only: ['userDemos', 'publicDemos'], preserveState: true });
     } catch (error) {
-        alert('Failed to delete demo: ' + (error.response?.data?.message || error.message));
+        alert(t('Failed to delete demo: :message', { message: error.response?.data?.message || error.message }));
     }
 };
 
@@ -1312,12 +1315,12 @@ const assignDemo = async () => {
         }
     } catch (error) {
         console.error('Error assigning demo:', error);
-        alert('Failed to assign demo. Please try again.');
+        alert(t('Failed to assign demo. Please try again.'));
     }
 };
 
 const unassignDemo = async (demo) => {
-    if (!confirm('Are you sure you want to remove the assignment from this demo?')) {
+    if (!confirm(t('Are you sure you want to remove the assignment from this demo?'))) {
         return;
     }
 
@@ -1329,7 +1332,7 @@ const unassignDemo = async (demo) => {
         }
     } catch (error) {
         console.error('Error unassigning demo:', error);
-        alert('Failed to unassign demo. Please try again.');
+        alert(t('Failed to unassign demo. Please try again.'));
     }
 };
 
@@ -1350,7 +1353,7 @@ watch(selectedPhysics, () => {
 
 <template>
     <div>
-        <Head title="Demo Upload" />
+        <Head :title="$t('Demo Upload')" />
 
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-8">
@@ -1358,14 +1361,14 @@ watch(selectedPhysics, () => {
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <div>
                         <div class="flex items-center gap-3 mb-1">
-                            <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">Demos</h1>
+                            <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('Demos') }}</h1>
                         </div>
-                        <p class="text-sm text-gray-400">Upload and manage demo files</p>
+                        <p class="text-sm text-gray-400">{{ $t('Upload and manage demo files') }}</p>
                         <p class="text-xs text-gray-500 mt-1">
                             <span class="relative group inline-block">
-                                <span class="cursor-help border-b border-dotted border-gray-600 text-gray-400">Special thanks</span>
+                                <span class="cursor-help border-b border-dotted border-gray-600 text-gray-400">{{ $t('Special thanks') }}</span>
                                 <span class="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-opacity absolute left-0 top-full z-30 w-64 rounded-lg bg-gray-900 border border-white/10 px-3 py-2 text-xs text-gray-300 shadow-xl leading-snug">
-                                    Special thanks to <Link href="/profile/549" class="text-gray-200 hover:text-white underline transition-colors">Enter</Link> for his demo collection that helped populate this database.
+                                    {{ $t('Special thanks to') }} <Link href="/profile/549" class="text-gray-200 hover:text-white underline transition-colors">Enter</Link> {{ $t('for his demo collection that helped populate this database.') }}
                                 </span>
                             </span>
                         </p>
@@ -1378,8 +1381,8 @@ watch(selectedPhysics, () => {
                             <polyline points="7 10 12 15 17 10"/>
                             <line x1="12" y1="15" x2="12" y2="3"/>
                         </svg>
-                        <span class="font-bold text-white whitespace-nowrap">Get the launcher</span>
-                        <span class="hidden sm:inline text-blue-200/80 font-semibold text-xs">auto backup demos + many more features</span>
+                        <span class="font-bold text-white whitespace-nowrap">{{ $t('Get the launcher') }}</span>
+                        <span class="hidden sm:inline text-blue-200/80 font-semibold text-xs">{{ $t('auto backup demos + many more features') }}</span>
                     </Link>
 
                     <!-- Limits Info (Right Side) -->
@@ -1398,18 +1401,18 @@ watch(selectedPhysics, () => {
                                 </svg>
                                 <div v-if="localDownloadLimitInfo.isGuest" class="text-xs">
                                     <span class="text-blue-200 font-semibold">{{ localDownloadLimitInfo.remaining }}/{{ localDownloadLimitInfo.limit }}</span>
-                                    <span class="text-blue-300/80 ml-1">downloads left today</span>
-                                    <div class="text-sm text-blue-200 font-semibold mt-1">Unlock more downloads after <a href="/login" class="underline hover:text-white transition-colors">login</a>/<a href="/register" class="underline hover:text-white transition-colors">register</a>. <a href="/donations" class="underline hover:text-white transition-colors">Donate</a> for unlimited.</div>
+                                    <span class="text-blue-300/80 ml-1">{{ $t('downloads left today') }}</span>
+                                    <div class="text-sm text-blue-200 font-semibold mt-1">{{ $t('Unlock more downloads after') }} <a href="/login" class="underline hover:text-white transition-colors">{{ $t('login') }}</a>/<a href="/register" class="underline hover:text-white transition-colors">{{ $t('register') }}</a>. <a href="/donations" class="underline hover:text-white transition-colors">{{ $t('Donate') }}</a> {{ $t('for unlimited.') }}</div>
                                 </div>
                                 <div v-else-if="localDownloadLimitInfo.remaining === 0" class="text-xs">
-                                    <span class="text-red-200 font-semibold">Limit reached</span>
+                                    <span class="text-red-200 font-semibold">{{ $t('Limit reached') }}</span>
                                 </div>
                                 <div v-else class="text-xs">
                                     <span class="text-green-400 font-semibold">{{ localDownloadLimitInfo.remaining }}</span>
                                     <span class="text-gray-300 mx-1">/</span>
                                     <span class="text-gray-300">{{ localDownloadLimitInfo.limit }}</span>
-                                    <span class="text-gray-400 ml-1">downloads left today</span>
-                                    <div class="text-gray-400 mt-1">Downloads limited due to bandwidth costs. <a href="/donations" class="underline hover:text-white transition-colors">Donate</a> for unlimited.</div>
+                                    <span class="text-gray-400 ml-1">{{ $t('downloads left today') }}</span>
+                                    <div class="text-gray-400 mt-1">{{ $t('Downloads limited due to bandwidth costs.') }} <a href="/donations" class="underline hover:text-white transition-colors">{{ $t('Donate') }}</a> {{ $t('for unlimited.') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -1421,13 +1424,13 @@ watch(selectedPhysics, () => {
                                 </svg>
                                 <div v-if="localUploadLimitInfo.isGuest" class="text-xs">
                                     <span class="text-purple-200 font-semibold">{{ localUploadLimitInfo.remaining }}/{{ localUploadLimitInfo.limit }}</span>
-                                    <span class="text-purple-300/80 ml-1">uploads left today</span>
-                                    <div class="text-sm text-purple-200 font-semibold mt-1">Unlock unlimited uploads after <a href="/login" class="underline hover:text-white transition-colors">login</a>/<a href="/register" class="underline hover:text-white transition-colors">register</a>.</div>
+                                    <span class="text-purple-300/80 ml-1">{{ $t('uploads left today') }}</span>
+                                    <div class="text-sm text-purple-200 font-semibold mt-1">{{ $t('Unlock unlimited uploads after') }} <a href="/login" class="underline hover:text-white transition-colors">{{ $t('login') }}</a>/<a href="/register" class="underline hover:text-white transition-colors">{{ $t('register') }}</a>.</div>
                                 </div>
                                 <div v-else class="text-xs">
-                                    <span class="text-green-400 font-semibold">Unlimited</span>
-                                    <span class="text-gray-400 ml-1">uploads</span>
-                                    <div class="text-gray-500 mt-0.5">Uploads are free, no bandwidth cost.</div>
+                                    <span class="text-green-400 font-semibold">{{ $t('Unlimited') }}</span>
+                                    <span class="text-gray-400 ml-1">{{ $t('uploads') }}</span>
+                                    <div class="text-gray-500 mt-0.5">{{ $t('Uploads are free, no bandwidth cost.') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -1447,7 +1450,7 @@ watch(selectedPhysics, () => {
                         <svg class="w-4 h-4 mr-1.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                         </svg>
-                        Upload Demos
+                        {{ $t('Upload Demos') }}
                     </h3>
 
                     <!-- Not logged in: full clickable login overlay -->
@@ -1459,11 +1462,11 @@ watch(selectedPhysics, () => {
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                                     </svg>
                                 </div>
-                                <p class="text-base font-semibold text-gray-200">Drag demo files or folders here</p>
-                                <p class="text-gray-400 mt-1 text-sm">Or use buttons below to select files or folders</p>
+                                <p class="text-base font-semibold text-gray-200">{{ $t('Drag demo files or folders here') }}</p>
+                                <p class="text-gray-400 mt-1 text-sm">{{ $t('Or use buttons below to select files or folders') }}</p>
                                 <div class="flex gap-2 justify-center">
-                                    <span class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg">Select Files</span>
-                                    <span class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg">Select Folder</span>
+                                    <span class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg">{{ $t('Select Files') }}</span>
+                                    <span class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg">{{ $t('Select Folder') }}</span>
                                 </div>
                             </div>
                         </div>
@@ -1474,8 +1477,8 @@ watch(selectedPhysics, () => {
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10 text-gray-400 group-hover:text-blue-400 transition-colors mb-3">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
                             </svg>
-                            <span class="text-gray-300 group-hover:text-blue-300 font-semibold text-lg transition-colors">Log in to upload demos</span>
-                            <span class="text-gray-500 text-sm mt-1">Click here to sign in</span>
+                            <span class="text-gray-300 group-hover:text-blue-300 font-semibold text-lg transition-colors">{{ $t('Log in to upload demos') }}</span>
+                            <span class="text-gray-500 text-sm mt-1">{{ $t('Click here to sign in') }}</span>
                         </Link>
                     </div>
 
@@ -1485,10 +1488,10 @@ watch(selectedPhysics, () => {
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-10 h-10 text-red-400 mx-auto mb-3">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
                             </svg>
-                            <p class="text-red-400 font-bold text-lg mb-1">Verify your email to upload demos</p>
-                            <p class="text-gray-500 text-sm mb-3">Email verification is required before you can upload demos</p>
+                            <p class="text-red-400 font-bold text-lg mb-1">{{ $t('Verify your email to upload demos') }}</p>
+                            <p class="text-gray-500 text-sm mb-3">{{ $t('Email verification is required before you can upload demos') }}</p>
                             <Link href="/email/verify" class="inline-block px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition-colors">
-                                Verify Email
+                                {{ $t('Verify Email') }}
                             </Link>
                         </div>
                     </div>
@@ -1520,8 +1523,8 @@ watch(selectedPhysics, () => {
                                 <svg class="w-16 h-16 mx-auto mb-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                                 </svg>
-                                <div class="text-2xl font-semibold">Drop demo files to upload</div>
-                                <div class="text-sm text-blue-100 mt-1">Release to upload your selected demos</div>
+                                <div class="text-2xl font-semibold">{{ $t('Drop demo files to upload') }}</div>
+                                <div class="text-sm text-blue-100 mt-1">{{ $t('Release to upload your selected demos') }}</div>
                             </div>
                         </div>
                         <div class="space-y-1.5">
@@ -1536,7 +1539,7 @@ watch(selectedPhysics, () => {
                                     'text-sm font-semibold transition-colors duration-300',
                                     isDragOver ? 'text-blue-300' : 'text-gray-300'
                                 ]">
-                                    {{ isDragOver ? 'Drop files here' : 'Drag demo files or folders here' }}
+                                    {{ isDragOver ? $t('Drop files here') : $t('Drag demo files or folders here') }}
                                 </p>
                             </div>
 
@@ -1568,7 +1571,7 @@ watch(selectedPhysics, () => {
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                     </svg>
-                                    Select Files
+                                    {{ $t('Select Files') }}
                                 </button>
                                 <button
                                     type="button"
@@ -1578,7 +1581,7 @@ watch(selectedPhysics, () => {
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
                                     </svg>
-                                    Select Folder
+                                    {{ $t('Select Folder') }}
                                 </button>
                             </div>
                         </div>
@@ -1591,13 +1594,13 @@ watch(selectedPhysics, () => {
                                 <svg class="w-5 h-5 mr-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
-                                {{ selectedFiles.length }} file(s) selected
+                                {{ $tc(':count file selected|:count files selected', selectedFiles.length) }}
                             </h4>
                             <button
                                 @click="clearAllFiles"
                                 class="text-sm text-red-400 hover:text-red-300 transition-colors duration-200"
                             >
-                                Clear all
+                                {{ $t('Clear all') }}
                             </button>
                         </div>
 
@@ -1639,8 +1642,8 @@ watch(selectedPhysics, () => {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                             </svg>
                             <div v-else class="w-6 h-6 mr-3 animate-spin border-2 border-white border-t-transparent rounded-full"></div>
-                            <span v-if="uploading">Uploading {{ selectedFiles.length }} demo(s)...</span>
-                            <span v-else>Upload {{ selectedFiles.length }} demo(s)</span>
+                            <span v-if="uploading">{{ $tc('Uploading :count demo...|Uploading :count demos...', selectedFiles.length) }}</span>
+                            <span v-else>{{ $tc('Upload :count demo|Upload :count demos', selectedFiles.length) }}</span>
                         </button>
                     </div>
 
@@ -1649,7 +1652,7 @@ watch(selectedPhysics, () => {
                         <div class="w-full bg-gray-700 rounded-full h-3 overflow-hidden border border-gray-600/50">
                             <div :style="{ width: uploadProgress + '%' }" class="h-3 bg-green-500 transition-all duration-200"></div>
                         </div>
-                        <div class="text-xs text-gray-400 mt-2">Progress: {{ uploadProgress }}%</div>
+                        <div class="text-xs text-gray-400 mt-2">{{ $t('Progress: :percent%', { percent: uploadProgress }) }}</div>
                     </div>
 
                     <!-- Upload Summary -->
@@ -1659,52 +1662,52 @@ watch(selectedPhysics, () => {
                             <svg class="w-5 h-5 text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
-                            <span class="text-blue-300 font-semibold">Upload Summary</span>
+                            <span class="text-blue-300 font-semibold">{{ $t('Upload Summary') }}</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span class="text-gray-500 text-xs">updates per batch</span>
-                                <button v-if="!uploading" @click="uploadSummary = null; uploadErrors = []; uploadSuccess = []" class="text-gray-400 hover:text-white transition-colors" title="Dismiss all results">
+                                <span class="text-gray-500 text-xs">{{ $t('updates per batch') }}</span>
+                                <button v-if="!uploading" @click="uploadSummary = null; uploadErrors = []; uploadSuccess = []" class="text-gray-400 hover:text-white transition-colors" :title="$t('Dismiss all results')">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                                 </button>
                             </div>
                         </div>
                         <div class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2 text-sm">
                             <div class="bg-gray-800/50 rounded-lg px-2 py-2 text-center">
-                                <div class="text-gray-400 text-xs">Selected</div>
+                                <div class="text-gray-400 text-xs">{{ $t('Selected') }}</div>
                                 <div class="text-white font-bold text-lg">{{ uploadSummary.total_selected.toLocaleString() }}</div>
                             </div>
                             <div v-if="uploadSummary.skipped_frontend > 0" class="bg-yellow-900/30 rounded-lg px-2 py-2 text-center border border-yellow-700/30">
-                                <div class="text-yellow-400 text-xs">Skipped</div>
+                                <div class="text-yellow-400 text-xs">{{ $t('Skipped') }}</div>
                                 <div class="text-yellow-300 font-bold text-lg">{{ uploadSummary.skipped_frontend.toLocaleString() }}</div>
                             </div>
                             <div class="bg-green-900/30 rounded-lg px-2 py-2 text-center border border-green-700/30">
-                                <div class="text-green-400 text-xs">Queued</div>
+                                <div class="text-green-400 text-xs">{{ $t('Queued') }}</div>
                                 <div class="text-green-300 font-bold text-lg">{{ uploadSummary.queued.toLocaleString() }}</div>
-                                <div v-if="uploadSummary.replaced > 0" class="text-[10px] text-cyan-400 mt-0.5">({{ uploadSummary.replaced }} replaced)</div>
+                                <div v-if="uploadSummary.replaced > 0" class="text-[10px] text-cyan-400 mt-0.5">({{ $t(':count replaced', { count: uploadSummary.replaced }) }})</div>
                             </div>
                             <div v-if="uploadSummary.duplicates > 0" class="bg-orange-900/30 rounded-lg px-2 py-2 text-center border border-orange-700/30">
-                                <div class="text-orange-400 text-xs">Duplicates</div>
+                                <div class="text-orange-400 text-xs">{{ $t('Duplicates') }}</div>
                                 <div class="text-orange-300 font-bold text-lg">{{ uploadSummary.duplicates.toLocaleString() }}</div>
                             </div>
                             <div v-if="uploadSummary.errors > 0" class="bg-red-900/30 rounded-lg px-2 py-2 text-center border border-red-700/30">
-                                <div class="text-red-400 text-xs">Errors</div>
+                                <div class="text-red-400 text-xs">{{ $t('Errors') }}</div>
                                 <div class="text-red-300 font-bold text-lg">{{ uploadSummary.errors.toLocaleString() }}</div>
                             </div>
                             <div v-if="uploadSummary.retried_batches > 0" class="bg-amber-900/30 rounded-lg px-2 py-2 text-center border border-amber-700/30">
-                                <div class="text-amber-400 text-xs">Recovered</div>
-                                <div class="text-amber-300 font-bold text-lg">{{ uploadSummary.retried_batches }} {{ uploadSummary.retried_batches === 1 ? 'batch' : 'batches' }}</div>
+                                <div class="text-amber-400 text-xs">{{ $t('Recovered') }}</div>
+                                <div class="text-amber-300 font-bold text-lg">{{ $tc(':count batch|:count batches', uploadSummary.retried_batches) }}</div>
                             </div>
-                            <div v-if="uploadSummary.failed_batch_files > 0" class="bg-red-900/40 rounded-lg px-2 py-2 text-center border-2 border-red-500/60 ring-1 ring-red-500/30 cursor-pointer" @click="showFailedFiles = !showFailedFiles" title="Click to show/hide file names">
-                                <div class="text-red-400 text-xs font-semibold">Not Uploaded</div>
-                                <div class="text-red-300 font-bold text-lg">{{ uploadSummary.failed_batch_files.toLocaleString() }} files</div>
-                                <div class="text-[10px] text-red-400 mt-0.5 font-medium">click to show files</div>
+                            <div v-if="uploadSummary.failed_batch_files > 0" class="bg-red-900/40 rounded-lg px-2 py-2 text-center border-2 border-red-500/60 ring-1 ring-red-500/30 cursor-pointer" @click="showFailedFiles = !showFailedFiles" :title="$t('Click to show/hide file names')">
+                                <div class="text-red-400 text-xs font-semibold">{{ $t('Not Uploaded') }}</div>
+                                <div class="text-red-300 font-bold text-lg">{{ $tc(':count file|:count files', uploadSummary.failed_batch_files) }}</div>
+                                <div class="text-[10px] text-red-400 mt-0.5 font-medium">{{ $t('click to show files') }}</div>
                             </div>
                             <div v-if="uploadSummary.batch_progress && uploading" class="bg-blue-900/30 rounded-lg px-2 py-2 text-center border border-blue-700/30">
-                                <div class="text-blue-400 text-xs">Batch</div>
+                                <div class="text-blue-400 text-xs">{{ $t('Batch') }}</div>
                                 <div class="text-blue-300 font-bold text-lg">{{ uploadSummary.batch_progress }}</div>
                             </div>
                             <div class="bg-gray-800/50 rounded-lg px-2 py-2 text-center">
-                                <div class="text-gray-400 text-xs">Duration</div>
+                                <div class="text-gray-400 text-xs">{{ $t('Duration') }}</div>
                                 <div class="text-white font-bold text-lg">{{ uploadSummary.duration }}s</div>
                             </div>
                         </div>
@@ -1713,8 +1716,8 @@ watch(selectedPhysics, () => {
                     <!-- Not Uploaded Files List -->
                     <div v-if="showFailedFiles && uploadSummary.failed_file_names && uploadSummary.failed_file_names.length > 0" class="mt-4 p-4 bg-red-900/20 rounded-xl border border-red-700/30">
                         <div class="flex items-center justify-between mb-2">
-                            <span class="text-red-300 font-semibold text-sm">Not Uploaded Files (re-upload these)</span>
-                            <button @click="showFailedFiles = false" class="text-red-400 hover:text-white text-xs">close</button>
+                            <span class="text-red-300 font-semibold text-sm">{{ $t('Not Uploaded Files (re-upload these)') }}</span>
+                            <button @click="showFailedFiles = false" class="text-red-400 hover:text-white text-xs">{{ $t('close') }}</button>
                         </div>
                         <div class="max-h-60 overflow-y-auto space-y-0.5">
                             <div v-for="name in uploadSummary.failed_file_names" :key="name" class="text-xs text-red-200/80 font-mono truncate">{{ name }}</div>
@@ -1728,7 +1731,7 @@ watch(selectedPhysics, () => {
                                 <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
-                                <span class="text-red-300 font-semibold">Upload Errors</span>
+                                <span class="text-red-300 font-semibold">{{ $t('Upload Errors') }}</span>
                                 <span class="ml-2 px-2 py-0.5 bg-red-500/30 text-red-300 text-xs rounded-full">{{ uploadErrors.length }}</span>
                             </div>
                             <svg class="w-4 h-4 text-red-400 transition-transform" :class="{ 'rotate-180': errorsExpanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1762,7 +1765,7 @@ watch(selectedPhysics, () => {
                                 <svg class="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
-                                <span class="text-green-300 font-semibold">Successfully Uploaded</span>
+                                <span class="text-green-300 font-semibold">{{ $t('Successfully Uploaded') }}</span>
                                 <span class="ml-2 px-2 py-0.5 bg-green-500/30 text-green-300 text-xs rounded-full">{{ uploadSuccess.length }}</span>
                             </div>
                             <svg class="w-4 h-4 text-green-400 transition-transform" :class="{ 'rotate-180': successExpanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1776,7 +1779,7 @@ watch(selectedPhysics, () => {
                                 </svg>
                                 <div>
                                     <span class="text-green-200/80 text-xs">{{ demo.processed_filename || demo.original_filename }}</span>
-                                    <span v-if="demo.record_id" class="text-purple-300 text-[10px] ml-1">auto-assigned</span>
+                                    <span v-if="demo.record_id" class="text-purple-300 text-[10px] ml-1">{{ $t('auto-assigned') }}</span>
                                 </div>
                             </div>
                         </div>
@@ -1789,10 +1792,10 @@ watch(selectedPhysics, () => {
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-2">
                             <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
-                            <h3 class="text-base font-semibold text-cyan-300">Processing Results</h3>
+                            <h3 class="text-base font-semibold text-cyan-300">{{ $t('Processing Results') }}</h3>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="text-gray-500 text-xs">updates every 2s</span>
+                            <span class="text-gray-500 text-xs">{{ $t('updates every 2s') }}</span>
                             <button @click="recentlyProcessed = []; processingDuration = null;" class="text-gray-500 hover:text-gray-300 transition-colors">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                             </button>
@@ -1801,24 +1804,24 @@ watch(selectedPhysics, () => {
                     <!-- Summary stats grid -->
                     <div class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2 text-sm">
                         <div class="bg-gray-800/50 rounded-lg px-2 py-2 text-center">
-                            <div class="text-gray-400 text-xs">Total</div>
+                            <div class="text-gray-400 text-xs">{{ $t('Total') }}</div>
                             <div class="text-white font-bold text-lg">{{ processingSummary.total.toLocaleString() }}</div>
                         </div>
                         <div v-if="processingSummary.success > 0" class="bg-green-900/30 rounded-lg px-2 py-2 text-center border border-green-700/30">
-                            <div class="text-green-400 text-xs">Success</div>
+                            <div class="text-green-400 text-xs">{{ $t('Success') }}</div>
                             <div class="text-green-300 font-bold text-lg">{{ processingSummary.success.toLocaleString() }}</div>
                         </div>
                         <div v-if="processingSummary.fail > 0" class="bg-red-900/30 rounded-lg px-2 py-2 text-center border border-red-700/30">
-                            <div class="text-red-400 text-xs">Failed</div>
+                            <div class="text-red-400 text-xs">{{ $t('Failed') }}</div>
                             <div class="text-red-300 font-bold text-lg">{{ processingSummary.fail.toLocaleString() }}</div>
                         </div>
                         <div v-if="processingDuration" class="bg-gray-800/50 rounded-lg px-2 py-2 text-center">
-                            <div class="text-gray-400 text-xs">Duration</div>
+                            <div class="text-gray-400 text-xs">{{ $t('Duration') }}</div>
                             <div class="text-white font-bold text-lg">{{ processingDuration }}s</div>
                         </div>
                         <div v-else-if="processingStartTime" class="bg-gray-800/50 rounded-lg px-2 py-2 text-center">
-                            <div class="text-gray-400 text-xs">Duration</div>
-                            <div class="text-yellow-300 font-bold text-lg animate-pulse">running...</div>
+                            <div class="text-gray-400 text-xs">{{ $t('Duration') }}</div>
+                            <div class="text-yellow-300 font-bold text-lg animate-pulse">{{ $t('running...') }}</div>
                         </div>
                     </div>
 
@@ -1827,7 +1830,7 @@ watch(selectedPhysics, () => {
                         <button @click="processingResultsExpanded = !processingResultsExpanded" class="w-full flex items-center justify-between p-3 bg-gradient-to-r from-cyan-900/20 to-cyan-800/10 rounded-xl border border-cyan-700/30">
                             <div class="flex items-center">
                                 <svg class="w-5 h-5 text-cyan-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-                                <span class="text-cyan-300 font-semibold text-sm">Details</span>
+                                <span class="text-cyan-300 font-semibold text-sm">{{ $t('Details') }}</span>
                                 <span class="ml-2 px-2 py-0.5 bg-cyan-500/20 text-cyan-300 text-xs rounded-full">{{ processingSummary.total }}</span>
                             </div>
                             <svg class="w-4 h-4 text-cyan-400 transition-transform" :class="{ 'rotate-180': processingResultsExpanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1878,9 +1881,9 @@ watch(selectedPhysics, () => {
                 <!-- Global Processing Status (logged in only) -->
                 <div v-if="$page.props.auth.user" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 mb-4 shadow-2xl border border-white/5">
                     <button @click.stop="globalQueueExpanded = !globalQueueExpanded" class="w-full flex items-center justify-between" :class="{ 'mb-3': globalQueueExpanded }">
-                        <h3 class="text-base font-semibold text-gray-200">Global Queue Status</h3>
+                        <h3 class="text-base font-semibold text-gray-200">{{ $t('Global Queue Status') }}</h3>
                         <div class="flex items-center gap-2">
-                            <span class="text-gray-500 text-xs">updates every 2s</span>
+                            <span class="text-gray-500 text-xs">{{ $t('updates every 2s') }}</span>
                             <svg class="w-4 h-4 text-gray-400 transition-transform" :class="{ 'rotate-180': globalQueueExpanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
@@ -1891,23 +1894,23 @@ watch(selectedPhysics, () => {
                     <div v-show="globalQueueExpanded" class="grid grid-cols-2 gap-2">
                         <div v-if="$page.props.auth.user" class="relative group bg-gradient-to-br from-yellow-600/20 to-yellow-700/10 rounded-lg p-3 text-center border border-yellow-600/30 cursor-help">
                             <div class="text-2xl font-bold text-yellow-400">{{ (queueStats.user_queued || 0) + (queueStats.user_processing || 0) }}</div>
-                            <div class="text-xs text-yellow-300 mt-1">Your Remaining</div>
+                            <div class="text-xs text-yellow-300 mt-1">{{ $t('Your Remaining') }}</div>
                             <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 border border-gray-600 rounded-lg text-xs text-gray-200 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                                Your demos not yet finished: {{ queueStats.user_queued || 0 }} waiting in queue, {{ queueStats.user_processing || 0 }} being processed right now
+                                {{ $t('Your demos not yet finished: :queued waiting in queue, :processing being processed right now', { queued: queueStats.user_queued || 0, processing: queueStats.user_processing || 0 }) }}
                             </div>
                         </div>
                         <div class="relative group bg-gradient-to-br from-green-600/20 to-green-700/10 rounded-lg p-3 text-center border border-green-600/30 cursor-help">
                             <div class="text-2xl font-bold text-green-400">{{ (queueStats.total_queued || 0) + (queueStats.total_processing || 0) }}</div>
-                            <div class="text-xs text-green-300 mt-1">Total Remaining</div>
+                            <div class="text-xs text-green-300 mt-1">{{ $t('Total Remaining') }}</div>
                             <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 border border-gray-600 rounded-lg text-xs text-gray-200 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                                Demos from all users not yet finished: {{ queueStats.total_queued || 0 }} waiting in queue, {{ queueStats.total_processing || 0 }} being processed right now
+                                {{ $t('Demos from all users not yet finished: :queued waiting in queue, :processing being processed right now', { queued: queueStats.total_queued || 0, processing: queueStats.total_processing || 0 }) }}
                             </div>
                         </div>
                     </div>
 
                     <!-- Actively Processing (only demos currently being worked on by workers) -->
                     <div v-if="activelyProcessingDemos.length > 0" v-show="globalQueueExpanded" class="mt-4 space-y-2">
-                        <h4 class="text-sm font-semibold text-blue-300">Actively Processing ({{ activelyProcessingDemos.length }}):</h4>
+                        <h4 class="text-sm font-semibold text-blue-300">{{ $t('Actively Processing (:count):', { count: activelyProcessingDemos.length }) }}</h4>
                         <div v-for="demo in activelyProcessingDemos" :key="demo.id" class="flex items-center justify-between bg-blue-900/20 rounded-lg p-2 border border-blue-600/30">
                             <div class="flex items-center space-x-2">
                                 <svg class="w-5 h-5 text-blue-400 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1929,7 +1932,7 @@ watch(selectedPhysics, () => {
 
                     <!-- Queued count (just a summary, not the full list) -->
                     <div v-if="queuedDemoCount > 0" v-show="globalQueueExpanded" class="mt-3">
-                        <div class="text-xs text-gray-400">{{ queuedDemoCount }} demo(s) waiting in queue</div>
+                        <div class="text-xs text-gray-400">{{ $tc(':count demo waiting in queue|:count demos waiting in queue', queuedDemoCount) }}</div>
                     </div>
                 </div>
 
@@ -1961,13 +1964,13 @@ watch(selectedPhysics, () => {
                         <svg class="w-16 h-16 mx-auto text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
-                        <p class="text-gray-400 text-lg">You haven't uploaded any demos yet.</p>
+                        <p class="text-gray-400 text-lg">{{ $t("You haven't uploaded any demos yet.") }}</p>
                     </div>
 
                     <!-- Show title, filters and table when demos exist -->
                     <template v-else>
                         <h3 class="text-xl font-semibold text-gray-200 mb-4">
-                            Your Uploaded Demos
+                            {{ $t('Your Uploaded Demos') }}
                         </h3>
 
                         <!-- Filter Tabs -->
@@ -1981,7 +1984,7 @@ watch(selectedPhysics, () => {
                                         ? 'bg-blue-600 text-white'
                                         : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
                                 >
-                                    All <span class="opacity-75">({{ demoCountsComputed.all }})</span>
+                                    {{ $t('All') }} <span class="opacity-75">({{ demoCountsComputed.all }})</span>
                                 </button>
                                 <button
                                     @click="changeTabFilter('online')"
@@ -1990,7 +1993,7 @@ watch(selectedPhysics, () => {
                                         ? 'bg-green-600 text-white'
                                         : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
                                 >
-                                    Online <span class="opacity-75">({{ demoCountsComputed.online }})</span>
+                                    {{ $t('Online') }} <span class="opacity-75">({{ demoCountsComputed.online }})</span>
                                 </button>
                                 <button
                                     @click="changeTabFilter('offline')"
@@ -1999,7 +2002,7 @@ watch(selectedPhysics, () => {
                                         ? 'bg-purple-600 text-white'
                                         : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
                                 >
-                                    Offline <span class="opacity-75">({{ demoCountsComputed.offline }})</span>
+                                    {{ $t('Offline') }} <span class="opacity-75">({{ demoCountsComputed.offline }})</span>
                                 </button>
 
                                 <span class="border-l border-gray-600/50 mx-1"></span>
@@ -2011,7 +2014,7 @@ watch(selectedPhysics, () => {
                                         ? 'bg-gray-600 text-white'
                                         : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                                 >
-                                    All Status
+                                    {{ $t('All Status') }}
                                 </button>
                                 <button
                                     @click="changeStatusFilter('assigned')"
@@ -2020,7 +2023,7 @@ watch(selectedPhysics, () => {
                                         ? 'bg-purple-600 text-white'
                                         : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                                 >
-                                    Assigned <span class="opacity-75">({{ demoCountsComputed.assigned }})</span>
+                                    {{ $t('Assigned') }} <span class="opacity-75">({{ demoCountsComputed.assigned }})</span>
                                 </button>
                                 <button
                                     @click="changeStatusFilter('fallback-assigned')"
@@ -2029,7 +2032,7 @@ watch(selectedPhysics, () => {
                                         ? 'bg-orange-600 text-white'
                                         : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                                 >
-                                    Fallback <span class="opacity-75">({{ demoCountsComputed.fallback_assigned || 0 }})</span>
+                                    {{ $t('Fallback') }} <span class="opacity-75">({{ demoCountsComputed.fallback_assigned || 0 }})</span>
                                 </button>
                                 <button
                                     v-if="(demoCountsComputed.uploaded || 0) > 0"
@@ -2039,7 +2042,7 @@ watch(selectedPhysics, () => {
                                         ? 'bg-cyan-600 text-white'
                                         : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                                 >
-                                    Uploaded <span class="opacity-75">({{ demoCountsComputed.uploaded || 0 }})</span>
+                                    {{ $t('Uploaded') }} <span class="opacity-75">({{ demoCountsComputed.uploaded || 0 }})</span>
                                 </button>
                                 <button
                                     @click="changeStatusFilter('processed')"
@@ -2048,7 +2051,7 @@ watch(selectedPhysics, () => {
                                         ? 'bg-blue-600 text-white'
                                         : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                                 >
-                                    Processed <span class="opacity-75">({{ demoCountsComputed.processed }})</span>
+                                    {{ $t('Processed') }} <span class="opacity-75">({{ demoCountsComputed.processed }})</span>
                                 </button>
                                 <button
                                     @click="changeStatusFilter('failed-validity')"
@@ -2057,7 +2060,7 @@ watch(selectedPhysics, () => {
                                         ? 'bg-orange-600 text-white'
                                         : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                                 >
-                                    Invalid <span class="opacity-75">({{ demoCountsComputed.failed_validity || 0 }})</span>
+                                    {{ $t('Invalid') }} <span class="opacity-75">({{ demoCountsComputed.failed_validity || 0 }})</span>
                                 </button>
                                 <button
                                     @click="changeStatusFilter('failed')"
@@ -2066,7 +2069,7 @@ watch(selectedPhysics, () => {
                                         ? 'bg-red-600 text-white'
                                         : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                                 >
-                                    Failed <span class="opacity-75">({{ demoCountsComputed.failed }})</span>
+                                    {{ $t('Failed') }} <span class="opacity-75">({{ demoCountsComputed.failed }})</span>
                                 </button>
                                 <button
                                     @click="changeStatusFilter('unsupported-version')"
@@ -2075,7 +2078,7 @@ watch(selectedPhysics, () => {
                                         ? 'bg-purple-600 text-white'
                                         : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                                 >
-                                    Unsupported <span class="opacity-75">({{ demoCountsComputed.unsupported_version || 0 }})</span>
+                                    {{ $t('Unsupported') }} <span class="opacity-75">({{ demoCountsComputed.unsupported_version || 0 }})</span>
                                 </button>
                                 <button
                                     v-if="$page.props.auth.user?.admin && (demoCountsComputed.failed || 0) > 0"
@@ -2083,7 +2086,7 @@ watch(selectedPhysics, () => {
                                     :disabled="reprocessingFailed"
                                     class="px-2.5 py-1 rounded text-xs font-medium transition-all bg-orange-700/30 text-orange-300 hover:bg-orange-700/50 border border-orange-600/30 disabled:opacity-50"
                                 >
-                                    {{ reprocessingFailed ? 'Reprocessing...' : 'Reprocess All Failed' }}
+                                    {{ reprocessingFailed ? $t('Reprocessing...') : $t('Reprocess All Failed') }}
                                 </button>
                                 <span v-if="reprocessMessage" class="text-xs text-yellow-300 ml-2">{{ reprocessMessage }}</span>
                             </div>
@@ -2093,7 +2096,7 @@ watch(selectedPhysics, () => {
                                 <input
                                     v-model="userSearchQuery"
                                     type="text"
-                                    placeholder="Search by filename..."
+                                    :placeholder="$t('Search by filename...')"
                                     class="w-full px-4 py-1.5 bg-gray-700/50 border border-gray-600/50 rounded-lg text-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 />
                                 <div class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400">
@@ -2107,7 +2110,7 @@ watch(selectedPhysics, () => {
                             <div v-if="$page.props.auth.user && ($page.props.auth.user.is_admin || $page.props.auth.user.admin)" class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-gray-600/50">
                                 <!-- Confidence Filter -->
                                 <div>
-                                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Confidence Range</label>
+                                    <label class="block text-xs font-medium text-gray-400 mb-1.5">{{ $t('Confidence Range') }}</label>
                                     <div class="relative">
                                         <button
                                             @click="confidenceDropdownOpen = !confidenceDropdownOpen"
@@ -2135,7 +2138,7 @@ watch(selectedPhysics, () => {
 
                                 <!-- 100% Match Other User Filter -->
                                 <div>
-                                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Match Type</label>
+                                    <label class="block text-xs font-medium text-gray-400 mb-1.5">{{ $t('Match Type') }}</label>
                                     <button
                                         @click="showOtherUserMatchesValue = !showOtherUserMatchesValue"
                                         :class="[
@@ -2149,18 +2152,18 @@ watch(selectedPhysics, () => {
                                             <svg v-if="showOtherUserMatchesValue" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
                                             </svg>
-                                            <span>100% Match (Other User)</span>
+                                            <span>{{ $t('100% Match (Other User)') }}</span>
                                         </div>
                                     </button>
                                 </div>
 
                                 <!-- Uploaded By Filter -->
                                 <div>
-                                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Uploaded By</label>
+                                    <label class="block text-xs font-medium text-gray-400 mb-1.5">{{ $t('Uploaded By') }}</label>
                                     <input
                                         v-model="uploadedByValue"
                                         type="text"
-                                        placeholder="Username..."
+                                        :placeholder="$t('Username...')"
                                         class="w-full px-3 py-1.5 bg-gray-700/50 border border-gray-600/50 rounded-lg text-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     />
                                 </div>
@@ -2168,7 +2171,7 @@ watch(selectedPhysics, () => {
                         </div>
 
                         <div v-if="filteredDemos.length === 0" class="text-gray-400 text-center py-8">
-                            No demos match the selected filters.
+                            {{ $t('No demos match the selected filters.') }}
                         </div>
 
                     <div v-else class="overflow-x-auto">
@@ -2177,7 +2180,7 @@ watch(selectedPhysics, () => {
                                 <tr>
                                     <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         <button @click="sortColumn('id')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
-                                            <span>ID</span>
+                                            <span>{{ $t('ID') }}</span>
                                             <svg v-if="sortBy === 'id'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="sortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -2186,7 +2189,7 @@ watch(selectedPhysics, () => {
                                     </th>
                                     <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         <button @click="sortColumn('original_filename')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
-                                            <span>Filename</span>
+                                            <span>{{ $t('Filename') }}</span>
                                             <svg v-if="sortBy === 'original_filename'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="sortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -2195,7 +2198,7 @@ watch(selectedPhysics, () => {
                                     </th>
                                     <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         <button @click="sortColumn('created_at')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
-                                            <span>Uploaded</span>
+                                            <span>{{ $t('Uploaded') }}</span>
                                             <svg v-if="sortBy === 'created_at'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="sortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -2204,7 +2207,7 @@ watch(selectedPhysics, () => {
                                     </th>
                                     <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         <button @click="sortColumn('map_name')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
-                                            <span>Map</span>
+                                            <span>{{ $t('Map') }}</span>
                                             <svg v-if="sortBy === 'map_name'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="sortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -2212,14 +2215,14 @@ watch(selectedPhysics, () => {
                                         </button>
                                     </th>
                                     <th class="px-1 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        Type
+                                        {{ $t('Type') }}
                                     </th>
                                     <th class="px-1 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        Physics
+                                        {{ $t('Physics') }}
                                     </th>
                                     <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         <button @click="sortColumn('time_ms')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
-                                            <span>Time</span>
+                                            <span>{{ $t('Time') }}</span>
                                             <svg v-if="sortBy === 'time_ms'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="sortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -2228,7 +2231,7 @@ watch(selectedPhysics, () => {
                                     </th>
                                     <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         <button @click="sortColumn('status')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
-                                            <span>Status</span>
+                                            <span>{{ $t('Status') }}</span>
                                             <svg v-if="sortBy === 'status'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="sortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -2236,7 +2239,7 @@ watch(selectedPhysics, () => {
                                         </button>
                                     </th>
                                     <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        Actions
+                                        {{ $t('Actions') }}
                                     </th>
                                 </tr>
                             </thead>
@@ -2262,7 +2265,7 @@ watch(selectedPhysics, () => {
                                                             'bg-red-500/20 text-red-400'
                                                         ]"
                                                     >
-                                                        {{ demo.name_confidence }}% confidence
+                                                        {{ $t(':percent% confidence', { percent: demo.name_confidence }) }}
                                                     </span>
 
                                                     <span v-if="demo.suggested_user" class="text-xs text-gray-400">
@@ -2270,7 +2273,7 @@ watch(selectedPhysics, () => {
                                                     </span>
 
                                                     <span v-if="demo.manually_assigned" class="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded">
-                                                        Manually Assigned
+                                                        {{ $t('Manually Assigned') }}
                                                     </span>
                                                 </div>
                                             </div>
@@ -2286,7 +2289,7 @@ watch(selectedPhysics, () => {
                                         <span v-else class="text-gray-500">-</span>
                                     </td>
                                     <td class="px-1 py-1.5 text-xs text-gray-300">
-                                        <span v-if="demo.gametype" class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium uppercase" :class="demo.gametype.startsWith('m') ? 'bg-green-900/50 text-green-200' : 'bg-purple-900/50 text-purple-200'" :title="demo.gametype.startsWith('m') ? 'Online' : 'Offline'">
+                                        <span v-if="demo.gametype" class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium uppercase" :class="demo.gametype.startsWith('m') ? 'bg-green-900/50 text-green-200' : 'bg-purple-900/50 text-purple-200'" :title="demo.gametype.startsWith('m') ? $t('Online') : $t('Offline')">
                                             {{ demo.gametype }}
                                         </span>
                                         <span v-else class="text-gray-500">-</span>
@@ -2353,7 +2356,7 @@ watch(selectedPhysics, () => {
                                                 @click.stop="toggleDetails(demo.id)"
                                                 class="inline-flex items-center px-2 py-1 text-[11px] font-medium rounded transition-colors"
                                                 :class="expandedDemos.has(demo.id) ? 'bg-amber-600/30 text-amber-200' : 'bg-white/[0.06] text-gray-300 hover:bg-white/10'"
-                                                :title="expandedDemos.has(demo.id) ? 'Hide details' : 'What is in this demo'"
+                                                :title="expandedDemos.has(demo.id) ? $t('Hide details') : $t('What is in this demo')"
                                             >
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -2362,18 +2365,18 @@ watch(selectedPhysics, () => {
                                             <button
                                                 @click.stop="downloadDemo(demo.id)"
                                                 class="inline-flex items-center px-2 py-1 bg-blue-600/20 text-blue-300 text-[11px] font-medium rounded hover:bg-blue-600/30 transition-colors"
-                                                title="Download"
+                                                :title="$t('Download')"
                                             >
                                                 <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                                 </svg>
-                                                DL
+                                                {{ $t('DL') }}
                                             </button>
                                             <button
                                                 v-if="$page.props.auth.user && (demo.user_id === $page.props.auth.user.id || $page.props.auth.user.is_admin || $page.props.auth.user.admin)"
                                                 @click="reprocessDemo(demo.id)"
                                                 class="inline-flex items-center px-2 py-1 bg-yellow-600/20 text-yellow-300 text-[11px] font-medium rounded hover:bg-yellow-600/30 transition-colors"
-                                                title="Reprocess"
+                                                :title="$t('Reprocess')"
                                             >
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -2383,7 +2386,7 @@ watch(selectedPhysics, () => {
                                                 v-if="$page.props.auth.user && (demo.user_id === $page.props.auth.user.id || $page.props.auth.user.is_admin || $page.props.auth.user.admin) && (demo.status === 'processed' || demo.status === 'failed' || demo.status === 'fallback-assigned') && !demo.record_id"
                                                 @click="openAssignModal(demo)"
                                                 class="inline-flex items-center px-2 py-1 bg-green-600/20 text-green-300 text-[11px] font-medium rounded hover:bg-green-600/30 transition-colors"
-                                                title="Assign"
+                                                :title="$t('Assign')"
                                             >
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
@@ -2393,7 +2396,7 @@ watch(selectedPhysics, () => {
                                                 v-if="$page.props.auth.user && (demo.user_id === $page.props.auth.user.id || $page.props.auth.user.is_admin || $page.props.auth.user.admin) && demo.record_id"
                                                 @click="unassignDemo(demo)"
                                                 class="inline-flex items-center px-2 py-1 bg-orange-600/20 text-orange-300 text-[11px] font-medium rounded hover:bg-orange-600/30 transition-colors"
-                                                title="Unassign"
+                                                :title="$t('Unassign')"
                                             >
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
@@ -2403,7 +2406,7 @@ watch(selectedPhysics, () => {
                                                 v-if="$page.props.auth.user && (demo.user_id === $page.props.auth.user.id || $page.props.auth.user.is_admin || $page.props.auth.user.admin) && !demo.record_id"
                                                 @click="deleteDemo(demo.id)"
                                                 class="inline-flex items-center px-2 py-1 bg-red-600/20 text-red-300 text-[11px] font-medium rounded hover:bg-red-600/30 transition-colors"
-                                                title="Delete"
+                                                :title="$t('Delete')"
                                             >
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -2439,7 +2442,7 @@ watch(selectedPhysics, () => {
                 <!-- Browse All Demos Section (for everyone) -->
                 <div v-if="!demosLoading && publicDemos" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5">
                     <h3 class="text-xl font-semibold text-gray-200 mb-4">
-                        Browse All Demos
+                        {{ $t('Browse All Demos') }}
                     </h3>
 
                     <!-- Browse Filter Tabs and Search -->
@@ -2453,7 +2456,7 @@ watch(selectedPhysics, () => {
                                     ? 'bg-blue-600 text-white'
                                     : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
                             >
-                                All <span class="opacity-75">({{ browseCountsComputed.all }})</span>
+                                {{ $t('All') }} <span class="opacity-75">({{ browseCountsComputed.all }})</span>
                             </button>
                             <button
                                 @click="changeBrowseTabFilter('online')"
@@ -2462,7 +2465,7 @@ watch(selectedPhysics, () => {
                                     ? 'bg-green-600 text-white'
                                     : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
                             >
-                                Online <span class="opacity-75">({{ browseCountsComputed.online }})</span>
+                                {{ $t('Online') }} <span class="opacity-75">({{ browseCountsComputed.online }})</span>
                             </button>
                             <button
                                 @click="changeBrowseTabFilter('offline')"
@@ -2471,7 +2474,7 @@ watch(selectedPhysics, () => {
                                     ? 'bg-purple-600 text-white'
                                     : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
                             >
-                                Offline <span class="opacity-75">({{ browseCountsComputed.offline }})</span>
+                                {{ $t('Offline') }} <span class="opacity-75">({{ browseCountsComputed.offline }})</span>
                             </button>
 
                             <span class="border-l border-gray-600/50 mx-1"></span>
@@ -2483,7 +2486,7 @@ watch(selectedPhysics, () => {
                                     ? 'bg-gray-600 text-white'
                                     : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                             >
-                                All Status
+                                {{ $t('All Status') }}
                             </button>
                             <button
                                 @click="changeBrowseStatusFilter('assigned')"
@@ -2492,7 +2495,7 @@ watch(selectedPhysics, () => {
                                     ? 'bg-purple-600 text-white'
                                     : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                             >
-                                Assigned <span class="opacity-75">({{ browseCountsComputed.assigned }})</span>
+                                {{ $t('Assigned') }} <span class="opacity-75">({{ browseCountsComputed.assigned }})</span>
                             </button>
                             <button
                                 @click="changeBrowseStatusFilter('fallback-assigned')"
@@ -2501,7 +2504,7 @@ watch(selectedPhysics, () => {
                                     ? 'bg-orange-600 text-white'
                                     : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                             >
-                                Fallback <span class="opacity-75">({{ browseCountsComputed.fallback_assigned || 0 }})</span>
+                                {{ $t('Fallback') }} <span class="opacity-75">({{ browseCountsComputed.fallback_assigned || 0 }})</span>
                             </button>
                             <button
                                 @click="changeBrowseStatusFilter('processed')"
@@ -2510,7 +2513,7 @@ watch(selectedPhysics, () => {
                                     ? 'bg-yellow-600 text-white'
                                     : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                             >
-                                Processed <span class="opacity-75">({{ browseCountsComputed.processed }})</span>
+                                {{ $t('Processed') }} <span class="opacity-75">({{ browseCountsComputed.processed }})</span>
                             </button>
                             <button
                                 @click="changeBrowseStatusFilter('failed-validity')"
@@ -2519,7 +2522,7 @@ watch(selectedPhysics, () => {
                                     ? 'bg-orange-600 text-white'
                                     : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                             >
-                                Invalid <span class="opacity-75">({{ browseCountsComputed.failed_validity || 0 }})</span>
+                                {{ $t('Invalid') }} <span class="opacity-75">({{ browseCountsComputed.failed_validity || 0 }})</span>
                             </button>
                             <button
                                 @click="changeBrowseStatusFilter('failed')"
@@ -2528,7 +2531,7 @@ watch(selectedPhysics, () => {
                                     ? 'bg-red-600 text-white'
                                     : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                             >
-                                Failed <span class="opacity-75">({{ browseCountsComputed.failed }})</span>
+                                {{ $t('Failed') }} <span class="opacity-75">({{ browseCountsComputed.failed }})</span>
                             </button>
                             <button
                                 @click="changeBrowseStatusFilter('unsupported-version')"
@@ -2537,7 +2540,7 @@ watch(selectedPhysics, () => {
                                     ? 'bg-purple-600 text-white'
                                     : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                             >
-                                Unsupported <span class="opacity-75">({{ browseCountsComputed.unsupported_version || 0 }})</span>
+                                {{ $t('Unsupported') }} <span class="opacity-75">({{ browseCountsComputed.unsupported_version || 0 }})</span>
                             </button>
                         </div>
 
@@ -2549,7 +2552,7 @@ watch(selectedPhysics, () => {
                                         v-model="browseSearchQuery"
                                         @keyup.enter="handleBrowseSearch"
                                         type="text"
-                                        placeholder="Search by filename..."
+                                        :placeholder="$t('Search by filename...')"
                                         class="w-full px-4 py-1.5 bg-gray-700/50 border border-gray-600/50 rounded-lg text-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     />
                                     <button
@@ -2569,7 +2572,7 @@ watch(selectedPhysics, () => {
                                     @focus="browseUploadedBySuggestions.length > 0 && (browseUploadedByOpen = true)"
                                     @blur="setTimeout(() => browseUploadedByOpen = false, 200)"
                                     type="text"
-                                    placeholder="Uploaded by..."
+                                    :placeholder="$t('Uploaded by...')"
                                     class="w-full px-4 py-1.5 bg-gray-700/50 border border-gray-600/50 rounded-lg text-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 />
                                 <button
@@ -2595,7 +2598,7 @@ watch(selectedPhysics, () => {
                     </div>
 
                     <div v-if="!publicDemos.data || publicDemos.data.length === 0" class="text-gray-400">
-                        No demos available yet.
+                        {{ $t('No demos available yet.') }}
                     </div>
 
                     <div v-else class="overflow-x-auto">
@@ -2604,7 +2607,7 @@ watch(selectedPhysics, () => {
                                 <tr>
                                     <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         <button @click="sortBrowseColumn('original_filename')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
-                                            <span>Filename</span>
+                                            <span>{{ $t('Filename') }}</span>
                                             <svg v-if="browseSortBy === 'original_filename'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -2612,11 +2615,11 @@ watch(selectedPhysics, () => {
                                         </button>
                                     </th>
                                     <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        Uploaded By
+                                        {{ $t('Uploaded By') }}
                                     </th>
                                     <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         <button @click="sortBrowseColumn('map_name')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
-                                            <span>Map</span>
+                                            <span>{{ $t('Map') }}</span>
                                             <svg v-if="browseSortBy === 'map_name'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -2625,7 +2628,7 @@ watch(selectedPhysics, () => {
                                     </th>
                                     <th class="px-1 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         <button @click="sortBrowseColumn('gametype')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
-                                            <span>Type</span>
+                                            <span>{{ $t('Type') }}</span>
                                             <svg v-if="browseSortBy === 'gametype'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -2634,7 +2637,7 @@ watch(selectedPhysics, () => {
                                     </th>
                                     <th class="px-1 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         <button @click="sortBrowseColumn('physics')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
-                                            <span>Physics</span>
+                                            <span>{{ $t('Physics') }}</span>
                                             <svg v-if="browseSortBy === 'physics'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -2643,7 +2646,7 @@ watch(selectedPhysics, () => {
                                     </th>
                                     <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         <button @click="sortBrowseColumn('time_ms')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
-                                            <span>Time</span>
+                                            <span>{{ $t('Time') }}</span>
                                             <svg v-if="browseSortBy === 'time_ms'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -2652,7 +2655,7 @@ watch(selectedPhysics, () => {
                                     </th>
                                     <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         <button @click="sortBrowseColumn('status')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
-                                            <span>Status</span>
+                                            <span>{{ $t('Status') }}</span>
                                             <svg v-if="browseSortBy === 'status'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -2660,7 +2663,7 @@ watch(selectedPhysics, () => {
                                         </button>
                                     </th>
                                     <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        Actions
+                                        {{ $t('Actions') }}
                                     </th>
                                 </tr>
                             </thead>
@@ -2673,8 +2676,8 @@ watch(selectedPhysics, () => {
                                     <td class="px-2 py-1.5 text-xs text-gray-300">
                                         <Link v-if="demo.user && demo.user.mdd_id" :href="`/profile/mdd/${demo.user.mdd_id}`" class="text-blue-400 hover:text-blue-300 transition-colors duration-200" v-html="q3tohtml(demo.user.name)"></Link>
                                         <span v-else-if="demo.user" v-html="q3tohtml(demo.user.name)"></span>
-                                        <span v-else-if="demo.source === 'demome'" class="text-cyan-400">Demome</span>
-                                        <span v-else class="text-gray-500">Guest</span>
+                                        <span v-else-if="demo.source === 'demome'" class="text-cyan-400">{{ $t('Demome') }}</span>
+                                        <span v-else class="text-gray-500">{{ $t('Guest') }}</span>
                                     </td>
                                     <td class="px-2 py-1.5 text-xs text-gray-300">
                                         <Link v-if="demo.map_name" :href="`/maps/${encodeURIComponent(demo.map_name)}`" class="text-blue-400 hover:text-blue-300 underline transition-colors duration-200 truncate block max-w-[120px]" :title="demo.map_name">
@@ -2683,7 +2686,7 @@ watch(selectedPhysics, () => {
                                         <span v-else class="text-gray-500">-</span>
                                     </td>
                                     <td class="px-2 py-4 text-xs text-gray-300">
-                                        <span v-if="demo.gametype" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase" :class="demo.gametype.startsWith('m') ? 'bg-green-900/50 text-green-200' : 'bg-purple-900/50 text-purple-200'" :title="demo.gametype.startsWith('m') ? 'Online' : 'Offline'">
+                                        <span v-if="demo.gametype" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase" :class="demo.gametype.startsWith('m') ? 'bg-green-900/50 text-green-200' : 'bg-purple-900/50 text-purple-200'" :title="demo.gametype.startsWith('m') ? $t('Online') : $t('Offline')">
                                             {{ demo.gametype }}
                                         </span>
                                         <span v-else class="text-gray-500">-</span>
@@ -2733,7 +2736,7 @@ watch(selectedPhysics, () => {
                                                 @click.stop="toggleDetails(demo.id)"
                                                 class="inline-flex items-center px-2 py-1 text-[11px] font-medium rounded transition-colors"
                                                 :class="expandedDemos.has(demo.id) ? 'bg-amber-600/30 text-amber-200' : 'bg-white/[0.06] text-gray-300 hover:bg-white/10'"
-                                                :title="expandedDemos.has(demo.id) ? 'Hide details' : 'What is in this demo'"
+                                                :title="expandedDemos.has(demo.id) ? $t('Hide details') : $t('What is in this demo')"
                                             >
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -2742,18 +2745,18 @@ watch(selectedPhysics, () => {
                                             <button
                                                 @click.stop="downloadDemo(demo.id)"
                                                 class="inline-flex items-center px-2 py-1 bg-blue-600/20 text-blue-300 text-[11px] font-medium rounded hover:bg-blue-600/30 transition-colors"
-                                                title="Download"
+                                                :title="$t('Download')"
                                             >
                                                 <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                                 </svg>
-                                                DL
+                                                {{ $t('DL') }}
                                             </button>
                                             <button
                                                 v-if="$page.props.auth.user && !demo.record_id && ['processed', 'fallback-assigned', 'failed'].includes(demo.status)"
                                                 @click="openAssignModal(demo)"
                                                 class="inline-flex items-center px-2 py-1 bg-green-600/20 text-green-300 text-[11px] font-medium rounded hover:bg-green-600/30 transition-colors"
-                                                title="Assign to online record"
+                                                :title="$t('Assign to online record')"
                                             >
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
@@ -2790,7 +2793,7 @@ watch(selectedPhysics, () => {
         <div v-if="showAssignModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50" @click="closeAssignModal">
             <div class="bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-white/10 shadow-2xl" @click.stop>
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-gray-100">Assign Demo to Online Record</h3>
+                    <h3 class="text-xl font-bold text-gray-100">{{ $t('Assign Demo to Online Record') }}</h3>
                     <button @click="closeAssignModal" class="text-gray-400 hover:text-gray-200 transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -2801,16 +2804,16 @@ watch(selectedPhysics, () => {
                 <!-- Demo info -->
                 <div v-if="assigningDemo" class="mb-6 p-4 bg-gray-800/60 rounded-lg border border-white/5">
                     <div class="grid grid-cols-2 gap-3">
-                        <div class="text-sm"><span class="text-gray-500">Demo:</span> <span class="text-gray-200 font-medium truncate block">{{ assigningDemo.processed_filename || assigningDemo.original_filename }}</span></div>
-                        <div v-if="assigningDemo.physics" class="text-sm"><span class="text-gray-500">Physics:</span> <span class="font-medium" :class="assigningDemo.physics === 'CPM' ? 'text-purple-400' : 'text-blue-400'">{{ assigningDemo.physics }}</span></div>
-                        <div v-if="assigningDemo.map_name" class="text-sm"><span class="text-gray-500">Map:</span> <span class="text-gray-200 font-medium">{{ assigningDemo.map_name }}</span></div>
-                        <div v-if="assigningDemo.time_ms" class="text-sm"><span class="text-gray-500">Time:</span> <span class="text-gray-200 font-mono font-medium">{{ formatTime(assigningDemo.time_ms) }}</span></div>
+                        <div class="text-sm"><span class="text-gray-500">{{ $t('Demo:') }}</span> <span class="text-gray-200 font-medium truncate block">{{ assigningDemo.processed_filename || assigningDemo.original_filename }}</span></div>
+                        <div v-if="assigningDemo.physics" class="text-sm"><span class="text-gray-500">{{ $t('Physics:') }}</span> <span class="font-medium" :class="assigningDemo.physics === 'CPM' ? 'text-purple-400' : 'text-blue-400'">{{ assigningDemo.physics }}</span></div>
+                        <div v-if="assigningDemo.map_name" class="text-sm"><span class="text-gray-500">{{ $t('Map:') }}</span> <span class="text-gray-200 font-medium">{{ assigningDemo.map_name }}</span></div>
+                        <div v-if="assigningDemo.time_ms" class="text-sm"><span class="text-gray-500">{{ $t('Time:') }}</span> <span class="text-gray-200 font-mono font-medium">{{ formatTime(assigningDemo.time_ms) }}</span></div>
                     </div>
                 </div>
 
                 <!-- Physics Selection -->
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-400 mb-2">Physics</label>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">{{ $t('Physics') }}</label>
                     <div class="relative">
                         <button
                             @click="physicsDropdownOpen = !physicsDropdownOpen"
@@ -2838,19 +2841,19 @@ watch(selectedPhysics, () => {
 
                 <!-- Map Search -->
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-400 mb-2">Search Map</label>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">{{ $t('Search Map') }}</label>
                     <input
                         v-model="searchQuery"
                         @input="searchMaps"
                         type="text"
-                        placeholder="Type map name..."
+                        :placeholder="$t('Type map name...')"
                         class="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500"
                     />
                 </div>
 
                 <!-- Available Maps -->
                 <div v-if="availableMaps.length > 0 && !selectedMap" class="mb-4">
-                    <label class="block text-sm font-medium text-gray-400 mb-2">Available Maps</label>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">{{ $t('Available Maps') }}</label>
                     <div class="max-h-32 overflow-y-auto border border-gray-700/50 rounded-lg">
                         <button
                             v-for="map in availableMaps"
@@ -2868,20 +2871,20 @@ watch(selectedPhysics, () => {
 
                 <!-- Selected map indicator -->
                 <div v-if="selectedMap" class="mb-4 flex items-center gap-2">
-                    <span class="text-sm text-gray-400">Map:</span>
+                    <span class="text-sm text-gray-400">{{ $t('Map:') }}</span>
                     <span class="text-sm font-medium text-gray-200 bg-gray-800 px-3 py-1 rounded-lg">{{ selectedMap }}</span>
-                    <button @click="selectedMap = ''; availableRecords = []; selectedRecord = ''" class="text-xs text-gray-500 hover:text-gray-300">(change)</button>
+                    <button @click="selectedMap = ''; availableRecords = []; selectedRecord = ''" class="text-xs text-gray-500 hover:text-gray-300">{{ $t('(change)') }}</button>
                 </div>
 
                 <!-- Loading indicator for maps -->
                 <div v-if="loadingMaps" class="mb-4 text-center">
-                    <div class="text-gray-400">Loading maps...</div>
+                    <div class="text-gray-400">{{ $t('Loading maps...') }}</div>
                 </div>
 
                 <!-- Suggested matches -->
                 <div v-if="selectedMap && !loadingRecords && suggestedRecords.length > 0" class="mb-5">
                     <label class="block text-sm font-medium text-green-400 mb-2">
-                        Closest time matches
+                        {{ $t('Closest time matches') }}
                     </label>
                     <div class="border border-green-700/30 rounded-lg bg-green-900/10 overflow-hidden">
                         <button
@@ -2900,7 +2903,7 @@ watch(selectedPhysics, () => {
                                 </div>
                                 <div class="flex items-center gap-3">
                                     <span class="text-xs" :class="record.timeDiff === 0 ? 'text-green-400 font-bold' : 'text-gray-500'">
-                                        {{ record.timeDiff === 0 ? 'EXACT' : (record.timeDiff < 1000 ? record.timeDiff + 'ms' : formatTime(record.timeDiff)) + ' diff' }}
+                                        {{ record.timeDiff === 0 ? $t('EXACT') : $t(':diff diff', { diff: record.timeDiff < 1000 ? record.timeDiff + 'ms' : formatTime(record.timeDiff) }) }}
                                     </span>
                                     <span class="text-sm font-mono" :class="selectedRecord === record.id ? 'text-green-300' : 'text-gray-400'">{{ record.formatted_time }}</span>
                                 </div>
@@ -2912,7 +2915,7 @@ watch(selectedPhysics, () => {
                 <!-- All Records -->
                 <div v-if="selectedMap && !loadingRecords && availableRecords.length > 0" class="mb-6">
                     <label class="block text-sm font-medium text-gray-400 mb-3">
-                        All records ({{ availableRecords.length }})
+                        {{ $t('All records (:count)', { count: availableRecords.length }) }}
                     </label>
                     <div class="max-h-[400px] overflow-y-auto border border-gray-700/50 rounded-lg">
                         <button
@@ -2937,18 +2940,18 @@ watch(selectedPhysics, () => {
 
                 <!-- Loading indicator for records -->
                 <div v-if="loadingRecords" class="mb-4 text-center py-4">
-                    <div class="text-gray-400">Loading records...</div>
+                    <div class="text-gray-400">{{ $t('Loading records...') }}</div>
                 </div>
 
                 <!-- No records found -->
                 <div v-if="selectedMap && !loadingRecords && availableRecords.length === 0" class="mb-6 text-center text-gray-400 py-8">
-                    No records found for {{ selectedMap }} ({{ selectedPhysics }})
+                    {{ $t('No records found for :map (:physics)', { map: selectedMap, physics: selectedPhysics }) }}
                 </div>
 
                 <!-- Action Buttons -->
                 <div class="flex justify-end space-x-3 pt-2">
                     <button @click="closeAssignModal" class="px-5 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
-                        Cancel
+                        {{ $t('Cancel') }}
                     </button>
                     <button
                         @click="assignDemo"
@@ -2958,7 +2961,7 @@ watch(selectedPhysics, () => {
                             selectedRecord ? 'bg-green-600 hover:bg-green-500' : 'bg-gray-600 cursor-not-allowed'
                         ]"
                     >
-                        Assign Demo
+                        {{ $t('Assign Demo') }}
                     </button>
                 </div>
             </div>
@@ -2982,10 +2985,10 @@ watch(selectedPhysics, () => {
                     <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                    Unparseable Demo
+                    {{ $t('Unparseable Demo') }}
                 </div>
                 <div class="text-[11px] text-purple-200/80 leading-relaxed">
-                    This demo file could not be parsed. It may be corrupted or recorded with an incompatible engine version.
+                    {{ $t('This demo file could not be parsed. It may be corrupted or recorded with an incompatible engine version.') }}
                 </div>
             </div>
         </div>
@@ -3005,7 +3008,7 @@ watch(selectedPhysics, () => {
                     <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                    Error Details:
+                    {{ $t('Error Details:') }}
                 </div>
                 <div class="font-mono text-[11px] text-red-200 whitespace-pre-wrap break-words max-h-60 overflow-y-auto">{{ hoveredDemo.processing_output }}</div>
             </div>
@@ -3026,7 +3029,7 @@ watch(selectedPhysics, () => {
                     <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                     </svg>
-                    Invalid Settings:
+                    {{ $t('Invalid Settings:') }}
                 </div>
                 <div class="space-y-1 text-orange-200">
                     <div v-for="(value, key) in (typeof hoveredDemo.validity === 'string' ? JSON.parse(hoveredDemo.validity) : hoveredDemo.validity)" :key="key">
@@ -3051,33 +3054,33 @@ watch(selectedPhysics, () => {
                     <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                    Online Record Details:
+                    {{ $t('Online Record Details:') }}
                 </div>
                 <div class="space-y-1 text-gray-300">
-                    <div><span class="text-gray-400">Record ID:</span> <span class="font-semibold text-purple-300">#{{ hoveredDemo.record_id }}</span></div>
-                    <div><span class="text-gray-400">Map:</span> <span class="font-semibold text-blue-300">{{ hoveredDemo.record.mapname }}</span></div>
-                    <div v-if="hoveredDemo.record.user"><span class="text-gray-400">Player:</span> <span class="font-semibold" v-html="q3tohtml(hoveredDemo.record.user.name)"></span></div>
-                    <div><span class="text-gray-400">Time:</span> <span class="font-semibold font-mono text-yellow-300">{{ formatTime(hoveredDemo.record.time) }}</span></div>
-                    <div v-if="hoveredDemo.record.date_set"><span class="text-gray-400">Date:</span> <span class="font-semibold text-gray-300">{{ new Date(hoveredDemo.record.date_set).toLocaleDateString() }}</span></div>
+                    <div><span class="text-gray-400">{{ $t('Record ID:') }}</span> <span class="font-semibold text-purple-300">#{{ hoveredDemo.record_id }}</span></div>
+                    <div><span class="text-gray-400">{{ $t('Map:') }}</span> <span class="font-semibold text-blue-300">{{ hoveredDemo.record.mapname }}</span></div>
+                    <div v-if="hoveredDemo.record.user"><span class="text-gray-400">{{ $t('Player:') }}</span> <span class="font-semibold" v-html="q3tohtml(hoveredDemo.record.user.name)"></span></div>
+                    <div><span class="text-gray-400">{{ $t('Time:') }}</span> <span class="font-semibold font-mono text-yellow-300">{{ formatTime(hoveredDemo.record.time) }}</span></div>
+                    <div v-if="hoveredDemo.record.date_set"><span class="text-gray-400">{{ $t('Date:') }}</span> <span class="font-semibold text-gray-300">{{ new Date(hoveredDemo.record.date_set).toLocaleDateString() }}</span></div>
                 </div>
                 <div class="border-t border-purple-600/30 pt-2 mt-2 space-y-1">
-                    <div class="text-[10px] text-purple-200/70 font-semibold mb-1">Match details:</div>
+                    <div class="text-[10px] text-purple-200/70 font-semibold mb-1">{{ $t('Match details:') }}</div>
                     <div class="text-[10px] text-gray-400">
-                        <span class="text-gray-500">Method:</span>
-                        <span v-if="hoveredDemo.user_id && hoveredDemo.record.user_id === hoveredDemo.user_id" class="text-green-400">Uploader match</span>
-                        <span v-else class="text-blue-400">Name match</span>
+                        <span class="text-gray-500">{{ $t('Method:') }}</span>
+                        <span v-if="hoveredDemo.user_id && hoveredDemo.record.user_id === hoveredDemo.user_id" class="text-green-400">{{ $t('Uploader match') }}</span>
+                        <span v-else class="text-blue-400">{{ $t('Name match') }}</span>
                     </div>
                     <div v-if="hoveredDemo.name_confidence !== null" class="text-[10px] text-gray-400">
-                        <span class="text-gray-500">Confidence:</span>
+                        <span class="text-gray-500">{{ $t('Confidence:') }}</span>
                         <span :class="hoveredDemo.name_confidence === 100 ? 'text-green-400' : hoveredDemo.name_confidence >= 90 ? 'text-blue-400' : 'text-yellow-400'">{{ hoveredDemo.name_confidence }}%</span>
                     </div>
                     <div v-if="hoveredDemo.matched_alias" class="text-[10px] text-gray-400">
-                        <span class="text-gray-500">Alias:</span>
+                        <span class="text-gray-500">{{ $t('Alias:') }}</span>
                         <span class="text-purple-300" v-html="q3tohtml(hoveredDemo.matched_alias)"></span>
                     </div>
                     <div class="text-[10px] text-gray-400">
-                        <span class="text-gray-500">Matched:</span>
-                        <span class="text-gray-300">map + gametype + time + player</span>
+                        <span class="text-gray-500">{{ $t('Matched:') }}</span>
+                        <span class="text-gray-300">{{ $t('map + gametype + time + player') }}</span>
                     </div>
                 </div>
             </div>
@@ -3098,29 +3101,29 @@ watch(selectedPhysics, () => {
                     <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                    Offline Record Details:
+                    {{ $t('Offline Record Details:') }}
                 </div>
                 <div class="space-y-1 text-gray-300">
-                    <div><span class="text-gray-400">Record ID:</span> <span class="font-semibold text-purple-300">#{{ hoveredDemo.offline_record.id }}</span></div>
-                    <div><span class="text-gray-400">Map:</span> <span class="font-semibold text-blue-300">{{ hoveredDemo.offline_record.map_name }}</span></div>
-                    <div><span class="text-gray-400">Player:</span> <span class="font-semibold" v-html="q3tohtml(hoveredDemo.offline_record.player_name)"></span></div>
-                    <div><span class="text-gray-400">Time:</span> <span class="font-semibold font-mono text-yellow-300">{{ formatTime(hoveredDemo.offline_record.time_ms) }}</span></div>
-                    <div><span class="text-gray-400">Rank:</span> <span class="font-semibold text-orange-300">#{{ hoveredDemo.offline_record.rank }}</span></div>
-                    <div><span class="text-gray-400">Gametype:</span> <span class="font-semibold text-cyan-300 uppercase">{{ hoveredDemo.offline_record.gametype }}</span></div>
-                    <div v-if="hoveredDemo.offline_record.date_set"><span class="text-gray-400">Date:</span> <span class="font-semibold text-gray-300">{{ new Date(hoveredDemo.offline_record.date_set).toLocaleDateString() }}</span></div>
+                    <div><span class="text-gray-400">{{ $t('Record ID:') }}</span> <span class="font-semibold text-purple-300">#{{ hoveredDemo.offline_record.id }}</span></div>
+                    <div><span class="text-gray-400">{{ $t('Map:') }}</span> <span class="font-semibold text-blue-300">{{ hoveredDemo.offline_record.map_name }}</span></div>
+                    <div><span class="text-gray-400">{{ $t('Player:') }}</span> <span class="font-semibold" v-html="q3tohtml(hoveredDemo.offline_record.player_name)"></span></div>
+                    <div><span class="text-gray-400">{{ $t('Time:') }}</span> <span class="font-semibold font-mono text-yellow-300">{{ formatTime(hoveredDemo.offline_record.time_ms) }}</span></div>
+                    <div><span class="text-gray-400">{{ $t('Rank:') }}</span> <span class="font-semibold text-orange-300">#{{ hoveredDemo.offline_record.rank }}</span></div>
+                    <div><span class="text-gray-400">{{ $t('Gametype:') }}</span> <span class="font-semibold text-cyan-300 uppercase">{{ hoveredDemo.offline_record.gametype }}</span></div>
+                    <div v-if="hoveredDemo.offline_record.date_set"><span class="text-gray-400">{{ $t('Date:') }}</span> <span class="font-semibold text-gray-300">{{ new Date(hoveredDemo.offline_record.date_set).toLocaleDateString() }}</span></div>
                 </div>
                 <div class="border-t border-purple-600/30 pt-2 mt-2 space-y-1">
-                    <div class="text-[10px] text-purple-200/70 font-semibold mb-1">Match details:</div>
+                    <div class="text-[10px] text-purple-200/70 font-semibold mb-1">{{ $t('Match details:') }}</div>
                     <div class="text-[10px] text-gray-400">
-                        <span class="text-gray-500">Method:</span>
-                        <span class="text-cyan-400">Offline demo (direct record)</span>
+                        <span class="text-gray-500">{{ $t('Method:') }}</span>
+                        <span class="text-cyan-400">{{ $t('Offline demo (direct record)') }}</span>
                     </div>
                     <div v-if="hoveredDemo.name_confidence !== null" class="text-[10px] text-gray-400">
-                        <span class="text-gray-500">Confidence:</span>
+                        <span class="text-gray-500">{{ $t('Confidence:') }}</span>
                         <span :class="hoveredDemo.name_confidence === 100 ? 'text-green-400' : hoveredDemo.name_confidence >= 90 ? 'text-blue-400' : 'text-yellow-400'">{{ hoveredDemo.name_confidence }}%</span>
                     </div>
                     <div v-if="hoveredDemo.matched_alias" class="text-[10px] text-gray-400">
-                        <span class="text-gray-500">Alias:</span>
+                        <span class="text-gray-500">{{ $t('Alias:') }}</span>
                         <span class="text-purple-300" v-html="q3tohtml(hoveredDemo.matched_alias)"></span>
                     </div>
                 </div>
@@ -3142,33 +3145,33 @@ watch(selectedPhysics, () => {
                     <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                     </svg>
-                    Fallback Offline Record (Rematchable):
+                    {{ $t('Fallback Offline Record (Rematchable):') }}
                 </div>
                 <div class="space-y-1 text-gray-300 mb-2">
-                    <div><span class="text-gray-400">Record ID:</span> <span class="font-semibold text-orange-300">#{{ hoveredDemo.offline_record.id }}</span></div>
-                    <div><span class="text-gray-400">Map:</span> <span class="font-semibold text-blue-300">{{ hoveredDemo.offline_record.map_name }}</span></div>
-                    <div><span class="text-gray-400">Player:</span> <span class="font-semibold" v-html="q3tohtml(hoveredDemo.offline_record.player_name)"></span></div>
-                    <div><span class="text-gray-400">Time:</span> <span class="font-semibold font-mono text-yellow-300">{{ formatTime(hoveredDemo.offline_record.time_ms) }}</span></div>
-                    <div><span class="text-gray-400">Rank:</span> <span class="font-semibold text-orange-300">#{{ hoveredDemo.offline_record.rank }}</span></div>
-                    <div><span class="text-gray-400">Gametype:</span> <span class="font-semibold text-cyan-300 uppercase">{{ hoveredDemo.offline_record.gametype }}</span></div>
-                    <div v-if="hoveredDemo.offline_record.date_set"><span class="text-gray-400">Date:</span> <span class="font-semibold text-gray-300">{{ new Date(hoveredDemo.offline_record.date_set).toLocaleDateString() }}</span></div>
+                    <div><span class="text-gray-400">{{ $t('Record ID:') }}</span> <span class="font-semibold text-orange-300">#{{ hoveredDemo.offline_record.id }}</span></div>
+                    <div><span class="text-gray-400">{{ $t('Map:') }}</span> <span class="font-semibold text-blue-300">{{ hoveredDemo.offline_record.map_name }}</span></div>
+                    <div><span class="text-gray-400">{{ $t('Player:') }}</span> <span class="font-semibold" v-html="q3tohtml(hoveredDemo.offline_record.player_name)"></span></div>
+                    <div><span class="text-gray-400">{{ $t('Time:') }}</span> <span class="font-semibold font-mono text-yellow-300">{{ formatTime(hoveredDemo.offline_record.time_ms) }}</span></div>
+                    <div><span class="text-gray-400">{{ $t('Rank:') }}</span> <span class="font-semibold text-orange-300">#{{ hoveredDemo.offline_record.rank }}</span></div>
+                    <div><span class="text-gray-400">{{ $t('Gametype:') }}</span> <span class="font-semibold text-cyan-300 uppercase">{{ hoveredDemo.offline_record.gametype }}</span></div>
+                    <div v-if="hoveredDemo.offline_record.date_set"><span class="text-gray-400">{{ $t('Date:') }}</span> <span class="font-semibold text-gray-300">{{ new Date(hoveredDemo.offline_record.date_set).toLocaleDateString() }}</span></div>
                 </div>
                 <div class="border-t border-orange-600/30 pt-2 mt-2 space-y-1">
-                    <div class="text-[10px] text-orange-200/70 font-semibold mb-1">Why fallback?</div>
+                    <div class="text-[10px] text-orange-200/70 font-semibold mb-1">{{ $t('Why fallback?') }}</div>
                     <div v-if="hoveredDemo.name_confidence !== null && hoveredDemo.name_confidence < 100" class="text-[10px] text-gray-400">
-                        <span class="text-gray-500">Confidence:</span>
+                        <span class="text-gray-500">{{ $t('Confidence:') }}</span>
                         <span :class="hoveredDemo.name_confidence >= 90 ? 'text-blue-400' : hoveredDemo.name_confidence >= 70 ? 'text-yellow-400' : 'text-red-400'">{{ hoveredDemo.name_confidence }}%</span>
-                        <span class="text-gray-500">(needs 100% for direct match)</span>
+                        <span class="text-gray-500">{{ $t('(needs 100% for direct match)') }}</span>
                     </div>
                     <div v-else class="text-[10px] text-gray-400">
-                        <span class="text-orange-300">No matching online record found</span>
+                        <span class="text-orange-300">{{ $t('No matching online record found') }}</span>
                     </div>
                     <div v-if="hoveredDemo.matched_alias" class="text-[10px] text-gray-400">
-                        <span class="text-gray-500">Alias:</span>
+                        <span class="text-gray-500">{{ $t('Alias:') }}</span>
                         <span class="text-orange-300" v-html="q3tohtml(hoveredDemo.matched_alias)"></span>
                     </div>
                     <div class="text-[10px] text-orange-200/50 mt-1">
-                        Can still be matched to an online record later.
+                        {{ $t('Can still be matched to an online record later.') }}
                     </div>
                 </div>
             </div>
@@ -3187,17 +3190,17 @@ watch(selectedPhysics, () => {
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-lg font-semibold text-gray-100">Reprocess Failed Demos</h3>
+                        <h3 class="text-lg font-semibold text-gray-100">{{ $t('Reprocess Failed Demos') }}</h3>
                         <p class="text-sm text-gray-400">{{ demoCountsComputed.failed }} demo(s) will be queued</p>
                     </div>
                 </div>
-                <p class="text-sm text-gray-300 mb-6">All failed demos will be sent back to the processing queue. You can track the progress in the queue status above.</p>
+                <p class="text-sm text-gray-300 mb-6">{{ $t('All failed demos will be sent back to the processing queue. You can track the progress in the queue status above.') }}</p>
                 <div class="flex justify-end space-x-3">
                     <button @click="showReprocessConfirm = false" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 border border-gray-600 transition-colors">
-                        Cancel
+                        {{ $t('Cancel') }}
                     </button>
                     <button @click="reprocessAllFailed" class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-orange-600 hover:bg-orange-500 transition-colors">
-                        Reprocess All
+                        {{ $t('Reprocess All') }}
                     </button>
                 </div>
             </div>
@@ -3238,7 +3241,7 @@ watch(selectedPhysics, () => {
                             'bg-red-600 hover:bg-red-500': uploadInfoType === 'error'
                         }"
                     >
-                        OK
+                        {{ $t('OK') }}
                     </button>
                 </div>
             </div>
@@ -3261,15 +3264,15 @@ watch(selectedPhysics, () => {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                         </svg>
                     </div>
-                    <h3 class="text-lg font-bold text-white">Download Limit Reached</h3>
+                    <h3 class="text-lg font-bold text-white">{{ $t('Download Limit Reached') }}</h3>
                 </div>
                 <p class="text-gray-300 text-sm mb-5">{{ downloadLimitPopupMessage }}</p>
                 <div v-if="downloadLimitPopupIsGuest" class="flex gap-3">
-                    <a href="/login" class="flex-1 text-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors">Login</a>
-                    <a href="/register" class="flex-1 text-center px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg transition-colors">Register</a>
+                    <a href="/login" class="flex-1 text-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors">{{ $t('Login') }}</a>
+                    <a href="/register" class="flex-1 text-center px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg transition-colors">{{ $t('Register') }}</a>
                 </div>
                 <div v-else>
-                    <button @click="showDownloadLimitPopup = false" class="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors">OK</button>
+                    <button @click="showDownloadLimitPopup = false" class="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors">{{ $t('OK') }}</button>
                 </div>
             </div>
         </div>
