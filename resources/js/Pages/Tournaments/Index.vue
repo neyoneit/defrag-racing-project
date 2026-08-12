@@ -4,6 +4,7 @@
     import TournamentCard from '@/Components/TournamentCard.vue';
     import Tabs from '@/Components/Tabs.vue';
     import { t } from '@/utils/i18n';
+    import { visitInternal } from '@/utils/visitInternal';
 
     const props = defineProps({
         tournaments: Object,
@@ -148,6 +149,7 @@
                     <div class="flex-1">
                         <p class="text-red-400 font-bold mb-1">{{ $t('Email Verification Required') }}</p>
                         <p class="text-red-300 text-sm [&_a]:text-red-200 [&_a:hover]:text-white [&_a]:underline [&_a]:font-medium"
+                            @click="visitInternal"
                             v-html="$t('<a href=/email/verify>Verify your email</a> to create and participate in tournaments.')"></p>
                     </div>
                 </div>
@@ -161,6 +163,7 @@
                     <div class="flex-1">
                         <p class="text-yellow-400 font-bold mb-1">{{ $t('Account Linking Required') }}</p>
                         <p class="text-yellow-300 text-sm [&_a]:text-yellow-200 [&_a:hover]:text-white [&_a]:underline [&_a]:font-medium"
+                            @click="visitInternal"
                             v-html="$t('<a href=:url>Link your account</a> to Q3DF.org to create tournaments.', { url: route('settings.show') })"></p>
                     </div>
                 </div>

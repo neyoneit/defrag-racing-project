@@ -272,8 +272,9 @@
                             </Link>
                             <div class="text-xs text-gray-500 mt-0.5">
                                 <span :class="modelsData.highlighted.category === 'player' ? 'text-emerald-400' : 'text-orange-400'" class="font-bold uppercase">{{ modelsData.highlighted.category }}</span>
-                                <span v-if="modelsData.highlighted.base_model && modelsData.highlighted.base_model !== modelsData.highlighted.name" class="ml-2 [&_span]:text-gray-400"
-                                    v-html="$t('based on <span>:model</span>', { model: modelsData.highlighted.base_model })"></span>
+                                <span v-if="modelsData.highlighted.base_model && modelsData.highlighted.base_model !== modelsData.highlighted.name" class="ml-2">
+                                    {{ $t('based on') }} <span class="text-gray-400">{{ modelsData.highlighted.base_model }}</span>
+                                </span>
                             </div>
                             <div class="flex items-center gap-4 mt-2">
                                 <div class="text-xs text-gray-500 [&_span]:text-xl [&_span]:font-black [&_span]:text-purple-400 [&_span]:mr-1"

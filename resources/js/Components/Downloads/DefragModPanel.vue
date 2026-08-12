@@ -1,4 +1,6 @@
 <script setup>
+import { visitInternal } from '@/utils/visitInternal';
+
 defineProps({
     panel: Object,
 });
@@ -128,6 +130,7 @@ const formatSize = (bytes) => {
         <div class="bg-black/45 backdrop-blur-xl rounded-xl border border-white/[0.08] p-5">
             <h2 class="text-sm font-black text-white mb-2">{{ $t('Installation') }}</h2>
             <p class="text-sm text-gray-400 leading-relaxed [&_code]:bg-black/60 [&_code]:text-cyan-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_strong]:text-gray-200 [&_a]:text-cyan-400 [&_a:hover]:text-cyan-300 [&_a]:transition-colors"
+               @click="visitInternal"
                v-html="$t('Download the latest .zip and extract the <code>defrag</code> folder into your Quake III Arena directory, next to <code>baseq3</code>, <strong>not inside it</strong>. See the <a href=/wiki/installation>Installation & Setup</a> guide for the full walkthrough.')"></p>
         </div>
     </div>
