@@ -49,8 +49,8 @@
                             
                                         <template #content>
                                             <div class="px-5 py-2">
-                                                <div>In order to use the play button, you need to download the Defrag Launcher.</div>
-                                                <div><a class="text-blue-500 hover:text-blue-400 underline" target="_blank" href="https://defrag.racing/bundles/7/defrag-launcher">Follow this link</a> to download it.</div>
+                                                <div>{{ $t('In order to use the play button, you need to download the Defrag Launcher.') }}</div>
+                                                <div class="[&_a]:text-blue-500 [&_a:hover]:text-blue-400 [&_a]:underline" v-html="$t('<a href=https://defrag.racing/bundles/7/defrag-launcher target=_blank>Follow this link</a> to download it.')"></div>
                                             </div>
                                         </template>
                                     </Popper>
@@ -60,7 +60,7 @@
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
                                             </svg>
-                                            <span class="ml-1">Play</span>
+                                            <span class="ml-1">{{ $t('Play') }}</span>
                                         </div>
                                     </a>
                                 </div>

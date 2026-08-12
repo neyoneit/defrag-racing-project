@@ -28,7 +28,7 @@
         <ConfirmationModal :show="show" maxWidth="xl" :closeable="true" @close="close">
             <template #title>
                 <div class="flex justify-between items-center">
-                    <div>Dismantle Clan ?</div>
+                    <div>{{ $t('Dismantle Clan ?') }}</div>
 
                     <div class="text-gray-200 cursor-pointer rounded-full hover:bg-grayop-700 p-1" @click="close">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
@@ -39,17 +39,17 @@
             </template>
 
             <template #content>
-                Are you sure you want to delete this clan ? This action cannot be undone.
+                {{ $t('Are you sure you want to delete this clan ? This action cannot be undone.') }}
             </template>
                 
             <template #footer>
                 <div class="flex w-full justify-between">
                     <PrimaryButton @click="submitForm" class="bg-red-600 hover:bg-red-500">
-                        Delete Clan
+                        {{ $t('Delete Clan') }}
                     </PrimaryButton>
     
                     <PrimaryButton @click="props.close" class="bg-gray-600 hover:bg-gray-500">
-                        Cancel
+                        {{ $t('Cancel') }}
                     </PrimaryButton>
                 </div>
             </template>
