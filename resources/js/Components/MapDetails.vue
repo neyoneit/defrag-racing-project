@@ -97,8 +97,8 @@
                     <template #content>
                         <div class="copy-text px-4 py-2 rounded-md bg-blackop-80">
                             <div class="text-gray-400">
-                                <span v-if="!copyState">Copy</span>
-                                <span v-else class="text-green-400">Copied!</span>
+                                <span v-if="!copyState">{{ $t('Copy') }}</span>
+                                <span v-else class="text-green-400">{{ $t('Copied!') }}</span>
                             </div>
                         </div>
                     </template>
@@ -107,7 +107,7 @@
 
             <!-- Author -->
             <div class="flex items-center text-gray-400 mb-6 text-sm">
-                By <Link class="ml-1 hover:text-gray-300 overflow-hidden truncate" style="max-width: 120px;" :title="map?.author" :href="route('maps.filters', {author: map?.author ?? 'unknown'})">{{ map?.author ?? 'Unknown' }}</Link>
+                {{ $t('By') }} <Link class="ml-1 hover:text-gray-300 overflow-hidden truncate" style="max-width: 120px;" :title="map?.author" :href="route('maps.filters', {author: map?.author ?? 'unknown'})">{{ map?.author ?? $t('Unknown') }}</Link>
             </div>
 
             <!-- Weapons -->

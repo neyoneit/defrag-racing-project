@@ -12,7 +12,7 @@
 
 <template>
     <div class="flex w-full justify-between items-center mt-5 cursor-pointer" @click="show = !show" >
-        <h1 class="font-black text-3xl text-white mb-3">My Times</h1>
+        <h1 class="font-black text-3xl text-white mb-3">{{ $t('My Times') }}</h1>
 
         <div class="rounded-md h-10 w-10 flex items-center justify-center bg-blackop-30 text-white cursor-pointer hover:bg-blackop-20">
             <svg v-if="show" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -38,7 +38,7 @@
             <MyDemoEntry v-for="demo in round.vq3_demos" :demo="demo" :key="demo.id" :tournament="tournament" />
 
             <div v-if="round.vq3_demos?.length == 0">
-                <div class="text-xl text-white mt-5 text-center">No Demos Submitted</div>
+                <div class="text-xl text-white mt-5 text-center">{{ $t('No Demos Submitted') }}</div>
             </div>
         </div>
 
@@ -50,7 +50,7 @@
             <MyDemoEntry v-for="demo in round.cpm_demos" :demo="demo" :key="demo.id" :tournament="tournament" />
 
             <div v-if="round.cpm_demos?.length == 0">
-                <div class="text-xl text-white mt-5 text-center">No Demos Submitted</div>
+                <div class="text-xl text-white mt-5 text-center">{{ $t('No Demos Submitted') }}</div>
             </div>
         </div>
     </div>

@@ -9,7 +9,7 @@
 </script>
 
 <template>
-    <h1 class="font-black text-3xl dark:text-white mb-3">Clan Results</h1>
+    <h1 class="font-black text-3xl dark:text-white mb-3">{{ $t('Clan Results') }}</h1>
 
     <div class="tech-line-overview my-4"></div>
 
@@ -28,7 +28,7 @@
             <DemoClanResultEntry physics="vq3" v-for="item in round.clans_vq3" :item="item" :key="item.clan.id" />
 
             <div v-if="round.clans_vq3.length == 0">
-                <div class="text-xl text-white mt-5 text-center">No Demos Submitted</div>
+                <div class="text-xl text-white mt-5 text-center">{{ $t('No Demos Submitted') }}</div>
             </div>
         </div>
 
@@ -40,7 +40,7 @@
             <DemoClanResultEntry physics="cpm" v-for="item in round.clans_cpm" :item="item" :key="item.clan.id" />
 
             <div v-if="round.clans_cpm?.length == 0">
-                <div class="text-xl text-white mt-5 text-center">No Demos Submitted</div>
+                <div class="text-xl text-white mt-5 text-center">{{ $t('No Demos Submitted') }}</div>
             </div>
         </div>
     </div>
