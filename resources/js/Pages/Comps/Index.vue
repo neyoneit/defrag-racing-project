@@ -321,18 +321,30 @@ export default {
         <!-- Same panel as Playing now on purpose: the two halves of this page
              are the two halves of the same week, and giving one a box and the
              other a bare heading made them read as unrelated. -->
-        <section v-if="voting" class="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm overflow-hidden">
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-white/5 backdrop-blur-sm px-5 py-3">
-                <div class="flex items-center gap-3">
+        <!-- Tinted blue, the way the prize pool is tinted green, but lighter.
+             The ballot is the half of the page with a deadline on it, so it
+             should read as more urgent than the round being played and less
+             loud than the money. -->
+        <section v-if="voting"
+                 class="rounded-2xl border border-blue-400/25 bg-black/40 backdrop-blur-sm overflow-hidden shadow-[0_0_35px_-16px_rgba(96,165,250,0.4)]">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-blue-400/20 bg-gradient-to-r from-blue-500/[0.12] to-white/5 backdrop-blur-sm px-5 py-3.5">
+                <div class="flex items-center gap-3 min-w-0">
                     <span class="rounded-full bg-blue-500/20 border border-blue-500/40 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-300">
                         {{ voting.is_open ? $t('Voting') : $t('Decided') }}
                     </span>
-                    <span class="font-bold text-white">{{ $t('Vote on the next map') }}</span>
-                    <span class="text-xs text-gray-500">
-                        {{ categoryLabel(voting.category) }}<template v-if="voting.weapon"> ({{ voting.weapon }})</template>
-                    </span>
+                    <div class="min-w-0">
+                        <div class="flex items-baseline gap-2 flex-wrap">
+                            <span class="font-bold text-white">{{ $t('Vote on the next map') }}</span>
+                            <span class="text-xs text-gray-500">
+                                {{ categoryLabel(voting.category) }}<template v-if="voting.weapon"> ({{ voting.weapon }})</template>
+                            </span>
+                        </div>
+                        <div class="text-xs text-blue-100/50">
+                            {{ $t('Vote on the next weekly comps map for both physics') }}
+                        </div>
+                    </div>
                 </div>
-                <CompsCountdown v-if="voting.is_open" :until="voting.closes_at" :label="$t('Voting closes in')" />
+                <CompsCountdown v-if="voting.is_open" :until="voting.closes_at" :label="$t('Voting closes in')" emphasis />
             </div>
 
             <div class="p-5">

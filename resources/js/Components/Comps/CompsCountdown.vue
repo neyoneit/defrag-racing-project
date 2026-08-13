@@ -8,6 +8,10 @@
     const props = defineProps({
         until: { type: String, default: null },
         label: { type: String, default: '' },
+        // The ballot deadline is the one clock on this page you lose something
+        // by missing, so it gets to be read from across the room. The round's
+        // own end is information; this is a deadline.
+        emphasis: { type: Boolean, default: false },
     });
 
     const now = ref(Date.now());
@@ -43,9 +47,13 @@
 </script>
 
 <template>
-    <span class="inline-flex items-baseline gap-1.5">
-        <span v-if="label" class="text-xs uppercase tracking-wider text-gray-500">{{ label }}</span>
-        <span v-if="done" class="text-sm font-bold text-gray-400">{{ $t('Closed') }}</span>
-        <span v-else class="text-sm font-bold tabular-nums text-white">{{ parts }}</span>
+    <span class="inline-flex items-baseline gap-2">
+        <span class="uppercase tracking-wider"
+              :class="emphasis ? 'text-[11px] font-bold text-blue-300/80' : 'text-xs text-gray-500'"
+              v-if="label">{{ label }}</span>
+        <span v-if="done" class="font-bold text-gray-400" :class="emphasis ? 'text-lg' : 'text-sm'">{{ $t('Closed') }}</span>
+        <span v-else
+              class="tabular-nums"
+              :class="emphasis ? 'text-xl md:text-2xl font-black text-blue-200' : 'text-sm font-bold text-white'">{{ parts }}</span>
     </span>
 </template>
