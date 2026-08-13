@@ -183,37 +183,63 @@ export default {
         <!-- What a week pays and who is paying for it. Sits above everything
              else because it is the answer to the first question anybody asks
              about a competition. -->
-        <section v-if="prize?.eur > 0" class="rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm px-4 py-2.5">
-            <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
-                <span class="text-[10px] font-black uppercase tracking-widest text-gray-500">{{ $t('Prize pool') }}</span>
+        <!-- Tinted rather than plain glass. This is the one panel on the page
+             that has to catch the eye on the way past, and a page where every
+             box is the same shade of black says nothing is more important than
+             anything else. Kept to a wash and a border, not a bright block. -->
+        <section v-if="prize?.eur > 0"
+                 class="relative overflow-hidden rounded-2xl border border-emerald-400/25 bg-gradient-to-br from-emerald-500/[0.12] via-black/40 to-black/40 backdrop-blur-sm p-5 md:p-6 shadow-[0_0_40px_-12px_rgba(16,185,129,0.35)]">
+            <!-- A soft bloom behind the number, so the corner it sits in is
+                 lit rather than outlined. -->
+            <div class="pointer-events-none absolute -top-24 -left-16 w-72 h-72 rounded-full bg-emerald-400/10 blur-3xl"></div>
 
-                <span class="inline-flex items-center gap-1.5">
-                    <span class="text-sm font-black text-emerald-300 tabular-nums">{{ prize.eur }} EUR</span>
-                    <span class="text-[11px] text-gray-500">{{ $t('per physics, every week') }}</span>
-                </span>
+            <div class="relative flex flex-col md:flex-row md:items-center gap-5 md:gap-8">
 
-                <span v-if="prize.self_funded" class="text-[11px] text-gray-400">
-                    {{ $t('The first :count weeklies are paid out by neyo.', { count: prize.funded_weeks }) }}
-                </span>
-                <span v-else class="text-[11px] text-gray-400">
-                    {{ $t('Paid out by neyo or by the community.') }}
-                </span>
+                <!-- The number, at the size the number deserves. It is the
+                     first thing anybody asks about a competition. -->
+                <div class="flex-shrink-0">
+                    <div class="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-emerald-400/90 mb-1.5">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2H6v2H2v3a5 5 0 0 0 4.6 5A5.5 5.5 0 0 0 11 15.9V19H7v3h10v-3h-4v-3.1a5.5 5.5 0 0 0 4.4-3.9A5 5 0 0 0 22 7V4h-4V2zM4 7V6h2v3.9A3 3 0 0 1 4 7zm16 0a3 3 0 0 1-2 2.9V6h2v1z" /></svg>
+                        {{ $t('Prize pool') }}
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-4xl md:text-5xl font-black text-emerald-300 tabular-nums leading-none">{{ prize.total }}</span>
+                        <span class="text-xl md:text-2xl font-black text-emerald-300/70 leading-none">EUR</span>
+                    </div>
+                    <div class="mt-1.5 text-sm text-emerald-100/60">
+                        {{ $t('every week, :amount EUR per physics', { amount: prize.eur }) }}
+                    </div>
+                </div>
+
+                <div class="hidden md:block w-px self-stretch bg-emerald-400/15"></div>
+
+                <div class="min-w-0 flex-1">
+                    <p class="text-sm text-gray-200">
+                        <span v-if="prize.self_funded">
+                            {{ $t('The first :count weeklies are paid out by neyo.', { count: prize.funded_weeks }) }}
+                        </span>
+                        <span v-else>
+                            {{ $t('Paid out by neyo or by the community.') }}
+                        </span>
+                    </p>
+                    <p class="mt-1.5 text-sm text-gray-500 leading-snug">
+                        {{ $t('Later weeks may be paid out by neyo again or by the community. Write "comps" in the note when you donate and it goes into the prize pool rather than towards the maintenance of the site.') }}
+                        <!-- Split off rather than linked mid-sentence: the
+                             clause lands in a different place in every
+                             language, and a link glued into one word order
+                             breaks in the other eight. -->
+                        <Link :href="route('donations.index')" class="text-gray-400 underline decoration-white/20 hover:text-gray-200">
+                            {{ $t('See everything donations pay for.') }}
+                        </Link>
+                    </p>
+                </div>
 
                 <Link :href="route('donations.index')"
-                      class="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/20 transition-colors">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-8-4.9-8-10.4A4.6 4.6 0 0 1 12 7a4.6 4.6 0 0 1 8 3.6C20 16.1 12 21 12 21z" /></svg>
+                      class="flex-shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-500/15 px-5 py-3 text-sm font-bold text-emerald-200 hover:bg-emerald-500/25 hover:border-emerald-400/60 transition-colors">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-8-4.9-8-10.4A4.6 4.6 0 0 1 12 7a4.6 4.6 0 0 1 8 3.6C20 16.1 12 21 12 21z" /></svg>
                     {{ $t('Donate to the pool') }}
                 </Link>
             </div>
-            <p class="mt-1.5 text-[11px] text-gray-600 leading-snug">
-                {{ $t('Later weeks may be paid out by neyo again or by the community. Write "comps" in the note when you donate and it goes into the prize pool rather than towards the maintenance of the site.') }}
-                <!-- Split off rather than linked mid-sentence: the clause
-                     lands in a different place in every language, and a link
-                     glued into one word order breaks in the other eight. -->
-                <Link :href="route('donations.index')" class="text-gray-500 underline decoration-white/20 hover:text-gray-300">
-                    {{ $t('See everything donations pay for.') }}
-                </Link>
-            </p>
         </section>
 
         <!-- ============================== YOU ============================== -->

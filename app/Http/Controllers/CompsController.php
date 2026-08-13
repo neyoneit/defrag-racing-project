@@ -90,6 +90,10 @@ class CompsController extends Controller
 
         return [
             'eur' => $eur,
+            // Both physics are paid, so the week costs twice the setting. The
+            // total is what a reader wants first and the per-physics figure is
+            // what they need to not misread it, so the page shows both.
+            'total' => $eur * count(BallotResolver::PHYSICS),
             'funded_weeks' => $fundedWeeks,
             'self_funded' => $eur > 0 && $current <= $fundedWeeks,
         ];
