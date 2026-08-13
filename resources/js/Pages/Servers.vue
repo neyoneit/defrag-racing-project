@@ -538,7 +538,13 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                                                  copy button and the save button
                                                  side by side. -->
                                             <div class="flex items-center gap-2 min-w-0" @mouseenter="hoveredMapServer = server.id" @mouseleave="hoveredMapServer = null">
-                                                <a :href="`/maps/${encodeURIComponent(server.map)}`" class="font-bold text-white text-lg hover:text-blue-400 transition-colors map-name-highlight truncate" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ server.map }}</a>
+                                                <!-- px-3 -mx-3 is not spacing: truncate
+                                                     is overflow:hidden, which clips at the
+                                                     box edge and took the text-shadow with
+                                                     it. The padding gives the 12px glow room
+                                                     to land inside the box and the negative
+                                                     margin puts the text back where it was. -->
+                                                <a :href="`/maps/${encodeURIComponent(server.map)}`" class="font-bold text-white text-lg hover:text-blue-400 transition-colors map-name-highlight truncate px-3 -mx-3" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ server.map }}</a>
                                             </div>
                                             <!-- Copy map name -->
                                             <CopyButton :text="server.map" size="xs" :label="$t('Copy map')" />
