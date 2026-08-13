@@ -331,81 +331,90 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                      the row broke onto a second line. Each group is now one
                      bordered pill with its label as a leading chip, and the
                      groups are told apart by hue instead of by whitespace. -->
-                <div class="flex flex-wrap items-center gap-2">
-                    <!-- Gametype Filter -->
-                    <div class="flex flex-wrap items-stretch rounded-lg border border-sky-400/25 bg-sky-500/[0.07] overflow-hidden">
-                        <span class="flex items-center px-2.5 py-1.5 bg-sky-500/10 text-[11px] font-bold text-sky-300/80 uppercase whitespace-nowrap">{{ $t('Gametype:') }}</span>
-                        <button @click="filters.gametype = 'all'" :class="filters.gametype === 'all' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
-                            {{ $t('All') }}
-                        </button>
-                        <button @click="filters.gametype = 'run'" :class="filters.gametype === 'run' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
-                            Run
-                        </button>
-                        <button @click="filters.gametype = 'ctf'" :class="filters.gametype === 'ctf' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
-                            CTF
-                        </button>
-                        <button @click="filters.gametype = 'freestyle'" :class="filters.gametype === 'freestyle' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
-                            Freestyle
-                        </button>
-                        <button @click="filters.gametype = 'teamrun'" :class="filters.gametype === 'teamrun' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
-                            Teamrun
-                        </button>
+                <!-- Two halves, not one run of four: what filters the list
+                     sits on the left, what only changes how it is shown sits
+                     against the right edge. It also gives a long language
+                     somewhere to grow - the gap in the middle absorbs it
+                     before anything has to wrap. -->
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- Gametype Filter -->
+                        <div class="flex flex-wrap items-stretch rounded-lg border border-sky-400/25 bg-sky-500/[0.07] overflow-hidden">
+                            <span class="flex items-center px-2.5 py-1.5 bg-sky-500/10 text-[11px] font-bold text-sky-300/80 uppercase whitespace-nowrap">{{ $t('Gametype:') }}</span>
+                            <button @click="filters.gametype = 'all'" :class="filters.gametype === 'all' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                {{ $t('All') }}
+                            </button>
+                            <button @click="filters.gametype = 'run'" :class="filters.gametype === 'run' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                Run
+                            </button>
+                            <button @click="filters.gametype = 'ctf'" :class="filters.gametype === 'ctf' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                CTF
+                            </button>
+                            <button @click="filters.gametype = 'freestyle'" :class="filters.gametype === 'freestyle' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                Freestyle
+                            </button>
+                            <button @click="filters.gametype = 'teamrun'" :class="filters.gametype === 'teamrun' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                Teamrun
+                            </button>
+                        </div>
+
+                        <!-- Physics Filter -->
+                        <div class="flex flex-wrap items-stretch rounded-lg border border-violet-400/25 bg-violet-500/[0.07] overflow-hidden">
+                            <span class="flex items-center px-2.5 py-1.5 bg-violet-500/10 text-[11px] font-bold text-violet-300/80 uppercase whitespace-nowrap">{{ $t('Physics:') }}</span>
+                            <button @click="filters.physics = 'all'" :class="filters.physics === 'all' ? 'bg-violet-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-violet-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                {{ $t('All') }}
+                            </button>
+                            <button @click="filters.physics = 'cpm'" :class="filters.physics === 'cpm' ? 'bg-violet-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-violet-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                CPM
+                            </button>
+                            <button @click="filters.physics = 'vq3'" :class="filters.physics === 'vq3' ? 'bg-violet-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-violet-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                VQ3
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Physics Filter -->
-                    <div class="flex flex-wrap items-stretch rounded-lg border border-violet-400/25 bg-violet-500/[0.07] overflow-hidden">
-                        <span class="flex items-center px-2.5 py-1.5 bg-violet-500/10 text-[11px] font-bold text-violet-300/80 uppercase whitespace-nowrap">{{ $t('Physics:') }}</span>
-                        <button @click="filters.physics = 'all'" :class="filters.physics === 'all' ? 'bg-violet-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-violet-400/20 text-xs font-bold transition-colors whitespace-nowrap">
-                            {{ $t('All') }}
-                        </button>
-                        <button @click="filters.physics = 'cpm'" :class="filters.physics === 'cpm' ? 'bg-violet-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-violet-400/20 text-xs font-bold transition-colors whitespace-nowrap">
-                            CPM
-                        </button>
-                        <button @click="filters.physics = 'vq3'" :class="filters.physics === 'vq3' ? 'bg-violet-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-violet-400/20 text-xs font-bold transition-colors whitespace-nowrap">
-                            VQ3
-                        </button>
-                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- Sort Options -->
+                        <div class="flex flex-wrap items-stretch rounded-lg border border-emerald-400/25 bg-emerald-500/[0.07] overflow-hidden">
+                            <span class="flex items-center px-2.5 py-1.5 bg-emerald-500/10 text-[11px] font-bold text-emerald-300/80 uppercase whitespace-nowrap">{{ $t('Sort:') }}</span>
+                            <button @click="toggleSort('popularity')" :class="sorting === 'popularity' ? 'bg-emerald-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-emerald-400/20 text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1">
+                                {{ $t('Popularity') }}
+                                <svg v-if="sorting === 'popularity'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" :class="sortingOrder === 'desc' ? 'rotate-0' : 'rotate-180'" class="w-3 h-3 transition-transform">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                </svg>
+                            </button>
+                            <button @click="toggleSort('alphabetically')" :class="sorting === 'alphabetically' ? 'bg-emerald-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-emerald-400/20 text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1">
+                                A-Z
+                                <svg v-if="sorting === 'alphabetically'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" :class="sortingOrder === 'desc' ? 'rotate-0' : 'rotate-180'" class="w-3 h-3 transition-transform">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                </svg>
+                            </button>
+                        </div>
 
-                    <!-- Sort Options -->
-                    <div class="flex flex-wrap items-stretch rounded-lg border border-emerald-400/25 bg-emerald-500/[0.07] overflow-hidden">
-                        <span class="flex items-center px-2.5 py-1.5 bg-emerald-500/10 text-[11px] font-bold text-emerald-300/80 uppercase whitespace-nowrap">{{ $t('Sort:') }}</span>
-                        <button @click="toggleSort('popularity')" :class="sorting === 'popularity' ? 'bg-emerald-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-emerald-400/20 text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1">
-                            {{ $t('Popularity') }}
-                            <svg v-if="sorting === 'popularity'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" :class="sortingOrder === 'desc' ? 'rotate-0' : 'rotate-180'" class="w-3 h-3 transition-transform">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                            </svg>
-                        </button>
-                        <button @click="toggleSort('alphabetically')" :class="sorting === 'alphabetically' ? 'bg-emerald-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-emerald-400/20 text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1">
-                            A-Z
-                            <svg v-if="sorting === 'alphabetically'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" :class="sortingOrder === 'desc' ? 'rotate-0' : 'rotate-180'" class="w-3 h-3 transition-transform">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <!-- Additional Options. These three are toggles, not a
-                         single choice like the three groups above, so the
-                         active fill is solid rather than a tint. -->
-                    <div class="flex flex-wrap items-stretch rounded-lg border border-amber-400/25 bg-amber-500/[0.07] overflow-hidden">
-                        <span class="flex items-center px-2.5 py-1.5 bg-amber-500/10 text-[11px] font-bold text-amber-300/80 uppercase whitespace-nowrap">{{ $t('Options:') }}</span>
-                        <button @click="filters.hideEmpty = !filters.hideEmpty" :class="filters.hideEmpty ? 'bg-amber-500/40 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-amber-400/20 text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 flex-shrink-0">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
-                            </svg>
-                            {{ $t('Hide Empty') }}
-                        </button>
-                        <button @click="filters.showDetails = !filters.showDetails" :class="!filters.showDetails ? 'bg-amber-500/40 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-amber-400/20 text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 flex-shrink-0">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
-                            </svg>
-                            {{ $t('Hide Details') }}
-                        </button>
-                        <button @click="toggleLayout" :class="layout !== 'large' ? 'bg-amber-500/40 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-amber-400/20 text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 flex-shrink-0">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
-                            </svg>
-                            {{ $t('Compact') }}
-                        </button>
+                        <!-- Additional Options. These three are toggles, not a
+                             single choice like the three groups above, so the
+                             active fill is solid rather than a tint. -->
+                        <div class="flex flex-wrap items-stretch rounded-lg border border-amber-400/25 bg-amber-500/[0.07] overflow-hidden">
+                            <span class="flex items-center px-2.5 py-1.5 bg-amber-500/10 text-[11px] font-bold text-amber-300/80 uppercase whitespace-nowrap">{{ $t('Options:') }}</span>
+                            <button @click="filters.hideEmpty = !filters.hideEmpty" :class="filters.hideEmpty ? 'bg-amber-500/40 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-amber-400/20 text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 flex-shrink-0">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                </svg>
+                                {{ $t('Hide Empty') }}
+                            </button>
+                            <button @click="filters.showDetails = !filters.showDetails" :class="!filters.showDetails ? 'bg-amber-500/40 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-amber-400/20 text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 flex-shrink-0">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                </svg>
+                                {{ $t('Hide Details') }}
+                            </button>
+                            <button @click="toggleLayout" :class="layout !== 'large' ? 'bg-amber-500/40 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-amber-400/20 text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 flex-shrink-0">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
+                                </svg>
+                                {{ $t('Compact') }}
+                            </button>
+                        </div>
                     </div>
                 </div>
                     </div>
