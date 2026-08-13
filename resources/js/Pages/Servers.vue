@@ -7,6 +7,7 @@ import CopyButton from '@/Components/Basic/CopyButton.vue';
 import LauncherBanner from '@/Components/LauncherBanner.vue';
 import CheatsBanner from '@/Components/CheatsBanner.vue';
 import { t } from '@/utils/i18n';
+import { getWeaponIcon, getWeaponName, getItemIcon, getItemName, getFunctionIcon, getFunctionName } from '@/utils/gameItems';
 const AddToMaplistModal = defineAsyncComponent(() => import('@/Components/Maplists/AddToMaplistModal.vue'));
 
 const page = usePage();
@@ -258,138 +259,6 @@ const filteredAndSortedServers = computed(() => {
 
 const serverCount = computed(() => filteredAndSortedServers.value.length);
 
-// Helper functions for weapon/item/function icons and names (from MapView.vue)
-const getWeaponIcon = (abbr) => {
-    const icons = {
-        'gauntlet': '/images/weapons/iconw_gauntlet.svg',
-        'gt': '/images/weapons/iconw_gauntlet.svg',
-        'mg': '/images/weapons/iconw_machinegun.svg',
-        'sg': '/images/weapons/iconw_shotgun.svg',
-        'gl': '/images/weapons/iconw_grenade.svg',
-        'rl': '/images/weapons/iconw_rocket.svg',
-        'lg': '/images/weapons/iconw_lightning.svg',
-        'rg': '/images/weapons/iconw_railgun.svg',
-        'pg': '/images/weapons/iconw_plasma.svg',
-        'bfg': '/images/weapons/iconw_bfg.svg',
-        'grapple': '/images/weapons/iconw_grapple.svg',
-        'hook': '/images/weapons/iconw_grapple.svg',
-        'gh': '/images/weapons/iconw_grapple.svg'
-    };
-    return icons[abbr.toLowerCase().trim()] || '/images/weapons/iconw_gauntlet.svg';
-};
-
-const getWeaponName = (abbr) => {
-    const weapons = {
-        'gauntlet': 'Gauntlet',
-        'gt': 'Gauntlet',
-        'mg': 'Machine Gun',
-        'sg': 'Shotgun',
-        'gl': 'Grenade Launcher',
-        'rl': 'Rocket Launcher',
-        'lg': 'Lightning Gun',
-        'rg': 'Rail Gun',
-        'pg': 'Plasma Gun',
-        'bfg': 'BFG',
-        'grapple': 'Grappling Hook',
-        'hook': 'Grappling Hook',
-        'gh': 'Grappling Hook'
-    };
-    return weapons[abbr.toLowerCase().trim()] || abbr.toUpperCase();
-};
-
-const getItemIcon = (abbr) => {
-    const icons = {
-        // Powerups
-        'enviro': '/images/powerups/envirosuit.svg',
-        'haste': '/images/powerups/haste.svg',
-        'quad': '/images/powerups/quad.svg',
-        'regen': '/images/powerups/regen.svg',
-        'invis': '/images/powerups/invis.svg',
-        'flight': '/images/powerups/flight.svg',
-        // Health
-        'health': '/images/items/iconh_yellow.svg',
-        'smallhealth': '/images/items/iconh_green.svg',
-        'bighealth': '/images/items/iconh_red.svg',
-        'mega': '/images/items/iconh_mega.svg',
-        'medkit': '/images/items/medkit.svg',
-        // Armor
-        'shard': '/images/items/iconr_shard.svg',
-        'ya': '/images/items/iconr_yellow.svg',
-        'ra': '/images/items/iconr_red.svg',
-        // CTF
-        'flag': '/images/items/iconf_blu2.svg'
-    };
-    return icons[abbr.toLowerCase().trim()] || '/images/items/iconh_yellow.svg';
-};
-
-const getItemName = (abbr) => {
-    const items = {
-        // Powerups
-        'enviro': 'Battle Suit',
-        'haste': 'Haste',
-        'quad': 'Quad Damage',
-        'regen': 'Regeneration',
-        'invis': 'Invisibility',
-        'flight': 'Flight',
-        // Health
-        'health': 'Health (+25)',
-        'smallhealth': 'Small Health (+5)',
-        'bighealth': 'Large Health (+50)',
-        'mega': 'Mega Health (+100)',
-        'medkit': 'Medkit',
-        // Armor
-        'shard': 'Armor Shard (+5)',
-        'ya': 'Yellow Armor (+50)',
-        'ra': 'Red Armor (+100)',
-        // CTF
-        'flag': 'Flag'
-    };
-    return items[abbr.toLowerCase().trim()] || abbr;
-};
-
-const getFunctionIcon = (abbr) => {
-    const icons = {
-        'tele': '/images/functions/tele.svg',
-        'teleporter': '/images/functions/teleporter.svg',
-        'slick': '/images/functions/slick.svg',
-        'timer': '/images/functions/timer.svg',
-        'fog': '/images/functions/fog.svg',
-        'water': '/images/functions/water.svg',
-        'lava': '/images/functions/lava.svg',
-        'moving': '/images/functions/moving.svg',
-        'door': '/images/functions/door.svg',
-        'button': '/images/functions/button.svg',
-        'push': '/images/functions/push.svg',
-        'break': '/images/functions/break.svg',
-        'slime': '/images/functions/slime.svg',
-        'shootergl': '/images/functions/shootergl.svg',
-        'shooterpg': '/images/functions/shooterpg.svg',
-        'shooterrl': '/images/functions/shooterrl.svg'
-    };
-    return icons[abbr.toLowerCase().trim()] || '/images/functions/timer.svg';
-};
-
-const getFunctionName = (abbr) => {
-    const functions = {
-        'tele': t('Teleporter'),
-        'teleporter': t('Teleporter'),
-        'slick': t('Slick Surface'),
-        'timer': t('Timer'),
-        'fog': t('Fog'),
-        'water': t('Water'),
-        'lava': t('Lava'),
-        'moving': t('Moving Platforms'),
-        'door': t('Doors'),
-        'button': t('Buttons'),
-        'push': t('Push Trigger'),
-        'break': t('Breakable'),
-        'slime': t('Slime'),
-        'shootergl': t('Grenade Shooter'),
-        'shooterpg': t('Plasma Shooter'),
-        'shooterrl': t('Rocket Shooter')
-    };
-    return functions[abbr.toLowerCase().trim()] || abbr;
-};
 </script>
 
 <template>

@@ -5,6 +5,7 @@
     import CopyButton from '@/Components/Basic/CopyButton.vue';
     import AddToMaplistModal from '@/Components/Maplists/AddToMaplistModal.vue';
     import { t } from '@/utils/i18n';
+    import { getWeaponName, getItemName, getFunctionName } from '@/utils/gameItems';
     const page = usePage();
     const showMaplistModal = ref(false);
 
@@ -163,13 +164,13 @@
                 <!-- Items Overlay - Bottom Right -->
                 <div class="absolute bottom-2 right-2 flex flex-col gap-0.5">
                     <div v-if="weaponsList.length > 0" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
-                        <div v-for="weapon in weaponsList" :key="weapon" :title="weapon" :class="`sprite-items sprite-${weapon} w-3 h-3`"></div>
+                        <div v-for="weapon in weaponsList" :key="weapon" :title="getWeaponName(weapon)" :class="`sprite-items sprite-${weapon} w-3 h-3`"></div>
                     </div>
                     <div v-if="itemsList.length > 0" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
-                        <div v-for="item in itemsList" :key="item" :title="item" :class="`sprite-items sprite-${item} w-3 h-3`"></div>
+                        <div v-for="item in itemsList" :key="item" :title="getItemName(item)" :class="`sprite-items sprite-${item} w-3 h-3`"></div>
                     </div>
                     <div v-if="functionsList.length > 0" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
-                        <div v-for="func in functionsList" :key="func" :title="func" :class="`sprite-items sprite-${func} w-3 h-3`"></div>
+                        <div v-for="func in functionsList" :key="func" :title="getFunctionName(func)" :class="`sprite-items sprite-${func} w-3 h-3`"></div>
                     </div>
                 </div>
             </div>
