@@ -18,19 +18,25 @@ return [
     | English it has a translation for and falls through to English for the
     | rest. That is what makes an unfinished translation safe to ship.
     |
+    | The order here is the order the menu shows, so keep the list alphabetical
+    | by that name-for-itself, treating accents as their plain letter: Čeština
+    | sorts as Cestina and leads, not trails. English is not pinned to the top;
+    | to a reader it is one language among ten. Cyrillic lands at the end,
+    | which is where a reader of it expects to find it.
+    |
     */
 
     'supported' => [
-        'en' => 'English',
         'cs' => 'Čeština',
-        'ru' => 'Русский',
-        'pl' => 'Polski',
         'de' => 'Deutsch',
-        'fr' => 'Français',
+        'en' => 'English',
         'es' => 'Español',
-        'uk' => 'Українська',
+        'fr' => 'Français',
         'nl' => 'Nederlands',
+        'pl' => 'Polski',
         'sv' => 'Svenska',
+        'ru' => 'Русский',
+        'uk' => 'Українська',
     ],
 
 ];
