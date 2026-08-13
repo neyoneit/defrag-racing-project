@@ -23,7 +23,7 @@
     }
     #head {
         display: flex;
-        align-items: baseline;
+        align-items: center;
         justify-content: space-between;
         gap: 8px;
         margin-bottom: 8px;
@@ -36,10 +36,37 @@
         color: #a78bfa;
         white-space: nowrap;
     }
+    /* The prize is the reason anyone watches, and at 11px grey it read as a
+       footnote next to the heading. Gold pill, amount at nearly twice the
+       size: on a stream this is seen at a fraction of full resolution,
+       through video compression, by someone not looking for it. */
     #head .p {
-        font-size: 11px;
-        color: #9ca3af;
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
         white-space: nowrap;
+        background: linear-gradient(180deg, rgba(251, 191, 36, .22), rgba(251, 191, 36, .10));
+        border: 1px solid rgba(251, 191, 36, .45);
+        border-radius: 999px;
+        padding: 2px 9px 3px;
+        box-shadow: 0 0 12px rgba(251, 191, 36, .18);
+    }
+    #head .p:empty {
+        display: none;
+    }
+    #head .p .amt {
+        font-size: 17px;
+        font-weight: 900;
+        line-height: 1;
+        color: #fcd34d;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, .95);
+    }
+    #head .p .lbl {
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: rgba(252, 211, 77, .75);
     }
     .row {
         display: flex;
@@ -126,8 +153,12 @@
             const d = await r.json();
             const card = document.getElementById('card');
             if (!d.contest || !d.top.length) { card.style.display = 'none'; return; }
-            document.getElementById('prize').textContent =
-                d.contest.prize_amount ? (d.contest.prize_label + ' prize') : '';
+            // The amount and the word carry different weight, so they are two
+            // elements. prize_label is ours, not user input.
+            document.getElementById('prize').innerHTML = d.contest.prize_amount
+                ? '<span class="amt">' + d.contest.prize_label + '</span>'
+                  + '<span class="lbl">prize</span>'
+                : '';
             document.getElementById('rows').innerHTML = d.top.map((e, i) =>
                 '<div class="row">'
                 + '<div class="rank r' + (i + 1) + '">' + (i + 1) + '</div>'
