@@ -470,7 +470,7 @@
                                     {{ $t('Demos') }}
                                 </DropdownLink>
                                 <DropdownLink :href="route('downloads')">
-                                    {{ $t('Bundles') }}
+                                    {{ $t('Downloads') }}
                                 </DropdownLink>
                                 <DropdownLink :href="route('clans.index')">
                                     {{ $t('Clans') }}

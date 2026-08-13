@@ -32,8 +32,8 @@
     }));
 
     const types = computed(() => ({
-        'run': { value: t('Run'), color: 'bg-blue-600' },
-        'team': { value: t('Team'), color: 'bg-blue-600' },
+        'run': { value: 'Run', color: 'bg-blue-600' },
+        'team': { value: 'Team', color: 'bg-blue-600' },
         'freestyle': { value: 'FS', color: 'bg-blue-600' },
         'fastcaps': { value: 'FC', color: 'bg-blue-600' },
     }));

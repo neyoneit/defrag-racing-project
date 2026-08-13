@@ -339,16 +339,16 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                             {{ $t('All') }}
                         </button>
                         <button @click="filters.gametype = 'run'" :class="filters.gametype === 'run' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
-                            {{ $t('Run') }}
+                            Run
                         </button>
                         <button @click="filters.gametype = 'ctf'" :class="filters.gametype === 'ctf' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
                             CTF
                         </button>
                         <button @click="filters.gametype = 'freestyle'" :class="filters.gametype === 'freestyle' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
-                            {{ $t('Freestyle') }}
+                            Freestyle
                         </button>
                         <button @click="filters.gametype = 'teamrun'" :class="filters.gametype === 'teamrun' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
-                            {{ $t('Teamrun') }}
+                            Teamrun
                         </button>
                     </div>
 

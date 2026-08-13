@@ -20,7 +20,7 @@
     const gametypeGroups = computed(() => [
         {
             label: 'Run',
-            types: [{ value: 'run', label: t('Run') }]
+            types: [{ value: 'run', label: 'Run' }]
         },
         {
             label: 'CTF',

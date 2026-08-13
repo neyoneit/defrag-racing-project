@@ -39,10 +39,10 @@ const physicsOptions = [
 ];
 
 const modeOptions = computed(() => [
-    { value: 'run', label: t('Run') },
+    { value: 'run', label: 'Run' },
     { value: 'strafe', label: t('Strafe') },
-    { value: 'freestyle', label: t('Freestyle') },
-    { value: 'fastcaps', label: t('Fastcaps') },
+    { value: 'freestyle', label: 'Freestyle' },
+    { value: 'fastcaps', label: 'Fastcaps' },
     { value: 'any', label: t('Any') },
 ]);
 

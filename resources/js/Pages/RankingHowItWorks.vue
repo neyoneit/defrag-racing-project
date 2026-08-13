@@ -444,7 +444,7 @@ const top200Share = computed(() => topNWeightShare(200));
 
                     <!-- Run mode: matrix of categories × physics -->
                     <div v-if="runCategoriesWithData.length > 0" class="mb-5">
-                        <div class="text-xs font-semibold text-gray-400 mb-2">{{ $t('Run') }}</div>
+                        <div class="text-xs font-semibold text-gray-400 mb-2">Run</div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-xs">
                                 <thead>
