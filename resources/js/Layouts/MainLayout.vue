@@ -40,6 +40,7 @@
         return {
             home: route().current('home'),
             servers: route().current('servers'),
+            comps: route().current('comps.*'),
             wishlist: route().current('wishlist.*'),
             players: route().current('records') || route().current('clans.*'),
             rankings: route().current('ranking') || route().current('community'),
@@ -825,7 +826,14 @@
                             {{ $t('Servers') }}
                         </NavLink>
 
-                        <!-- 2. Wishlist - always visible. Third on purpose:
+                        <!-- 2. Comps - always visible. It runs on a deadline,
+                             and a competition you only find by searching for it
+                             is one people miss the week of. -->
+                        <NavLink :href="route('comps.index')" :active="navActive.comps">
+                            {{ $t('Comps') }}
+                        </NavLink>
+
+                        <!-- 3. Wishlist - always visible. Third on purpose:
                              a suggestion box nobody walks past is a suggestion
                              box nobody writes in. -->
                         <NavLink :href="route('wishlist.index')" :active="navActive.wishlist">
@@ -927,12 +935,8 @@
                             </Dropdown>
                         </div>
 
-                        <!-- 8. Tournaments - visible from xl -->
-                        <div class="hidden xl:inline-flex">
-                            <NavLink :href="route('tournaments.index')" :active="navActive.tournaments">
-                                {{ $t('Tournaments') }}
-                            </NavLink>
-                        </div>
+                        <!-- Tournaments now lives in More at every width - see
+                             the dropdown below. -->
 
                         <!-- 9. Wiki - visible from xl -->
                         <div class="hidden xl:inline-flex">
@@ -948,15 +952,15 @@
                             </NavLink>
                         </div>
 
-                        <!-- 11. Beta - visible from xl -->
-                        <div class="hidden xl:inline-flex">
-                            <NavLink href="/test-map-viewer.html?map=pornstar-cpmrun">
-                                {{ $t('Beta') }}
-                            </NavLink>
-                        </div>
+                        <!-- Beta now lives in More at every width, below. -->
 
-                        <!-- More dropdown - visible below xl -->
-                        <div class="xl:hidden">
+                        <!-- More dropdown. Shown at every width, not just below
+                             xl: Tournaments and Beta live in here permanently,
+                             so hiding the dropdown on a wide screen would put
+                             them out of reach entirely. Everything else in it
+                             is still only a fallback for the widths where its
+                             own inline link has been dropped. -->
+                        <div>
                             <Dropdown align="left" width="56" :hoverable="true">
                                 <template #trigger="{ open }">
                                     <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
@@ -992,11 +996,16 @@
                                         <DropdownLink :href="route('defraglive.contest')" :active="navActive.defragliveContest">{{ $t('DefragLive Contest') }}</DropdownLink>
                                         <div class="border-t border-white/10 my-1.5"></div>
                                     </div>
-                                    <!-- Items always in More (hidden inline below xl) -->
-                                    <DropdownLink :href="route('maplists.index')" :active="navActive.maplists">{{ $t('Maplists') }}</DropdownLink>
+                                    <!-- Items that have an inline link of their own from xl,
+                                         so below xl they fall back to here. -->
+                                    <div class="xl:hidden">
+                                        <DropdownLink :href="route('maplists.index')" :active="navActive.maplists">{{ $t('Maplists') }}</DropdownLink>
+                                        <DropdownLink :href="route('wiki.index')" :active="navActive.wiki">{{ $t('Wiki') }}</DropdownLink>
+                                        <DropdownLink :href="route('downloads')" :active="navActive.bundles">{{ $t('Downloads') }}</DropdownLink>
+                                    </div>
+
+                                    <!-- These two have no inline link at any width. -->
                                     <DropdownLink :href="route('tournaments.index')" :active="navActive.tournaments">{{ $t('Tournaments') }}</DropdownLink>
-                                    <DropdownLink :href="route('wiki.index')" :active="navActive.wiki">{{ $t('Wiki') }}</DropdownLink>
-                                    <DropdownLink :href="route('downloads')" :active="navActive.bundles">{{ $t('Downloads') }}</DropdownLink>
                                     <DropdownLink href="/test-map-viewer.html?map=pornstar-cpmrun">{{ $t('Beta') }}</DropdownLink>
                                 </template>
                             </Dropdown>
