@@ -7,6 +7,7 @@
     import ItemsSelect from '@/Components/Basic/ItemsSelect.vue';
     import axios from 'axios';
     import { t } from '@/utils/i18n';
+    import { getFunctionName } from '@/utils/gameItems';
 
     const props = defineProps({
         queries: Object,
@@ -46,10 +47,10 @@
     const weapons = [
         { code: 'gauntlet', name: 'Gauntlet' },
         { code: 'mg', name: 'Machine Gun' },
-        { code: 'sg', name: 'Shot Gun' },
+        { code: 'sg', name: 'Shotgun' },
         { code: 'gl', name: 'Grenade Launcher' },
         { code: 'rl', name: 'Rocket Launcher' },
-        { code: 'lg', name: 'Lightening Gun' },
+        { code: 'lg', name: 'Lightning Gun' },
         { code: 'rg', name: 'Rail Gun' },
         { code: 'pg', name: 'Plasma Gun' },
         { code: 'bfg', name: 'BFG' },
@@ -60,20 +61,9 @@
     ];
 
     const functions = computed(() => [
-        { code: 'door', name: t('Door') },
-        { code: 'button', name: t('Button') },
-        { code: 'tele', name: t('Teleporter') },
-        { code: 'jumppad', name: t('Jump Pad') },
-        { code: 'moving', name: t('Moving Object') },
-        { code: 'slick', name: t('Slick') },
-        { code: 'water', name: t('Water') },
-        { code: 'fog', name: t('Fog') },
-        { code: 'slime', name: t('Slime') },
-        { code: 'lava', name: t('Lava') },
-        { code: 'break', name: t('Breakable') },
-        { code: 'sound', name: t('Sound') },
-        { code: 'timer', name: t('Timer') },
-    ]);
+        'door', 'button', 'tele', 'jumppad', 'moving', 'slick', 'water',
+        'fog', 'slime', 'lava', 'break', 'sound', 'timer',
+    ].map((code) => ({ code, name: getFunctionName(code) })));
 
     const items = [
         { code: 'ra', name: 'Red Armor' },

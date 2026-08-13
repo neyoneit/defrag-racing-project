@@ -125,19 +125,30 @@ export const getFunctionIcon = (abbr) => lookup({
     'shooterrl': '/images/functions/shooterrl.svg',
 }, abbr, '/images/functions/timer.svg');
 
+/**
+ * The short names, his call: the same feature was `Slick` in the filter on
+ * /maps and `Slick Surface` in the tooltip of the icon sitting next to it.
+ * Two of the three places that name these already used the short form, and
+ * the one place that is width-constrained is the filter sidebar with its
+ * thirteen checkboxes, so the short form is what the other two adopt.
+ *
+ * `sound` has a name but no icon file, so it falls back like any code the
+ * icon table does not know.
+ */
 export const getFunctionName = (abbr) => lookup({
     'tele': t('Teleporter'),
     'teleporter': t('Teleporter'),
-    'slick': t('Slick Surface'),
+    'slick': t('Slick'),
     'timer': t('Timer'),
     'fog': t('Fog'),
     'water': t('Water'),
     'lava': t('Lava'),
-    'moving': t('Moving Platforms'),
-    'door': t('Doors'),
-    'button': t('Buttons'),
+    'moving': t('Moving Object'),
+    'door': t('Door'),
+    'button': t('Button'),
+    'sound': t('Sound'),
     'push': t('Push Trigger'),
-    'jumppad': t('Jumppad'),
+    'jumppad': t('Jump Pad'),
     'launchramp': t('Launch Ramp'),
     'break': t('Breakable'),
     'slime': t('Slime'),

@@ -2042,7 +2042,7 @@
                             </div>
                         </div>
                         <div class="flex justify-between items-center group relative">
-                            <span class="text-xs text-gray-400 cursor-help">{{ $t('Jumppad') }}</span>
+                            <span class="text-xs text-gray-400 cursor-help">{{ $t('Jump Pad') }}</span>
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 {{ $t('Records on maps featuring jump pads') }}
                             </div>

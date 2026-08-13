@@ -9,6 +9,7 @@
     import SecondaryButton from '@/Components/Laravel/SecondaryButton.vue';
     import ItemsChoices from '@/Components/Basic/ItemsChoices.vue';
     import { t } from '@/utils/i18n';
+    import { getFunctionName } from '@/utils/gameItems';
 
 
     const weapons = [
@@ -21,7 +22,7 @@
             'name': 'Machine Gun'
         },{
             'code': 'sg',
-            'name': 'Shot Gun'
+            'name': 'Shotgun'
         },{
             'code': 'gl',
             'name': 'Grenade Launcher'
@@ -30,7 +31,7 @@
             'name': 'Rocket Launcher'
         },{
             'code': 'lg',
-            'name': 'Lightening Gun'
+            'name': 'Lightning Gun'
         },{
             'code': 'rg',
             'name': 'Rail Gun'
@@ -56,48 +57,9 @@
     ];
 
     const functions = computed(() => [
-        {
-            'code': 'door',
-            'name': t('Door')
-        },
-        {
-            'code': 'button',
-            'name': t('Button')
-        },{
-            'code': 'tele',
-            'name': t('Teleporter')
-        },{
-            'code': 'jumppad',
-            'name': t('Jump Pad')
-        },{
-            'code': 'moving',
-            'name': t('Moving Object')
-        },{
-            'code': 'slick',
-            'name': t('Slick')
-        },{
-            'code': 'water',
-            'name': t('Water')
-        },{
-            'code': 'fog',
-            'name': t('Fog')
-        },{
-            'code': 'slime',
-            'name': t('Slime')
-        },{
-            'code': 'lava',
-            'name': t('Lava')
-        },{
-            'code': 'break',
-            'name': t('Breakable')
-        },{
-            'code': 'sound',
-            'name': t('Sound')
-        },{
-            'code': 'timer',
-            'name': t('Timer')
-        },
-    ]);
+        'door', 'button', 'tele', 'jumppad', 'moving', 'slick', 'water',
+        'fog', 'slime', 'lava', 'break', 'sound', 'timer',
+    ].map((code) => ({ 'code': code, 'name': getFunctionName(code) })));
 
     const items = [
         {
