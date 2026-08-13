@@ -104,19 +104,46 @@ export const t = (key, replacements = {}) => {
 
 /**
  * Czech counts in three: 1 server, 2 servery, 5 serverů. English counts in
- * two. A language whose rule is neither (Russian and Polish repeat the second
- * form at 22, 32...) needs its own branch here before it is added to
- * config/locales.php, otherwise it reads wrong at every number above four.
+ * two. Chinese counts in one.
+ *
+ * **A language added to config/locales.php without its branch here silently
+ * loses its last form** - the clamp in tChoice hides the mistake, so it reads
+ * as a wrong ending rather than as an error. Russian and Polish shipped that
+ * way and printed "5 mapy" where Polish wants "5 map".
+ *
+ * The three-form Slavic languages do not share one rule. Czech and Slovak use
+ * the plain 1 / 2-4 / rest. Russian, Ukrainian and Polish repeat the middle
+ * form at 22, 23, 24 and the last one through the teens, and they disagree at
+ * 21: Russian takes the singular ("21 карта"), Polish does not ("21 map").
  */
 const pluralIndex = (code, count) => {
+    const n = Math.abs(count);
+
+    // No grammatical number at all - one form covers every count.
+    if (code === 'zh' || code === 'ja' || code === 'ko') {
+        return 0;
+    }
+
     if (code === 'cs' || code === 'sk') {
-        if (count === 1) return 0;
-        if (count >= 2 && count <= 4) return 1;
+        if (n === 1) return 0;
+        if (n >= 2 && n <= 4) return 1;
 
         return 2;
     }
 
-    return count === 1 ? 0 : 1;
+    if (code === 'ru' || code === 'uk' || code === 'pl') {
+        const last = n % 10;
+        const lastTwo = n % 100;
+
+        // Polish keeps the singular for a bare 1 only; Russian and Ukrainian
+        // take it again at 21, 31, 41...
+        if (code === 'pl' ? n === 1 : (last === 1 && lastTwo !== 11)) return 0;
+        if (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14)) return 1;
+
+        return 2;
+    }
+
+    return n === 1 ? 0 : 1;
 };
 
 /** Forms separated by a pipe, singular first, then the count as the argument. */
