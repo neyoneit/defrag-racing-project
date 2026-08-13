@@ -9,6 +9,7 @@ import ConfirmationModal from '@/Components/Laravel/ConfirmationModal.vue';
 import axios from 'axios';
 import { t } from '@/utils/i18n';
 
+import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
 const page = usePage();
 
 const props = defineProps({
@@ -698,6 +699,7 @@ const createMaplist = async () => {
                     <!-- Left: Form -->
                     <div class="flex-1 space-y-4 min-w-0">
                         <div>
+                            <EnglishOnlyNotice />
                             <label for="maplist_name" class="block text-xs font-medium text-gray-400 mb-1">{{ $t('Maplist Name') }}</label>
                             <input
                                 id="maplist_name"

@@ -65,6 +65,7 @@
 
                     <!-- Create Form -->
                     <div v-if="showCreateForm" class="mt-3 space-y-3 bg-white/5 rounded-lg p-3 border border-white/5">
+                        <EnglishOnlyNotice />
                         <div>
                             <label class="block text-xs font-medium text-gray-400 mb-1">{{ $t('Maplist Name') }}</label>
                             <input
@@ -132,6 +133,7 @@ import DialogModal from '@/Components/Laravel/DialogModal.vue';
 import axios from 'axios';
 import { t } from '@/utils/i18n';
 
+import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
 const props = defineProps({
     show: Boolean,
     mapId: Number,

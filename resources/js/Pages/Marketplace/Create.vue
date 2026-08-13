@@ -3,6 +3,7 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import { t } from '@/utils/i18n';
 
+import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
 const form = useForm({
     listing_type: 'request',
     work_type: 'map',
@@ -88,6 +89,8 @@ const submit = () => {
 
                 <!-- Title & Description -->
                 <div class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-xl p-6 space-y-4">
+                    <EnglishOnlyNotice :compact="false" />
+
                     <div>
                         <label class="block text-sm font-bold text-white mb-2">{{ $t('Title') }}</label>
                         <input

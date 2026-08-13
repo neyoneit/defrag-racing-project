@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 
+import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
 const props = defineProps({
     listingId: Number,
     reviews: Array,
@@ -70,6 +71,7 @@ const timeAgo = (date) => {
             </div>
 
             <!-- Comment -->
+            <EnglishOnlyNotice />
             <textarea
                 v-model="comment"
                 :placeholder="$t('Write your review (optional)...')"

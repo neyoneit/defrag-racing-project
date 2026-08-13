@@ -11,6 +11,7 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { currentLocale, t } from '@/utils/i18n';
 
+import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
 const props = defineProps({
     wishes: { type: Array, default: () => [] },
     statuses: { type: Object, default: () => ({}) },
@@ -207,6 +208,8 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(currentLocale())
                     </div>
                     <div v-if="form.errors.project" class="text-red-400 text-sm mt-1">{{ form.errors.project }}</div>
                 </div>
+                <EnglishOnlyNotice :compact="false" />
+
                 <div>
                     <label class="block text-sm text-gray-300 mb-1">{{ $t('Title') }}</label>
                     <input v-model="form.title" type="text" maxlength="120"

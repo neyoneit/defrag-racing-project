@@ -11,6 +11,7 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { t } from '@/utils/i18n';
 
+import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
 const props = defineProps({
     application: { type: Object, default: null },
     applicantCount: { type: Number, default: 0 },
@@ -303,6 +304,8 @@ const submit = () => {
                     <!-- The two long answers share a row on wide screens, so
                          neither becomes a single field stretched across the
                          whole page. -->
+                    <EnglishOnlyNotice :compact="false" />
+
                     <div class="grid gap-5 lg:grid-cols-2">
                     <div>
                         <label class="block text-sm font-semibold text-gray-300 mb-2">

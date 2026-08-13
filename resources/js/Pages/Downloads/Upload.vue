@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import CategorySelect from '@/Components/Downloads/CategorySelect.vue';
 
+import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
 const props = defineProps({
     categories: Array,
     maxFileMb: Number,
@@ -106,6 +107,7 @@ const submit = () => {
                     <div>
                         <label class="block text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1.5 [&_span]:text-gray-700 [&_span]:normal-case [&_span]:tracking-normal"
                                v-html="$t('Description <span>(optional)</span>')"></label>
+                        <EnglishOnlyNotice />
                         <textarea
                             v-model="form.description"
                             rows="5"

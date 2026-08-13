@@ -2614,6 +2614,7 @@
     "Please read these terms carefully": "Внимательно прочитай эти условия",
     "Please select demo files to upload.": "Выбери файлы демо для загрузки.",
     "Please type \":phrase\" to confirm deletion": "Введи \":phrase\", чтобы подтвердить удаление",
+    "Please write this in English so the whole community can read it.": "Пишите здесь на английском, чтобы это могло прочитать всё сообщество.",
     "pmove_fixed, normally 1": "pmove_fixed, обычно 1",
     "pmove_fixed=0 - physics not fixed to framerate": "pmove_fixed=0 — физика не привязана к фреймрейту",
     "pmove_msec, normally 8": "pmove_msec, обычно 8",

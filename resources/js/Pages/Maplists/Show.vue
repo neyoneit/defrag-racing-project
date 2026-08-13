@@ -8,6 +8,7 @@ import InputLabel from '@/Components/Laravel/InputLabel.vue';
 import axios from 'axios';
 import { t } from '@/utils/i18n';
 
+import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
 const props = defineProps({
     maplist: Object,
     is_liked: Boolean,
@@ -432,6 +433,8 @@ const closeServerDropdown = () => {
 
                     <!-- Edit Mode -->
                     <div v-if="isEditing">
+                        <EnglishOnlyNotice :compact="false" />
+
                         <div class="mb-6">
                             <label class="block text-sm font-semibold text-blue-400 mb-2 uppercase tracking-wider">{{ $t('Name') }}</label>
                             <input

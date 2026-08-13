@@ -24,6 +24,7 @@ import draggable from 'vuedraggable';
 import 'vue-advanced-cropper/dist/style.css';
 import { t } from '@/utils/i18n';
 
+import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
 const props = defineProps({
     confirmsTwoFactorAuthentication: Boolean,
     sessions: Array,
@@ -1256,6 +1257,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs.
                         </div>
                     </div>
                     <div>
+                        <EnglishOnlyNotice />
                         <textarea v-model="aboutMeForm.content"
                             class="w-full bg-gray-800/60 border border-gray-700/50 rounded-lg p-3 text-sm text-white placeholder-gray-600 focus:border-amber-500/50 focus:outline-none resize-none"
                             rows="3" maxlength="500"
@@ -1754,6 +1756,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs.
                         <!-- Bio -->
                         <div>
                             <label class="block text-xs font-bold text-gray-400 mb-1">{{ $t('Bio / Portfolio Description') }}</label>
+                            <EnglishOnlyNotice />
                             <textarea
                                 v-model="mpProfile.bio"
                                 rows="4"

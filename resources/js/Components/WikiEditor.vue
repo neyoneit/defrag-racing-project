@@ -14,6 +14,7 @@ import { TextAlign } from '@tiptap/extension-text-align';
 import Placeholder from '@tiptap/extension-placeholder';
 import { t } from '@/utils/i18n';
 
+import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
 const props = defineProps({
     modelValue: { type: String, default: '' },
 });
@@ -200,6 +201,8 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="wiki-editor-wrapper">
+        <EnglishOnlyNotice />
+
         <!-- Toolbar -->
         <div class="flex flex-wrap items-center gap-0.5 bg-gray-900/40 border border-gray-700/50 rounded-t-lg px-2 py-1.5">
             <template v-if="!sourceMode">

@@ -3,6 +3,7 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { t } from '@/utils/i18n';
 
+import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
 const page = usePage();
 
 const props = defineProps({
@@ -1000,6 +1001,7 @@ const getParticipantStatusLabel = (status) => {
 
                             <div>
                                 <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Notes (optional)') }}</label>
+                                <EnglishOnlyNotice />
                                 <textarea
                                     v-model="submitForm.submission_notes"
                                     rows="3"
@@ -1147,6 +1149,8 @@ const getParticipantStatusLabel = (status) => {
                         <p class="text-sm text-blue-400 mb-4">{{ $t('You are within the 1-hour grace period. After this period, you will need to request edits from an administrator.') }}</p>
 
                         <form @submit.prevent="submitEdit" class="space-y-4">
+                            <EnglishOnlyNotice :compact="false" />
+
                             <div>
                                 <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Title *') }}</label>
                                 <input v-model="editForm.title" type="text" required class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50" />

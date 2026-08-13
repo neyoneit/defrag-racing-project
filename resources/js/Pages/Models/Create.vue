@@ -6,6 +6,7 @@ import ShadowViewer from '@/Components/ShadowViewer.vue';
 import { generateAllGifs, waitForTextures } from '@/utils/gifGenerator.js';
 import { t } from '@/utils/i18n';
 
+import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
 const DEBUG = false;
 
 const page = usePage();
@@ -419,6 +420,7 @@ function currentViewerModel() {
                         <label for="description" class="block text-sm font-bold text-white mb-2">
                             {{ $t('Description') }}
                         </label>
+                        <EnglishOnlyNotice />
                         <textarea
                             id="description"
                             v-model="formDescription"

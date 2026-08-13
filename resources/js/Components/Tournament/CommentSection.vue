@@ -5,6 +5,7 @@
     import { ref } from 'vue';
     import CommentPart from '@/Components/Tournament/CommentPart.vue';
 
+    import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
     const date = (created_at) => {
         return moment(created_at).fromNow();
     }
@@ -50,6 +51,7 @@
         </div>
 
         <div class="bg-blackop-30 p-4 rounded-md mt-5" v-show="showSection">
+            <EnglishOnlyNotice />
             <div class="flex justify-between items-center">
                 <textarea
                     v-model="form.comment"

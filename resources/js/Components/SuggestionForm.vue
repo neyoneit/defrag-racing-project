@@ -5,6 +5,7 @@
     import InputError from '@/Components/Laravel/InputError.vue';
     import InputLabel from '@/Components/Laravel/InputLabel.vue';
 
+    import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
     const props = defineProps({
         closeForm: Function,
         tournament: Object
@@ -47,6 +48,8 @@
 
             <div class="mt-2">
                 <form method="POST" enctype="multipart/form-data" @submit.prevent="submitSuggestionForm">
+                    <EnglishOnlyNotice :compact="false" />
+
                     <div class="">
                         <div class="">
                             <div>

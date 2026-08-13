@@ -11,6 +11,7 @@
     import rulesData from '@/rules';
     import { t } from '@/utils/i18n';
 
+    import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
     const props = defineProps({
         tournament: Object,
         url: String
@@ -172,6 +173,7 @@
 
                     <div class="mb-3">
                         <InputLabel for="description" :value="$t('Description')" />
+                        <EnglishOnlyNotice />
                         <textarea
                             id="description"
                             v-model="form.description"

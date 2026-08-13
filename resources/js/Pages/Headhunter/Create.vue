@@ -3,6 +3,7 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
 import { t } from '@/utils/i18n';
 
+import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
 const props = defineProps({
     maps: {
         type: Array,
@@ -154,6 +155,8 @@ const submit = () => {
                     <h1 class="text-2xl md:text-3xl font-black text-white mb-6">{{ $t('Create New Challenge') }}</h1>
 
                     <form @submit.prevent="submit" class="space-y-6">
+                        <EnglishOnlyNotice :compact="false" />
+
                         <!-- Title -->
                         <div>
                             <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Challenge Title *') }}</label>

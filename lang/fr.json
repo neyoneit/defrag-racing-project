@@ -2614,6 +2614,7 @@
     "Please read these terms carefully": "Merci de lire attentivement ces conditions",
     "Please select demo files to upload.": "Merci de sélectionner des fichiers demo à envoyer.",
     "Please type \":phrase\" to confirm deletion": "Merci de saisir \":phrase\" pour confirmer la suppression",
+    "Please write this in English so the whole community can read it.": "Écris ceci en anglais, pour que toute la communauté puisse le lire.",
     "pmove_fixed, normally 1": "pmove_fixed, normalement 1",
     "pmove_fixed=0 - physics not fixed to framerate": "pmove_fixed=0 - physique non fixée à la fréquence d'images",
     "pmove_msec, normally 8": "pmove_msec, normalement 8",

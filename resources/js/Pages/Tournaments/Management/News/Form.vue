@@ -1,5 +1,6 @@
 <script setup>
     import { ref } from 'vue';
+    import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
     import { useForm } from '@inertiajs/vue3';
     import FormSection from '@/Components/Laravel/FormSection.vue';
     import InputError from '@/Components/Laravel/InputError.vue';
@@ -130,6 +131,7 @@
     
                     <div class="mb-3">
                         <InputLabel for="user_id" :value="$t('Content')" />
+                        <EnglishOnlyNotice />
                         <textarea
                             id="content"
                             v-model="form.content"
