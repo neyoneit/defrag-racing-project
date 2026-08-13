@@ -74,11 +74,11 @@
 
                     <div v-else class="flex justify-center">
                         <span @click="showInvitationModal = true" class="text-gray-300 font-bold bg-grayop-700 cursor-pointer hover:bg-grayop-600 text-center rounded-lg p-3">
-                            {{ $t('Invite a VQ3 Player') }}
+                            {{ $t('Invite a CPM Player') }}
                         </span>
                     </div>
                 </div>
-    
+
                 <div class="col-span-1 lg:col-span-1 mt-3 lg:mt-0">
                     <div class="text-center text-xl font-medium text-gray-900 dark:text-gray-100">VQ3</div>
                     <div class="tech-line-vq3 mb-4"></div>

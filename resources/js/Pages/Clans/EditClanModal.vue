@@ -107,7 +107,7 @@
             <div class="p-5">
                 <div class="flex justify-between items-center">
                     <h2 class="font-semibold text-xl text-gray-200 leading-tight">
-                        {{ $t('Invite Player') }}
+                        {{ $t('Edit Clan') }}
                     </h2>
 
                     <div class="text-gray-200 cursor-pointer rounded-full hover:bg-grayop-700 p-1" @click="close">
