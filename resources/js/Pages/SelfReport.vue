@@ -86,12 +86,28 @@ watch(sort, reload);
 
 // Selection survives searching and re-sorting, so a player can collect runs
 // from several searches before withdrawing them in one go.
-const picked = ref(new Set());
+//
+// Keyed by id but holding the whole row, because that is the only copy of it
+// there will be. A run ticked on page 1 and then searched away is no longer in
+// `rows`, and the confirmation list has to name it anyway - id alone would
+// leave the player confirming a number.
+const picked = ref(new Map());
 const pickedCount = computed(() => picked.value.size);
 
-const toggle = (id) => {
-    const next = new Set(picked.value);
-    next.has(id) ? next.delete(id) : next.add(id);
+// Same order the list was read in, so the confirmation reads like the page it
+// was picked from rather than like insertion order.
+const pickedRows = computed(() => [...picked.value.values()]
+    .sort((a, b) => (a.mapname ?? '').localeCompare(b.mapname ?? '')
+        || (a.time ?? 0) - (b.time ?? 0)));
+
+// Nothing is sent from the bar itself. The last thing between a player and a
+// list of their own runs disappearing is a sentence they have to read. Sits
+// here rather than beside the form because unpick() closes it.
+const confirming = ref(false);
+
+const toggle = (record) => {
+    const next = new Map(picked.value);
+    next.has(record.id) ? next.delete(record.id) : next.set(record.id, record);
     picked.value = next;
 };
 
@@ -99,16 +115,29 @@ const allShownPicked = computed(() => rows.value.length > 0
     && rows.value.every((record) => picked.value.has(record.id)));
 
 const toggleAllShown = () => {
-    const next = new Set(picked.value);
+    const next = new Map(picked.value);
     if (allShownPicked.value) {
         rows.value.forEach((record) => next.delete(record.id));
     } else {
-        rows.value.forEach((record) => next.add(record.id));
+        rows.value.forEach((record) => next.set(record.id, record));
     }
     picked.value = next;
 };
 
-const clearPicked = () => { picked.value = new Set(); };
+const unpick = (id) => {
+    const next = new Map(picked.value);
+    next.delete(id);
+    picked.value = next;
+
+    // Emptying the list from inside the confirmation leaves nothing to
+    // confirm, so it steps back to the page rather than offering to send a
+    // batch of nothing.
+    if (next.size === 0) {
+        confirming.value = false;
+    }
+};
+
+const clearPicked = () => { picked.value = new Map(); };
 
 const form = useForm({
     record_ids: [],
@@ -117,10 +146,6 @@ const form = useForm({
     note: '',
     confirm: false,
 });
-
-// Nothing is sent from the bar itself. The last thing between a player and a
-// list of their own runs disappearing is a sentence they have to read.
-const confirming = ref(false);
 
 const askConfirm = () => {
     if (!form.confirm) {
@@ -131,7 +156,7 @@ const askConfirm = () => {
 };
 
 const submit = () => {
-    form.record_ids = [...picked.value];
+    form.record_ids = [...picked.value.keys()];
     form.post('/amnesty', {
         preserveScroll: true,
         onSuccess: () => {
@@ -322,7 +347,7 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                             class="flex items-center gap-4 p-3 cursor-pointer transition-colors"
                             :class="picked.has(record.id) ? 'bg-emerald-500/10' : 'hover:bg-white/[0.04]'">
 
-                            <input type="checkbox" :checked="picked.has(record.id)" @change="toggle(record.id)"
+                            <input type="checkbox" :checked="picked.has(record.id)" @change="toggle(record)"
                                 class="w-5 h-5 shrink-0 rounded bg-black/50 border-white/20 text-emerald-500 focus:ring-emerald-500/40" />
 
                             <img :src="thumb(record.map_thumbnail)" alt=""
@@ -533,6 +558,44 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                         <p class="text-gray-300 leading-relaxed mb-5">
                             {{ $t('This exists for runs that should never have counted. Abusing it to delete times you are simply not happy with costs you access to this section permanently.') }}
                         </p>
+
+                        <!-- The runs themselves, by name. Up to here the
+                             confirmation only said how many there were, and a
+                             selection is built across several searches and
+                             pages - so the one moment it matters, nobody could
+                             see what they had actually ticked. Each row can
+                             still be dropped from here, because finding the
+                             wrong one and having to go hunt for it again is
+                             how people end up sending it anyway. -->
+                        <div class="rounded-xl border border-white/10 bg-black/40 mb-3 overflow-hidden">
+                            <div class="px-3 py-2 border-b border-white/10 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                                {{ $tc('The run you are sending|The :count runs you are sending', pickedCount) }}
+                            </div>
+
+                            <div class="max-h-56 overflow-y-auto defrag-scrollbar divide-y divide-white/5" style="max-height: 14rem">
+                                <div v-for="record in pickedRows" :key="record.id"
+                                     class="flex items-center gap-3 px-3 py-2 text-sm">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="font-semibold text-white truncate">{{ record.mapname }}</div>
+                                        <div class="text-[11px] text-gray-500 flex flex-wrap gap-x-2">
+                                            <span class="uppercase">{{ record.physics }} {{ record.mode }}</span>
+                                            <span>{{ fmtDate(record.date_set) }}</span>
+                                            <span v-if="record.rank">{{ $t('Rank') }} {{ record.rank }}</span>
+                                        </div>
+                                    </div>
+
+                                    <span class="font-mono text-gray-200 whitespace-nowrap">{{ formatTime(record.time) }}</span>
+
+                                    <button type="button" @click="unpick(record.id)"
+                                            class="shrink-0 p-1 rounded text-gray-600 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                                            :title="$t('Remove from this batch')">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="rounded-xl border border-white/10 bg-black/40 p-3 mb-5 text-sm">
                             <div class="flex justify-between gap-3 py-0.5">
