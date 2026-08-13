@@ -877,9 +877,14 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                  there; this reads as the rest of the site, and the map, the
                  player and the record all link where they link everywhere
                  else here, which on the original they do not. -->
-            <div v-else-if="layout === 'oldschool'" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            <!-- Four to a row and not five. The card has to carry a full
+                 ip:port without shortening it, since that is the thing people
+                 are here to copy, and at five the text column comes up about
+                 40px short however small the thumbnail is made. At four it has
+                 room to spare. -->
+            <div v-else-if="layout === 'oldschool'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 <div v-for="server in filteredAndSortedServers" :key="server.id"
-                     :class="['rounded-xl border bg-black/40 backdrop-blur-sm p-4',
+                     :class="['rounded-xl border bg-black/40 backdrop-blur-sm p-3',
                               server.cheats ? 'border-red-500/50' : 'border-white/10']">
 
                     <CheatsBanner :cheats="server.cheats" />
@@ -894,7 +899,7 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                         <a :href="server.map ? `/maps/${encodeURIComponent(server.map)}` : '#'" class="shrink-0">
                             <img :src="`/storage/${server.mapdata?.thumbnail}`"
                                  @error="$event.target.src='/images/unknown.jpg'"
-                                 class="w-28 h-20 rounded-lg object-cover bg-gray-900 border border-white/10" />
+                                 class="w-24 h-16 rounded-lg object-cover bg-gray-900 border border-white/10" />
                         </a>
 
                         <div class="min-w-0 flex-1 text-xs space-y-1">
