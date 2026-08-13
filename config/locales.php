@@ -25,6 +25,12 @@ return [
         'cs' => 'Čeština',
         'ru' => 'Русский',
         'pl' => 'Polski',
+        'de' => 'Deutsch',
+        'fr' => 'Français',
+        'es' => 'Español',
+        'uk' => 'Українська',
+        'nl' => 'Nederlands',
+        'sv' => 'Svenska',
     ],
 
 ];

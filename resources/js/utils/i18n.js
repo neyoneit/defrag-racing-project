@@ -33,6 +33,12 @@ const MOMENT_LOCALES = {
     cs: () => import('moment/dist/locale/cs'),
     ru: () => import('moment/dist/locale/ru'),
     pl: () => import('moment/dist/locale/pl'),
+    de: () => import('moment/dist/locale/de'),
+    fr: () => import('moment/dist/locale/fr'),
+    es: () => import('moment/dist/locale/es'),
+    uk: () => import('moment/dist/locale/uk'),
+    nl: () => import('moment/dist/locale/nl'),
+    sv: () => import('moment/dist/locale/sv'),
 };
 
 const messages = ref({});
@@ -111,6 +117,9 @@ export const t = (key, replacements = {}) => {
  * as a wrong ending rather than as an error. Russian and Polish shipped that
  * way and printed "5 mapy" where Polish wants "5 map".
  *
+ * German, Dutch, Swedish and Spanish count the way English does and need no
+ * branch. French does: it takes the singular for zero as well as for one.
+ *
  * The three-form Slavic languages do not share one rule. Czech and Slovak use
  * the plain 1 / 2-4 / rest. Russian, Ukrainian and Polish repeat the middle
  * form at 22, 23, 24 and the last one through the teens, and they disagree at
@@ -129,6 +138,12 @@ const pluralIndex = (code, count) => {
         if (n >= 2 && n <= 4) return 1;
 
         return 2;
+    }
+
+    // French counts zero as singular: "0 point", "1 point", "2 points".
+    // English does not, so the default rule below would print "0 points".
+    if (code === 'fr') {
+        return n <= 1 ? 0 : 1;
     }
 
     if (code === 'ru' || code === 'uk' || code === 'pl') {
