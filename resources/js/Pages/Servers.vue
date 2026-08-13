@@ -1108,6 +1108,9 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
     padding-right: 12px;
     margin-left: -12px;
     margin-right: -12px;
+    /* Collapsed the padding has to go, or box-sizing keeps the box 12px tall
+       when max-height says 0 and the row never fully closes. */
+    padding-bottom: 0;
     transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
 }
 
@@ -1115,6 +1118,11 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
 .map-features-expanded .map-features-container {
     max-height: 200px;
     opacity: 1;
+    /* The icons sit on the bottom edge of this box, so their drop-shadow was
+       being sliced off flat. This is the room it needs; the negative margin
+       gives the space straight back so nothing below moves. */
+    padding-bottom: 12px;
+    margin-bottom: -12px;
     transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
 }
 
