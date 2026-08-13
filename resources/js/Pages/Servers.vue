@@ -903,8 +903,24 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                         </a>
 
                         <div class="min-w-0 flex-1 text-xs space-y-1">
+                            <!-- Where the address used to be printed. On the
+                                 original that address is itself the way in -
+                                 it says so at the top of the page - so a
+                                 button that connects belongs in its place
+                                 rather than beside it. The address stays
+                                 reachable: it is the button's tooltip, and
+                                 the copy icon next to it still hands it over
+                                 for anyone typing it somewhere else. -->
                             <div class="flex items-center gap-1.5">
-                                <span class="font-mono text-blue-300 truncate">{{ server.ip }}:{{ server.port }}</span>
+                                <a :href="`defrag://${server.ip}:${server.port}`"
+                                   :title="`${server.ip}:${server.port}`"
+                                   :class="server.defrag?.toLowerCase().includes('cpm') ? 'connect-button-cpm' : 'connect-button-vq3'"
+                                   class="connect-button flex items-center gap-1 px-2 py-1 rounded text-white font-bold transition-all hover:scale-[1.03]">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 shrink-0">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
+                                    </svg>
+                                    {{ $t('Connect') }}
+                                </a>
                                 <CopyButton :text="server.ip + ':' + server.port" size="xs" />
                             </div>
                             <a v-if="server.map" :href="`/maps/${encodeURIComponent(server.map)}`"
