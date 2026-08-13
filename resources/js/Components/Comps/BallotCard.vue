@@ -55,7 +55,8 @@
 </script>
 
 <template>
-    <div class="rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm overflow-hidden flex flex-col">
+    <div class="rounded-xl border bg-black/40 backdrop-blur-sm overflow-hidden flex flex-col transition-colors"
+         :class="mayVote && isOpen ? 'border-white/15 hover:border-white/25' : 'border-white/10'">
         <!-- Thumbnail, doubling as the preview trigger -->
         <div class="relative aspect-video bg-black/40">
             <img
@@ -116,30 +117,49 @@
                     </div>
 
                     <div v-else class="flex items-center gap-2">
+                        <!-- A row that can be voted on has to look like a
+                             control before it is used, not only after. It used
+                             to be a near-invisible border round a grey bar,
+                             which reads as a label - so it carries a radio
+                             mark, a border you can see and a hover that lights
+                             up. Once voting is closed all of that comes off
+                             and it goes back to being a result. -->
                         <button
                             type="button"
                             :disabled="!mayVote || !isOpen"
                             @click="emit('vote', { candidate: candidate.id, physics })"
-                            class="flex-1 flex items-center gap-2 rounded-lg border px-2.5 py-1.5 transition-colors disabled:cursor-not-allowed"
+                            :title="mayVote && isOpen ? $t('Vote for this map in :physics', { physics: physics.toUpperCase() }) : ''"
+                            class="flex-1 flex items-center gap-2 rounded-lg border px-2.5 py-2 transition-all disabled:cursor-not-allowed"
                             :class="votedIn(physics)
-                                ? 'bg-blue-600/25 border-blue-500/50 text-white'
-                                : 'bg-black/40 backdrop-blur-sm border-white/5 text-gray-300 hover:bg-black/60 disabled:hover:bg-black/40'"
+                                ? 'bg-blue-600/30 border-blue-400/60 text-white shadow-[0_0_18px_-6px_rgba(96,165,250,0.6)]'
+                                : (mayVote && isOpen
+                                    ? 'cursor-pointer bg-white/[0.04] border-white/20 text-gray-200 hover:bg-blue-500/15 hover:border-blue-400/60'
+                                    : 'bg-black/40 border-white/10 text-gray-400')"
                         >
+                            <!-- The radio mark. Nothing else on the card says
+                                 "one of these two, pick one". -->
+                            <span class="flex-shrink-0 w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center transition-colors"
+                                  :class="votedIn(physics)
+                                      ? 'border-blue-300'
+                                      : (mayVote && isOpen ? 'border-white/40' : 'border-white/15')">
+                                <span v-if="votedIn(physics)" class="w-1.5 h-1.5 rounded-full bg-blue-300"></span>
+                            </span>
+
                             <span class="text-[10px] font-black uppercase tracking-wider w-8 text-left"
-                                  :class="votedIn(physics) ? 'text-blue-300' : 'text-gray-500'">
+                                  :class="votedIn(physics) ? 'text-blue-200' : 'text-gray-400'">
                                 {{ physics }}
                             </span>
 
-                            <span class="flex-1 h-1.5 rounded-full bg-black/40 overflow-hidden">
+                            <span class="flex-1 h-1.5 rounded-full bg-black/50 overflow-hidden">
                                 <span
                                     class="block h-full rounded-full transition-all duration-500"
-                                    :class="votedIn(physics) ? 'bg-blue-400' : 'bg-gray-600'"
+                                    :class="votedIn(physics) ? 'bg-blue-400' : 'bg-gray-500'"
                                     :style="{ width: share(physics) + '%' }"
                                 ></span>
                             </span>
 
                             <span class="text-xs font-bold tabular-nums w-6 text-right"
-                                  :class="votedIn(physics) ? 'text-white' : 'text-gray-400'">
+                                  :class="votedIn(physics) ? 'text-white' : 'text-gray-300'">
                                 {{ candidate.votes[physics] }}
                             </span>
                         </button>
