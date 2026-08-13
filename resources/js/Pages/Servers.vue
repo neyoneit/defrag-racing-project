@@ -630,7 +630,7 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                         <div v-if="server.online_players.length > 0" :class="['mb-4 mt-2 map-hover-fade relative z-20', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
                             <div class="rounded-lg p-2 border border-white/10 backdrop-blur-[4px]" style="background: rgba(71,85,105,0.55);">
                                 <div class="space-y-1.5">
-                                    <OnlinePlayer v-for="player in server.online_players" :key="player.name" :player="player" />
+                                    <OnlinePlayer v-for="player in server.online_players" :key="player.id" :player="player" :siblings="server.online_players" />
                                 </div>
                             </div>
                         </div>
@@ -768,7 +768,7 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                             <!-- Players List - Expands on hover -->
                             <div v-if="server.online_players.length > 0" class="mt-0 max-h-0 group-hover:max-h-96 overflow-hidden transition-all duration-300">
                                 <div class="pt-2 space-y-1">
-                                    <OnlinePlayer v-for="player in server.online_players" :key="player.name" :player="player" />
+                                    <OnlinePlayer v-for="player in server.online_players" :key="player.id" :player="player" :siblings="server.online_players" />
                                 </div>
                             </div>
                         </div>
@@ -879,7 +879,7 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                             <!-- Players List - Expands on hover -->
                             <div v-if="server.online_players.length > 0" class="mt-0 max-h-0 group-hover:max-h-96 overflow-hidden transition-all duration-300">
                                 <div class="pt-2 space-y-1">
-                                    <OnlinePlayer v-for="player in server.online_players" :key="player.name" :player="player" />
+                                    <OnlinePlayer v-for="player in server.online_players" :key="player.id" :player="player" :siblings="server.online_players" />
                                 </div>
                             </div>
                         </div>
@@ -985,7 +985,7 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                             <span>{{ $t('Player') }}</span>
                             <span>{{ $t('Time') }}</span>
                         </div>
-                        <OnlinePlayer v-for="player in server.online_players" :key="player.name" :player="player" />
+                        <OnlinePlayer v-for="player in server.online_players" :key="player.id" :player="player" :siblings="server.online_players" />
                     </div>
 
                     <div v-else class="mt-3 text-xs text-gray-600 italic">

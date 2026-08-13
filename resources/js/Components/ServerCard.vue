@@ -106,7 +106,7 @@
 
                 <!-- Online Players -->
                 <div class="mt-4 relative">
-                    <OnlinePlayer v-for="player in server.online_players" :player="player" :key="player.id" />
+                    <OnlinePlayer v-for="player in server.online_players" :player="player" :key="player.id" :siblings="server.online_players" />
                 </div>
             </div>
         </div>
