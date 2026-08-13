@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\PageResource\Pages;
 use App\Filament\Resources\PageResource\RelationManagers;
+use App\Filament\Forms\TranslationTabs;
 use App\Models\Page;
 use FilamentTiptapEditor\TiptapEditor;
 use Filament\Forms;
@@ -47,6 +48,18 @@ class PageResource extends Resource
                 ->required()
                 ->profile('default')
                 ->columnSpanFull(),
+
+            // English above is the source. Anything left blank below falls
+            // back to it, so one language filled in is a normal state.
+            TranslationTabs::make(fn (string $locale) => [
+                Forms\Components\TextInput::make(TranslationTabs::field($locale, 'title'))
+                    ->label('Title')
+                    ->maxLength(255),
+                TiptapEditor::make(TranslationTabs::field($locale, 'content'))
+                    ->label('Content')
+                    ->profile('default')
+                    ->columnSpanFull(),
+            ]),
         ]);
     }
 

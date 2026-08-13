@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\AnnouncementResource\Pages;
 use App\Filament\Resources\AnnouncementResource\RelationManagers;
+use App\Filament\Forms\TranslationTabs;
 use App\Models\Announcement;
 use FilamentTiptapEditor\TiptapEditor;
 use Filament\Forms;
@@ -41,6 +42,18 @@ class AnnouncementResource extends Resource
                 Forms\Components\TextInput::make('type')
                     ->required()
                     ->maxLength(255),
+
+                // English above is the source. A blank field below falls back
+                // to it, one field at a time.
+                TranslationTabs::make(fn (string $locale) => [
+                    Forms\Components\TextInput::make(TranslationTabs::field($locale, 'title'))
+                        ->label('Title')
+                        ->maxLength(255),
+                    TiptapEditor::make(TranslationTabs::field($locale, 'text'))
+                        ->label('Text')
+                        ->profile('default')
+                        ->columnSpanFull(),
+                ]),
             ]);
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -9,12 +10,15 @@ use Illuminate\Support\Facades\Cache;
 class Announcement extends Model
 {
     use HasFactory;
+    use HasTranslations;
 
     protected $fillable = [
         'title',
         'text',
         'type'
     ];
+
+    public array $translatable = ['title', 'text'];
 
     protected static function booted(): void {
         static::created(function (Announcement $announcement) {

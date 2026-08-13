@@ -16,7 +16,11 @@ class ChangelogController extends Controller
     }
 
     public function announcements (Request $request) {
-        $announcements = Announcement::where('type', 'home')->orderBy('created_at', 'DESC')->get();
+        $announcements = Announcement::where('type', 'home')
+            ->with('translations')
+            ->orderBy('created_at', 'DESC')
+            ->get()
+            ->map->translated();
 
         return Inertia::render('Announcements')->with('announcements', $announcements);
     }
