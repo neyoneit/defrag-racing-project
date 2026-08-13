@@ -44,19 +44,28 @@
         </template>
 
         <template #content>
-            <button
-                v-for="(name, code) in locales"
-                :key="code"
-                type="button"
-                @click="choose(code)"
-                class="flex w-full items-center justify-between px-4 py-2 text-sm leading-5 text-left transition-all hover:bg-white/5"
-                :class="code === current ? 'text-blue-400 font-semibold' : 'text-gray-300'"
-            >
-                {{ name }}
-                <svg v-if="code === current" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                </svg>
-            </button>
+            <!-- The menu is fixed to the viewport, so anything past the bottom
+                 edge cannot be scrolled to: the page scrolls underneath it and
+                 the last languages stay out of reach. Ten of them are about
+                 370px tall, which is more than a phone held sideways has, so
+                 the height is capped here and the list scrolls on its own.
+                 The cap is inline because `defrag-scrollbar` carries one of its
+                 own at 450px, and only an inline style is certain to win. -->
+            <div class="defrag-scrollbar" style="max-height: calc(100vh - 5rem)">
+                <button
+                    v-for="(name, code) in locales"
+                    :key="code"
+                    type="button"
+                    @click="choose(code)"
+                    class="flex w-full items-center justify-between px-4 py-2 text-sm leading-5 text-left transition-all hover:bg-white/5"
+                    :class="code === current ? 'text-blue-400 font-semibold' : 'text-gray-300'"
+                >
+                    {{ name }}
+                    <svg v-if="code === current" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                    </svg>
+                </button>
+            </div>
         </template>
     </Dropdown>
 </template>
