@@ -1099,6 +1099,15 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
     max-height: 0;
     overflow: hidden;
     opacity: 0;
+    /* The overflow is here to animate the height, but it clips sideways too,
+       and it was cutting the glow off the Functions label and the icons in a
+       straight vertical line. Padding gives the glow room to land inside the
+       box; the negative margin of the same size puts the row back where it
+       was. Only horizontal - the vertical clip is what does the animation. */
+    padding-left: 12px;
+    padding-right: 12px;
+    margin-left: -12px;
+    margin-right: -12px;
     transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
 }
 
