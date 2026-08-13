@@ -54,14 +54,22 @@ const formatRecordDate = (value) => {
     return `${yy}/${mm}/${dd}`;
 };
 
-// Get layout from cookie or default to 'large'
+// Three ways to read this page, kept in a cookie for a year.
+//
+// `large` is called that in the cookie and Modern on screen: it was the only
+// layout for a long time and renaming the stored value would have reset the
+// choice for everyone still carrying the old one.
+const LAYOUTS = ['large', 'compact', 'oldschool'];
+
 const getLayoutFromCookie = () => {
     const cookies = document.cookie.split(';');
     const layoutCookie = cookies.find(c => c.trim().startsWith('servers_layout='));
-    return layoutCookie ? layoutCookie.split('=')[1] : 'large';
+    const stored = layoutCookie ? layoutCookie.split('=')[1] : null;
+
+    return LAYOUTS.includes(stored) ? stored : 'large';
 };
 
-const layout = ref(getLayoutFromCookie()); // 'large' or 'compact'
+const layout = ref(getLayoutFromCookie());
 
 // Filters - restore from localStorage
 const savedFilters = JSON.parse(localStorage.getItem('servers_filters') || '{}');
@@ -143,8 +151,8 @@ const getServerName = (name) => {
     return name.replace(colorRegex, '');
 }
 
-const toggleLayout = () => {
-    layout.value = layout.value === 'large' ? 'compact' : 'large';
+const setLayout = (value) => {
+    layout.value = value;
     // Save to cookie (expires in 1 year)
     const expires = new Date();
     expires.setFullYear(expires.getFullYear() + 1);
@@ -391,28 +399,35 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                             </button>
                         </div>
 
-                        <!-- Additional Options. These three are toggles, not a
-                             single choice like the three groups above, so the
-                             active fill is solid rather than a tint. -->
+                        <!-- What to leave out. The word "Hide" was on both
+                             buttons and is now said once, by the chip that
+                             governs them - the buttons name the thing, not the
+                             verb. These are toggles rather than a single
+                             choice, so the active fill is solid and not a
+                             tint like the groups that pick one of several. -->
                         <div class="flex flex-wrap items-stretch rounded-lg border border-amber-400/25 bg-amber-500/[0.07] overflow-hidden">
-                            <span class="flex items-center px-2.5 py-1.5 bg-amber-500/10 text-[11px] font-bold text-amber-300/80 uppercase whitespace-nowrap">{{ $t('Options:') }}</span>
-                            <button @click="filters.hideEmpty = !filters.hideEmpty" :class="filters.hideEmpty ? 'bg-amber-500/40 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-amber-400/20 text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 flex-shrink-0">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
-                                </svg>
-                                {{ $t('Hide Empty') }}
+                            <span class="flex items-center px-2.5 py-1.5 bg-amber-500/10 text-[11px] font-bold text-amber-300/80 uppercase whitespace-nowrap">{{ $t('Hide:') }}</span>
+                            <button @click="filters.hideEmpty = !filters.hideEmpty" :class="filters.hideEmpty ? 'bg-amber-500/40 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-amber-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                {{ $t('Empty') }}
                             </button>
-                            <button @click="filters.showDetails = !filters.showDetails" :class="!filters.showDetails ? 'bg-amber-500/40 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-amber-400/20 text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 flex-shrink-0">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
-                                </svg>
-                                {{ $t('Hide Details') }}
+                            <button @click="filters.showDetails = !filters.showDetails" :class="!filters.showDetails ? 'bg-amber-500/40 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-amber-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                {{ $t('Details') }}
                             </button>
-                            <button @click="toggleLayout" :class="layout !== 'large' ? 'bg-amber-500/40 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-amber-400/20 text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1.5">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 flex-shrink-0">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
-                                </svg>
+                        </div>
+
+                        <!-- Layout is a choice of one, not a switch, so it is
+                             its own group rather than a third toggle sitting
+                             among things it has nothing to do with. -->
+                        <div class="flex flex-wrap items-stretch rounded-lg border border-rose-400/25 bg-rose-500/[0.07] overflow-hidden">
+                            <span class="flex items-center px-2.5 py-1.5 bg-rose-500/10 text-[11px] font-bold text-rose-300/80 uppercase whitespace-nowrap">{{ $t('View:') }}</span>
+                            <button @click="setLayout('large')" :class="layout === 'large' ? 'bg-rose-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-rose-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                {{ $t('Modern') }}
+                            </button>
+                            <button @click="setLayout('compact')" :class="layout === 'compact' ? 'bg-rose-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-rose-400/20 text-xs font-bold transition-colors whitespace-nowrap">
                                 {{ $t('Compact') }}
+                            </button>
+                            <button @click="setLayout('oldschool')" :class="layout === 'oldschool' ? 'bg-rose-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-rose-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                {{ $t('Oldschool') }}
                             </button>
                         </div>
                     </div>
@@ -628,7 +643,7 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
             </div>
 
             <!-- Compact List Layout - Split by Physics -->
-            <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div v-else-if="layout === 'compact'" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- VQ3 Servers (Left) -->
                 <div class="space-y-3">
                     <div class="flex items-center gap-3 mb-4 px-4">
@@ -849,6 +864,79 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
 
                     <div v-if="filteredAndSortedServers.filter(s => s.defrag.toLowerCase().includes('cpm')).length === 0" class="text-center py-8  bg-white/5 rounded-xl border border-white/10">
                         <p class="text-gray-500 text-sm">{{ $t('No CPM servers found') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Oldschool Layout: the shape of the q3df.org serverlist, three
+                 boxes to a row, each one a thumbnail beside the address and a
+                 plain table of who is on. Everything is stated rather than
+                 revealed on hover, which is the whole appeal of it.
+
+                 The shape only. Its grey-on-black and its table borders stay
+                 there; this reads as the rest of the site, and the map, the
+                 player and the record all link where they link everywhere
+                 else here, which on the original they do not. -->
+            <div v-else-if="layout === 'oldschool'" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                <div v-for="server in filteredAndSortedServers" :key="server.id"
+                     :class="['rounded-xl border bg-black/40 backdrop-blur-sm p-4',
+                              server.cheats ? 'border-red-500/50' : 'border-white/10']">
+
+                    <CheatsBanner :cheats="server.cheats" />
+
+                    <div class="flex items-center gap-2 mb-3">
+                        <img v-if="server.location" :src="`/images/flags/${server.location}.png`" :title="server.location"
+                             class="w-5 h-3.5 rounded shrink-0" @error="$event.target.style.display='none'" />
+                        <h3 class="font-bold text-sm truncate" v-html="q3tohtml(server.name)"></h3>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <a :href="server.map ? `/maps/${encodeURIComponent(server.map)}` : '#'" class="shrink-0">
+                            <img :src="`/storage/${server.mapdata?.thumbnail}`"
+                                 @error="$event.target.src='/images/unknown.jpg'"
+                                 class="w-28 h-20 rounded-lg object-cover bg-gray-900 border border-white/10" />
+                        </a>
+
+                        <div class="min-w-0 flex-1 text-xs space-y-1">
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-mono text-blue-300 truncate">{{ server.ip }}:{{ server.port }}</span>
+                                <CopyButton :text="server.ip + ':' + server.port" size="xs" />
+                            </div>
+                            <a v-if="server.map" :href="`/maps/${encodeURIComponent(server.map)}`"
+                               class="block font-bold text-white hover:text-blue-400 transition-colors truncate">{{ server.map }}</a>
+                            <div class="uppercase" :class="server.defrag?.toLowerCase().includes('cpm') ? 'text-purple-300' : 'text-blue-300'">
+                                {{ server.defrag }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- The map record, exactly where the original put it. -->
+                    <div v-if="server.besttime_time && server.besttime_time > 0"
+                         class="mt-3 pt-2 border-t border-white/10 text-xs">
+                        <span class="text-gray-500 font-bold uppercase tracking-wide">{{ $t('Best Time') }}</span>
+                        <a :href="server.besttime_url ? `/profile/${server.besttime_url}` : '#'"
+                           class="flex items-center gap-1.5 mt-1 hover:bg-white/5 rounded px-1 -mx-1 py-0.5 transition-colors">
+                            <img v-if="server.besttime_country" :src="`/images/flags/${server.besttime_country}.png`"
+                                 class="w-4 h-3 rounded shrink-0" @error="$event.target.style.display='none'" />
+                            <span class="truncate" v-html="q3tohtml(server.besttime_name || '')"></span>
+                            <span class="ml-auto font-mono font-bold text-yellow-400 shrink-0">{{ formatTime(server.besttime_time) }}</span>
+                        </a>
+                    </div>
+
+                    <!-- Players, then spectators, as two plain lists. Uses the
+                         same row component as everywhere else, so the flag,
+                         the profile link, the padlock and the Twitch dot all
+                         come along rather than being rebuilt here. -->
+                    <div v-if="server.online_players.length > 0" class="mt-3">
+                        <div class="grid grid-cols-[1fr_auto] gap-x-3 text-[10px] font-bold uppercase tracking-wide text-gray-500 border-b border-white/10 pb-1 mb-1">
+                            <span>{{ $t('Player') }}</span>
+                            <span>{{ $t('Time') }}</span>
+                        </div>
+                        <OnlinePlayer v-for="player in server.online_players" :key="player.name" :player="player" />
+                    </div>
+
+                    <div v-else class="mt-3 text-xs text-gray-600 italic">
+                        {{ $t('No players online') }}
                     </div>
                 </div>
             </div>
