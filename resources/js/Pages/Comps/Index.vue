@@ -155,30 +155,36 @@ export default {
              as a page from somewhere else. -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
-                <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">
-                    {{ $t('Comps') }}
-                </h1>
-                <p class="text-gray-400 mt-2 max-w-3xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                    {{ $t('Every week the site draws five maps, everyone votes, and the winners are played for a week. Nobody organises it and nobody can forget to.') }}
-                </p>
+                <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 lg:gap-8">
+                    <div class="min-w-0">
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">
+                            {{ $t('Comps') }}
+                        </h1>
+                        <p class="text-gray-400 mt-2 max-w-3xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                            {{ $t('Every week the site draws five maps, everyone votes, and the winners are played for a week. Nobody organises it and nobody can forget to.') }}
+                        </p>
+                    </div>
+
+                    <!-- Opposite the intro rather than below it. The first
+                         weeks of anything new go wrong somewhere, and a player
+                         whose run scored oddly needs to know it is worth
+                         telling somebody rather than assuming that is how it
+                         works. Switched off in admin once it has run clean. -->
+                    <section v-if="betaNotice"
+                             class="flex-shrink-0 lg:max-w-sm rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-sm px-4 py-3">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 flex-shrink-0 text-amber-400 mt-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm0 6l7.5 13h-15L12 8zm-1 3v4h2v-4h-2zm0 5v2h2v-2h-2z" /></svg>
+                            <p class="text-sm text-amber-100/90 leading-snug">
+                                <span class="font-bold">{{ $t('Comps is brand new.') }}</span>
+                                {{ $t('Expect a few rough edges in the first weeks. If something does not look right, tell neyo and it gets sorted.') }}
+                            </p>
+                        </div>
+                    </section>
+                </div>
             </div>
         </div>
 
     <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12 space-y-10" style="margin-top: -22rem;">
-
-        <!-- The first weeks of anything new go wrong somewhere, and a player
-             whose run scored oddly needs to know it is worth telling somebody
-             rather than assuming that is how it works. Switched off in admin
-             once it has run clean. -->
-        <section v-if="betaNotice" class="rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-sm px-4 py-3">
-            <div class="flex items-start gap-3">
-                <svg class="w-5 h-5 flex-shrink-0 text-amber-400 mt-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm0 6l7.5 13h-15L12 8zm-1 3v4h2v-4h-2zm0 5v2h2v-2h-2z" /></svg>
-                <p class="text-sm text-amber-100/90 leading-snug">
-                    <span class="font-bold">{{ $t('Comps is brand new.') }}</span>
-                    {{ $t('Expect a few rough edges in the first weeks. If something does not look right, tell neyo and it gets sorted.') }}
-                </p>
-            </div>
-        </section>
 
         <!-- What a week pays and who is paying for it. Sits above everything
              else because it is the answer to the first question anybody asks
