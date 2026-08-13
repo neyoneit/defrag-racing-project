@@ -48,13 +48,52 @@ export default {
 
     const categoryLabel = (category) => (CATEGORY_LABELS[category] ?? (() => category))();
 
-    // The word "admin" is a link, and it sits in a different place in every
-    // language - mid-sentence in English, at the end in some others - so it
-    // goes in as a placeholder the translator can move rather than as two
-    // fragments glued around one fixed word order.
-    const betaNoticeHtml = computed(() => t(
-        'Expect a few rough edges in the first weeks. If something does not look right, tell :admin and it gets sorted.',
-        { admin: `<a href="${props.adminUrl}" class="font-bold underline decoration-amber-400/40 hover:text-amber-50">${t('the admin')}</a>` },
+    // Several sentences link the word "admin", and it sits in a different
+    // place in each language - mid-sentence in English, at the end in some of
+    // the others - so it goes in as a placeholder the translator can move
+    // rather than as two fragments glued around one fixed word order.
+    //
+    // t() leaves a placeholder it was not given, so the translated line is
+    // split around what remains. That keeps the link an Inertia Link rather
+    // than raw HTML: v-html would work but would navigate the whole page and
+    // put markup into the language files.
+    //
+    // It takes the translated line, not the key, on purpose: lang:sync only
+    // sees literals sitting directly inside t(), so a key passed through a
+    // helper is a key that never reaches the language files.
+    //
+    // Every sentence below is phrased so the linked word is the subject. One
+    // link text has to serve all of them, and an inflected language gives a
+    // subject and an object different endings - "vyplacI admin" against
+    // "napis adminovi" - so a sentence that needs the other case would read as
+    // broken grammar in half the languages we ship.
+    const aroundAdmin = (line) => {
+        const at = line.indexOf(':admin');
+
+        if (at === -1) {
+            return { before: line, after: '' };
+        }
+
+        return { before: line.slice(0, at), after: line.slice(at + ':admin'.length) };
+    };
+
+    const betaLine = computed(() => aroundAdmin(
+        t('Expect a few rough edges in the first weeks. If something does not look right, :admin will sort it out.'),
+    ));
+
+    const prizeFundedLine = computed(() => aroundAdmin(
+        t('The first :count weeklies are paid out by :admin from own funds: :total EUR in total.', {
+            count: props.prize?.funded_weeks,
+            total: props.prize?.funded_total,
+        }),
+    ));
+
+    const prizeCommunityLine = computed(() => aroundAdmin(
+        t('Paid out by :admin or by the community.'),
+    ));
+
+    const prizeLaterLine = computed(() => aroundAdmin(
+        t('Later weeks may be paid out by :admin again or by the community. Write "comps" in the note when you donate and it goes into the prize pool rather than towards the maintenance of the site.'),
     ));
 
     // Totals per ballot, so each bar can show a share rather than a bare count.
@@ -171,7 +210,7 @@ export default {
                             {{ $t('Comps') }}
                         </h1>
                         <p class="text-gray-400 mt-2 max-w-3xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                            {{ $t('Every week the site draws five maps, everyone votes, and the winners are played for a week. Nobody organises it and nobody can forget to.') }}
+                            {{ $t('Every week the site draws five maps, everyone votes, and the map winners for both physics are played for a week. Nobody organises it and nobody can forget to.') }}
                         </p>
                     </div>
 
@@ -186,7 +225,7 @@ export default {
                             <svg class="w-5 h-5 flex-shrink-0 text-amber-400 mt-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm0 6l7.5 13h-15L12 8zm-1 3v4h2v-4h-2zm0 5v2h2v-2h-2z" /></svg>
                             <p class="text-sm text-amber-100/90 leading-snug">
                                 <span class="font-bold">{{ $t('Comps is brand new.') }}</span>
-                                <span v-html="betaNoticeHtml"></span>
+                                <span>{{ betaLine.before }}<Link :href="adminUrl" class="font-bold underline decoration-amber-400/40 hover:text-amber-50">{{ $t('the admin') }}</Link>{{ betaLine.after }}</span>
                             </p>
                         </div>
                     </section>
@@ -194,7 +233,11 @@ export default {
             </div>
         </div>
 
-    <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12 space-y-10" style="margin-top: -22rem;">
+    <!-- Six units between sections, not ten. Ten was set when the page was
+         three big boxes; with the header block above them it left a hole
+         between the status strip and the ballot that read as a gap rather
+         than a break. -->
+    <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12 space-y-6" style="margin-top: -22rem;">
 
         <!-- The prize and your own standing are one header block, spaced
              tightly against each other. The page's 10-unit rhythm is for
@@ -237,22 +280,21 @@ export default {
 
                 <div class="min-w-0 flex-1">
                     <p class="text-sm text-gray-200">
-                        <span v-if="prize.self_funded">
-                            {{ $t('The first :count weeklies are paid out by neyo: :total EUR in total.', { count: prize.funded_weeks, total: prize.funded_total }) }}
-                        </span>
-                        <span v-else>
-                            {{ $t('Paid out by neyo or by the community.') }}
-                        </span>
+                        <span v-if="prize.self_funded">{{ prizeFundedLine.before }}<Link :href="adminUrl" class="font-bold underline decoration-emerald-400/40 hover:text-white">{{ $t('the admin') }}</Link>{{ prizeFundedLine.after }}</span>
+                        <span v-else>{{ prizeCommunityLine.before }}<Link :href="adminUrl" class="font-bold underline decoration-emerald-400/40 hover:text-white">{{ $t('the admin') }}</Link>{{ prizeCommunityLine.after }}</span>
                     </p>
                     <p class="mt-1.5 text-sm text-gray-500 leading-snug">
-                        {{ $t('Later weeks may be paid out by neyo again or by the community. Write "comps" in the note when you donate and it goes into the prize pool rather than towards the maintenance of the site.') }}
-                        <!-- Split off rather than linked mid-sentence: the
+                        <span>{{ prizeLaterLine.before }}<Link :href="adminUrl" class="underline decoration-white/20 hover:text-gray-300">{{ $t('the admin') }}</Link>{{ prizeLaterLine.after }}</span>
+                        <!-- The space is written out: Vue drops whitespace
+                             between elements when it contains a newline, which
+                             ran this straight into the sentence above it.
+
+                             Split off rather than linked mid-sentence: the
                              clause lands in a different place in every
                              language, and a link glued into one word order
                              breaks in the other eight. -->
-                        <Link :href="route('donations.index')" class="text-gray-400 underline decoration-white/20 hover:text-gray-200">
-                            {{ $t('See everything donations pay for.') }}
-                        </Link>
+                        {{ ' ' }}
+                        <Link :href="route('donations.index')" class="text-gray-400 underline decoration-white/20 hover:text-gray-200">{{ $t('See everything donations pay for.') }}</Link>
                     </p>
                 </div>
 
@@ -271,46 +313,46 @@ export default {
              ballot is open - but it is a status line, not the point of the
              page, and four tall cards pushed the actual competition below the
              fold. -->
-        <section v-if="me" class="rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm px-4 py-2.5">
+        <section v-if="me" class="rounded-xl border border-white/10 bg-white/[0.04] backdrop-blur-sm px-4 py-3">
             <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
-                <span class="text-[10px] font-black uppercase tracking-widest text-gray-500">{{ $t('Your comps') }}</span>
+                <span class="text-[11px] font-black uppercase tracking-widest text-gray-300">{{ $t('Your comps') }}</span>
 
                 <!-- Wildcards. Gold only when there is one to spend, so the
                      strip stays quiet the rest of the time. -->
                 <span class="inline-flex items-center gap-1.5"
                       :title="totalSpent > 0 ? $t('Already spent: :count', { count: totalSpent }) : ''">
-                    <svg class="w-3.5 h-3.5" :class="totalHeld > 0 ? 'text-amber-400' : 'text-gray-700'" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4-6.2-4.6-6.2 4.6 2.4-7.4L2 9.4h7.6z" /></svg>
-                    <span class="text-sm font-black tabular-nums" :class="totalHeld > 0 ? 'text-amber-300' : 'text-gray-600'">{{ totalHeld }}</span>
-                    <span class="text-[11px] text-gray-500">
+                    <svg class="w-3.5 h-3.5" :class="totalHeld > 0 ? 'text-amber-400' : 'text-gray-500'" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4-6.2-4.6-6.2 4.6 2.4-7.4L2 9.4h7.6z" /></svg>
+                    <span class="text-base font-black tabular-nums" :class="totalHeld > 0 ? 'text-amber-300' : 'text-gray-300'">{{ totalHeld }}</span>
+                    <span class="text-xs text-gray-400">
                         {{ totalHeld > 0 ? heldBreakdown : $t('Wildcards') }}
                     </span>
                 </span>
 
-                <span class="hidden sm:block h-4 w-px bg-white/10"></span>
+                <span class="hidden sm:block h-4 w-px bg-white/15"></span>
 
                 <!-- Progress to the next one, as one line per physics. -->
                 <span class="inline-flex items-center gap-3">
-                    <span class="text-[11px] text-gray-500">{{ $t('Next wildcard') }}</span>
+                    <span class="text-xs text-gray-400">{{ $t('Next wildcard') }}</span>
                     <span v-for="physics in PHYSICS" :key="physics" class="inline-flex items-center gap-1.5">
-                        <span class="text-[9px] font-black uppercase tracking-wider text-gray-600">{{ physics }}</span>
-                        <span class="w-12 h-1 rounded-full bg-black/50 overflow-hidden">
-                            <span class="block h-full rounded-full bg-amber-400/70"
+                        <span class="text-[10px] font-black uppercase tracking-wider text-gray-400">{{ physics }}</span>
+                        <span class="w-12 h-1.5 rounded-full bg-black/60 overflow-hidden">
+                            <span class="block h-full rounded-full bg-amber-400"
                                   :style="{ width: (((me.wins[physics] % winsPerWildcard) / winsPerWildcard) * 100) + '%' }"></span>
                         </span>
-                        <span class="text-[10px] tabular-nums text-gray-500">{{ me.wins[physics] % winsPerWildcard }}/{{ winsPerWildcard }}</span>
+                        <span class="text-[11px] tabular-nums text-gray-400">{{ me.wins[physics] % winsPerWildcard }}/{{ winsPerWildcard }}</span>
                     </span>
                 </span>
 
-                <span class="hidden sm:block h-4 w-px bg-white/10"></span>
+                <span class="hidden sm:block h-4 w-px bg-white/15"></span>
 
                 <span class="inline-flex items-baseline gap-1.5">
-                    <span class="text-sm font-black tabular-nums text-white">{{ me.wins.cpm + me.wins.vq3 }}</span>
-                    <span class="text-[11px] text-gray-500">{{ $t('Weeks won') }}</span>
+                    <span class="text-base font-black tabular-nums text-white">{{ me.wins.cpm + me.wins.vq3 }}</span>
+                    <span class="text-xs text-gray-400">{{ $t('Weeks won') }}</span>
                 </span>
 
                 <span class="inline-flex items-baseline gap-1.5">
-                    <span class="text-sm font-black tabular-nums text-white">{{ me.average_rank ?? '-' }}</span>
-                    <span class="text-[11px] text-gray-500">
+                    <span class="text-base font-black tabular-nums text-white">{{ me.average_rank ?? '-' }}</span>
+                    <span class="text-xs text-gray-400">
                         <template v-if="me.rounds_entered">
                             {{ $t('Average rank') }} ({{ me.rounds_entered }})
                         </template>
@@ -319,10 +361,17 @@ export default {
                 </span>
 
                 <span v-if="me.best_rank" class="inline-flex items-baseline gap-1.5">
-                    <span class="text-sm font-black tabular-nums text-white">{{ me.best_rank }}</span>
-                    <span class="text-[11px] text-gray-500">{{ $t('Best') }}</span>
+                    <span class="text-base font-black tabular-nums text-white">{{ me.best_rank }}</span>
+                    <span class="text-xs text-gray-400">{{ $t('Best') }}</span>
                 </span>
             </div>
+
+            <!-- What a wildcard actually is. The strip counted them and
+                 tracked progress towards the next without ever saying what one
+                 does, which is a scoreboard for a rule nobody was told. -->
+            <p class="mt-2 pt-2 border-t border-white/10 text-xs text-gray-400 leading-snug">
+                {{ $t('A wildcard picks next week\'s map outright and overrules the vote. You earn one for every :count weekly wins in a physics, and whoever spends one first decides that round - everyone else keeps theirs.', { count: winsPerWildcard }) }}
+            </p>
         </section>
 
         </div>
