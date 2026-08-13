@@ -127,6 +127,10 @@ class CommunityScoreService
             ->whereNotNull('user_id')
             ->whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'unsupported-version', 'failed', 'failed-validity'])
             ->where('created_at', '>=', config('community-scores.demos_uploaded_after', '2026-03-14'))
+            // Raw query, so the comps global scope has to be repeated: a demo
+            // held back for a running round should not move anybody's score
+            // before the round has even ended.
+            ->where(fn ($q) => $q->whereNull('comps_hidden_until')->orWhere('comps_hidden_until', '<=', now()))
             ->groupBy('user_id')
             ->select('user_id', DB::raw('COUNT(*) as cnt'))
             ->get();
@@ -161,6 +165,8 @@ class CommunityScoreService
         $counts = DB::table('uploaded_demos')
             ->where('manually_assigned', true)
             ->whereNotNull('user_id')
+            // Raw query - same reason as addDemosUploaded above.
+            ->where(fn ($q) => $q->whereNull('comps_hidden_until')->orWhere('comps_hidden_until', '<=', now()))
             ->groupBy('user_id')
             ->select('user_id', DB::raw('COUNT(*) as cnt'))
             ->get();

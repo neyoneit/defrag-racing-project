@@ -296,6 +296,10 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
             $counts = \DB::table('uploaded_demos')
                 ->where('user_id', $this->id)
                 ->where('manually_assigned', true)
+                // Raw query: the comps global scope does not reach it, so a
+                // demo held back for a running round has to be excluded here
+                // by hand or the count gives it away.
+                ->where(fn ($q) => $q->whereNull('comps_hidden_until')->orWhere('comps_hidden_until', '<=', now()))
                 ->selectRaw("
                     SUM(CASE WHEN gametype NOT LIKE 'm%' THEN 1 ELSE 0 END) as offline,
                     SUM(CASE WHEN gametype LIKE 'm%' THEN 1 ELSE 0 END) as online

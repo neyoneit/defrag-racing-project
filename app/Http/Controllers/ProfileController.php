@@ -194,6 +194,12 @@ class ProfileController extends Controller {
             $demoStats = Cache::remember("profile:demo_stats:{$user->id}", 3600, function () use ($user, $topDownloadedDemos) {
                 $stats = DB::table('uploaded_demos')
                     ->where('user_id', $user->id)
+                    // Raw query, so the HidesUnreleasedCompsDemos global scope
+                    // does not apply and has to be spelled out. Without it a
+                    // comps run still moves the counters while the round is
+                    // being played, which is the one thing that page is not
+                    // supposed to say yet.
+                    ->where(fn ($q) => $q->whereNull('comps_hidden_until')->orWhere('comps_hidden_until', '<=', now()))
                     ->selectRaw('COUNT(*) as total_demos, COALESCE(SUM(download_count), 0) as total_downloads, SUM(CASE WHEN download_count > 0 THEN 1 ELSE 0 END) as demos_with_downloads, COUNT(DISTINCT map_name) as unique_maps')
                     ->first();
                 return [
