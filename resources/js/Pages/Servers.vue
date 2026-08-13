@@ -529,9 +529,16 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                                 <div v-if="server.map" :class="['bg-white/5 rounded-lg px-3 py-2 border border-white/10 transition-all relative map-features-hover-group', filters.showDetails ? 'map-features-expanded' : '']">
                                     <div class="flex items-center justify-between gap-2">
                                         <div class="flex items-center gap-2">
-                                            <div class="flex items-center gap-2" @mouseenter="hoveredMapServer = server.id" @mouseleave="hoveredMapServer = null">
-                                                <a :href="`/maps/${encodeURIComponent(server.map)}`" class="text-gray-300 text-base font-semibold hover:text-blue-400 transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ $t('Map:') }}</a>
-                                                <a :href="`/maps/${encodeURIComponent(server.map)}`" class="font-bold text-white text-lg hover:text-blue-400 transition-colors map-name-highlight" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ server.map }}</a>
+                                            <!-- No "Map:" in front of it. On a card
+                                                 whose whole top half is the map's
+                                                 own screenshot the word says
+                                                 nothing, and it cost a third of
+                                                 this row - which is the row that
+                                                 has to hold a long map name, the
+                                                 copy button and the save button
+                                                 side by side. -->
+                                            <div class="flex items-center gap-2 min-w-0" @mouseenter="hoveredMapServer = server.id" @mouseleave="hoveredMapServer = null">
+                                                <a :href="`/maps/${encodeURIComponent(server.map)}`" class="font-bold text-white text-lg hover:text-blue-400 transition-colors map-name-highlight truncate" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ server.map }}</a>
                                             </div>
                                             <!-- Copy map name -->
                                             <CopyButton :text="server.map" size="xs" :label="$t('Copy map')" />
