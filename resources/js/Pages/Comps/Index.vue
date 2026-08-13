@@ -186,6 +186,12 @@ export default {
 
     <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12 space-y-10" style="margin-top: -22rem;">
 
+        <!-- The prize and your own standing are one header block, spaced
+             tightly against each other. The page's 10-unit rhythm is for
+             actual sections; giving a two-line status strip the same air
+             around it as the competition itself reads as a gap, not a break. -->
+        <div class="space-y-4">
+
         <!-- What a week pays and who is paying for it. Sits above everything
              else because it is the answer to the first question anybody asks
              about a competition. -->
@@ -308,6 +314,8 @@ export default {
                 </span>
             </div>
         </section>
+
+        </div>
 
         <!-- ============================ VOTING ============================= -->
         <!-- Same panel as Playing now on purpose: the two halves of this page
