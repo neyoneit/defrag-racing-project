@@ -34,12 +34,15 @@ class CompSubmission extends Model
         'is_highlight',
         'status',
         'invalid_reason',
+        'removed_by',
+        'removed_at',
         'matched_record_id',
     ];
 
     protected $casts = [
         'is_online' => 'boolean',
         'is_highlight' => 'boolean',
+        'removed_at' => 'datetime',
     ];
 
     public function round()
@@ -62,9 +65,29 @@ class CompSubmission extends Model
         return $this->hasMany(CompDemoReport::class);
     }
 
+    public function removedBy()
+    {
+        return $this->belongsTo(User::class, 'removed_by');
+    }
+
     public function scopeValid($query)
     {
         return $query->where('status', 'valid');
+    }
+
+    /**
+     * Runs an admin took out, as opposed to ones the validator never accepted.
+     * Both are `invalid`; only these were ever a real entry, and only these
+     * stay visible on the round page - see the removed_by migration.
+     */
+    public function scopeRemovedByAdmin($query)
+    {
+        return $query->where('status', 'invalid')->whereNotNull('removed_by');
+    }
+
+    public function wasRemovedByAdmin(): bool
+    {
+        return $this->status === 'invalid' && $this->removed_by !== null;
     }
 
     /**

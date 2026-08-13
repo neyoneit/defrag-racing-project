@@ -7,6 +7,9 @@
     defineProps({
         player: { type: Object, required: true },
         size: { type: String, default: 'md' },
+        // A run an admin took out. Struck through and dimmed rather than
+        // hidden, so the list still shows they turned up.
+        struck: { type: Boolean, default: false },
     });
 </script>
 
@@ -15,6 +18,7 @@
         :is="player.id ? Link : 'span'"
         :href="player.id ? route('profile.index', player.id) : undefined"
         class="inline-flex items-center gap-2 min-w-0 group"
+        :class="struck ? 'opacity-50' : ''"
     >
         <img
             v-if="player.country"
@@ -40,6 +44,7 @@
             :class="[
                 size === 'sm' ? 'text-xs' : 'text-sm',
                 'name-effect-' + (player.name_effect || 'none'),
+                struck ? 'line-through decoration-red-500/70' : '',
             ]"
             :style="`--effect-color: ${player.color || '#ffffff'}`"
             v-html="q3tohtml(player.name)"

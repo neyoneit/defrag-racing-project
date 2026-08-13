@@ -118,6 +118,11 @@ class CompDemoReportResource extends Resource
                         $submission?->update([
                             'status' => 'invalid',
                             'invalid_reason' => 'Removed after a report.',
+                            // Stamped so the round page can tell this apart
+                            // from a run the validator never accepted, and
+                            // keep the player visible as removed.
+                            'removed_by' => auth()->id(),
+                            'removed_at' => now(),
                         ]);
 
                         $r->update([

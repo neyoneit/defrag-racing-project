@@ -11,6 +11,7 @@ use App\Models\CompVote;
 use App\Models\CompWildcard;
 use App\Services\Comps\BallotResolver;
 use App\Services\Comps\CompPreviewService;
+use App\Services\Comps\CompSettings;
 use App\Services\Comps\ResultsCalculator;
 use App\Services\Comps\WildcardService;
 use Illuminate\Http\Request;
@@ -60,7 +61,38 @@ class CompsController extends Controller
             'pointsTable' => ResultsCalculator::POINTS,
             'pointsForFinishing' => ResultsCalculator::POINTS_FOR_FINISHING,
             'winsPerWildcard' => CompWildcard::WEEKLY_WINS_REQUIRED,
+            'prize' => $this->prize(),
+            'betaNotice' => app(CompSettings::class)->betaNotice(),
         ]);
+    }
+
+    /**
+     * What a weekly pays, and who is paying for it.
+     *
+     * The first weeks are paid out by neyo, and after those the pool may be
+     * paid out by him again or by the community. Both numbers are settings,
+     * because a prize is a promise to players and the person making it should
+     * be able to change it without waiting for a deploy - and because a
+     * promise that has run out should stop being displayed on its own rather
+     * than sit there until somebody remembers to take it down.
+     */
+    private function prize(): array
+    {
+        $settings = app(CompSettings::class);
+
+        $eur = $settings->prizeEur();
+        $fundedWeeks = $settings->prizeFundedWeeks();
+
+        // The highest week that exists, which is the one being played or voted
+        // on rather than the last one finished - so week 5 of 5 still counts
+        // as funded while it is being run, not only until it starts.
+        $current = (int) Comp::weekly()->max('number');
+
+        return [
+            'eur' => $eur,
+            'funded_weeks' => $fundedWeeks,
+            'self_funded' => $eur > 0 && $current <= $fundedWeeks,
+        ];
     }
 
     /** A finished comp, opened from the history list. */
@@ -308,6 +340,7 @@ class CompsController extends Controller
             // Times stay hidden until the round closes, so this is who has
             // entered rather than who is winning.
             'entrants' => $this->entrants($round),
+            'removed_entrants' => $this->removedEntrants($round),
             'my_entries' => $user ? $this->myEntries($round, $user->id) : [],
         ];
     }
@@ -337,6 +370,60 @@ class CompsController extends Controller
                     'photo' => $s->user?->profile_photo_path,
                     'name_effect' => $s->user?->name_effect,
                     'color' => $s->user?->color,
+                ])
+                ->values();
+        }
+
+        return $out;
+    }
+
+    /**
+     * People whose run an admin took out, shown alongside the entrants rather
+     * than deleted from the list.
+     *
+     * Silently dropping them would make the round page read as though they
+     * never turned up, which is both unfair to them and confusing to everyone
+     * who watched them enter. Only admin removals appear here: a run the
+     * validator refused - wrong map, unreadable file - is somebody picking the
+     * wrong demo, and publishing that would be publishing their slip.
+     *
+     * Anybody who still has a counting run in that physics is left out: they
+     * had one entry pulled and another accepted, and they are simply an
+     * entrant.
+     */
+    private function removedEntrants(CompRound $round): array
+    {
+        $rows = CompSubmission::query()
+            ->removedByAdmin()
+            ->where('comp_round_id', $round->id)
+            ->whereNotNull('physics')
+            ->with('user:id,name,country,profile_photo_path,name_effect,color')
+            ->get()
+            ->groupBy('physics');
+
+        $stillIn = CompSubmission::query()
+            ->counting()
+            ->where('comp_round_id', $round->id)
+            ->get()
+            ->groupBy('physics')
+            ->map(fn ($g) => $g->pluck('user_id')->all());
+
+        $out = [];
+
+        foreach (BallotResolver::PHYSICS as $physics) {
+            $keep = $stillIn->get($physics, []);
+
+            $out[$physics] = ($rows->get($physics) ?? collect())
+                ->reject(fn (CompSubmission $s) => in_array($s->user_id, $keep, true))
+                ->unique('user_id')
+                ->map(fn (CompSubmission $s) => [
+                    'id' => $s->user?->id,
+                    'name' => $s->user?->name,
+                    'country' => $s->user?->country,
+                    'photo' => $s->user?->profile_photo_path,
+                    'name_effect' => $s->user?->name_effect,
+                    'color' => $s->user?->color,
+                    'reason' => $s->invalid_reason,
                 ])
                 ->values();
         }
