@@ -27,6 +27,7 @@ class CompSettings
     public const KEY_PRIZE_EUR = 'comps_prize_eur';
     public const KEY_PRIZE_FUNDED_WEEKS = 'comps_prize_funded_weeks';
     public const KEY_BETA_NOTICE = 'comps_beta_notice';
+    public const KEY_CONTACT_USER_ID = 'comps_contact_user_id';
 
     /** Prague, not UTC. In UTC the hour would drift by one across the year. */
     public function timezone(): CarbonTimeZone
@@ -101,5 +102,15 @@ class CompSettings
     public function betaNotice(): bool
     {
         return SiteSetting::getBool(self::KEY_BETA_NOTICE, true);
+    }
+
+    /**
+     * Who "tell the admin" points at. A setting rather than a literal in the
+     * page so the person who runs comps can stop being the person who runs
+     * comps without a frontend change.
+     */
+    public function contactUserId(): int
+    {
+        return (int) SiteSetting::get(self::KEY_CONTACT_USER_ID, '8');
     }
 }

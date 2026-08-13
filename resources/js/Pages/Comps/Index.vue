@@ -32,6 +32,7 @@ export default {
         winsPerWildcard: { type: Number, default: 5 },
         prize: { type: Object, default: null },
         betaNotice: { type: Boolean, default: false },
+        adminUrl: { type: String, default: '' },
     });
 
     const page = usePage();
@@ -46,6 +47,15 @@ export default {
     };
 
     const categoryLabel = (category) => (CATEGORY_LABELS[category] ?? (() => category))();
+
+    // The word "admin" is a link, and it sits in a different place in every
+    // language - mid-sentence in English, at the end in some others - so it
+    // goes in as a placeholder the translator can move rather than as two
+    // fragments glued around one fixed word order.
+    const betaNoticeHtml = computed(() => t(
+        'Expect a few rough edges in the first weeks. If something does not look right, tell :admin and it gets sorted.',
+        { admin: `<a href="${props.adminUrl}" class="font-bold underline decoration-amber-400/40 hover:text-amber-50">${t('the admin')}</a>` },
+    ));
 
     // Totals per ballot, so each bar can show a share rather than a bare count.
     const totals = computed(() => {
@@ -176,7 +186,7 @@ export default {
                             <svg class="w-5 h-5 flex-shrink-0 text-amber-400 mt-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm0 6l7.5 13h-15L12 8zm-1 3v4h2v-4h-2zm0 5v2h2v-2h-2z" /></svg>
                             <p class="text-sm text-amber-100/90 leading-snug">
                                 <span class="font-bold">{{ $t('Comps is brand new.') }}</span>
-                                {{ $t('Expect a few rough edges in the first weeks. If something does not look right, tell neyo and it gets sorted.') }}
+                                <span v-html="betaNoticeHtml"></span>
                             </p>
                         </div>
                     </section>
@@ -228,7 +238,7 @@ export default {
                 <div class="min-w-0 flex-1">
                     <p class="text-sm text-gray-200">
                         <span v-if="prize.self_funded">
-                            {{ $t('The first :count weeklies are paid out by neyo.', { count: prize.funded_weeks }) }}
+                            {{ $t('The first :count weeklies are paid out by neyo: :total EUR in total.', { count: prize.funded_weeks, total: prize.funded_total }) }}
                         </span>
                         <span v-else>
                             {{ $t('Paid out by neyo or by the community.') }}

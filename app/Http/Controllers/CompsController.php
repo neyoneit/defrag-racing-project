@@ -63,6 +63,9 @@ class CompsController extends Controller
             'winsPerWildcard' => CompWildcard::WEEKLY_WINS_REQUIRED,
             'prize' => $this->prize(),
             'betaNotice' => app(CompSettings::class)->betaNotice(),
+            // Where "tell the admin" goes. Built here rather than in the page
+            // so the id is not a literal sitting in a Vue file.
+            'adminUrl' => route('profile.index', app(CompSettings::class)->contactUserId()),
         ]);
     }
 
@@ -95,6 +98,10 @@ class CompsController extends Controller
             // what they need to not misread it, so the page shows both.
             'total' => $eur * count(BallotResolver::PHYSICS),
             'funded_weeks' => $fundedWeeks,
+            // The whole commitment, which reads very differently from the
+            // weekly figure and is the number people actually repeat to each
+            // other. Derived, so changing either setting keeps it honest.
+            'funded_total' => $eur * count(BallotResolver::PHYSICS) * $fundedWeeks,
             'self_funded' => $eur > 0 && $current <= $fundedWeeks,
         ];
     }
