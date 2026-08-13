@@ -10,25 +10,39 @@ use Illuminate\Support\Facades\Auth;
 
 class RecordFlagController extends Controller
 {
-    const FLAG_TYPES = [
-        'sv_cheats' => 'sv_cheats enabled',
-        'tool_assisted' => 'Tool-assisted speedrun (TAS)',
-        'client_finish' => 'No proper finish (client_finish=false)',
-        'timescale' => 'Timescale modified',
-        'g_speed' => 'Movement speed modified (g_speed)',
-        'g_gravity' => 'Gravity modified (g_gravity)',
-        'sv_fps' => 'Non-standard server FPS (sv_fps)',
-        'com_maxfps' => 'Non-standard max FPS (com_maxfps)',
-        'pmove_fixed' => 'Non-standard pmove_fixed',
-        'pmove_msec' => 'Non-standard pmove_msec',
-        'df_mp_interferenceoff' => 'Interference setting modified',
-        'left_right' => '+left / +right turn binds',
-        'scripts' => 'Scripted movement',
-        'upmove' => 'Upmove script',
-        'replay_cheat' => 'Replay cheat',
-        'engine_cheat' => 'Modified engine',
-        'other' => 'Other validity issue',
-    ];
+    /**
+     * A method rather than a const, because lang:sync only sees a literal
+     * sitting inside __(). While these labels were a const, every caller
+     * wrote __($label) with the sentence out of reach of the scanner, so the
+     * strings never reached a language file and /self-report listed all
+     * seventeen reasons in English no matter which language the page was in.
+     *
+     * The keys are what the database stores, so they must never be touched.
+     * Only the labels are translated, and they are translated here rather
+     * than at each call site so no caller can forget.
+     */
+    public static function flagTypes(): array
+    {
+        return [
+            'sv_cheats' => __('sv_cheats enabled'),
+            'tool_assisted' => __('Tool-assisted speedrun (TAS)'),
+            'client_finish' => __('No proper finish (client_finish=false)'),
+            'timescale' => __('Timescale modified'),
+            'g_speed' => __('Movement speed modified (g_speed)'),
+            'g_gravity' => __('Gravity modified (g_gravity)'),
+            'sv_fps' => __('Non-standard server FPS (sv_fps)'),
+            'com_maxfps' => __('Non-standard max FPS (com_maxfps)'),
+            'pmove_fixed' => __('Non-standard pmove_fixed'),
+            'pmove_msec' => __('Non-standard pmove_msec'),
+            'df_mp_interferenceoff' => __('Interference setting modified'),
+            'left_right' => __('+left / +right turn binds'),
+            'scripts' => __('Scripted movement'),
+            'upmove' => __('Upmove script'),
+            'replay_cheat' => __('Replay cheat'),
+            'engine_cheat' => __('Modified engine'),
+            'other' => __('Other validity issue'),
+        ];
+    }
 
     public function store(Request $request)
     {
@@ -46,7 +60,7 @@ class RecordFlagController extends Controller
         $request->validate([
             'record_id' => 'nullable|exists:records,id',
             'demo_id' => 'nullable|exists:uploaded_demos,id',
-            'flag_type' => 'required|in:' . implode(',', array_keys(self::FLAG_TYPES)),
+            'flag_type' => 'required|in:' . implode(',', array_keys(self::flagTypes())),
             'note' => 'nullable|string|max:500',
         ]);
 
