@@ -173,6 +173,37 @@ const toggleSort = (type) => {
     }
 }
 
+/**
+ * Which tab a server belongs under. Pulled out of the filter so the cheats
+ * warning can ask the same question - freestyle answers it differently and
+ * there must not be two ideas of what freestyle means.
+ */
+const effectiveGametype = (server) => {
+    const serverType = server.type?.toLowerCase() || 'run';
+    const serverName = (server.name || '').replace(/\^\d|\^x[\da-fA-F]{2}|\^[\da-fA-F]{6}/g, '').toLowerCase();
+
+    let effectiveType = serverType;
+    if (effectiveType === 'teamruns') effectiveType = 'team';
+    if (effectiveType === 'cpm' || effectiveType === 'vq3' || effectiveType === 'mixed') effectiveType = 'run';
+
+    if (effectiveType === 'run') {
+        if (serverName.includes('fastcap') || serverName.includes('ctf')) effectiveType = 'fastcaps';
+        else if (serverName.includes('freestyle')) effectiveType = 'freestyle';
+        else if (serverName.includes('teamrun') || serverName.includes('team run')) effectiveType = 'team';
+    }
+
+    return effectiveType;
+};
+
+/**
+ * On a freestyle server sv_cheats is the point rather than a problem: nothing
+ * there is a timed result, so there is nothing for it to invalidate. The
+ * warning still shows, because it is true and someone should be able to see
+ * it, but quietly - a full red bar there is crying wolf, and a warning that
+ * fires where it does not matter is one people stop reading where it does.
+ */
+const cheatsAreExpected = (server) => effectiveGametype(server) === 'freestyle';
+
 const filteredAndSortedServers = computed(() => {
     if (!localServers.value || localServers.value.length === 0) return [];
     let result = [...localServers.value];
@@ -201,15 +232,7 @@ const filteredAndSortedServers = computed(() => {
             // where a gametype belongs — so it is normalised first. Without
             // that, the twelve servers typed by physics matched no tab at
             // all and the two 'teamruns' ones were invisible to the team tab.
-            let effectiveType = serverType;
-            if (effectiveType === 'teamruns') effectiveType = 'team';
-            if (effectiveType === 'cpm' || effectiveType === 'vq3' || effectiveType === 'mixed') effectiveType = 'run';
-
-            if (effectiveType === 'run') {
-                if (serverName.includes('fastcap') || serverName.includes('ctf')) effectiveType = 'fastcaps';
-                else if (serverName.includes('freestyle')) effectiveType = 'freestyle';
-                else if (serverName.includes('teamrun') || serverName.includes('team run')) effectiveType = 'team';
-            }
+            const effectiveType = effectiveGametype(server);
 
             switch (filters.value.gametype) {
                 case 'run':
@@ -455,8 +478,8 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
 
             <!-- Large Card Layout -->
             <div v-else-if="layout === 'large'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div v-for="server in filteredAndSortedServers" :key="server.id" :class="['group relative cursor-default bg-black/40 backdrop-blur-sm rounded-2xl border transition-all duration-300 hover:shadow-2xl overflow-hidden player-list-hover-group', server.cheats ? 'border-red-500/60 hover:border-red-400/80 hover:shadow-red-500/20' : 'border-white/10 hover:border-white/20 hover:shadow-blue-500/20']">
-                    <CheatsBanner :cheats="server.cheats" />
+                <div v-for="server in filteredAndSortedServers" :key="server.id" :class="['group relative cursor-default bg-black/40 backdrop-blur-sm rounded-2xl border transition-all duration-300 hover:shadow-2xl overflow-hidden player-list-hover-group', server.cheats && !cheatsAreExpected(server) ? 'border-red-500/60 hover:border-red-400/80 hover:shadow-red-500/20' : 'border-white/10 hover:border-white/20 hover:shadow-blue-500/20']">
+                    <CheatsBanner :cheats="server.cheats" :subdued="cheatsAreExpected(server)" />
                     <!-- Background Image - FIXED SIZE, never changes, keeps aspect ratio -->
                     <div class="absolute top-0 left-0 right-0 h-[450px] rounded-t-2xl pointer-events-none">
                         <div class="relative inline-block w-full">
@@ -511,7 +534,7 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                                                 <a :href="`/maps/${encodeURIComponent(server.map)}`" class="font-bold text-white text-lg hover:text-blue-400 transition-colors map-name-highlight" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ server.map }}</a>
                                             </div>
                                             <!-- Copy map name -->
-                                            <CopyButton :text="server.map" size="xs" />
+                                            <CopyButton :text="server.map" size="xs" :label="$t('Copy map')" />
                                         </div>
                                         <div class="flex items-center gap-2 ml-auto">
                                             <!-- Expand Indicator - only show if map has features -->
@@ -658,8 +681,8 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                         </div>
                     </div>
 
-                    <div v-for="server in filteredAndSortedServers.filter(s => !s.defrag.toLowerCase().includes('cpm'))" :key="server.id" :class="['group relative overflow-hidden rounded-xl border transition-all duration-300', server.cheats ? 'border-red-500/60 hover:border-red-400/80 pt-4' : 'border-white/10 hover:border-blue-500/50']">
-                        <CheatsBanner :cheats="server.cheats" compact />
+                    <div v-for="server in filteredAndSortedServers.filter(s => !s.defrag.toLowerCase().includes('cpm'))" :key="server.id" :class="['group relative overflow-hidden rounded-xl border transition-all duration-300', server.cheats && !cheatsAreExpected(server) ? 'border-red-500/60 hover:border-red-400/80 pt-4' : ['border-white/10 hover:border-blue-500/50', server.cheats ? 'pt-4' : '']]">
+                        <CheatsBanner :cheats="server.cheats" compact :subdued="cheatsAreExpected(server)" />
                         <!-- Background Map Thumbnail -->
                         <div v-if="server.mapdata?.thumbnail" class="absolute inset-0 transition-all duration-500">
                             <img
@@ -770,8 +793,8 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                         </div>
                     </div>
 
-                    <div v-for="server in filteredAndSortedServers.filter(s => s.defrag.toLowerCase().includes('cpm'))" :key="server.id" :class="['group relative overflow-hidden rounded-xl border transition-all duration-300', server.cheats ? 'border-red-500/60 hover:border-red-400/80 pt-4' : 'border-white/10 hover:border-purple-500/50']">
-                        <CheatsBanner :cheats="server.cheats" compact />
+                    <div v-for="server in filteredAndSortedServers.filter(s => s.defrag.toLowerCase().includes('cpm'))" :key="server.id" :class="['group relative overflow-hidden rounded-xl border transition-all duration-300', server.cheats && !cheatsAreExpected(server) ? 'border-red-500/60 hover:border-red-400/80 pt-4' : ['border-white/10 hover:border-purple-500/50', server.cheats ? 'pt-4' : '']]">
+                        <CheatsBanner :cheats="server.cheats" compact :subdued="cheatsAreExpected(server)" />
                         <!-- Background Map Thumbnail -->
                         <div v-if="server.mapdata?.thumbnail" class="absolute inset-0 transition-all duration-500">
                             <img
@@ -885,9 +908,9 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
             <div v-else-if="layout === 'oldschool'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 <div v-for="server in filteredAndSortedServers" :key="server.id"
                      :class="['rounded-xl border bg-black/40 backdrop-blur-sm p-3',
-                              server.cheats ? 'border-red-500/50' : 'border-white/10']">
+                              server.cheats && !cheatsAreExpected(server) ? 'border-red-500/50' : 'border-white/10']">
 
-                    <CheatsBanner :cheats="server.cheats" />
+                    <CheatsBanner :cheats="server.cheats" :subdued="cheatsAreExpected(server)" />
 
                     <div class="flex items-center gap-2 mb-3">
                         <img v-if="server.location" :src="`/images/flags/${server.location}.png`" :title="server.location"
@@ -911,7 +934,13 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                                  reachable: it is the button's tooltip, and
                                  the copy icon next to it still hands it over
                                  for anyone typing it somewhere else. -->
-                            <div class="flex items-center gap-1.5">
+                            <!-- Wraps: at four to a row the column is about
+                                 200px, and Connect plus a labelled Copy IP is
+                                 wider than that in Russian, where the word for
+                                 Connect is longer than an IP address. It drops
+                                 to a second line there rather than squashing
+                                 the button. -->
+                            <div class="flex flex-wrap items-center gap-1.5">
                                 <a :href="`defrag://${server.ip}:${server.port}`"
                                    :title="`${server.ip}:${server.port}`"
                                    :class="server.defrag?.toLowerCase().includes('cpm') ? 'connect-button-cpm' : 'connect-button-vq3'"
@@ -921,10 +950,13 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                                     </svg>
                                     {{ $t('Connect') }}
                                 </a>
-                                <CopyButton :text="server.ip + ':' + server.port" size="xs" />
+                                <CopyButton :text="server.ip + ':' + server.port" size="xs" :label="$t('Copy IP')" />
                             </div>
-                            <a v-if="server.map" :href="`/maps/${encodeURIComponent(server.map)}`"
-                               class="block font-bold text-white hover:text-blue-400 transition-colors truncate">{{ server.map }}</a>
+                            <div v-if="server.map" class="flex items-center gap-1 min-w-0">
+                                <a :href="`/maps/${encodeURIComponent(server.map)}`"
+                                   class="font-bold text-white hover:text-blue-400 transition-colors truncate">{{ server.map }}</a>
+                                <CopyButton :text="server.map" size="xs" :label="$t('Copy map')" />
+                            </div>
                             <div class="uppercase" :class="server.defrag?.toLowerCase().includes('cpm') ? 'text-purple-300' : 'text-blue-300'">
                                 {{ server.defrag }}
                             </div>
