@@ -21,13 +21,13 @@ function categoryLabel(cat) {
     const labels = {
         overall: t('Overall'),
         strafe: t('Strafe'),
-        lg: t('LG'),
-        rocket: t('Rocket'),
+        lg: 'LG',
+        rocket: 'Rocket',
         plasma: t('Plasma'),
-        grenade: t('Grenade'),
+        grenade: 'Grenade',
         slick: t('Slick'),
         tele: t('Tele'),
-        bfg: t('BFG'),
+        bfg: 'BFG',
     };
 
     return labels[cat] ?? cat;
@@ -683,7 +683,7 @@ const top200Share = computed(() => topNWeightShare(200));
                         <div class="text-xs text-gray-500">{{ $t('Maps with teleporters') }}</div>
                     </div>
                     <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
-                        <div class="text-sm font-bold text-orange-400">{{ $t('Rocket') }}</div>
+                        <div class="text-sm font-bold text-orange-400">Rocket</div>
                         <div class="text-xs text-gray-500">{{ $t('Maps with RL') }}</div>
                     </div>
                     <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
@@ -691,15 +691,15 @@ const top200Share = computed(() => topNWeightShare(200));
                         <div class="text-xs text-gray-500">{{ $t('Maps with PG') }}</div>
                     </div>
                     <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
-                        <div class="text-sm font-bold text-green-400">{{ $t('Grenade') }}</div>
+                        <div class="text-sm font-bold text-green-400">Grenade</div>
                         <div class="text-xs text-gray-500">{{ $t('Maps with GL') }}</div>
                     </div>
                     <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
-                        <div class="text-sm font-bold text-pink-400">{{ $t('LG') }}</div>
+                        <div class="text-sm font-bold text-pink-400">LG</div>
                         <div class="text-xs text-gray-500">{{ $t('Maps with Lightning Gun') }}</div>
                     </div>
                     <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
-                        <div class="text-sm font-bold text-red-400">{{ $t('BFG') }}</div>
+                        <div class="text-sm font-bold text-red-400">BFG</div>
                         <div class="text-xs text-gray-500">{{ $t('Maps with BFG') }}</div>
                     </div>
                 </div>

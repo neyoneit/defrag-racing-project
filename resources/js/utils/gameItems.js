@@ -21,9 +21,26 @@ import { t } from '@/utils/i18n';
  * a ref, and an object built once at import would freeze whichever language
  * happened to be loaded at the time.
  *
- * Weapon and item names stay English on purpose - they are what the game
- * calls them, and a player looks them up under those names. The functions are
- * descriptions rather than proper nouns, so those are translated.
+ * What you pick up keeps its English name; what the map does gets translated.
+ * A rocket launcher and a quad are what the game calls them and what players
+ * call them out loud in any language, and the filter on /maps has listed the
+ * items in English all along. A door and some fog are ordinary words that
+ * happen to describe the map, and reading them in English helps nobody.
+ *
+ * Those names are plain strings rather than t() calls, so lang:sync never
+ * offers them to a translator in the first place. They were t() before, which
+ * left every one of them sitting in nine language files as an invitation:
+ * `Regeneration` had been translated in seven of them, `Invisibility` in five,
+ * and the tooltip on a map page disagreed with the checkbox in the filter
+ * beside it. Discipline was not going to hold that line, so the key is gone.
+ *
+ * `Flag` looked like it should be the exception, being an ordinary word rather
+ * than a name from the game, right up until the nine translations were read
+ * side by side: six of them say "report". The word reached a translator on its
+ * own, with no hint that it names the thing you carry in CTF, and "flag" is a
+ * far commoner verb in a user interface than it is a noun. So the tooltip on
+ * the flag icon read Melden, Signaler, Пожаловаться. It is English with the
+ * rest of them now, and the key is gone.
  */
 
 const lookup = (table, abbr, fallback) => table[String(abbr).toLowerCase().trim()] ?? fallback;
@@ -45,19 +62,19 @@ export const getWeaponIcon = (abbr) => lookup({
 }, abbr, '/images/weapons/iconw_gauntlet.svg');
 
 export const getWeaponName = (abbr) => lookup({
-    'gauntlet': t('Gauntlet'),
-    'gt': t('Gauntlet'),
-    'mg': t('Machine Gun'),
-    'sg': t('Shotgun'),
-    'gl': t('Grenade Launcher'),
-    'rl': t('Rocket Launcher'),
-    'lg': t('Lightning Gun'),
-    'rg': t('Rail Gun'),
-    'pg': t('Plasma Gun'),
-    'bfg': t('BFG'),
-    'grapple': t('Grappling Hook'),
-    'hook': t('Grappling Hook'),
-    'gh': t('Grappling Hook'),
+    'gauntlet': 'Gauntlet',
+    'gt': 'Gauntlet',
+    'mg': 'Machine Gun',
+    'sg': 'Shotgun',
+    'gl': 'Grenade Launcher',
+    'rl': 'Rocket Launcher',
+    'lg': 'Lightning Gun',
+    'rg': 'Rail Gun',
+    'pg': 'Plasma Gun',
+    'bfg': 'BFG',
+    'grapple': 'Grappling Hook',
+    'hook': 'Grappling Hook',
+    'gh': 'Grappling Hook',
 }, abbr, String(abbr).toUpperCase());
 
 export const getItemIcon = (abbr) => lookup({
@@ -84,24 +101,24 @@ export const getItemIcon = (abbr) => lookup({
 
 export const getItemName = (abbr) => lookup({
     // Powerups
-    'enviro': t('Battle Suit'),
-    'haste': t('Haste'),
-    'quad': t('Quad Damage'),
-    'regen': t('Regeneration'),
-    'invis': t('Invisibility'),
-    'flight': t('Flight'),
+    'enviro': 'Battle Suit',
+    'haste': 'Haste',
+    'quad': 'Quad Damage',
+    'regen': 'Regeneration',
+    'invis': 'Invisibility',
+    'flight': 'Flight',
     // Health
-    'health': t('Health (+25)'),
-    'smallhealth': t('Small Health (+5)'),
-    'bighealth': t('Large Health (+50)'),
-    'mega': t('Mega Health (+100)'),
-    'medkit': t('Medkit'),
+    'health': 'Health (+25)',
+    'smallhealth': 'Small Health (+5)',
+    'bighealth': 'Large Health (+50)',
+    'mega': 'Mega Health (+100)',
+    'medkit': 'Medkit',
     // Armor
-    'shard': t('Armor Shard (+5)'),
-    'ya': t('Yellow Armor (+50)'),
-    'ra': t('Red Armor (+100)'),
+    'shard': 'Armor Shard (+5)',
+    'ya': 'Yellow Armor (+50)',
+    'ra': 'Red Armor (+100)',
     // CTF
-    'flag': t('Flag'),
+    'flag': 'Flag',
 }, abbr, abbr);
 
 export const getFunctionIcon = (abbr) => lookup({
