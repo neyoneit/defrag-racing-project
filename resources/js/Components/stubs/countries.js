@@ -3,7 +3,7 @@ const countries = {
     "AF": "Afghanistan",
     "AL": "Albania",
     "DZ": "Algeria",
-    "AD": "AndorrA",
+    "AD": "Andorra",
     "AG": "Antigua and Barbuda",
     "AR": "Argentina",
     "AM": "Armenia",
@@ -41,11 +41,11 @@ const countries = {
     "CG": "Congo",
     "CD": "Congo, The Democratic Republic of the",
     "CR": "Costa Rica",
-    "CI": "Cote D\"Ivoire",
+    "CI": "Cote d'Ivoire",
     "HR": "Croatia",
     "CU": "Cuba",
     "CY": "Cyprus",
-    "CZ": "Czech Republic",
+    "CZ": "Czechia",
     "DK": "Denmark",
     "DJ": "Djibouti",
     "DM": "Dominica",
@@ -90,11 +90,11 @@ const countries = {
     "KZ": "Kazakhstan",
     "KE": "Kenya",
     "KI": "Kiribati",
-    "KP": "Korea, Democratic People\"S Republic of",
+    "KP": "North Korea",
     "KR": "Korea, Republic of",
     "KW": "Kuwait",
     "KG": "Kyrgyzstan",
-    "LA": "Lao People\"S Democratic Republic",
+    "LA": "Laos",
     "LV": "Latvia",
     "LB": "Lebanon",
     "LS": "Lesotho",
@@ -103,7 +103,7 @@ const countries = {
     "LI": "Liechtenstein",
     "LT": "Lithuania",
     "LU": "Luxembourg",
-    "MK": "Macedonia, The Former Yugoslav Republic of",
+    "MK": "North Macedonia",
     "MG": "Madagascar",
     "MW": "Malawi",
     "MY": "Malaysia",
@@ -144,7 +144,7 @@ const countries = {
     "PT": "Portugal",
     "PR": "Puerto Rico",
     "QA": "Qatar",
-    "RW": "RWANDA",
+    "RW": "Rwanda",
     "RO": "Romania",
     "RU": "Russian Federation",
     "KN": "Saint Kitts and Nevis",
@@ -168,7 +168,7 @@ const countries = {
     "LK": "Sri Lanka",
     "SD": "Sudan",
     "SR": "Suriname",
-    "SZ": "Swaziland",
+    "SZ": "Eswatini",
     "SE": "Sweden",
     "SS": "South Sudan",
     "CH": "Switzerland",
@@ -182,7 +182,7 @@ const countries = {
     "TO": "Tonga",
     "TT": "Trinidad and Tobago",
     "TN": "Tunisia",
-    "TR": "Turkey",
+    "TR": "Türkiye",
     "TM": "Turkmenistan",
     "TV": "Tuvalu",
     "UG": "Uganda",
@@ -202,3 +202,82 @@ const countries = {
 };
 
 export default countries
+
+/**
+ * Country names are deliberately NOT in the language files.
+ *
+ * There are 200 of them, every language already has a canonical spelling for
+ * each, and the browser ships that list - so asking a translator to copy an
+ * atlas would be a day of work per language for something Intl gives away.
+ * The English list above stays the source for English, so the spellings this
+ * site has always shown do not change under anyone's feet.
+ *
+ * Nothing depends on the name: users.country and uploaded_demos.country both
+ * store the ISO code, and the code is what the picker submits. The name is a
+ * label and a search string, nothing more.
+ */
+import { t, currentLocale } from '@/utils/i18n';
+
+// Building an Intl.DisplayNames costs real time and the picker asks for 200
+// names on every keystroke, so keep one per language.
+const formatters = {};
+
+const formatter = (locale) => {
+    if (!(locale in formatters)) {
+        try {
+            formatters[locale] = new Intl.DisplayNames([locale], { type: 'region' });
+        } catch (e) {
+            // Ancient browser without Intl.DisplayNames. English list it is.
+            formatters[locale] = null;
+        }
+    }
+
+    return formatters[locale];
+};
+
+export const countryName = (code) => {
+    if (!code) {
+        return '';
+    }
+
+    // Not a country, and the only entry here that is a sentence.
+    if (code === '_404') {
+        return t('Prefer not to say');
+    }
+
+    const locale = currentLocale();
+
+    if (locale !== 'en') {
+        try {
+            // .of() THROWS on anything that is not a region code - it does not
+            // hand the code back. X1, our own entry for Scotland, lands here,
+            // and so would any junk that ever reaches this from the database.
+            const name = formatter(locale)?.of(code);
+
+            if (name && name !== code) {
+                return name;
+            }
+        } catch (e) {
+            // Not a region code. The English list below still has a name for
+            // it, which beats printing the raw code at the player.
+        }
+    }
+
+    return countries[code] ?? code;
+};
+
+/**
+ * The whole list for the current language, sorted the way that language sorts
+ * it. The English list is in English alphabetical order, which in Czech would
+ * look shuffled. "Prefer not to say" stays pinned at the top where it is now.
+ */
+export const countryList = () => {
+    const locale = currentLocale();
+
+    const entries = Object.keys(countries)
+        .filter((code) => code !== '_404')
+        .map((code) => [code, countryName(code)])
+        .sort((a, b) => a[1].localeCompare(b[1], locale));
+
+    return Object.fromEntries([['_404', countryName('_404')], ...entries]);
+};

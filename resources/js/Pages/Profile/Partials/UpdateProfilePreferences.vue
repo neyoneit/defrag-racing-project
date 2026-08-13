@@ -41,20 +41,20 @@
 <template>
     <FormSection @submitted="updateProfilePreferences" id="preferences">
         <template #title>
-            Profile Preferences
+            {{ $t('Profile Preferences') }}
         </template>
 
         <template #description>
-            Customize your profile.
+            {{ $t('Customize your profile.') }}
         </template>
 
         <template #topActions>
             <ActionMessage :on="form.recentlySuccessful" class="me-3">
-                Saved.
+                {{ $t('Saved') }}
             </ActionMessage>
 
             <PrimaryButton type="button" @click="updateProfilePreferences" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                Save
+                {{ $t('Save') }}
             </PrimaryButton>
         </template>
 
@@ -64,21 +64,21 @@
                     <div>
                         <div class="flex flex-col items-center p-4 relative">
                             <div class="profile-effect" :style="getAnimation"></div>
-                            <img style="z-index: 2;" class="h-24 w-24 rounded-full border-4 border-gray-500 object-cover" :src="user?.profile_photo_path ? '/storage/' + user.profile_photo_path : '/images/null.jpg'" :alt="user?.name ?? profile.name">
+                            <img style="z-index: 2;" class="h-24 w-24 rounded-full border-4 border-gray-500 object-cover" :src="user.profile_photo_path ? '/storage/' + user.profile_photo_path : '/images/null.jpg'" :alt="user.name">
                         </div>
 
                         <div class="flex items-center justify-center">
                             <div>
-                                <img onerror="this.src='/images/flags/_404.png'" :src="`/images/flags/${user?.country ?? profile.country}.png`" :title="user?.country ?? profile.country" class="w-7 inline mr-2 mb-0.5">
+                                <img onerror="this.src='/images/flags/_404.png'" :src="`/images/flags/${user.country}.png`" :title="user.country" class="w-7 inline mr-2 mb-0.5">
                             </div>
-                            <div class="text-2xl font-medium text-gray-100" v-html="q3tohtml(user?.name ?? profile.name)"></div>
+                            <div class="text-2xl font-medium text-gray-100" v-html="q3tohtml(user.name)"></div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="col-span-6 flex flex-col items-center">
-                <div class="text-white mb-2">Profile Color</div>
+                <div class="text-white mb-2">{{ $t('Profile Color') }}</div>
                 <div class="flex justify-center">
                     <v-color-picker show-swatches color="#1F2937" v-model="form.color" hide-inputs />
                 </div>

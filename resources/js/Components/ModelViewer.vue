@@ -6,6 +6,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { MD3Loader } from '@/utils/MD3Loader.js';
 import { MD3AnimationManager } from '@/utils/MD3AnimationManager.js';
 import { MD3SoundManager } from '@/utils/MD3SoundManager.js';
+import { t } from '@/utils/i18n';
 
 const DEBUG = false;
 
@@ -592,7 +593,7 @@ async function loadModel() {
         emit('loaded', model);
     } catch (err) {
         console.error('Failed to load model:', err);
-        error.value = err.message || 'Failed to load model';
+        error.value = err.message || t('Failed to load model');
         loading.value = false;
         emit('error', err);
     }
@@ -1279,7 +1280,7 @@ defineExpose({
         <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-black/50">
             <div class="text-center">
                 <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-                <p class="mt-4 text-white font-semibold">Loading 3D Model...</p>
+                <p class="mt-4 text-white font-semibold">{{ $t('Loading 3D Model...') }}</p>
             </div>
         </div>
 
@@ -1287,9 +1288,9 @@ defineExpose({
         <div v-if="error" class="absolute inset-0 flex items-center justify-center bg-black/50">
             <div class="text-center max-w-md p-6">
                 <div class="text-amber-400 text-5xl mb-4">⚠️</div>
-                <p class="text-white font-bold mb-2">Failed to load model</p>
+                <p class="text-white font-bold mb-2">{{ $t('Failed to load model') }}</p>
                 <p class="text-gray-400 text-sm mb-3">{{ error }}</p>
-                <p class="text-amber-400/80 text-xs">This model may be incomplete or missing required files from the original author's package.</p>
+                <p class="text-amber-400/80 text-xs">{{ $t('This model may be incomplete or missing required files from the original author\'s package.') }}</p>
             </div>
         </div>
 
@@ -1297,11 +1298,11 @@ defineExpose({
         <div v-if="showGrid" class="absolute bottom-4 left-4 bg-black/60 rounded-lg px-4 py-2 text-xs text-gray-300">
             <div class="flex items-center gap-2">
                 <span>🖱️</span>
-                <span>Left click: Rotate | Right click: Pan | Scroll: Zoom</span>
+                <span>{{ $t('Left click: Rotate') }} | {{ $t('Right click: Pan') }} | {{ $t('Scroll: Zoom') }}</span>
             </div>
             <div v-if="isWeapon" class="flex items-center gap-2 mt-1">
                 <span>⌨️</span>
-                <span>Ctrl: Fire | Alt: Fire + Hit</span>
+                <span>{{ $t('Ctrl: Fire') }} | {{ $t('Alt: Fire + Hit') }}</span>
             </div>
         </div>
 
@@ -1316,7 +1317,7 @@ defineExpose({
                 @contextmenu.prevent
                 class="bg-red-600/80 hover:bg-red-500 rounded-lg px-6 py-3 text-white font-bold shadow-lg transition-all hover:shadow-red-500/50 active:scale-95 select-none"
             >
-                🔫 FIRE
+                🔫 {{ $t('FIRE') }}
             </button>
             <!-- Fire + Hit button (only for gauntlet and lightning gun) -->
             <button
@@ -1329,7 +1330,7 @@ defineExpose({
                 @contextmenu.prevent
                 class="bg-orange-600/80 hover:bg-orange-500 rounded-lg px-6 py-3 text-white font-bold shadow-lg transition-all hover:shadow-orange-500/50 active:scale-95 select-none"
             >
-                💥 FIRE + HIT
+                💥 {{ $t('FIRE + HIT') }}
             </button>
         </div>
     </div>

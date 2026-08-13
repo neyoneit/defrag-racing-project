@@ -8,14 +8,14 @@ defineProps({
 
 <template>
     <div class="py-12 px-4 sm:px-6 lg:px-8">
-        <Head title="Terms of Service" />
+        <Head :title="$t('Terms of Service')" />
 
         <!-- Modern Terms Container -->
         <div class="max-w-4xl mx-auto">
             <!-- Header -->
             <div class="text-center mb-8">
-                <h1 class="text-2xl md:text-3xl font-black text-white mb-2">Terms of Service</h1>
-                <p class="text-gray-400">Please read these terms carefully</p>
+                <h1 class="text-2xl md:text-3xl font-black text-white mb-2">{{ $t('Terms of Service') }}</h1>
+                <p class="text-gray-400">{{ $t('Please read these terms carefully') }}</p>
             </div>
 
             <!-- Terms Content Card -->
@@ -32,14 +32,14 @@ defineProps({
                     :href="route('home')"
                     class="px-6 py-3 bg-black/40 backdrop-blur-sm hover:bg-black/50 border border-white/10 hover:border-white/20 text-white font-medium rounded-lg transition-all"
                 >
-                    ← Back to Home
+                    ← {{ $t('Back to Home') }}
                 </Link>
                 <Link
                     v-if="!$page.props.auth.user"
                     :href="route('register')"
                     class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-blue-500/20"
                 >
-                    I Agree - Create Account
+                    {{ $t('I Agree - Create Account') }}
                 </Link>
             </div>
         </div>

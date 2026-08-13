@@ -78,11 +78,11 @@
     <div>
         <FormSection @submitted="finishBasicInformation">
             <template #title>
-                <div>Organizer Details</div>
+                <div>{{ $t('Organizer Details') }}</div>
             </template>
     
             <template #description>
-                <div>Add the details of the new Organizer</div>
+                <div>{{ $t('Add the details of the new Organizer') }}</div>
             </template>
     
             <template #form>
@@ -98,7 +98,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <InputLabel for="user_id" value="Defrag User" />
+                        <InputLabel for="user_id" :value="$t('Defrag User')" />
                         <PlayerSelectDefrag
                             id="user_id"
                             v-model="user_id"
@@ -113,7 +113,7 @@
     
             <template #actions>
                 <div class="flex justify-between w-full">
-                    <PrimaryButton>Submit</PrimaryButton>
+                    <PrimaryButton>{{ $t('Submit') }}</PrimaryButton>
                 </div>
             </template>
         </FormSection>

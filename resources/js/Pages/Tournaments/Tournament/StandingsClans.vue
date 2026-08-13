@@ -13,7 +13,7 @@
 <template>
     <Tournament :tournament="tournament" tab="Standings">
         <div class="flex justify-between items-center">
-            <h1 class="font-black text-2xl md:text-3xl text-white mb-3">Standings</h1>
+            <h1 class="font-black text-2xl md:text-3xl text-white mb-3">{{ $t('Standings') }}</h1>
         </div>
     
         <div class="tech-line-overview"></div>
@@ -31,7 +31,7 @@
                 <StandingsEntryClans physics="vq3" v-for="(clan, index) in vq3_standings" :item="clan" :key="clan.id" :rank="index+1" />
     
                 <div v-if="vq3_standings?.length == 0">
-                    <div class="text-xl text-white mt-5 text-center">No results yet.</div>
+                    <div class="text-xl text-white mt-5 text-center">{{ $t('No results yet.') }}</div>
                 </div>
             </div>
     
@@ -43,7 +43,7 @@
                 <StandingsEntryClans physics="cpm" v-for="(clan, index) in cpm_standings" :item="clan" :key="clan.id" :rank="index+1" />
     
                 <div v-if="cpm_standings?.length == 0">
-                    <div class="text-xl text-white mt-5 text-center">No results yet.</div>
+                    <div class="text-xl text-white mt-5 text-center">{{ $t('No results yet.') }}</div>
                 </div>
             </div>
         </div>

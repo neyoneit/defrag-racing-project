@@ -86,27 +86,26 @@ const byDay = computed(() => {
 </script>
 
 <template>
-    <Head title="DefragLive Map Log" />
+    <Head :title="$t('DefragLive Map Log')" />
 
     <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-8">
         <!-- Header -->
         <div class="rounded-2xl border border-purple-500/20 bg-black/40 backdrop-blur-sm p-6 md:p-8 mb-6 shadow-2xl">
-            <div class="text-xs uppercase tracking-widest text-purple-300/80 font-semibold mb-1">DefragLive</div>
-            <h1 class="text-2xl md:text-3xl font-black text-white">Map log</h1>
+            <div class="text-xs uppercase tracking-widest text-purple-300/80 font-semibold mb-1">{{ $t('DefragLive') }}</div>
+            <h1 class="text-2xl md:text-3xl font-black text-white">{{ $t('Map log') }}</h1>
             <p class="text-gray-400 mt-2 text-sm leading-relaxed max-w-2xl">
-                What the bot has been streaming, map by map - which map ran from when to when,
-                and the players it spectated along the way. Each block is one continuous stretch on a map.
+                {{ $t('What the bot has been streaming, map by map - which map ran from when to when, and the players it spectated along the way. Each block is one continuous stretch on a map.') }}
             </p>
             <Link href="/defraglive/contest"
                 class="inline-flex items-center gap-1.5 mt-3 text-sm font-semibold text-[#a970ff] hover:text-[#bf94ff] hover:underline">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                Back to the Watch Contest
+                {{ $t('Back to the Watch Contest') }}
             </Link>
         </div>
 
         <div v-if="!blocks || blocks.length === 0"
             class="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm p-10 text-center text-gray-500">
-            Nothing logged yet.
+            {{ $t('Nothing logged yet.') }}
         </div>
 
         <div v-else class="space-y-8">
@@ -132,7 +131,7 @@ const byDay = computed(() => {
                                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
                                         <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                                     </span>
-                                    Live
+                                    {{ $t('Live') }}
                                 </div>
                                 <div class="absolute bottom-2 left-3 right-3 sm:hidden">
                                     <div class="font-bold text-white truncate drop-shadow">{{ b.map }}</div>
@@ -148,13 +147,13 @@ const byDay = computed(() => {
                                         <div class="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
                                             <span>{{ time(b.started_at) }}</span>
                                             <span class="text-gray-600">&rarr;</span>
-                                            <span v-if="b.live" class="text-red-400 font-semibold">now</span>
+                                            <span v-if="b.live" class="text-red-400 font-semibold">{{ $t('now') }}</span>
                                             <span v-else>{{ time(b.ended_at) }}</span>
                                         </div>
                                     </div>
                                     <div class="shrink-0 text-right">
                                         <div class="text-sm font-bold text-white tabular-nums">{{ fmtDur(liveDur(b)) }}</div>
-                                        <div class="text-[10px] uppercase tracking-wider text-gray-500">{{ b.players.length }} player{{ b.players.length === 1 ? '' : 's' }}</div>
+                                        <div class="text-[10px] uppercase tracking-wider text-gray-500">{{ $tc(':count player|:count players', b.players.length) }}</div>
                                     </div>
                                 </div>
 
@@ -176,8 +175,8 @@ const byDay = computed(() => {
                 </div>
             </div>
             <!-- Lazy-load tail: spinner while fetching the next chunk, quiet end note otherwise -->
-            <div v-if="loadingMore" class="py-6 text-center text-sm text-gray-500">Loading more…</div>
-            <div v-else-if="!hasMore && blocks?.length" class="py-6 text-center text-xs text-gray-600">That's the whole log we keep.</div>
+            <div v-if="loadingMore" class="py-6 text-center text-sm text-gray-500">{{ $t('Loading more…') }}</div>
+            <div v-else-if="!hasMore && blocks?.length" class="py-6 text-center text-xs text-gray-600">{{ $t("That's the whole log we keep.") }}</div>
         </div>
     </div>
 </template>

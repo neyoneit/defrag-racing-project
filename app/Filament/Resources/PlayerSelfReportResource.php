@@ -144,7 +144,7 @@ class PlayerSelfReportResource extends Resource
                     ->sortable()
                     ->description(function (PlayerSelfReport $record) {
                         $reasons = array_filter(explode(',', (string) $record->reason_list));
-                        $labels = array_map(fn ($r) => RecordFlagController::FLAG_TYPES[$r] ?? $r, $reasons);
+                        $labels = array_map(fn ($r) => RecordFlagController::flagTypes()[$r] ?? $r, $reasons);
 
                         return implode(', ', array_slice($labels, 0, 3))
                             . (count($labels) > 3 ? ' +' . (count($labels) - 3) . ' more' : '');
@@ -217,7 +217,7 @@ class PlayerSelfReportResource extends Resource
                 Tables\Grouping\Group::make('reason')
                     ->label('Reason')
                     ->collapsible()
-                    ->getTitleFromRecordUsing(fn (PlayerSelfReport $record) => RecordFlagController::FLAG_TYPES[$record->reason] ?? $record->reason),
+                    ->getTitleFromRecordUsing(fn (PlayerSelfReport $record) => RecordFlagController::flagTypes()[$record->reason] ?? $record->reason),
                 Tables\Grouping\Group::make('mapname')
                     ->label('Map')
                     ->collapsible(),
@@ -246,7 +246,7 @@ class PlayerSelfReportResource extends Resource
                 Tables\Filters\SelectFilter::make('reason')
                     ->label('Reason')
                     ->multiple()
-                    ->options(RecordFlagController::FLAG_TYPES),
+                    ->options(RecordFlagController::flagTypes()),
 
                 Tables\Filters\SelectFilter::make('physics')
                     ->options(['cpm' => 'CPM', 'vq3' => 'VQ3']),
@@ -267,7 +267,7 @@ class PlayerSelfReportResource extends Resource
                 Tables\Columns\TextColumn::make('reason')
                     ->label('Reason')
                     ->badge()
-                    ->formatStateUsing(fn (string $state) => RecordFlagController::FLAG_TYPES[$state] ?? $state),
+                    ->formatStateUsing(fn (string $state) => RecordFlagController::flagTypes()[$state] ?? $state),
 
                 Tables\Columns\TextColumn::make('processed_at')
                     ->label('State')

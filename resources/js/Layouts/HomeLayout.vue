@@ -15,6 +15,7 @@
     import AlertBanner from '@/Components/Basic/AlertBanner.vue';
 
     import Footer from '@/Components/Footer.vue';
+    import { currentLocale } from '@/utils/i18n';
 
     defineProps({
         title: String,
@@ -168,42 +169,42 @@
                                 </template>
                                 <template #content>
                                     <div class="px-4 py-2 text-xs text-gray-400 border-b border-white/5">
-                                        Menu
+                                        {{ $t('Menu') }}
                                     </div>
                                     <!-- Main items (hidden on smaller screens) -->
                                     <DropdownLink :href="route('maps')" class="lg:hidden">
-                                        Maps
+                                        {{ $t('Maps') }}
                                     </DropdownLink>
                                     <DropdownLink :href="route('maplists.index')" class="lg:hidden">
-                                        Maplists
+                                        {{ $t('Maplists') }}
                                     </DropdownLink>
                                     <DropdownLink :href="route('ranking')" class="lg:hidden">
-                                        Ranking
+                                        {{ $t('Ranking') }}
                                     </DropdownLink>
                                     <DropdownLink :href="route('servers')" class="md:hidden">
-                                        Servers
+                                        {{ $t('Servers') }}
                                     </DropdownLink>
                                     <!-- Divider -->
                                     <div class="border-t border-white/5 my-1"></div>
                                     <!-- More items (always shown in mobile menu) -->
                                     <DropdownLink :href="route('records')">
-                                        Records
+                                        {{ $t('Records') }}
                                     </DropdownLink>
                                     <DropdownLink :href="route('demos.index')">
-                                        Demos
+                                        {{ $t('Demos') }}
                                     </DropdownLink>
                                     <DropdownLink :href="route('downloads')">
-                                        Downloads
+                                        {{ $t('Downloads') }}
                                     </DropdownLink>
                                     <DropdownLink :href="route('clans.index')">
-                                        Clans
+                                        {{ $t('Clans') }}
                                     </DropdownLink>
                                     <DropdownLink :href="route('tournaments.index')">
-                                        Tournaments
+                                        {{ $t('Tournaments') }}
                                     </DropdownLink>
                                     <div class="border-t border-white/5 my-1"></div>
                                     <DropdownLink href="/models">
-                                        Models
+                                        {{ $t('Models') }}
                                     </DropdownLink>
                                 </template>
                             </Dropdown>
@@ -219,7 +220,7 @@
                                         @focus="onSearchFocus"
                                         type="text"
                                         class="h-9 pl-9 pr-3 w-48 sm:w-56 md:w-64 lg:w-72 bg-white/5 border-white/10 text-sm placeholder:text-gray-500 focus:bg-white/10 focus:border-white/20 transition-all"
-                                        placeholder="Search..."
+                                        :placeholder="$t('Search...')"
                                         @input="performSearch"
                                     />
                                 </div>
@@ -237,7 +238,7 @@
                                             class="px-3 py-3 text-xs font-bold transition-all border-l-2 text-left whitespace-nowrap"
                                             :class="searchCategory == 'maps' ? 'border-green-500 text-green-400 bg-green-500/10' : 'border-transparent text-gray-400 hover:text-white hover:bg-white/5'"
                                         >
-                                            Maps<span v-if="maps.data?.length > 0" class="ml-1.5 text-[10px] opacity-60">({{ maps.data.length }})</span>
+                                            {{ $t('Maps') }}<span v-if="maps.data?.length > 0" class="ml-1.5 text-[10px] opacity-60">({{ maps.data.length }})</span>
                                         </button>
                                         <button
                                             v-if="$page.props.auth.user"
@@ -245,35 +246,35 @@
                                             class="px-3 py-3 text-xs font-bold transition-all border-l-2 text-left whitespace-nowrap"
                                             :class="searchCategory == 'players' ? 'border-purple-500 text-purple-400 bg-purple-500/10' : 'border-transparent text-gray-400 hover:text-white hover:bg-white/5'"
                                         >
-                                            Players<span v-if="players?.length > 0" class="ml-1.5 text-[10px] opacity-60">({{ players.length }})</span>
+                                            {{ $t('Players') }}<span v-if="players?.length > 0" class="ml-1.5 text-[10px] opacity-60">({{ players.length }})</span>
                                         </button>
                                         <button
                                             @click.stop="searchCategory = 'demos'"
                                             class="px-3 py-3 text-xs font-bold transition-all border-l-2 text-left whitespace-nowrap"
                                             :class="searchCategory == 'demos' ? 'border-orange-500 text-orange-400 bg-orange-500/10' : 'border-transparent text-gray-400 hover:text-white hover:bg-white/5'"
                                         >
-                                            Demos<span v-if="demos?.length > 0" class="ml-1.5 text-[10px] opacity-60">({{ demos.length }})</span>
+                                            {{ $t('Demos') }}<span v-if="demos?.length > 0" class="ml-1.5 text-[10px] opacity-60">({{ demos.length }})</span>
                                         </button>
                                         <button
                                             @click.stop="searchCategory = 'clans'"
                                             class="px-3 py-3 text-xs font-bold transition-all border-l-2 text-left whitespace-nowrap"
                                             :class="searchCategory == 'clans' ? 'border-cyan-500 text-cyan-400 bg-cyan-500/10' : 'border-transparent text-gray-400 hover:text-white hover:bg-white/5'"
                                         >
-                                            Clans<span v-if="clans?.length > 0" class="ml-1.5 text-[10px] opacity-60">({{ clans.length }})</span>
+                                            {{ $t('Clans') }}<span v-if="clans?.length > 0" class="ml-1.5 text-[10px] opacity-60">({{ clans.length }})</span>
                                         </button>
                                         <button
                                             @click.stop="searchCategory = 'bundles'"
                                             class="px-3 py-3 text-xs font-bold transition-all border-l-2 text-left whitespace-nowrap"
                                             :class="searchCategory == 'bundles' ? 'border-yellow-500 text-yellow-400 bg-yellow-500/10' : 'border-transparent text-gray-400 hover:text-white hover:bg-white/5'"
                                         >
-                                            Bundles<span v-if="bundles?.length > 0" class="ml-1.5 text-[10px] opacity-60">({{ bundles.length }})</span>
+                                            {{ $t('Bundles') }}<span v-if="bundles?.length > 0" class="ml-1.5 text-[10px] opacity-60">({{ bundles.length }})</span>
                                         </button>
                                     </div>
 
                                     <!-- Right Side - Results -->
                                     <div class="flex-1 defrag-scrollbar p-3 overflow-y-auto">
                                         <div v-if="search.length == 0" class="text-center py-20 text-gray-500 text-sm">
-                                            Start typing to search...
+                                            {{ $t('Start typing to search...') }}
                                         </div>
 
                                         <div ref="resultsSection" v-else>
@@ -300,7 +301,7 @@
                                                     <!-- Demo Info -->
                                                     <div class="flex-1 min-w-0">
                                                         <div class="text-base font-black text-white group-hover:text-orange-400 transition-colors truncate mb-0.5">{{ demo.filename }}</div>
-                                                        <div class="text-xs text-gray-400 font-semibold">Uploaded {{ new Date(demo.created_at).toLocaleDateString() }}</div>
+                                                        <div class="text-xs text-gray-400 font-semibold">{{ $t('Uploaded :date', { date: new Date(demo.created_at).toLocaleDateString(currentLocale()) }) }}</div>
                                                     </div>
 
                                                     <!-- Arrow -->
@@ -323,7 +324,7 @@
                                                     <!-- Clan Info -->
                                                     <div class="flex-1 min-w-0">
                                                         <div class="text-base font-black text-white group-hover:text-cyan-400 transition-colors truncate mb-0.5">{{ clan.name }}</div>
-                                                        <div class="text-xs text-gray-400 font-semibold">{{ clan.members_count }} members</div>
+                                                        <div class="text-xs text-gray-400 font-semibold">{{ $tc(':count member|:count members', clan.members_count) }}</div>
                                                     </div>
 
                                                     <!-- Arrow -->
@@ -358,8 +359,8 @@
 
                                             <!-- No Results -->
                                             <div v-if="players?.length == 0 && maps.data?.length == 0 && demos?.length == 0 && clans?.length == 0 && bundles?.length == 0" class="text-center py-20">
-                                                <p class="text-sm text-gray-400 mb-1">No results found</p>
-                                                <p class="text-xs text-gray-600">Try different keywords</p>
+                                                <p class="text-sm text-gray-400 mb-1">{{ $t('No results found') }}</p>
+                                                <p class="text-xs text-gray-600">{{ $t('Try different keywords') }}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -389,28 +390,28 @@
 
                                     <template #content>
                                         <DropdownLink :href="route('profile.index', $page.props.auth.user.id)">
-                                            My Profile
+                                            {{ $t('My Profile') }}
                                         </DropdownLink>
                                         <div class="mx-3 border-t border-white/10 my-1" />
                                         <DropdownLink :href="route('settings.show')">
-                                            Settings
+                                            {{ $t('Settings') }}
                                         </DropdownLink>
                                         <div class="pl-7 pr-3 pb-2 -mt-1 space-y-px">
-                                            <Link :href="route('settings.show')" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Profile</Link>
+                                            <Link :href="route('settings.show')" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">{{ $t('Profile') }}</Link>
                                             <template v-if="$page.props.auth.user.email_verified_at">
-                                                <Link :href="route('settings.show') + '?tab=customize'" class="block text-sm text-gray-400 hover:text-purple-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Customize</Link>
-                                                <Link :href="route('settings.show') + '?tab=notifications'" class="block text-sm text-gray-400 hover:text-orange-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Notifications</Link>
+                                                <Link :href="route('settings.show') + '?tab=customize'" class="block text-sm text-gray-400 hover:text-purple-400 py-1 px-2 rounded hover:bg-white/5 transition-all">{{ $t('Customize') }}</Link>
+                                                <Link :href="route('settings.show') + '?tab=notifications'" class="block text-sm text-gray-400 hover:text-orange-400 py-1 px-2 rounded hover:bg-white/5 transition-all">{{ $t('Notifications') }}</Link>
                                             </template>
-                                            <Link :href="route('settings.show') + '?tab=security'" class="block text-sm text-gray-400 hover:text-red-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Security</Link>
+                                            <Link :href="route('settings.show') + '?tab=security'" class="block text-sm text-gray-400 hover:text-red-400 py-1 px-2 rounded hover:bg-white/5 transition-all">{{ $t('Security') }}</Link>
                                         </div>
                                         <div class="mx-3 border-t border-white/10 mb-1" />
                                         <DropdownLink :href="route('maplists.index') + '?user=' + $page.props.auth.user.id">
-                                            Play Later
+                                            {{ $t('Play Later') }}
                                         </DropdownLink>
                                         <div class="mx-3 border-t border-white/10 my-1" />
                                         <form @submit.prevent="logout">
                                             <DropdownLink as="button">
-                                                <span class="text-red-400">Log Out</span>
+                                                <span class="text-red-400">{{ $t('Log Out') }}</span>
                                             </DropdownLink>
                                         </form>
                                     </template>
@@ -421,12 +422,12 @@
                             <div v-else class="flex items-center gap-2">
                                 <Link :href="route('login')">
                                     <button class="px-3 py-1.5 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all">
-                                        Login
+                                        {{ $t('Login') }}
                                     </button>
                                 </Link>
                                 <Link :href="route('register')">
                                     <button class="px-3 py-1.5 text-sm font-medium bg-white/10 hover:bg-white/15 text-white rounded-lg transition-all">
-                                        Register
+                                        {{ $t('Register') }}
                                     </button>
                                 </Link>
                             </div>
@@ -436,26 +437,26 @@
                     <!-- Second Row: Navigation Links -->
                     <div class="hidden md:flex items-center gap-1 h-12 px-2">
                         <NavLink :href="route('servers')" :active="route().current('servers')">
-                            Servers
+                            {{ $t('Servers') }}
                         </NavLink>
                         <NavLink :href="route('ranking')" :active="route().current('ranking')">
-                            Ranking
+                            {{ $t('Ranking') }}
                         </NavLink>
                         <NavLink :href="route('maps')" :active="route().current('maps')">
-                            Maps
+                            {{ $t('Maps') }}
                         </NavLink>
                         <NavLink :href="route('maplists.index')" :active="route().current('maplists.*')">
-                            Maplists
+                            {{ $t('Maplists') }}
                         </NavLink>
                         <NavLink href="/models" :active="route().current('models.*')">
-                            Models
+                            {{ $t('Models') }}
                         </NavLink>
 
                         <!-- More Menu Dropdown -->
                         <Dropdown align="left" width="48">
                             <template #trigger>
                                 <button class="px-3 py-2 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all flex items-center gap-1">
-                                    More
+                                    {{ $t('More') }}
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                                     </svg>
@@ -463,19 +464,19 @@
                             </template>
                             <template #content>
                                 <DropdownLink :href="route('records')">
-                                    Records
+                                    {{ $t('Records') }}
                                 </DropdownLink>
                                 <DropdownLink :href="route('demos.index')">
-                                    Demos
+                                    {{ $t('Demos') }}
                                 </DropdownLink>
                                 <DropdownLink :href="route('downloads')">
-                                    Bundles
+                                    {{ $t('Downloads') }}
                                 </DropdownLink>
                                 <DropdownLink :href="route('clans.index')">
-                                    Clans
+                                    {{ $t('Clans') }}
                                 </DropdownLink>
                                 <DropdownLink :href="route('tournaments.index')">
-                                    Tournaments
+                                    {{ $t('Tournaments') }}
                                 </DropdownLink>
                             </template>
                         </Dropdown>

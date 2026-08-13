@@ -14,7 +14,7 @@ class PagesController extends Controller {
             ->firstOrFail();
 
         return Inertia::render('PageView')
-            ->with('page', $page);
+            ->with('page', $page->translated());
     }
 
 }

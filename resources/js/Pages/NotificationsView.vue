@@ -1,5 +1,6 @@
 <script setup>
     import { Head, Link, router } from '@inertiajs/vue3';
+    import { t } from '@/utils/i18n';
     import { ref, computed, onMounted, nextTick } from 'vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import axios from 'axios';
@@ -204,9 +205,9 @@
     // header bell pill so users see "Clan:", "Tournament:" etc.
     const getNotificationPrefix = (type) => {
         if (!type) return null;
-        if (type.startsWith('clan_')) return 'Clan:';
-        if (type.startsWith('tournament_') || type.startsWith('round_')) return 'Tournament:';
-        if (type === 'alias_suggestion') return 'Alias:';
+        if (type.startsWith('clan_')) return t('Clan:');
+        if (type.startsWith('tournament_') || type.startsWith('round_')) return t('Tournament:');
+        if (type === 'alias_suggestion') return t('Alias:');
         return null;
     };
 
@@ -332,19 +333,19 @@
 
 <template>
     <div class="">
-        <Head title="Notification Center" />
+        <Head :title="$t('Notification Center')" />
 
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-16">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="flex justify-between items-start flex-wrap gap-4">
                     <div>
-                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">Notification Center</h1>
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">{{ $t('Notification Center') }}</h1>
                         <div class="flex items-center gap-2 text-gray-400">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
                             </svg>
-                            <span class="text-sm font-semibold">{{ totalCount }} total notifications</span>
+                            <span class="text-sm font-semibold">{{ $tc(':count total notification|:count total notifications', totalCount) }}</span>
                         </div>
                     </div>
                 </div>
@@ -368,7 +369,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3-3 3" />
                             </svg>
-                            <span>Record Notifications</span>
+                            <span>{{ $t('Record Notifications') }}</span>
                             <span v-if="(recordNotificationsPage?.data || []).filter(n => !n.read).length" class="px-2 py-0.5 rounded-full text-xs font-bold"
                                   :class="activeTab === 'records' ? 'bg-orange-500/30 text-orange-300' : 'bg-white/10 text-gray-400'">
                                 {{ (recordNotificationsPage?.data || []).filter(n => !n.read).length }}
@@ -388,7 +389,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 0 8.835-2.535m0 0A23.74 23.74 0 0 0 18.795 3m.38 1.125a23.91 23.91 0 0 1 1.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 0 0 1.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 0 1 0 3.46" />
                             </svg>
-                            <span>System Notifications</span>
+                            <span>{{ $t('System Notifications') }}</span>
                             <span v-if="(systemNotificationsPage?.data || []).filter(n => !n.read).length" class="px-2 py-0.5 rounded-full text-xs font-bold"
                                   :class="activeTab === 'system' ? 'bg-blue-500/30 text-blue-300' : 'bg-white/10 text-gray-400'">
                                 {{ (systemNotificationsPage?.data || []).filter(n => !n.read).length }}
@@ -413,7 +414,7 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
                                 </svg>
-                                <span>All Records</span>
+                                <span>{{ $t('All Records') }}</span>
                                 <span v-if="recordTabCounts.all" class="px-2 py-0.5 rounded-full text-xs font-bold"
                                       :class="activeRecordTab === 'all' ? 'bg-orange-500/30 text-orange-300' : 'bg-white/10 text-gray-400'">
                                     {{ recordTabCounts.all }}
@@ -433,7 +434,7 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3-3 3" />
                                 </svg>
-                                <span>Beaten Records</span>
+                                <span>{{ $t('Beaten Records') }}</span>
                                 <span v-if="recordTabCounts.beaten" class="px-2 py-0.5 rounded-full text-xs font-bold"
                                       :class="activeRecordTab === 'beaten' ? 'bg-blue-500/30 text-blue-300' : 'bg-white/10 text-gray-400'">
                                     {{ recordTabCounts.beaten }}
@@ -453,7 +454,7 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
                                 </svg>
-                                <span>Beaten World Records</span>
+                                <span>{{ $t('Beaten World Records') }}</span>
                                 <span v-if="recordTabCounts.worldrecords" class="px-2 py-0.5 rounded-full text-xs font-bold"
                                       :class="activeRecordTab === 'worldrecords' ? 'bg-yellow-500/30 text-yellow-300' : 'bg-white/10 text-gray-400'">
                                     {{ recordTabCounts.worldrecords }}
@@ -469,13 +470,13 @@
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                             </svg>
-                            Mark All as Read
+                            {{ $t('Mark All as Read') }}
                         </button>
                         <button @click="markAllAsUnread" class="px-2.5 py-1 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-400 font-semibold text-xs transition-all flex items-center gap-1.5">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 3.844.148m-3.844-.148a23.856 23.856 0 0 1-5.455-1.31 8.964 8.964 0 0 0 2.3-5.542m3.155 6.852a3 3 0 0 0 5.667 1.97m1.965-2.277L21 21m-4.225-4.225a23.81 23.81 0 0 0 3.536-1.003A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6.53 6.53m10.245 10.245L6.53 6.53M3 3l3.53 3.53" />
                             </svg>
-                            Mark All as Unread
+                            {{ $t('Mark All as Unread') }}
                         </button>
                     </div>
 
@@ -499,15 +500,15 @@
                                     <span class="text-xs px-2 py-0.5 rounded-full font-bold uppercase shrink-0" :class="{'bg-purple-500/30 text-purple-300': notification.physics.includes('cpm'), 'bg-blue-500/30 text-blue-300': !notification.physics.includes('cpm')}">
                                         {{ notification.physics }}
                                     </span>
-                                    <span class="text-gray-500">broke your time on</span>
+                                    <span class="text-gray-500">{{ $t('broke your time on') }}</span>
                                     <Link class="text-blue-400 hover:text-blue-300 font-semibold hover:underline transition-colors" :href="`/maps/${encodeURIComponent(notification.mapname)}`" @click.stop>{{ notification.mapname }}</Link>
-                                    <span class="text-gray-500">with</span>
+                                    <span class="text-gray-500">{{ $t('with') }}</span>
                                     <span class="font-bold text-white">{{ formatTime(notification.time) }}</span>
                                     <span class="text-green-400 font-semibold">(+{{ formatTime(timeDiff(notification.my_time, notification.time)) }})</span>
                                 </div>
 
                                 <!-- Read/Unread Toggle -->
-                                <button @click.stop="toggleNotificationRead(notification.id)" class="shrink-0 p-1 rounded hover:bg-white/5 transition-all" :title="notification.read ? 'Mark as unread' : 'Mark as read'">
+                                <button @click.stop="toggleNotificationRead(notification.id)" class="shrink-0 p-1 rounded hover:bg-white/5 transition-all" :title="notification.read ? $t('Mark as unread') : $t('Mark as read')">
                                     <!-- A sealed envelope is unread and asks to be opened; an opened one
                                          is read. The old check mark read as "approve" and the crossed-out
                                          bell as "mute", neither of which is what this button does. -->
@@ -532,8 +533,8 @@
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto text-gray-600 mb-4">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                         </svg>
-                        <h3 class="text-xl font-bold text-gray-400 mb-2">No notifications</h3>
-                        <p class="text-gray-500">No notifications in this category.</p>
+                        <h3 class="text-xl font-bold text-gray-400 mb-2">{{ $t('No notifications') }}</h3>
+                        <p class="text-gray-500">{{ $t('No notifications in this category.') }}</p>
                     </div>
                 </div>
 
@@ -552,7 +553,7 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
                                 </svg>
-                                <span>All</span>
+                                <span>{{ $t('All') }}</span>
                                 <span v-if="systemTabCounts.all" class="px-2 py-0.5 rounded-full text-xs font-bold"
                                       :class="activeSystemTab === 'all' ? 'bg-white/30 text-white' : 'bg-white/10 text-gray-400'">
                                     {{ systemTabCounts.all }}
@@ -572,7 +573,7 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 0 8.835-2.535m0 0A23.74 23.74 0 0 0 18.795 3m.38 1.125a23.91 23.91 0 0 1 1.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 0 0 1.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 0 1 0 3.46" />
                                 </svg>
-                                <span>Announcements</span>
+                                <span>{{ $t('Announcements') }}</span>
                                 <span v-if="systemTabCounts.announcements" class="px-2 py-0.5 rounded-full text-xs font-bold"
                                       :class="activeSystemTab === 'announcements' ? 'bg-blue-500/30 text-blue-300' : 'bg-white/10 text-gray-400'">
                                     {{ systemTabCounts.announcements }}
@@ -592,7 +593,7 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
                                 </svg>
-                                <span>Maps</span>
+                                <span>{{ $t('Maps') }}</span>
                                 <span v-if="systemTabCounts.maps" class="px-2 py-0.5 rounded-full text-xs font-bold"
                                       :class="activeSystemTab === 'maps' ? 'bg-amber-500/30 text-amber-300' : 'bg-white/10 text-gray-400'">
                                     {{ systemTabCounts.maps }}
@@ -612,7 +613,7 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
                                 </svg>
-                                <span>Clan</span>
+                                <span>{{ $t('Clan') }}</span>
                                 <span v-if="systemTabCounts.clan" class="px-2 py-0.5 rounded-full text-xs font-bold"
                                       :class="activeSystemTab === 'clan' ? 'bg-green-500/30 text-green-300' : 'bg-white/10 text-gray-400'">
                                     {{ systemTabCounts.clan }}
@@ -632,7 +633,7 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
                                 </svg>
-                                <span>Tournament</span>
+                                <span>{{ $t('Tournament') }}</span>
                                 <span v-if="systemTabCounts.tournament" class="px-2 py-0.5 rounded-full text-xs font-bold"
                                       :class="activeSystemTab === 'tournament' ? 'bg-pink-500/30 text-pink-300' : 'bg-white/10 text-gray-400'">
                                     {{ systemTabCounts.tournament }}
@@ -652,7 +653,7 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
                                 </svg>
-                                <span>Profile</span>
+                                <span>{{ $t('Profile') }}</span>
                                 <span v-if="systemTabCounts.profile" class="px-2 py-0.5 rounded-full text-xs font-bold"
                                       :class="activeSystemTab === 'profile' ? 'bg-indigo-500/30 text-indigo-300' : 'bg-white/10 text-gray-400'">
                                     {{ systemTabCounts.profile }}
@@ -672,7 +673,7 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
                                 </svg>
-                                <span>Render</span>
+                                <span>{{ $t('Render') }}</span>
                                 <span v-if="systemTabCounts.render" class="px-2 py-0.5 rounded-full text-xs font-bold"
                                       :class="activeSystemTab === 'render' ? 'bg-emerald-500/30 text-emerald-300' : 'bg-white/10 text-gray-400'">
                                     {{ systemTabCounts.render }}
@@ -688,13 +689,13 @@
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                             </svg>
-                            Mark All as Read
+                            {{ $t('Mark All as Read') }}
                         </button>
                         <button @click="markAllSystemAsUnread" class="px-2.5 py-1 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-400 font-semibold text-xs transition-all flex items-center gap-1.5">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 3.844.148m-3.844-.148a23.856 23.856 0 0 1-5.455-1.31 8.964 8.964 0 0 0 2.3-5.542m3.155 6.852a3 3 0 0 0 5.667 1.97m1.965-2.277L21 21m-4.225-4.225a23.81 23.81 0 0 0 3.536-1.003A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6.53 6.53m10.245 10.245L6.53 6.53M3 3l3.53 3.53" />
                             </svg>
-                            Mark All as Unread
+                            {{ $t('Mark All as Unread') }}
                         </button>
                     </div>
 
@@ -714,11 +715,11 @@
                                 <!-- Content -->
                                 <div class="flex-1 min-w-0 text-sm text-gray-300">
                                     <template v-if="notification.type === 'announcement'">
-                                        <span class="text-gray-400">Announcement:</span>
+                                        <span class="text-gray-400">{{ $t('Announcement:') }}</span>
                                         <span class="ml-1.5 text-blue-400 group-hover:text-blue-300 group-hover:underline font-bold transition-colors" v-html="q3tohtml(notification.headline)"></span>
                                     </template>
                                     <template v-else-if="notification.type === 'render_completed'">
-                                        <span class="text-gray-400">Render:</span>
+                                        <span class="text-gray-400">{{ $t('Render:') }}</span>
                                         <Link v-if="notification.subheadline" @click.stop="markSystemRead(notification)" class="ml-1.5 inline-flex items-center gap-1 align-middle text-emerald-300 hover:text-emerald-200 hover:underline font-bold transition-colors" :href="notification.subheadline">
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 shrink-0">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
@@ -744,14 +745,14 @@
                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 shrink-0">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                                 </svg>
-                                                Approve / reject
+                                                {{ $t('Approve / reject') }}
                                             </Link>
                                         </template>
                                     </template>
                                 </div>
 
                                 <!-- Read/Unread Toggle -->
-                                <button @click.stop="toggleSystemNotificationRead(notification.id)" class="shrink-0 p-1 rounded hover:bg-white/5 transition-all" :title="notification.read ? 'Mark as unread' : 'Mark as read'">
+                                <button @click.stop="toggleSystemNotificationRead(notification.id)" class="shrink-0 p-1 rounded hover:bg-white/5 transition-all" :title="notification.read ? $t('Mark as unread') : $t('Mark as read')">
                                     <!-- A sealed envelope is unread and asks to be opened; an opened one
                                          is read. The old check mark read as "approve" and the crossed-out
                                          bell as "mute", neither of which is what this button does. -->
@@ -776,8 +777,8 @@
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto text-gray-600 mb-4">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                         </svg>
-                        <h3 class="text-xl font-bold text-gray-400 mb-2">No notifications</h3>
-                        <p class="text-gray-500">No notifications in this category.</p>
+                        <h3 class="text-xl font-bold text-gray-400 mb-2">{{ $t('No notifications') }}</h3>
+                        <p class="text-gray-500">{{ $t('No notifications in this category.') }}</p>
                     </div>
                 </div>
 

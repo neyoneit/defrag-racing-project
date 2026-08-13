@@ -52,17 +52,17 @@
     <div>
         <FormSection @submitted="finishBasicInformation">
             <template #title>
-                <div>Streamer Details</div>
+                <div>{{ $t('Streamer Details') }}</div>
             </template>
     
             <template #description>
-                <div>Add the details of the new streamer</div>
+                <div>{{ $t('Add the details of the new streamer') }}</div>
             </template>
     
             <template #form>
                 <div class="col-span-6">
                     <div class="mb-3">
-                        <InputLabel for="twitch_username" value="Twitch Username" />
+                        <InputLabel for="twitch_username" :value="$t('Twitch Username')" />
                         <TextInput
                             id="twitch_username"
                             v-model="form.twitch_username"
@@ -74,7 +74,7 @@
                     </div>
     
                     <div class="mb-3">
-                        <InputLabel for="user_id" value="Defrag User" />
+                        <InputLabel for="user_id" :value="$t('Defrag User')" />
                         <PlayerSelectDefrag
                             id="user_id"
                             v-model="user_id"
@@ -89,7 +89,7 @@
     
             <template #actions>
                 <div class="flex justify-between w-full">
-                    <PrimaryButton>Submit</PrimaryButton>
+                    <PrimaryButton>{{ $t('Submit') }}</PrimaryButton>
                 </div>
             </template>
         </FormSection>

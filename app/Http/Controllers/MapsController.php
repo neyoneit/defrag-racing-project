@@ -483,6 +483,49 @@ class MapsController extends Controller
      * well left runs that nothing on the site could reach: too slow for Demos
      * Top against their own MDD record, and refused by the drawer.
      */
+    /**
+     * The MDD record time on this map for every profile that holds one, keyed
+     * "user:<id>" and "mdd:<id>". Both keys are emitted for the same record so
+     * a lookup works whether the q3df profile has been claimed here or not,
+     * and the fastest wins if a profile somehow holds two.
+     *
+     * This is the line that decides which row a demo hangs under. Everything
+     * at or slower than the record belongs to the record's own drawer; only
+     * what is faster than the record, and no faster than the online row
+     * itself, belongs to that online row. Without it both drawers listed the
+     * whole cluster, so the same attempt showed up twice on one screen and a
+     * faster demo sat nested under a slower one.
+     */
+    private function mddTimesByProfileKey(string $mapname, string $gametype): array
+    {
+        $times = [];
+
+        Record::where('mapname', $mapname)
+            ->where('gametype', $gametype)
+            ->select(['user_id', 'mdd_id', 'time'])
+            ->get()
+            ->each(function ($r) use (&$times) {
+                $t = (int) $r->time;
+
+                foreach (array_filter([
+                    $r->user_id ? 'user:' . (int) $r->user_id : null,
+                    $r->mdd_id ? 'mdd:' . (int) $r->mdd_id : null,
+                ]) as $key) {
+                    if (!isset($times[$key]) || $t < $times[$key]) {
+                        $times[$key] = $t;
+                    }
+                }
+            });
+
+        return $times;
+    }
+
+    /** The gametype string records are stored under: run_cpm, ctf3_vq3, ... */
+    private static function recordGametype(string $physics, ?string $fastcap = null): string
+    {
+        return ($fastcap !== null ? 'ctf' . $fastcap : 'run') . '_' . $physics;
+    }
+
     private function communityFlaggedDemoIds(array $demoIds, array $recordIds): array
     {
         if (empty($demoIds) && empty($recordIds)) {
@@ -587,16 +630,44 @@ class MapsController extends Controller
         //      online and offline reps as separate rows, each with its own
         //      time history drawer of the same origin type (so an offline
         //      rep's drawer doesn't pull in online attempts and vice versa)
+        //   3. Slower than the seed, and faster than the player's own MDD
+        //      record. A demo at or slower than the record hangs under the
+        //      record's row instead, which is the only row that can claim it
+        //      without putting a faster time underneath a slower one.
         // Distinct demo IDs are all shown: two demos with identical time_ms
         // or file_hash but different demo.id are intentionally kept — user
         // wants to see every attempt as long as it's a separate record.
         $seedId = (int) $seed->id;
         $seedIsOnline = $seed->gametype && str_starts_with($seed->gametype, 'm');
+        $seedTime = (int) $seed->time_ms;
+
+        // Only online demos ever reach a record's drawer, so an offline rep
+        // has nothing to cede and keeps its whole subcluster.
+        $mddTime = null;
+        if ($seedIsOnline) {
+            $mddTimes = $this->mddTimesByProfileKey(
+                $mapname,
+                self::recordGametype($physics, self::fastcapOf($seed->physics))
+            );
+            $seedKey = (new DemoProfileResolver())->resolve($seed, array_keys($mddTimes));
+            $mddTime = $seedKey !== null ? ($mddTimes[$seedKey] ?? null) : null;
+        }
+
         $cluster = $cluster
             ->reject(fn ($d) => (int) $d->id === $seedId)
-            ->filter(function ($d) use ($seedIsOnline) {
+            ->filter(function ($d) use ($seedIsOnline, $seedTime, $mddTime) {
                 $isOnline = $d->gametype && str_starts_with($d->gametype, 'm');
-                return $isOnline === $seedIsOnline;
+                if ($isOnline !== $seedIsOnline) {
+                    return false;
+                }
+
+                $time = (int) $d->time_ms;
+
+                if ($time < $seedTime) {
+                    return false;
+                }
+
+                return $mddTime === null || $time < $mddTime;
             })
             ->sortBy('time_ms')
             ->values();
@@ -726,21 +797,30 @@ class MapsController extends Controller
         // map+physics. Needed so the resolver's ambiguous-plain tiebreaker
         // kicks in and demos whose plain alias is claimed by multiple
         // profiles still attribute to the one with a record on the map.
-        $gametype = 'run_' . $physics;
-        $priorityProfileKeys = \App\Models\Record::where('mapname', $mapname)
-            ->where('gametype', $gametype)
-            ->select(['user_id', 'mdd_id'])->get()
-            ->flatMap(fn ($r) => array_filter([
-                $r->user_id ? 'user:' . (int) $r->user_id : null,
-                $r->mdd_id ? 'mdd:' . (int) $r->mdd_id : null,
-            ]))->unique()->values()->toArray();
+        //
+        // Reads the gametype the caller is actually looking at. It used to say
+        // run_ unconditionally, so on a fastcap view the tiebreaker consulted
+        // the run records instead - and the record time below would have been
+        // read off the wrong run entirely.
+        $gametype = self::recordGametype($physics, $fastcap);
+        $mddTimes = $this->mddTimesByProfileKey($mapname, $gametype);
+        $priorityProfileKeys = array_keys($mddTimes);
+
+        // This row IS the record, so its drawer holds the attempts at or
+        // slower than it. Anything faster belongs to the online Demos Top row
+        // above, which is only ever created for a demo that beats the record.
+        // Both drawers used to list the whole cluster, which is how the same
+        // demo appeared twice on one page and how a faster time ended up
+        // nested under a slower one.
+        $recordTime = $mddTimes[$profileKey] ?? null;
 
         // Resolve every remaining demo and keep only those that map to
         // this profile AND are online (main record context is always online).
         $resolver = new DemoProfileResolver();
-        $matched = $demos->filter(function ($d) use ($resolver, $profileKey, $priorityProfileKeys) {
+        $matched = $demos->filter(function ($d) use ($resolver, $profileKey, $priorityProfileKeys, $recordTime) {
             $isOnline = $d->gametype && str_starts_with($d->gametype, 'm');
             if (!$isOnline) return false;
+            if ($recordTime !== null && (int) $d->time_ms < $recordTime) return false;
             return $resolver->resolve($d, $priorityProfileKeys) === $profileKey;
         })
         ->sortBy('time_ms')
@@ -1228,6 +1308,10 @@ class MapsController extends Controller
         // records table) agrees with the Demos Top rep counts.
         $profileResolver = new DemoProfileResolver();
 
+        // Same record times both drawers cut on, so a badge never counts a
+        // demo the drawer will hand to the other row.
+        $mddTimes = $this->mddTimesByProfileKey($mapname, self::recordGametype($physics, $fastcap));
+
         $byName = []; $byColored = []; $byPlain = []; $byUser = [];
         $demosArr = $demos->values();
         foreach ($demosArr as $i => $d) {
@@ -1334,8 +1418,26 @@ class MapsController extends Controller
             usort($onlineMembers, fn ($a, $b) => (int) $a->time_ms - (int) $b->time_ms);
             usort($offlineMembers, fn ($a, $b) => (int) $a->time_ms - (int) $b->time_ms);
 
-            [$onlineCount, $onlineSignals] = $onlineMembers
-                ? $dedupeAndCount($onlineMembers, $onlineMembers[0])
+            // The record time splits the online members between two rows, so
+            // it has to be known before anything is counted. Both drawers
+            // apply this same cut; a badge counted without it promises rows
+            // the drawer then refuses to show.
+            $clusterKeyForTime = null;
+            foreach ($members as $m) {
+                $rk = $profileResolver->resolve($m, $priorityProfileKeys);
+                if ($rk !== null) { $clusterKeyForTime = $rk; break; }
+            }
+            $recordTime = $clusterKeyForTime !== null ? ($mddTimes[$clusterKeyForTime] ?? null) : null;
+
+            // What the online Demos Top row keeps: faster than the record,
+            // and no faster than the row itself.
+            $onlineOwnMembers = $recordTime === null ? $onlineMembers : array_values(array_filter(
+                $onlineMembers,
+                fn ($d) => (int) $d->time_ms < $recordTime
+            ));
+
+            [$onlineCount, $onlineSignals] = $onlineOwnMembers
+                ? $dedupeAndCount($onlineOwnMembers, $onlineOwnMembers[0])
                 : [0, 0];
             [$offlineCount, $offlineSignals] = $offlineMembers
                 ? $dedupeAndCount($offlineMembers, $offlineMembers[0])
@@ -1354,14 +1456,19 @@ class MapsController extends Controller
             // (unclaimed q3df profile). Frontend falls back to
             // record.user_id → meta["user:X"] or record.mdd_id →
             // meta["mdd:Y"] when the row has no attached demo.
-            $clusterProfileKey = null;
-            foreach ($members as $m) {
-                $rk = $profileResolver->resolve($m, $priorityProfileKeys);
-                if ($rk !== null) { $clusterProfileKey = $rk; break; }
-            }
-            if ($clusterProfileKey !== null && !empty($onlineMembers)) {
+            //
+            // Counts what the record's own drawer will list: the attempts at
+            // or slower than it. The ones that beat it are counted on the
+            // online row above instead.
+            $clusterProfileKey = $clusterKeyForTime;
+            $recordOwnMembers = $recordTime === null ? $onlineMembers : array_values(array_filter(
+                $onlineMembers,
+                fn ($d) => (int) $d->time_ms >= $recordTime
+            ));
+
+            if ($clusterProfileKey !== null && !empty($recordOwnMembers)) {
                 $meta[$clusterProfileKey] = [
-                    'count' => $dedupeAndCountAll($onlineMembers),
+                    'count' => $dedupeAndCountAll($recordOwnMembers),
                     'signals' => $onlineSignals,
                     'profileKey' => $clusterProfileKey,
                 ];

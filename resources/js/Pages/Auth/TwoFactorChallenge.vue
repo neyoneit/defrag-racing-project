@@ -37,14 +37,14 @@ const submit = () => {
 
 <template>
     <div>
-        <Head title="Two-Factor Authentication" />
+        <Head :title="$t('Two-Factor Authentication')" />
 
         <!-- Header Section with Gradient Shadow -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center">
-                    <h1 class="text-2xl md:text-3xl font-black text-white mb-2">Two-Factor Authentication</h1>
-                    <p class="text-gray-400">Confirm your identity to continue</p>
+                    <h1 class="text-2xl md:text-3xl font-black text-white mb-2">{{ $t('Two-Factor Authentication') }}</h1>
+                    <p class="text-gray-400">{{ $t('Confirm your identity to continue') }}</p>
                 </div>
             </div>
         </div>
@@ -57,17 +57,17 @@ const submit = () => {
                 <!-- Description -->
                 <div class="mb-6 text-sm text-gray-400">
                     <template v-if="!recovery">
-                        Please confirm access to your account by entering the authentication code provided by your authenticator application.
+                        {{ $t('Please confirm access to your account by entering the authentication code provided by your authenticator application.') }}
                     </template>
                     <template v-else>
-                        Please confirm access to your account by entering one of your emergency recovery codes.
+                        {{ $t('Please confirm access to your account by entering one of your emergency recovery codes.') }}
                     </template>
                 </div>
 
                 <form @submit.prevent="submit" class="space-y-6">
                     <!-- Code Field -->
                     <div v-if="!recovery">
-                        <label for="code" class="block text-sm font-bold text-gray-300 mb-2">Code</label>
+                        <label for="code" class="block text-sm font-bold text-gray-300 mb-2">{{ $t('Code') }}</label>
                         <input
                             id="code"
                             ref="codeInput"
@@ -77,14 +77,14 @@ const submit = () => {
                             autofocus
                             autocomplete="one-time-code"
                             class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all"
-                            placeholder="Enter your 6-digit code"
+                            :placeholder="$t('Enter your 6-digit code')"
                         />
                         <p v-if="form.errors.code" class="mt-2 text-sm text-red-400">{{ form.errors.code }}</p>
                     </div>
 
                     <!-- Recovery Code Field -->
                     <div v-else>
-                        <label for="recovery_code" class="block text-sm font-bold text-gray-300 mb-2">Recovery Code</label>
+                        <label for="recovery_code" class="block text-sm font-bold text-gray-300 mb-2">{{ $t('Recovery Code') }}</label>
                         <input
                             id="recovery_code"
                             ref="recoveryCodeInput"
@@ -92,7 +92,7 @@ const submit = () => {
                             type="text"
                             autocomplete="one-time-code"
                             class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all"
-                            placeholder="Enter your recovery code"
+                            :placeholder="$t('Enter your recovery code')"
                         />
                         <p v-if="form.errors.recovery_code" class="mt-2 text-sm text-red-400">{{ form.errors.recovery_code }}</p>
                     </div>
@@ -104,8 +104,8 @@ const submit = () => {
                             class="text-sm text-blue-400 hover:text-blue-300 transition cursor-pointer"
                             @click.prevent="toggleRecovery"
                         >
-                            <template v-if="!recovery">Use a recovery code</template>
-                            <template v-else>Use an authentication code</template>
+                            <template v-if="!recovery">{{ $t('Use a recovery code') }}</template>
+                            <template v-else>{{ $t('Use an authentication code') }}</template>
                         </button>
                     </div>
 
@@ -115,13 +115,13 @@ const submit = () => {
                         :disabled="form.processing"
                         class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-bold rounded-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:transform-none shadow-lg shadow-blue-500/20"
                     >
-                        <span v-if="!form.processing">Log In</span>
+                        <span v-if="!form.processing">{{ $t('Log In') }}</span>
                         <span v-else class="flex items-center justify-center gap-2">
                             <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            Verifying...
+                            {{ $t('Verifying...') }}
                         </span>
                     </button>
                 </form>
@@ -130,7 +130,7 @@ const submit = () => {
                 <!-- Footer Links -->
                 <div class="mt-8 text-center">
                     <Link :href="route('login')" class="text-sm text-gray-400 hover:text-white transition">
-                        ← Back to Login
+                        ← {{ $t('Back to Login') }}
                     </Link>
                 </div>
             </div>

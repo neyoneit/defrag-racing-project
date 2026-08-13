@@ -1,9 +1,10 @@
 <script setup>
-    import { ref } from 'vue';
+    import { computed, ref } from 'vue';
     import { Link } from '@inertiajs/vue3';
     import Tournament from '@/Pages/Tournaments/Tournament.vue';
     import SuggestionForm from '@/Components/SuggestionForm.vue';
     import OverviewNew from '@/Components/Tournament/OverviewNew.vue';
+    import { t } from '@/utils/i18n';
 
     const props = defineProps({
         tournament: Object,
@@ -14,6 +15,14 @@
     const trailerOpened = ref(false);
     const suggestionFormOpened = ref(false);
 
+    const roleLabels = computed(() => ({
+        'admin': t('Admins'),
+        'organizer': t('Organizers'),
+        'mapper': t('Mappers'),
+        'tester': t('Testers'),
+        'validator': t('Validators'),
+    }));
+
     const getYoutubeUrl = (url) => {
         return url.replace('watch?v=', 'embed/');
     }
@@ -23,7 +32,7 @@
     <Tournament :tournament="tournament" tab="Overview">
         <div v-if="latestNews.length > 0">
             <div class="flex justify-between items-center">
-                <h1 class="font-black text-2xl md:text-3xl text-white mb-3">Latest News</h1>
+                <h1 class="font-black text-2xl md:text-3xl text-white mb-3">{{ $t('Latest News') }}</h1>
             </div>
 
             <div class="">
@@ -46,7 +55,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
                                 </svg>                              
                                 
-                                <span class="ml-2">Trailer</span>
+                                <span class="ml-2">{{ $t('Trailer') }}</span>
                             </div>
                         </div>
         
@@ -59,7 +68,7 @@
                                 </svg>
                             </div>
                             <div class="w-full h-full flex justify-center mt-20">
-                                <iframe width="90%" height="90%" :src="getYoutubeUrl(tournament.trailer)" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                                <iframe width="90%" height="90%" :src="getYoutubeUrl(tournament.trailer)" :title="$t('YouTube video player')" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
                             </div>
                         </div>
                     </div>
@@ -70,7 +79,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
                             </svg>
                             
-                            <span class="ml-2">Suggest</span>
+                            <span class="ml-2">{{ $t('Suggest') }}</span>
                         </div>
         
                         <SuggestionForm v-if="suggestionFormOpened" :closeForm="() => suggestionFormOpened = false" :tournament="tournament" />
@@ -94,7 +103,7 @@
 
         <!-- Live Streamers -->
         <div v-if="tournament.streamers.length > 0">
-            <h1 class="font-black text-2xl md:text-3xl text-white my-5">Live Streamers</h1>
+            <h1 class="font-black text-2xl md:text-3xl text-white my-5">{{ $t('Live Streamers') }}</h1>
 
             <div class="tech-line-overview"></div>
 
@@ -111,25 +120,24 @@
 
         <!-- Prize Pool -->
         <div v-if="tournament.prize_pool > 0">
-            <h1 class="font-black text-2xl md:text-3xl text-white my-5">Prize Pool</h1>
+            <h1 class="font-black text-2xl md:text-3xl text-white my-5">{{ $t('Prize Pool') }}</h1>
 
             <div class="tech-line-overview"></div>
 
-            <div class="text-gray-400 text-lg mb-10">
-                Current Prize Pool: <span class="text-blue-400 text-xl">{{ tournament.prize_pool }}$</span>
-            </div>
+            <div class="text-gray-400 text-lg mb-10 [&_span]:text-blue-400 [&_span]:text-xl"
+                 v-html="$t('Current Prize Pool: <span>:amount$</span>', { amount: tournament.prize_pool })"></div>
         </div>
 
         <!-- Organizers -->
         <div>
-            <h1 class="font-black text-2xl md:text-3xl text-white my-5">Organizers</h1>
+            <h1 class="font-black text-2xl md:text-3xl text-white my-5">{{ $t('Organizers') }}</h1>
 
             <div class="tech-line-overview"></div>
 
             <div class="mt-5">
                 <div class="w-full flex text-center">
                     <div class="w-60" v-for="(data, role) in organizers">
-                        <h1 class="text-gray-400 capitalize mb-2">{{ role }}s</h1>
+                        <h1 class="text-gray-400 capitalize mb-2">{{ roleLabels[role] ?? role + 's' }}</h1>
 
                         <div v-for="organizer in data">
                             <Link :href="route('profile.index', organizer.user.id)" class="text-gray-500 my-4 hover:underline" v-html="q3tohtml(organizer.user.name)" />
@@ -141,7 +149,7 @@
 
         <!-- Related Tournaments -->
         <div v-if="tournament.related_tournaments > 0">
-            <h1 class="font-black text-2xl md:text-3xl text-white my-5">Related Tournaments</h1>
+            <h1 class="font-black text-2xl md:text-3xl text-white my-5">{{ $t('Related Tournaments') }}</h1>
 
             <div class="tech-line-overview"></div>
 

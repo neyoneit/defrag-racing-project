@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { ref, computed, getCurrentInstance } from 'vue';
 import WikiSearchOverlay from '@/Components/WikiSearchOverlay.vue';
+import { currentLocale } from '@/utils/i18n';
 
 const { proxy } = getCurrentInstance();
 const q3tohtml = proxy.q3tohtml;
@@ -62,14 +63,14 @@ const searchOpen = ref(false);
 
 <template>
     <div class="pb-4">
-        <Head :title="page.title + ' - Wiki'" />
+        <Head :title="$t(':title - Wiki', { title: page.title })" />
 
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <div class="flex items-center gap-2 text-sm text-gray-500 mb-2">
-                            <Link :href="route('wiki.index')" class="hover:text-gray-300 transition">Wiki</Link>
+                            <Link :href="route('wiki.index')" class="hover:text-gray-300 transition">{{ $t('Wiki') }}</Link>
                             <span>/</span>
                             <template v-if="page.parent">
                                 <Link :href="route('wiki.show', page.parent.slug)" class="hover:text-gray-300 transition">{{ page.parent.title }}</Link>
@@ -85,21 +86,21 @@ const searchOpen = ref(false);
                             class="px-4 py-2 bg-gray-700/60 hover:bg-gray-700 text-gray-300 text-sm font-medium rounded-lg transition flex items-center gap-2"
                         >
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                            <span class="hidden sm:inline">Search</span>
+                            <span class="hidden sm:inline">{{ $t('Search') }}</span>
                             <kbd class="hidden md:inline-flex items-center px-1.5 py-0.5 text-[10px] text-gray-500 bg-gray-800 border border-gray-700 rounded">Ctrl+K</kbd>
                         </button>
                         <Link
                             :href="route('wiki.history', page.slug)"
                             class="px-4 py-2 bg-gray-700/60 hover:bg-gray-700 text-gray-300 text-sm font-medium rounded-lg transition"
                         >
-                            History
+                            {{ $t('History') }}
                         </Link>
                         <Link
                             v-if="canEdit"
                             :href="route('wiki.edit', page.slug)"
                             class="px-4 py-2 bg-blue-600/80 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition"
                         >
-                            Edit
+                            {{ $t('Edit') }}
                         </Link>
                         <Link
                             v-if="isStaff"
@@ -109,7 +110,7 @@ const searchOpen = ref(false);
                             class="px-4 py-2 text-sm font-medium rounded-lg transition"
                             :class="page.is_locked ? 'bg-yellow-600/80 hover:bg-yellow-600 text-white' : 'bg-gray-700/60 hover:bg-gray-700 text-gray-300'"
                         >
-                            {{ page.is_locked ? 'Unlock' : 'Lock' }}
+                            {{ page.is_locked ? $t('Unlock') : $t('Lock') }}
                         </Link>
                     </div>
                 </div>
@@ -130,7 +131,7 @@ const searchOpen = ref(false);
                                         {{ sidebarItems.parent.title }}
                                     </Link>
                                 </template>
-                                <template v-else>Pages</template>
+                                <template v-else>{{ $t('Pages') }}</template>
                             </h3>
                             <button
                                 @click="sidebarCollapsed = !sidebarCollapsed"
@@ -196,13 +197,13 @@ const searchOpen = ref(false);
                         <div class="flex items-center gap-4 text-xs text-gray-500 mb-6 pb-4 border-b border-gray-700/50">
                             <span v-if="page.is_locked" class="flex items-center gap-1 text-yellow-500">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                                Locked
+                                {{ $t('Locked') }}
                             </span>
                             <span v-if="page.updater">
-                                Last edited by <Link :href="'/profile/' + page.updater.id" class="text-gray-400 hover:text-blue-400 transition" v-html="q3tohtml(page.updater.name)"></Link>
+                                {{ $t('Last edited by') }} <Link :href="'/profile/' + page.updater.id" class="text-gray-400 hover:text-blue-400 transition" v-html="q3tohtml(page.updater.name)"></Link>
                             </span>
                             <span v-if="page.updated_at">
-                                {{ new Date(page.updated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }}
+                                {{ new Date(page.updated_at).toLocaleDateString(currentLocale(), { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }}
                             </span>
                         </div>
 
@@ -211,7 +212,7 @@ const searchOpen = ref(false);
 
                         <!-- Child pages -->
                         <div v-if="children && children.length > 0" class="mt-8 pt-6 border-t border-gray-700/50">
-                            <h3 class="text-lg font-bold text-gray-300 mb-3">Sub-pages</h3>
+                            <h3 class="text-lg font-bold text-gray-300 mb-3">{{ $t('Sub-pages') }}</h3>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 <Link
                                     v-for="child in children"

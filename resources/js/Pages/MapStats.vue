@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref, computed, nextTick } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
+import { t } from '@/utils/i18n';
 
 const props = defineProps({
     stats: Object,
@@ -67,7 +68,7 @@ const fetchStats = () => {
     router.reload({
         only: ['stats'],
         onError: () => {
-            statsError.value = 'Failed to load stats. Please refresh.';
+            statsError.value = t('Failed to load stats. Please refresh.');
             statsLoading.value = false;
         },
         onFinish: finishLoading,
@@ -87,7 +88,7 @@ const ensurePlotly = () => new Promise((resolve, reject) => {
     s.async = true;
     s.dataset.plotly = '1';
     s.onload = () => resolve(window.Plotly);
-    s.onerror = () => reject(new Error('Failed to load Plotly from CDN'));
+    s.onerror = () => reject(new Error(t('Failed to load Plotly from CDN')));
     document.head.appendChild(s);
 });
 
@@ -157,7 +158,13 @@ const renderAll = async () => {
     if (!data) return;
 
     const buildHover = pts => pts.map(p =>
-        `<b>${p.map}</b><br>WR ${fmtTime(p.wr_ms)} · ${p.holder || '?'}<br>released ${p.date_added}<br>finishers ${p.finishers}`
+        t('<b>:map</b><br>WR :time · :holder<br>released :date<br>finishers :finishers', {
+            map: p.map,
+            time: fmtTime(p.wr_ms),
+            holder: p.holder || '?',
+            date: p.date_added,
+            finishers: p.finishers,
+        })
     );
 
     // 1. Histogram WR per physics — pre-bucket in JS rather than letting
@@ -165,7 +172,7 @@ const renderAll = async () => {
     // before applying the log transform, which produces empty bars when
     // the data spans 0.5s–1200s. Build log-spaced buckets ourselves.
     const wrBuckets = [
-        [0,    1,    'sub 1s'],
+        [0,    1,    t('sub 1s')],
         [1,    2,    '1–2s'],
         [2,    5,    '2–5s'],
         [5,    10,   '5–10s'],
@@ -198,29 +205,29 @@ const renderAll = async () => {
         { x: labels, y: bucketCounts(data.vq3), type: 'bar', name: 'VQ3',
           marker: { color: '#3b82f6' }, opacity: 0.85 },
     ], { ...DARK, barmode: 'group',
-         xaxis: { ...DARK.xaxis, title: 'WR time bucket' },
-         yaxis: { ...DARK.yaxis, title: 'maps' } }, CFG);
+         xaxis: { ...DARK.xaxis, title: t('WR time bucket') },
+         yaxis: { ...DARK.yaxis, title: t('maps') } }, CFG);
 
     // 2. Maps per year
     Plotly.newPlot('chart-yearly', [
         { x: data.maps_per_year.map(d => d.year), y: data.maps_per_year.map(d => d.count),
           type: 'bar', marker: { color: '#22c55e' } }
-    ], { ...DARK, xaxis: { ...DARK.xaxis, title: 'year' },
-         yaxis: { ...DARK.yaxis, title: 'maps released' } }, CFG);
+    ], { ...DARK, xaxis: { ...DARK.xaxis, title: t('year') },
+         yaxis: { ...DARK.yaxis, title: t('maps released') } }, CFG);
 
     // 3. Active players per year
     Plotly.newPlot('chart-active-players', [
         { x: data.active_players_year.map(d => d.year), y: data.active_players_year.map(d => d.players),
           type: 'bar', marker: { color: '#f59e0b' } }
-    ], { ...DARK, xaxis: { ...DARK.xaxis, title: 'year' },
-         yaxis: { ...DARK.yaxis, title: 'distinct active players' } }, CFG);
+    ], { ...DARK, xaxis: { ...DARK.xaxis, title: t('year') },
+         yaxis: { ...DARK.yaxis, title: t('distinct active players') } }, CFG);
 
     // 4. Top authors
     const authors = data.top_authors.slice(0, 25).reverse();
     Plotly.newPlot('chart-authors', [
         { y: authors.map(a => a.author), x: authors.map(a => a.count),
           type: 'bar', orientation: 'h', marker: { color: '#ec4899' } }
-    ], { ...DARK, xaxis: { ...DARK.xaxis, title: 'maps' },
+    ], { ...DARK, xaxis: { ...DARK.xaxis, title: t('maps') },
          yaxis: { ...DARK.yaxis, automargin: true },
          margin: { ...DARK.margin, l: 130 },
          height: Math.max(400, authors.length * 22) }, CFG);
@@ -230,15 +237,15 @@ const renderAll = async () => {
     Plotly.newPlot('chart-pareto', [
         { x: wrc.map((_, i) => i + 1), y: wrc.map(p => p.wrs),
           customdata: wrc.map(p => p.name),
-          hovertemplate: 'Rank %{x}: %{customdata}<br>%{y} WRs<extra></extra>',
-          type: 'bar', marker: { color: '#06b6d4' }, name: 'WRs' },
+          hovertemplate: t('Rank %{x}: %{customdata}<br>%{y} WRs<extra></extra>'),
+          type: 'bar', marker: { color: '#06b6d4' }, name: t('WRs') },
         { x: wrc.map((_, i) => i + 1), y: wrc.map(p => p.cumulative_pct),
-          type: 'scatter', mode: 'lines+markers', name: 'cumulative %',
+          type: 'scatter', mode: 'lines+markers', name: t('cumulative %'),
           yaxis: 'y2', line: { color: '#facc15' } },
     ], { ...DARK,
-         xaxis: { ...DARK.xaxis, title: 'rank (top 30 WR holders)' },
-         yaxis: { ...DARK.yaxis, title: 'WRs held' },
-         yaxis2: { title: 'cumulative %', overlaying: 'y', side: 'right',
+         xaxis: { ...DARK.xaxis, title: t('rank (top 30 WR holders)') },
+         yaxis: { ...DARK.yaxis, title: t('WRs held') },
+         yaxis2: { title: t('cumulative %'), overlaying: 'y', side: 'right',
                    gridcolor: 'transparent', range: [0, 100] },
     }, CFG);
 
@@ -246,7 +253,7 @@ const renderAll = async () => {
     Plotly.newPlot('chart-countries', [
         { type: 'choropleth', locationmode: 'ISO-3', locations: data.wrs_by_country.map(c => iso2to3(c.country)),
           z: data.wrs_by_country.map(c => c.wrs),
-          text: data.wrs_by_country.map(c => `${c.country}: ${c.wrs} WRs`),
+          text: data.wrs_by_country.map(c => t(':country: :wrs WRs', { country: c.country, wrs: c.wrs })),
           colorscale: [[0, '#1e293b'], [0.2, '#1e40af'], [0.5, '#7c3aed'], [1, '#f43f5e']],
           showscale: true,
           marker: { line: { color: 'rgba(148,163,184,0.3)', width: 0.4 } } }
@@ -264,10 +271,10 @@ const renderAll = async () => {
         return row ? row.count : 0;
     }));
     Plotly.newPlot('chart-heatmap', [
-        { z, x: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+        { z, x: [t('Jan'),t('Feb'),t('Mar'),t('Apr'),t('May'),t('Jun'),t('Jul'),t('Aug'),t('Sep'),t('Oct'),t('Nov'),t('Dec')],
           y: yrs, type: 'heatmap',
           colorscale: [[0, '#0b1020'], [0.1, '#1e293b'], [0.3, '#1e40af'], [0.7, '#a855f7'], [1, '#f43f5e']],
-          hovertemplate: '%{y} %{x}: %{z} records<extra></extra>' }
+          hovertemplate: t('%{y} %{x}: %{z} records<extra></extra>') }
     ], { ...DARK, height: Math.max(280, yrs.length * 28),
          xaxis: { ...DARK.xaxis, side: 'top' },
          yaxis: { ...DARK.yaxis, autorange: 'reversed' } }, CFG);
@@ -277,9 +284,9 @@ const renderAll = async () => {
         { x: data.records_per_player.map(b => b.bucket),
           y: data.records_per_player.map(b => b.players),
           type: 'bar', marker: { color: '#14b8a6' },
-          hovertemplate: '%{x} records: %{y} players<extra></extra>' }
-    ], { ...DARK, xaxis: { ...DARK.xaxis, title: 'records per player' },
-         yaxis: { ...DARK.yaxis, title: 'players (log)', ...LOG_AXIS } }, CFG);
+          hovertemplate: t('%{x} records: %{y} players<extra></extra>') }
+    ], { ...DARK, xaxis: { ...DARK.xaxis, title: t('records per player') },
+         yaxis: { ...DARK.yaxis, title: t('players (log)'), ...LOG_AXIS } }, CFG);
 
     // 9. Weapons per year — line chart (not stacked, since a single
     // map can carry multiple weapons; stacking would double-count).
@@ -309,8 +316,8 @@ const renderAll = async () => {
             line: { color, width: 2 },
             hovertemplate: `${key}: %{y:.1f}%<extra></extra>`,
         })),
-        { ...DARK, xaxis: { ...DARK.xaxis, title: 'year' },
-          yaxis: { ...DARK.yaxis, title: '% of new maps including this weapon', ticksuffix: '%' } },
+        { ...DARK, xaxis: { ...DARK.xaxis, title: t('year') },
+          yaxis: { ...DARK.yaxis, title: t('% of new maps including this weapon'), ticksuffix: '%' } },
         CFG
     );
 
@@ -335,8 +342,8 @@ const renderAll = async () => {
         mode: 'markers', type: 'scattergl', name: phys.toUpperCase(),
         marker: { size: 4, opacity: 0.55, color: phys === 'cpm' ? '#a855f7' : '#3b82f6' },
     })), { ...DARK,
-           xaxis: { ...DARK.xaxis, title: 'map release date', type: 'date' },
-           yaxis: { ...DARK.yaxis, title: `WR time (seconds, log; capped at ${wrCapSec})`, ...LOG_AXIS,
+           xaxis: { ...DARK.xaxis, title: t('map release date'), type: 'date' },
+           yaxis: { ...DARK.yaxis, title: t('WR time (seconds, log; capped at :cap)', { cap: wrCapSec }), ...LOG_AXIS,
                     range: [0, Math.log10(wrCapSec) + 0.02], autorange: false } }, CFG);
 
     // 11. Scatter: release × #finishers
@@ -369,8 +376,8 @@ const renderAll = async () => {
         mode: 'markers', type: 'scattergl', name: phys.toUpperCase(),
         marker: { size: 4, opacity: 0.55, color: phys === 'cpm' ? '#a855f7' : '#3b82f6' },
     })), { ...DARK,
-           xaxis: { ...DARK.xaxis, title: 'map release date', type: 'date' },
-           yaxis: { ...DARK.yaxis, title: 'unique finishers (log)', ...LOG_AXIS,
+           xaxis: { ...DARK.xaxis, title: t('map release date'), type: 'date' },
+           yaxis: { ...DARK.yaxis, title: t('unique finishers (log)'), ...LOG_AXIS,
                     range: [0, Math.log10(finishersMax) + 0.05], autorange: false } }, CFG);
 
     // 12. Scatter: release × WR set date
@@ -382,8 +389,8 @@ const renderAll = async () => {
         mode: 'markers', type: 'scattergl', name: phys.toUpperCase(),
         marker: { size: 4, opacity: 0.55, color: phys === 'cpm' ? '#a855f7' : '#3b82f6' },
     })), { ...DARK,
-           xaxis: { ...DARK.xaxis, title: 'map release date', type: 'date' },
-           yaxis: { ...DARK.yaxis, title: 'WR set date', type: 'date' } }, CFG);
+           xaxis: { ...DARK.xaxis, title: t('map release date'), type: 'date' },
+           yaxis: { ...DARK.yaxis, title: t('WR set date'), type: 'date' } }, CFG);
 };
 
 // Plotly's choropleth wants ISO-3 codes; the records table has ISO-2.
@@ -415,40 +422,39 @@ onMounted(() => {
 </script>
 
 <template>
-    <Head title="Map Statistics" />
+    <Head :title="$t('Map Statistics')" />
 
     <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-8">
-            <h1 class="text-2xl md:text-3xl font-black text-white mb-2">Map Statistics</h1>
+            <h1 class="text-2xl md:text-3xl font-black text-white mb-2">{{ $t('Map Statistics') }}</h1>
             <p class="text-gray-400 mb-6 text-sm">
-                Aggregates across the whole defrag.racing dataset. Updated every six hours
-                from the live records database.
+                {{ $t('Aggregates across the whole defrag.racing dataset. Updated every six hours from the live records database.') }}
             </p>
 
             <!-- Top-level summary chips (hidden until data lands) -->
             <div v-if="props.stats" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <div class="text-2xl font-bold text-white">{{ summary.total_maps?.toLocaleString() }}</div>
-                    <div class="text-xs text-gray-400 uppercase tracking-wider">Maps</div>
+                    <div class="text-xs text-gray-400 uppercase tracking-wider">{{ $t('Maps') }}</div>
                 </div>
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <div class="text-2xl font-bold text-white">{{ summary.total_records?.toLocaleString() }}</div>
-                    <div class="text-xs text-gray-400 uppercase tracking-wider">Records</div>
+                    <div class="text-xs text-gray-400 uppercase tracking-wider">{{ $t('Records') }}</div>
                 </div>
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <div class="text-2xl font-bold text-white">{{ summary.total_wrs?.toLocaleString() }}</div>
-                    <div class="text-xs text-gray-400 uppercase tracking-wider">Top-1 runs</div>
+                    <div class="text-xs text-gray-400 uppercase tracking-wider">{{ $t('Top-1 runs') }}</div>
                 </div>
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <div class="text-2xl font-bold text-white">{{ summary.total_authors?.toLocaleString() }}</div>
-                    <div class="text-xs text-gray-400 uppercase tracking-wider">Mappers</div>
+                    <div class="text-xs text-gray-400 uppercase tracking-wider">{{ $t('Mappers') }}</div>
                 </div>
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <div class="text-2xl font-bold text-white">{{ summary.total_players?.toLocaleString() }}</div>
-                    <div class="text-xs text-gray-400 uppercase tracking-wider">Players</div>
+                    <div class="text-xs text-gray-400 uppercase tracking-wider">{{ $t('Players') }}</div>
                 </div>
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <div class="text-sm font-bold text-white">{{ summary.first_record }}</div>
-                    <div class="text-xs text-gray-400 uppercase tracking-wider">First record</div>
+                    <div class="text-xs text-gray-400 uppercase tracking-wider">{{ $t('First record') }}</div>
                 </div>
             </div>
 
@@ -467,8 +473,8 @@ onMounted(() => {
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                     </svg>
                     <div class="flex-1 min-w-0">
-                        <div class="text-sm text-gray-200 font-medium">Crunching aggregates across 15k maps and 646k records…</div>
-                        <div class="text-xs text-gray-500 mt-0.5">First load can take up to ~15 seconds. Subsequent visits are instant from cache.</div>
+                        <div class="text-sm text-gray-200 font-medium">{{ $t('Crunching aggregates across 15k maps and 646k records…') }}</div>
+                        <div class="text-xs text-gray-500 mt-0.5">{{ $t('First load can take up to ~15 seconds. Subsequent visits are instant from cache.') }}</div>
                     </div>
                 </div>
 
@@ -500,90 +506,90 @@ onMounted(() => {
 
             <div v-if="statsError" class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-red-300 mb-6 flex items-center justify-between">
                 <span>{{ statsError }}</span>
-                <button @click="fetchStats" class="px-3 py-1 rounded bg-red-500/20 hover:bg-red-500/30 text-red-200 text-sm font-bold">Retry</button>
+                <button @click="fetchStats" class="px-3 py-1 rounded bg-red-500/20 hover:bg-red-500/30 text-red-200 text-sm font-bold">{{ $t('Retry') }}</button>
             </div>
 
             <div v-if="plotlyError" class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-red-300 mb-6">
-                Failed to load charts: {{ plotlyError }}. Check your network connection or try refreshing.
+                {{ $t('Failed to load charts: :error. Check your network connection or try refreshing.', { error: plotlyError }) }}
             </div>
 
             <div v-if="props.stats" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <!-- Histograms / bar charts in 2-col -->
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
-                    <h2 class="text-base font-bold text-white mb-1">WR time distribution</h2>
-                    <p class="text-xs text-gray-500 mb-2">Per-map fastest run, log-scale X. CPM (purple) vs VQ3 (blue).</p>
+                    <h2 class="text-base font-bold text-white mb-1">{{ $t('WR time distribution') }}</h2>
+                    <p class="text-xs text-gray-500 mb-2">{{ $t('Per-map fastest run, log-scale X. CPM (purple) vs VQ3 (blue).') }}</p>
                     <div id="chart-hist" style="height: 360px"></div>
                 </div>
 
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
-                    <h2 class="text-base font-bold text-white mb-1">Maps released per year</h2>
-                    <p class="text-xs text-gray-500 mb-2">When was the map library built?</p>
+                    <h2 class="text-base font-bold text-white mb-1">{{ $t('Maps released per year') }}</h2>
+                    <p class="text-xs text-gray-500 mb-2">{{ $t('When was the map library built?') }}</p>
                     <div id="chart-yearly" style="height: 360px"></div>
                 </div>
 
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
-                    <h2 class="text-base font-bold text-white mb-1">Distinct active players per year</h2>
-                    <p class="text-xs text-gray-500 mb-2">Players who set at least one record that year.</p>
+                    <h2 class="text-base font-bold text-white mb-1">{{ $t('Distinct active players per year') }}</h2>
+                    <p class="text-xs text-gray-500 mb-2">{{ $t('Players who set at least one record that year.') }}</p>
                     <div id="chart-active-players" style="height: 360px"></div>
                 </div>
 
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
-                    <h2 class="text-base font-bold text-white mb-1">Records per player</h2>
-                    <p class="text-xs text-gray-500 mb-2">Long-tail distribution — most players have a handful, a few have thousands.</p>
+                    <h2 class="text-base font-bold text-white mb-1">{{ $t('Records per player') }}</h2>
+                    <p class="text-xs text-gray-500 mb-2">{{ $t('Long-tail distribution — most players have a handful, a few have thousands.') }}</p>
                     <div id="chart-records-per-player" style="height: 360px"></div>
                 </div>
 
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
-                    <h2 class="text-base font-bold text-white mb-1">Weapon presence in new maps</h2>
-                    <p class="text-xs text-gray-500 mb-2">% of maps released each year that include each weapon.</p>
+                    <h2 class="text-base font-bold text-white mb-1">{{ $t('Weapon presence in new maps') }}</h2>
+                    <p class="text-xs text-gray-500 mb-2">{{ $t('% of maps released each year that include each weapon.') }}</p>
                     <div id="chart-weapons" style="height: 360px"></div>
                 </div>
 
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
-                    <h2 class="text-base font-bold text-white mb-1">Top mappers</h2>
-                    <p class="text-xs text-gray-500 mb-2">25 most prolific authors by visible map count.</p>
+                    <h2 class="text-base font-bold text-white mb-1">{{ $t('Top mappers') }}</h2>
+                    <p class="text-xs text-gray-500 mb-2">{{ $t('25 most prolific authors by visible map count.') }}</p>
                     <div id="chart-authors" style="min-height: 600px"></div>
                 </div>
 
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
-                    <h2 class="text-base font-bold text-white mb-1">WR concentration (top 30)</h2>
-                    <p class="text-xs text-gray-500 mb-2">Bar = WRs held, line = cumulative % of all WRs.</p>
+                    <h2 class="text-base font-bold text-white mb-1">{{ $t('WR concentration (top 30)') }}</h2>
+                    <p class="text-xs text-gray-500 mb-2">{{ $t('Bar = WRs held, line = cumulative % of all WRs.') }}</p>
                     <div id="chart-pareto" style="height: 420px"></div>
                 </div>
 
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
-                    <h2 class="text-base font-bold text-white mb-1">WRs by country</h2>
-                    <p class="text-xs text-gray-500 mb-2">Choropleth of map-best-time holders.</p>
+                    <h2 class="text-base font-bold text-white mb-1">{{ $t('WRs by country') }}</h2>
+                    <p class="text-xs text-gray-500 mb-2">{{ $t('Choropleth of map-best-time holders.') }}</p>
                     <div id="chart-countries" style="height: 480px"></div>
                 </div>
 
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
-                    <h2 class="text-base font-bold text-white mb-1">Activity heatmap</h2>
-                    <p class="text-xs text-gray-500 mb-2">Records set per month, per year. GitHub-style — the brighter the busier.</p>
+                    <h2 class="text-base font-bold text-white mb-1">{{ $t('Activity heatmap') }}</h2>
+                    <p class="text-xs text-gray-500 mb-2">{{ $t('Records set per month, per year. GitHub-style — the brighter the busier.') }}</p>
                     <div id="chart-heatmap"></div>
                 </div>
 
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
-                    <h2 class="text-base font-bold text-white mb-1">Map release date × WR time</h2>
-                    <p class="text-xs text-gray-500 mb-2">Each dot is one map. Hover for details.</p>
+                    <h2 class="text-base font-bold text-white mb-1">{{ $t('Map release date × WR time') }}</h2>
+                    <p class="text-xs text-gray-500 mb-2">{{ $t('Each dot is one map. Hover for details.') }}</p>
                     <div id="chart-release-vs-wr" style="height: 540px"></div>
                 </div>
 
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
-                    <h2 class="text-base font-bold text-white mb-1">Map release date × number of finishers</h2>
-                    <p class="text-xs text-gray-500 mb-2">Older maps tend to have more finishers, but viral newer maps stand out.</p>
+                    <h2 class="text-base font-bold text-white mb-1">{{ $t('Map release date × number of finishers') }}</h2>
+                    <p class="text-xs text-gray-500 mb-2">{{ $t('Older maps tend to have more finishers, but viral newer maps stand out.') }}</p>
                     <div id="chart-release-vs-finishers" style="height: 540px"></div>
                 </div>
 
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
-                    <h2 class="text-base font-bold text-white mb-1">Map release date × WR set date</h2>
-                    <p class="text-xs text-gray-500 mb-2">Diagonal-ish — outliers above the line are late discoveries (WR set years after release).</p>
+                    <h2 class="text-base font-bold text-white mb-1">{{ $t('Map release date × WR set date') }}</h2>
+                    <p class="text-xs text-gray-500 mb-2">{{ $t('Diagonal-ish — outliers above the line are late discoveries (WR set years after release).') }}</p>
                     <div id="chart-release-vs-wrdate" style="height: 540px"></div>
                 </div>
             </div>
 
         <p class="text-center text-xs text-gray-600 mt-8">
-            Generated {{ summary.last_record }} · cache refresh every 6h
+            {{ $t('Generated :date · cache refresh every 6h', { date: summary.last_record ?? '' }) }}
         </p>
     </div>
 </template>

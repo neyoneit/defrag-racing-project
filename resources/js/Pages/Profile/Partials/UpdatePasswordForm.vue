@@ -44,17 +44,17 @@ const updatePassword = () => {
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
                     </svg>
                 </div>
-                <h2 class="text-sm font-bold text-white">Update Password</h2>
+                <h2 class="text-sm font-bold text-white">{{ $t('Update Password') }}</h2>
             </div>
             <div class="flex items-center gap-2">
                 <div v-if="form.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
                     <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
-                    <span class="text-xs font-medium text-green-400">Saved</span>
+                    <span class="text-xs font-medium text-green-400">{{ $t('Saved') }}</span>
                 </div>
                 <PrimaryButton type="button" @click="updatePassword" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                    Save
+                    {{ $t('Save') }}
                 </PrimaryButton>
             </div>
         </div>
@@ -62,7 +62,7 @@ const updatePassword = () => {
         <form @submit.prevent="updatePassword" class="space-y-3">
             <input type="text" name="username" autocomplete="username" class="hidden" aria-hidden="true" tabindex="-1" />
             <div>
-                <InputLabel for="current_password" value="Current Password" />
+                <InputLabel for="current_password" :value="$t('Current Password')" />
                 <TextInput
                     id="current_password"
                     ref="currentPasswordInput"
@@ -75,7 +75,7 @@ const updatePassword = () => {
             </div>
 
             <div>
-                <InputLabel for="password" value="New Password" />
+                <InputLabel for="password" :value="$t('New Password')" />
                 <TextInput
                     id="password"
                     ref="passwordInput"
@@ -88,7 +88,7 @@ const updatePassword = () => {
             </div>
 
             <div>
-                <InputLabel for="password_confirmation" value="Confirm Password" />
+                <InputLabel for="password_confirmation" :value="$t('Confirm Password')" />
                 <TextInput
                     id="password_confirmation"
                     v-model="form.password_confirmation"

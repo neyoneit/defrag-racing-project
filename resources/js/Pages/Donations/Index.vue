@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { Teleport } from 'vue';
+import { currentLocale } from '@/utils/i18n';
 
 const props = defineProps({
     donations: Array,
@@ -263,6 +264,17 @@ const highlightOperationalCosts = () => {
     }
 };
 
+// The link that jumps here sits inside a translated sentence rendered with
+// v-html, so its click is caught on the paragraph rather than on the anchor.
+const onOperationalCostsLink = (event) => {
+    if (!event.target.closest('a[href="#operational-costs"]')) {
+        return;
+    }
+
+    event.preventDefault();
+    highlightOperationalCosts();
+};
+
 // Track which years are expanded (only current year expanded by default)
 const expandedYears = ref(new Set([props.currentYear]));
 
@@ -430,7 +442,7 @@ const groupedByYear = computed(() => {
 
 // Format date
 const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString(currentLocale(), {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
@@ -505,15 +517,15 @@ const getYearProgress = (year, yearTotal) => {
 </script>
 
 <template>
-    <Head title="Support Defrag Racing" />
+    <Head :title="$t('Support Defrag Racing')" />
 
     <div>
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="text-center">
-                    <h1 class="text-2xl md:text-3xl font-bold text-white mb-4">Support Defrag Racing</h1>
-                    <p class="text-xl text-gray-400">Help to keep defrag.racing projects running and the community thriving!</p>
+                    <h1 class="text-2xl md:text-3xl font-bold text-white mb-4">{{ $t('Support Defrag Racing') }}</h1>
+                    <p class="text-xl text-gray-400">{{ $t('Help to keep defrag.racing projects running and the community thriving!') }}</p>
                 </div>
             </div>
         </div>
@@ -522,23 +534,24 @@ const getYearProgress = (year, yearTotal) => {
 
             <!-- Make a Donation -->
             <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto text-center">
-                <h2 class="text-2xl font-bold text-white mb-4">Make a Donation</h2>
-                <p class="text-gray-400 mb-6">Your support helps cover defrag.racing projects and continue improving!</p>
+                <h2 class="text-2xl font-bold text-white mb-4">{{ $t('Make a Donation') }}</h2>
+                <p class="text-gray-400 mb-6">{{ $t('Your support helps cover defrag.racing projects and continue improving!') }}</p>
 
                 <!-- PayPal Donation Button -->
                 <div class="max-w-md mx-auto">
                     <form action="https://www.paypal.com/donate" method="post" target="_top">
                         <input type="hidden" name="hosted_button_id" value="WH6GY4PDGU8FA" />
-                        <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" class="mx-auto transform scale-150 hover:scale-[1.55] transition-transform" />
+                        <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" :title="$t('PayPal - The safer, easier way to pay online!')" :alt="$t('Donate with PayPal button')" class="mx-auto transform scale-150 hover:scale-[1.55] transition-transform" />
                         <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
                     </form>
-                    <p class="text-sm text-gray-500 mt-6">Secure payment through PayPal</p>
+                    <p class="text-sm text-gray-500 mt-6">{{ $t('Secure payment through PayPal') }}</p>
                     <div class="mt-6 p-4 rounded-lg bg-pink-950/30 border border-pink-500/20 max-w-md mx-auto">
                         <div class="flex items-center gap-2 mb-1">
-                            <img src="/images/svg/badge-donor.svg" class="w-5 h-5" alt="Supporter">
-                            <span class="text-sm font-bold text-pink-300">Supporter Badge</span>
+                            <img src="/images/svg/badge-donor.svg" class="w-5 h-5" :alt="$t('Supporter')">
+                            <span class="text-sm font-bold text-pink-300">{{ $t('Supporter Badge') }}</span>
                         </div>
-                        <p class="text-xs text-gray-400">Want your donation linked to your profile? Send <a href="/profile/8" class="text-blue-400 hover:text-blue-300 font-bold">me</a> a message on <a href="https://discordapp.com/users/248530770754625536" target="_blank" class="text-indigo-400 hover:text-indigo-300 font-bold">Discord</a> after donating and I'll link it to your account - you'll get a Supporter badge on your profile!</p>
+                        <p class="text-xs text-gray-400 [&_a]:font-bold [&_a:first-of-type]:text-blue-400 [&_a:first-of-type:hover]:text-blue-300 [&_a:last-of-type]:text-indigo-400 [&_a:last-of-type:hover]:text-indigo-300"
+                            v-html="$t('Want your donation linked to your profile? Send <a href=/profile/8>me</a> a message on <a href=https://discordapp.com/users/248530770754625536 target=_blank>Discord</a> after donating and I\'ll link it to your account - you\'ll get a Supporter badge on your profile!')"></p>
                     </div>
                 </div>
             </div>
@@ -546,7 +559,7 @@ const getYearProgress = (year, yearTotal) => {
             <!-- Current Year Progress -->
             <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto">
                 <div class="relative mb-2">
-                    <h2 class="text-2xl font-bold text-white text-center">{{ currentYear }} Progress</h2>
+                    <h2 class="text-2xl font-bold text-white text-center">{{ $t(':year Progress', { year: currentYear }) }}</h2>
 
                     <!-- Currency Selector Dropdown -->
                     <div class="absolute right-0 top-0 currency-dropdown">
@@ -563,7 +576,7 @@ const getYearProgress = (year, yearTotal) => {
 
                         <!-- Exchange Rate Disclaimer -->
                         <div class="absolute right-0 top-full mt-1 text-xs text-gray-500 whitespace-nowrap">
-                            Rates from <a href="https://exchangerate-api.com" target="_blank" class="text-blue-400 hover:text-blue-300 underline">exchangerate-api.com</a>
+                            {{ $t('Rates from') }} <a href="https://exchangerate-api.com" target="_blank" class="text-blue-400 hover:text-blue-300 underline">exchangerate-api.com</a>
                         </div>
 
                         <!-- Dropdown Menu (Teleported to body) -->
@@ -579,7 +592,7 @@ const getYearProgress = (year, yearTotal) => {
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-blue-400">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
                                         </svg>
-                                        <span class="text-xs font-semibold text-blue-400 uppercase tracking-wide">Popular Currencies</span>
+                                        <span class="text-xs font-semibold text-blue-400 uppercase tracking-wide">{{ $t('Popular Currencies') }}</span>
                                     </div>
                                 </div>
 
@@ -613,7 +626,7 @@ const getYearProgress = (year, yearTotal) => {
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
                                             </svg>
-                                            All Currencies
+                                            {{ $t('All Currencies') }}
                                         </div>
                                     </div>
                                 </div>
@@ -622,7 +635,7 @@ const getYearProgress = (year, yearTotal) => {
                     </div>
                 </div>
 
-                <p class="text-xs text-gray-500 text-center mb-4 italic">Manually updated sporadically, not in real-time</p>
+                <p class="text-xs text-gray-500 text-center mb-4 italic">{{ $t('Manually updated sporadically, not in real-time') }}</p>
 
                 <div class="max-w-3xl mx-auto">
                     <!-- Progress Bar -->
@@ -649,15 +662,15 @@ const getYearProgress = (year, yearTotal) => {
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
                         <div>
                             <div class="text-3xl font-bold text-green-400">{{ currencySymbol }}{{ currentYearTotal }}</div>
-                            <div class="text-sm text-gray-400 mt-1">Raised This Year</div>
+                            <div class="text-sm text-gray-400 mt-1">{{ $t('Raised This Year') }}</div>
                         </div>
                         <div>
                             <div class="text-3xl font-bold text-blue-400">{{ currencySymbol }}{{ goalAmount }}</div>
-                            <div class="text-sm text-gray-400 mt-1">Yearly Goal</div>
+                            <div class="text-sm text-gray-400 mt-1">{{ $t('Yearly Goal') }}</div>
                         </div>
                         <div>
                             <div class="text-3xl font-bold text-orange-400">{{ currencySymbol }}{{ monthlyGoal }}</div>
-                            <div class="text-sm text-gray-400 mt-1">Monthly Goal</div>
+                            <div class="text-sm text-gray-400 mt-1">{{ $t('Monthly Goal') }}</div>
                         </div>
                     </div>
                 </div>
@@ -665,46 +678,47 @@ const getYearProgress = (year, yearTotal) => {
 
             <!-- Where Donations Go -->
             <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto">
-                <h2 class="text-2xl font-bold text-white mb-4 text-center">Where Your Support Goes</h2>
+                <h2 class="text-2xl font-bold text-white mb-4 text-center">{{ $t('Where Your Support Goes') }}</h2>
                 <div class="max-w-3xl mx-auto space-y-4 text-gray-300">
                     <div id="operational-costs">
-                        <h3 class="text-lg font-semibold text-white mb-2">Operational Costs (~€1,200/year)</h3>
+                        <h3 class="text-lg font-semibold text-white mb-2">{{ $t('Operational Costs (~€1,200/year)') }}</h3>
                         <p class="text-sm leading-relaxed mb-3">
-                            Donations help cover: servers, hosting, vps's, backblaze, domains, DemoMe, DefragLive, isp, electricity.
+                            {{ $t('Donations help cover: servers, hosting, vps\'s, backblaze, domains, DemoMe, DefragLive, isp, electricity.') }}
                         </p>
                         <p class="text-sm leading-relaxed text-gray-400">
-                            Any future excess donations would go towards tournament prizepools, new servers in underserved locations, and other community-driven initiatives.
+                            {{ $t('Any future excess donations would go towards tournament prizepools, new servers in underserved locations, and other community-driven initiatives.') }}
                         </p>
                     </div>
 
                     <div>
-                        <h3 class="text-lg font-semibold text-white mb-2">A Brief History</h3>
+                        <h3 class="text-lg font-semibold text-white mb-2">{{ $t('A Brief History') }}</h3>
                         <p class="text-sm leading-relaxed">
-                            All developers who worked on these projects since 2021 were fairly compensated. In early 2024, the last paid developer unexpectedly departed without response,
-                            leaving everything as-is. At that point, I decided to stop paying for development as it felt like progress had stalled. With Batawi's help, I made defrag-racing and related repositories <a href="https://github.com/Defrag-racing/" target="_blank" class="text-blue-400 hover:text-blue-300 underline">open-source</a>, inviting the community to contribute.
-                            Development has been in limbo since, as no one had the availability or free time to contribute. Around August 2025, I've taken it upon myself with AI assistance to continue development independently.
-                            Mind you, I never had any prior knowledge with coding, but I made it work and I am learning everyday as I go, bringing you a fully functional <a href="https://twitch.tv/defraglive" target="_blank" class="text-purple-400 hover:text-purple-300 underline">DefragLive</a> with extension, improved defrag.racing, and more updates coming soon - <a :href="route('roadmap')" class="text-blue-400 hover:text-blue-300 underline">Roadmap</a>.
+                            {{ $t('All developers who worked on these projects since 2021 were fairly compensated. In early 2024, the last paid developer unexpectedly departed without response, leaving everything as-is. At that point, I decided to stop paying for development as it felt like progress had stalled.') }}
+                            <span class="[&_a]:underline [&_a]:text-blue-400 [&_a:hover]:text-blue-300"
+                                v-html="$t('With Batawi\'s help, I made defrag-racing and related repositories <a href=https://github.com/Defrag-racing/ target=_blank>open-source</a>, inviting the community to contribute.')"></span>
+                            {{ $t('Development has been in limbo since, as no one had the availability or free time to contribute. Around August 2025, I\'ve taken it upon myself with AI assistance to continue development independently.') }}
+                            <span class="[&_a]:underline [&_a:first-of-type]:text-purple-400 [&_a:first-of-type:hover]:text-purple-300 [&_a:last-of-type]:text-blue-400 [&_a:last-of-type:hover]:text-blue-300"
+                                v-html="$t('Mind you, I never had any prior knowledge with coding, but I made it work and I am learning everyday as I go, bringing you a fully functional <a href=https://twitch.tv/defraglive target=_blank>DefragLive</a> with extension, improved defrag.racing, and more updates coming soon - <a href=:roadmap>Roadmap</a>.', { roadmap: route('roadmap') })"></span>
                         </p>
                     </div>
 
                     <div>
-                        <h3 class="text-lg font-semibold text-white mb-2">What I Cover Out-of-Pocket</h3>
-                        <p class="text-sm leading-relaxed">
-                            Hardware costs (dedicated PC for DemoMe+DefragLive, EU server PC) and other expenses remain out-of-pocket.
-                            Your donations help offset <a href="#operational-costs" @click.prevent="highlightOperationalCosts" class="text-blue-400 hover:text-blue-300 underline cursor-pointer">operational costs</a>.
-                        </p>
+                        <h3 class="text-lg font-semibold text-white mb-2">{{ $t('What I Cover Out-of-Pocket') }}</h3>
+                        <p class="text-sm leading-relaxed [&_a]:underline [&_a]:cursor-pointer [&_a]:text-blue-400 [&_a:hover]:text-blue-300"
+                            @click="onOperationalCostsLink"
+                            v-html="$t('Hardware costs (dedicated PC for DemoMe+DefragLive, EU server PC) and other expenses remain out-of-pocket. Your donations help offset <a href=#operational-costs>operational costs</a>.')"></p>
                     </div>
 
                     <div class="border-t border-white/10 pt-4">
-                        <h3 class="text-lg font-semibold text-blue-300 mb-3">How You Can Help Without Donating Money</h3>
+                        <h3 class="text-lg font-semibold text-blue-300 mb-3">{{ $t('How You Can Help Without Donating Money') }}</h3>
                         <ul class="space-y-2 text-sm">
                             <li class="flex gap-2">
                                 <span class="text-blue-400">•</span>
-                                <span><strong>Allow DefragLive to spectate you</strong> - The more viewers it gets, the less I have to pay from my own pocket</span>
+                                <span v-html="$t('<strong>Allow DefragLive to spectate you</strong> - The more viewers it gets, the less I have to pay from my own pocket')"></span>
                             </li>
                             <li class="flex gap-2">
                                 <span class="text-blue-400">•</span>
-                                <span><strong>Spread the word about DefragLegends YouTube channel</strong> - We're missing 1,600 yearly watch hours to get it monetized. Playing it in the background could help!</span>
+                                <span v-html="$t('<strong>Spread the word about DefragLegends YouTube channel</strong> - We\'re missing 1,600 yearly watch hours to get it monetized. Playing it in the background could help!')"></span>
                             </li>
                         </ul>
                     </div>
@@ -713,7 +727,7 @@ const getYearProgress = (year, yearTotal) => {
 
             <!-- Donation History by Year -->
             <div class="space-y-4">
-                <h2 class="text-3xl font-bold text-white text-center mb-6">Donation History</h2>
+                <h2 class="text-3xl font-bold text-white text-center mb-6">{{ $t('Donation History') }}</h2>
 
                 <div v-for="yearData in groupedByYear" :key="yearData.year" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto">
                     <div
@@ -741,12 +755,12 @@ const getYearProgress = (year, yearTotal) => {
                                     <span v-if="yearData.donationsTotal > 0"
                                         class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 border border-green-500/25 text-xs font-semibold text-green-300 tabular-nums">
                                         <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-                                        {{ currencySymbol }}{{ yearData.donationsTotal.toFixed(2) }} crowd
+                                        {{ currencySymbol }}{{ yearData.donationsTotal.toFixed(2) }} {{ $t('crowd') }}
                                     </span>
                                     <span v-if="yearData.selfRaisedTotal > 0"
                                         class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/25 text-xs font-semibold text-purple-300 tabular-nums">
                                         <span class="w-2 h-2 bg-purple-500 rounded-full"></span>
-                                        {{ currencySymbol }}{{ yearData.selfRaisedTotal.toFixed(2) }} self
+                                        {{ currencySymbol }}{{ yearData.selfRaisedTotal.toFixed(2) }} {{ $t('self') }}
                                     </span>
                                 </div>
                             </div>
@@ -774,7 +788,7 @@ const getYearProgress = (year, yearTotal) => {
                             </div>
                         </div>
                         <div class="text-xs font-semibold text-gray-400 mt-1.5 text-center tabular-nums">
-                            Goal: {{ currencySymbol }}{{ getYearProgress(yearData.year, yearData.total).goal }}
+                            {{ $t('Goal: :amount', { amount: currencySymbol + getYearProgress(yearData.year, yearData.total).goal }) }}
                         </div>
                     </div>
 
@@ -784,7 +798,7 @@ const getYearProgress = (year, yearTotal) => {
                         <div v-if="yearData.donations.length > 0" class="mb-4">
                             <div class="flex items-center gap-2.5 mb-3">
                                 <span class="w-1 h-5 rounded-full bg-green-500"></span>
-                                <h4 class="text-base font-black text-white uppercase tracking-wider">Donations</h4>
+                                <h4 class="text-base font-black text-white uppercase tracking-wider">{{ $t('Donations') }}</h4>
                                 <span class="px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/25 text-xs font-semibold text-green-300 tabular-nums">{{ yearData.donations.length }}</span>
                             </div>
                             <div class="space-y-2">
@@ -814,11 +828,11 @@ const getYearProgress = (year, yearTotal) => {
                                             <component :is="donation.user ? Link : 'span'"
                                                 :href="donation.user ? `/profile/${donation.user.id}` : undefined"
                                                 class="font-bold text-white truncate" :class="donation.user ? 'hover:underline' : ''">
-                                                {{ donation.donor_name || 'Anonymous Donor' }}
+                                                {{ donation.donor_name || $t('Anonymous Donor') }}
                                             </component>
                                             <Link v-if="isContestDonation(donation.note)" href="/defraglive/contest"
                                                 class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/15 border border-purple-400/30 text-[11px] font-semibold text-purple-300 hover:bg-purple-500/25 transition-colors">
-                                                🎁 DefragLive prize
+                                                🎁 {{ $t('DefragLive prize') }}
                                             </Link>
                                         </div>
                                         <div class="text-xs text-gray-500 mt-0.5">{{ formatDate(donation.donation_date) }}</div>
@@ -840,7 +854,7 @@ const getYearProgress = (year, yearTotal) => {
                         <div v-if="yearData.selfRaised.length > 0">
                             <div class="flex items-center gap-2.5 mb-3 mt-6 pt-5 border-t border-white/10">
                                 <span class="w-1 h-5 rounded-full bg-purple-500"></span>
-                                <h4 class="text-base font-black text-white uppercase tracking-wider">Self-Raised</h4>
+                                <h4 class="text-base font-black text-white uppercase tracking-wider">{{ $t('Self-Raised') }}</h4>
                                 <span class="text-xs text-gray-500 font-semibold">YouTube / Twitch</span>
                                 <span class="px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/25 text-xs font-semibold text-purple-300 tabular-nums">{{ yearData.selfRaised.length }}</span>
                             </div>
@@ -877,7 +891,7 @@ const getYearProgress = (year, yearTotal) => {
 
             <!-- All-Time Total -->
             <div class="mt-12 bg-black/60 border border-white/10 rounded-xl p-8 text-center">
-                <h2 class="text-2xl font-bold text-white mb-4">All-Time Total (since 2020)</h2>
+                <h2 class="text-2xl font-bold text-white mb-4">{{ $t('All-Time Total (since 2020)') }}</h2>
 
                 <!-- Progress Bar showing split -->
                 <div class="max-w-2xl mx-auto mb-6">
@@ -898,17 +912,17 @@ const getYearProgress = (year, yearTotal) => {
                     <div class="flex justify-center gap-4 mt-2 text-xs text-gray-400">
                         <span v-if="allTimeDonationsTotal > 0" class="flex items-center gap-1">
                             <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-                            {{ currencySymbol }}{{ allTimeDonationsTotal.toFixed(2) }} crowd
+                            {{ currencySymbol }}{{ allTimeDonationsTotal.toFixed(2) }} {{ $t('crowd') }}
                         </span>
                         <span v-if="allTimeSelfRaisedTotal > 0" class="flex items-center gap-1">
                             <span class="w-2 h-2 bg-purple-500 rounded-full"></span>
-                            {{ currencySymbol }}{{ allTimeSelfRaisedTotal.toFixed(2) }} self
+                            {{ currencySymbol }}{{ allTimeSelfRaisedTotal.toFixed(2) }} {{ $t('self') }}
                         </span>
                     </div>
                 </div>
 
                 <div class="text-5xl font-bold text-green-400">{{ currencySymbol }}{{ totalRaised }}</div>
-                <p class="text-gray-400 mt-4">Thank you to everyone who has supported defrag.racing projects!</p>
+                <p class="text-gray-400 mt-4">{{ $t('Thank you to everyone who has supported defrag.racing projects!') }}</p>
             </div>
         </div>
     </div>

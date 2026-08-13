@@ -6,6 +6,7 @@
     import DemoFlagModal from '@/Components/DemoFlagModal.vue';
     import DemoRenderButton from '@/Components/DemoRenderButton.vue';
     import DemoDetails from '@/Components/DemoDetails.vue';
+    import { t } from '@/utils/i18n';
 
     const props = defineProps({
         record: Object,
@@ -159,7 +160,7 @@
             await axios.post('/render/request', { record_id: recordId, demo_id: demoId });
             renderRequested.value = true;
         } catch (e) {
-            renderError.value = e.response?.data?.error || 'Failed';
+            renderError.value = e.response?.data?.error || t('Failed');
         } finally {
             renderRequesting.value = false;
         }
@@ -226,7 +227,7 @@
         if (match) videoId = match[1];
 
         const demoId = demoIdForYoutubeLink.value;
-        if (!demoId) { youtubeLinkError.value = 'No demo found'; return; }
+        if (!demoId) { youtubeLinkError.value = t('No demo found'); return; }
 
         youtubeLinkSaving.value = true;
         youtubeLinkError.value = null;
@@ -236,7 +237,7 @@
             youtubeLinkInput.value = '';
             window.location.reload();
         } catch (e) {
-            youtubeLinkError.value = e.response?.data?.message || 'Failed to link';
+            youtubeLinkError.value = e.response?.data?.message || t('Failed to link');
         } finally {
             youtubeLinkSaving.value = false;
         }
@@ -269,31 +270,31 @@
         };
     };
 
-    const VALIDITY_FLAGS = {
-        'sv_cheats=1.0': { short: 'cheats', desc: 'sv_cheats was enabled - cheat commands allowed' },
-        'client_finish=false': { short: 'no finish', desc: 'Player did not cross the finish line properly' },
-        'tool_assisted=true': { short: 'TAS', desc: 'Tool-assisted speedrun - not human input' },
-        'timescale=': { short: 'timescale', desc: 'Game speed was altered with timescale', prefix: true },
-        'g_speed=': { short: 'speed', desc: 'Player movement speed was modified', prefix: true, showValue: true },
-        'g_gravity=': { short: 'gravity', desc: 'Gravity was modified from default value', prefix: true },
-        'pmove_fixed=0.0': { short: 'pmove 0', desc: 'pmove_fixed=0 - physics not fixed to framerate' },
-        'pmove_fixed=': { short: 'pmove', desc: 'Non-standard pmove_fixed value', prefix: true, showValue: true },
-        'pmove_msec=': { short: 'msec', desc: 'Non-standard pmove_msec value', prefix: true, showValue: true },
-        'sv_fps=': { short: 'fps', desc: 'Non-standard server framerate', prefix: true, showValue: true },
-        'com_maxfps=': { short: 'maxfps', desc: 'Non-standard max framerate cap', prefix: true, showValue: true },
-        'df_mp_interferenceoff=': { short: 'interf', desc: 'df_mp_interferenceoff - interference setting modified', prefix: true, showValue: true },
-    };
+    const VALIDITY_FLAGS = computed(() => ({
+        'sv_cheats=1.0': { short: 'cheats', desc: t('sv_cheats was enabled - cheat commands allowed') },
+        'client_finish=false': { short: 'no finish', desc: t('Player did not cross the finish line properly') },
+        'tool_assisted=true': { short: 'TAS', desc: t('Tool-assisted speedrun - not human input') },
+        'timescale=': { short: 'timescale', desc: t('Game speed was altered with timescale'), prefix: true },
+        'g_speed=': { short: 'speed', desc: t('Player movement speed was modified'), prefix: true, showValue: true },
+        'g_gravity=': { short: 'gravity', desc: t('Gravity was modified from default value'), prefix: true },
+        'pmove_fixed=0.0': { short: 'pmove 0', desc: t('pmove_fixed=0 - physics not fixed to framerate') },
+        'pmove_fixed=': { short: 'pmove', desc: t('Non-standard pmove_fixed value'), prefix: true, showValue: true },
+        'pmove_msec=': { short: 'msec', desc: t('Non-standard pmove_msec value'), prefix: true, showValue: true },
+        'sv_fps=': { short: 'fps', desc: t('Non-standard server framerate'), prefix: true, showValue: true },
+        'com_maxfps=': { short: 'maxfps', desc: t('Non-standard max framerate cap'), prefix: true, showValue: true },
+        'df_mp_interferenceoff=': { short: 'interf', desc: t('df_mp_interferenceoff - interference setting modified'), prefix: true, showValue: true },
+    }));
 
     const formatValidityFlag = (flag) => {
         if (!flag) return { short: flag, original: flag, desc: '' };
 
         // Exact match first
-        if (VALIDITY_FLAGS[flag]) {
-            return { short: VALIDITY_FLAGS[flag].short, original: flag, desc: VALIDITY_FLAGS[flag].desc };
+        if (VALIDITY_FLAGS.value[flag]) {
+            return { short: VALIDITY_FLAGS.value[flag].short, original: flag, desc: VALIDITY_FLAGS.value[flag].desc };
         }
 
         // Prefix match
-        for (const [key, config] of Object.entries(VALIDITY_FLAGS)) {
+        for (const [key, config] of Object.entries(VALIDITY_FLAGS.value)) {
             if (config.prefix && flag.startsWith(key)) {
                 const value = flag.slice(key.length).replace(/\.0$/, '');
                 const short = config.showValue ? `${config.short} ${value}` : config.short;
@@ -312,32 +313,32 @@
     });
 
     // Community flags (approved by admin)
-    const COMMUNITY_FLAG_LABELS = {
-        'sv_cheats': { short: 'cheats', desc: 'sv_cheats was enabled - flagged by community' },
-        'tool_assisted': { short: 'TAS', desc: 'Tool-assisted speedrun - flagged by community' },
-        'client_finish': { short: 'no finish', desc: 'No proper finish - flagged by community' },
-        'timescale': { short: 'timescale', desc: 'Game speed was altered - flagged by community' },
-        'g_speed': { short: 'speed', desc: 'Movement speed modified - flagged by community' },
-        'g_gravity': { short: 'gravity', desc: 'Gravity modified - flagged by community' },
-        'sv_fps': { short: 'fps', desc: 'Non-standard server FPS - flagged by community' },
-        'com_maxfps': { short: 'maxfps', desc: 'Non-standard max FPS - flagged by community' },
-        'pmove_fixed': { short: 'pmove', desc: 'Non-standard pmove_fixed - flagged by community' },
-        'pmove_msec': { short: 'msec', desc: 'Non-standard pmove_msec - flagged by community' },
-        'df_mp_interferenceoff': { short: 'interf', desc: 'Interference setting modified - flagged by community' },
-        'left_right': { short: '+left/+right', desc: '+left / +right turn binds - flagged by community' },
-        'scripts': { short: 'scripts', desc: 'Scripted movement - flagged by community' },
-        'upmove': { short: 'upmove', desc: 'Upmove script - flagged by community' },
-        'replay_cheat': { short: 'replay', desc: 'Replay cheat - flagged by community' },
-        'engine_cheat': { short: 'engine', desc: 'Modified engine - flagged by community' },
-        'other': { short: 'flagged', desc: 'Flagged by community for validity issue' },
-    };
+    const COMMUNITY_FLAG_LABELS = computed(() => ({
+        'sv_cheats': { short: 'cheats', desc: t('sv_cheats was enabled - flagged by community') },
+        'tool_assisted': { short: 'TAS', desc: t('Tool-assisted speedrun - flagged by community') },
+        'client_finish': { short: 'no finish', desc: t('No proper finish - flagged by community') },
+        'timescale': { short: 'timescale', desc: t('Game speed was altered - flagged by community') },
+        'g_speed': { short: 'speed', desc: t('Movement speed modified - flagged by community') },
+        'g_gravity': { short: 'gravity', desc: t('Gravity modified - flagged by community') },
+        'sv_fps': { short: 'fps', desc: t('Non-standard server FPS - flagged by community') },
+        'com_maxfps': { short: 'maxfps', desc: t('Non-standard max FPS - flagged by community') },
+        'pmove_fixed': { short: 'pmove', desc: t('Non-standard pmove_fixed - flagged by community') },
+        'pmove_msec': { short: 'msec', desc: t('Non-standard pmove_msec - flagged by community') },
+        'df_mp_interferenceoff': { short: 'interf', desc: t('Interference setting modified - flagged by community') },
+        'left_right': { short: '+left/+right', desc: t('+left / +right turn binds - flagged by community') },
+        'scripts': { short: 'scripts', desc: t('Scripted movement - flagged by community') },
+        'upmove': { short: 'upmove', desc: t('Upmove script - flagged by community') },
+        'replay_cheat': { short: 'replay', desc: t('Replay cheat - flagged by community') },
+        'engine_cheat': { short: 'engine', desc: t('Modified engine - flagged by community') },
+        'other': { short: 'flagged', desc: t('Flagged by community for validity issue') },
+    }));
 
     const communityFlags = computed(() => {
         const flags = props.record.approved_flags;
         if (!flags || flags.length === 0) return [];
         return flags.map(f => ({
-            short: COMMUNITY_FLAG_LABELS[f.flag_type]?.short ?? f.flag_type,
-            desc: COMMUNITY_FLAG_LABELS[f.flag_type]?.desc ?? f.flag_type,
+            short: COMMUNITY_FLAG_LABELS.value[f.flag_type]?.short ?? f.flag_type,
+            desc: COMMUNITY_FLAG_LABELS.value[f.flag_type]?.desc ?? f.flag_type,
             count: f.flag_count || 1,
             original: f.flag_type,
         }));
@@ -494,7 +495,7 @@
             v-if="!hideRank"
             class="font-black text-sm w-10 flex-shrink-0 text-left pl-1.5 leading-none"
             :class="rankColorClass"
-            :title="isVerified ? 'Verified - demo attached' : ''"
+            :title="isVerified ? $t('Verified - demo attached') : ''"
             @mouseenter="record.map_score && $emit('scoreHover', { score: record.map_score, reltime: record.reltime, base_score: record.base_score, rank_multiplier: record.rank_multiplier, multiplier: record.multiplier, el: $event.target })"
             @mouseleave="$emit('scoreHover', null)"
         >
@@ -504,7 +505,7 @@
                  sides at once and the row read as jumping left. No pop on
                  hover either - the number changing is the whole effect. -->
             <span :class="record.map_score ? 'group-hover:hidden' : ''">
-                <span v-if="hasValidityIssue || !record.rank" class="text-red-500/50" title="Flagged - does not count for ranking">&#x2715;</span>
+                <span v-if="hasValidityIssue || !record.rank" class="text-red-500/50" :title="$t('Flagged - does not count for ranking')">&#x2715;</span>
                 <template v-else>{{ record.rank }}</template>
             </span>
             <span v-if="record.map_score" class="hidden group-hover:inline whitespace-nowrap text-yellow-400/90 tabular-nums cursor-help">
@@ -574,7 +575,7 @@
             <template v-if="showSourceChips">
                 <!-- Primary chip: what type of entry is this (clickable with download icon if demo available) -->
                 <span v-if="record.oldtop" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/50">
-                    old record
+                    {{ $t('old record') }}
                 </span>
                 <span
                     v-else-if="isOnlineDemo || (isOfflineRecord && record.is_online)"
@@ -586,10 +587,10 @@
                         @click.stop="openDemoInfo"
                         class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-400"
                         :class="{ 'hover:bg-blue-500/30 hover:text-blue-300 transition-colors': demoDownloadUrl }"
-                        :title="demoDownloadUrl ? 'Download online demo' : ''"
+                        :title="demoDownloadUrl ? $t('Download online demo') : ''"
                     >
                         <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
-                        online
+                        {{ $t('online') }}
                     </component>
                     <DemoRenderButton
                         :renderedVideo="renderedVideo"
@@ -614,10 +615,10 @@
                         @click.stop="openDemoInfo"
                         class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-500/20 text-gray-400"
                         :class="{ 'hover:bg-gray-500/30 hover:text-gray-300 transition-colors': demoDownloadUrl }"
-                        :title="demoDownloadUrl ? 'Download offline demo' : ''"
+                        :title="demoDownloadUrl ? $t('Download offline demo') : ''"
                     >
                         <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
-                        offline
+                        {{ $t('offline') }}
                     </component>
                     <DemoRenderButton
                         :renderedVideo="renderedVideo"
@@ -640,12 +641,12 @@
                     @mouseleave="showVerifiedTooltip = false"
                 >
                     <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                    Verified
+                    {{ $t('Verified') }}
                     <Teleport to="body" v-if="showVerifiedTooltip">
                         <div class="fixed z-[9999] pointer-events-none" :style="{ top: verifiedTooltipPos.y + 'px', left: verifiedTooltipPos.x + 'px' }">
                             <div class="bg-gray-900 border border-green-500/30 rounded-lg px-3 py-2 shadow-xl -translate-x-1/2 -translate-y-full -mt-2">
-                                <div class="text-green-400 font-semibold text-xs">Verified Record</div>
-                                <div class="text-gray-300 text-xs mt-0.5">Online record + online demo matches</div>
+                                <div class="text-green-400 font-semibold text-xs">{{ $t('Verified Record') }}</div>
+                                <div class="text-gray-300 text-xs mt-0.5">{{ $t('Online record + online demo matches') }}</div>
                             </div>
                         </div>
                     </Teleport>
@@ -657,12 +658,12 @@
                     @mousemove="recTooltipPos = { x: $event.clientX, y: $event.clientY }"
                     @mouseleave="showRecTooltip = false"
                 >
-                    rec.
+                    {{ $t('rec.') }}
                     <Teleport to="body" v-if="showRecTooltip">
                         <div class="fixed z-[9999] pointer-events-none" :style="{ top: recTooltipPos.y + 'px', left: recTooltipPos.x + 'px' }">
                             <div class="bg-gray-900 border border-amber-500/30 rounded-lg px-3 py-2 shadow-xl -translate-x-1/2 -translate-y-full -mt-2">
-                                <div class="text-amber-400 font-semibold text-xs">Online Record</div>
-                                <div class="text-gray-300 text-xs mt-0.5">No demo attached - not verified</div>
+                                <div class="text-amber-400 font-semibold text-xs">{{ $t('Online Record') }}</div>
+                                <div class="text-gray-300 text-xs mt-0.5">{{ $t('No demo attached - not verified') }}</div>
                             </div>
                         </div>
                     </Teleport>
@@ -678,10 +679,10 @@
                         @click.stop="openDemoInfo"
                         class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 hover:text-blue-200 transition-colors"
                         :class="{ 'rounded-r': !canRequestRender || renderedVideo }"
-                        title="Download demo"
+                        :title="$t('Download demo')"
                     >
                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
-                        online
+                        {{ $t('online') }}
                     </a>
                     <DemoRenderButton
                         :renderedVideo="renderedVideo"
@@ -741,10 +742,10 @@
                         @click.stop="openDemoInfo"
                         class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 hover:text-blue-200 transition-colors"
                         :class="{ 'rounded-r': !canRequestRender || renderedVideo }"
-                        title="Download demo"
+                        :title="$t('Download demo')"
                     >
                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
-                        online
+                        {{ $t('online') }}
                     </a>
                     <DemoRenderButton
                         :renderedVideo="renderedVideo"
@@ -770,10 +771,10 @@
                         @click.stop="openDemoInfo"
                         class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-500/20 text-gray-400"
                         :class="{ 'hover:bg-gray-500/30 hover:text-gray-300 transition-colors': demoDownloadUrl }"
-                        :title="demoDownloadUrl ? 'Download offline demo' : ''"
+                        :title="demoDownloadUrl ? $t('Download offline demo') : ''"
                     >
                         <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
-                        offline
+                        {{ $t('offline') }}
                     </component>
                     <DemoRenderButton
                         :renderedVideo="renderedVideo"
@@ -799,10 +800,10 @@
                         @click.stop="openDemoInfo"
                         class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-400"
                         :class="{ 'hover:bg-blue-500/30 hover:text-blue-300 transition-colors': demoDownloadUrl }"
-                        :title="demoDownloadUrl ? 'Download online demo' : ''"
+                        :title="demoDownloadUrl ? $t('Download online demo') : ''"
                     >
                         <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
-                        online
+                        {{ $t('online') }}
                     </component>
                     <DemoRenderButton
                         :renderedVideo="renderedVideo"
@@ -855,10 +856,10 @@
                 <div class="bg-gray-900 border border-orange-500/30 rounded-lg px-3 py-2 shadow-xl -translate-x-1/2 -translate-y-full -mt-2">
                     <div class="text-orange-400 font-semibold text-xs flex items-center gap-1">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg>
-                        Community Flag
+                        {{ $t('Community Flag') }}
                     </div>
                     <div class="text-gray-300 text-xs mt-0.5">{{ hoveredCommunityFlag.desc }}</div>
-                    <div v-if="hoveredCommunityFlag.count > 1" class="text-orange-300/70 text-xs mt-0.5">Flagged by {{ hoveredCommunityFlag.count }} users</div>
+                    <div v-if="hoveredCommunityFlag.count > 1" class="text-orange-300/70 text-xs mt-0.5">{{ $tc('Flagged by :count user|Flagged by :count users', hoveredCommunityFlag.count) }}</div>
                 </div>
             </div>
         </Teleport>
@@ -874,9 +875,9 @@
                 :class="record.assigned_user_id
                     ? 'bg-teal-500/15 text-teal-300 border-teal-500/30 hover:bg-teal-500/25'
                     : 'bg-gray-700/40 text-gray-300 border-white/10 hover:bg-gray-700/70 hover:text-white'"
-                :title="record.assigned_user_id ? 'Attributed to an account - click to change' : 'Attribute this demo to an account'"
+                :title="record.assigned_user_id ? $t('Attributed to an account - click to change') : $t('Attribute this demo to an account')"
             >
-                {{ record.assigned_user_id ? 'Assigned' : 'Assign to account' }}
+                {{ record.assigned_user_id ? $t('Assigned') : $t('Assign to account') }}
             </button>
 
             <!-- Always visible: assign/match/reassign -->
@@ -884,7 +885,7 @@
                 v-if="! hideRecordActions && isLoggedIn && isOnlineDemo && !record.record_id && record.demo"
                 @click.stop="emit('assign', record)"
                 class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-green-400 hover:bg-green-500/10"
-                title="Assign to online record"
+                :title="$t('Assign to online record')"
             >
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
@@ -895,7 +896,7 @@
                 v-if="! hideRecordActions && isLoggedIn && !isOnlineDemo && !isOfflineRecord && demoMatches.length > 0 && !(record.uploaded_demos && record.uploaded_demos.length > 0)"
                 @click.stop="emit('assign-from-record', record)"
                 class="p-0.5 rounded transition-all hover:scale-110 bg-purple-500/20 text-purple-400 hover:text-purple-300 hover:bg-purple-500/30 animate-pulse"
-                :title="`${demoMatches.length} possible demo match${demoMatches.length > 1 ? 'es' : ''}`"
+                :title="$tc(':count possible demo match|:count possible demo matches', demoMatches.length)"
             >
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
@@ -906,7 +907,7 @@
                 v-if="! hideRecordActions && isLoggedIn && !isOnlineDemo && !isOfflineRecord && record.uploaded_demos && record.uploaded_demos.length > 0"
                 @click.stop="emit('reassign-record', record)"
                 class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/10"
-                title="Reassign demo"
+                :title="$t('Reassign demo')"
             >
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -928,7 +929,7 @@
                         v-if="canFlagRecord && !record.oldtop"
                         @click.stop="showFlagModal = true"
                         class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
-                        title="Flag validity issue"
+                        :title="$t('Flag validity issue')"
                     >
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
@@ -939,7 +940,7 @@
                         v-if="canReportDemo && getDemoForReport"
                         @click.stop="showReportModal = true"
                         class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
-                        title="Report demo"
+                        :title="$t('Report demo')"
                     >
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
@@ -950,7 +951,7 @@
                         v-if="isAdmin && demoIdForYoutubeLink"
                         @click.stop="showYoutubeLinkModal = true"
                         class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
-                        title="Link YouTube video"
+                        :title="$t('Link YouTube video')"
                     >
                         <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
                     </button>
@@ -965,17 +966,15 @@
                 v-if="timeHistory && timeHistory.count"
                 type="button"
                 @click.prevent.stop="emit('toggle-history')"
-                :title="historyExpanded ? 'Hide time history' : 'Show time history'"
+                :title="historyExpanded ? $t('Hide time history') : $t('Show time history')"
                 :class="[
-                    'inline-flex flex-col items-center justify-center leading-none px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors',
+                    'inline-flex flex-col items-center justify-center leading-none px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors [&_span]:mt-0.5',
                     historyExpanded
                         ? 'bg-blue-500/30 text-blue-200 border-blue-400/60'
                         : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10 hover:text-white'
                 ]"
-            >
-                <span>Time</span>
-                <span class="mt-0.5">History</span>
-            </button>
+                v-html="$t('Time <span>History</span>')"
+            ></button>
             <!-- Sized to the time it holds, not to the longest time there
                  could be. The date after it is a fixed width, so every time
                  still ends on the same line - and the history button sits
@@ -1024,38 +1023,36 @@
                         <div class="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
                             <svg class="w-5 h-5 text-red-400" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
                         </div>
-                        <h3 class="text-sm font-bold text-white">Render to YouTube?</h3>
+                        <h3 class="text-sm font-bold text-white">{{ $t('Render to YouTube?') }}</h3>
                     </div>
-                    <p class="text-xs text-gray-400 mb-3">This queues this demo to be rendered into a video and uploaded to the defrag.racing YouTube channel. Rendering can take several minutes.</p>
+                    <p class="text-xs text-gray-400 mb-3">{{ $t('This queues this demo to be rendered into a video and uploaded to the defrag.racing YouTube channel. Rendering can take several minutes.') }}</p>
 
                     <div class="border border-red-500/30 bg-red-500/[0.06] rounded-lg p-3 mb-3">
-                        <p class="text-[11px] text-gray-300 leading-relaxed">
-                            <span class="font-bold text-red-300">Renders cost real money.</span>
-                            The render farm time and storage are paid for by defrag.racing out of the project's own pocket, and YouTube caps how many videos demome can upload per day. Every render you queue spends part of that shared, limited budget - so please only render runs that are worth keeping.
-                        </p>
+                        <p class="text-[11px] text-gray-300 leading-relaxed [&_span]:font-bold [&_span]:text-red-300"
+                           v-html="$t('<span>Renders cost real money.</span> The render farm time and storage are paid for by defrag.racing out of the project\'s own pocket, and YouTube caps how many videos demome can upload per day. Every render you queue spends part of that shared, limited budget - so please only render runs that are worth keeping.')"></p>
                     </div>
 
                     <div class="border border-white/10 bg-white/[0.02] rounded-lg p-3 mb-3">
-                        <h4 class="text-xs font-bold text-white mb-2">Render etiquette</h4>
+                        <h4 class="text-xs font-bold text-white mb-2">{{ $t('Render etiquette') }}</h4>
                         <ul class="text-[11px] text-gray-400 space-y-1.5 list-disc pl-4">
-                            <li>Render the best run. Don't queue a whole time history for a map when a faster time already exists - or will likely beat it within minutes or hours.</li>
-                            <li>Several near-identical times on the same map, a few ms apart? Pick one.</li>
-                            <li>Slower time but a genuinely cool trick or something worth showing off? That's totally fine, go for it.</li>
+                            <li>{{ $t('Render the best run. Don\'t queue a whole time history for a map when a faster time already exists - or will likely beat it within minutes or hours.') }}</li>
+                            <li>{{ $t('Several near-identical times on the same map, a few ms apart? Pick one.') }}</li>
+                            <li>{{ $t('Slower time but a genuinely cool trick or something worth showing off? That\'s totally fine, go for it.') }}</li>
                         </ul>
                     </div>
 
                     <label class="flex items-start gap-2 mb-3 cursor-pointer select-none">
                         <input type="checkbox" v-model="etiquetteAccepted" class="mt-0.5 w-3.5 h-3.5 rounded border-white/20 bg-white/5 text-red-600 focus:ring-red-500 focus:ring-offset-0">
-                        <span class="text-xs text-gray-300">I'll only render runs actually worth keeping, not whole time histories.</span>
+                        <span class="text-xs text-gray-300">{{ $t('I\'ll only render runs actually worth keeping, not whole time histories.') }}</span>
                     </label>
 
                     <p v-if="renderError" class="text-xs text-red-400 mb-3">{{ renderError }}</p>
                     <div class="flex gap-2 justify-end">
                         <button @click="cancelRender" class="px-3 py-1.5 text-xs font-medium text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors">
-                            Cancel
+                            {{ $t('Cancel') }}
                         </button>
                         <button @click="requestRender" :disabled="renderRequesting || !etiquetteAccepted" class="px-3 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors">
-                            {{ renderRequesting ? '...' : 'Render' }}
+                            {{ renderRequesting ? '...' : $t('Render') }}
                         </button>
                     </div>
                 </template>
@@ -1066,15 +1063,13 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                             </svg>
                         </div>
-                        <h3 class="text-sm font-bold text-white">Render Queued</h3>
+                        <h3 class="text-sm font-bold text-white">{{ $t('Render Queued') }}</h3>
                     </div>
-                    <p class="text-xs text-gray-400 mb-4">
-                        This demo has been added to the render queue. You can check rendering progress
-                        <a href="/rendered-demos" class="text-red-400 hover:text-red-300 underline">here</a>.
-                    </p>
+                    <p class="text-xs text-gray-400 mb-4 [&_a]:text-red-400 [&_a:hover]:text-red-300 [&_a]:underline"
+                       v-html="$t('This demo has been added to the render queue. You can check rendering progress <a href=/rendered-demos>here</a>.')"></p>
                     <div class="flex justify-end">
                         <button @click="cancelRender" class="px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors">
-                            Close
+                            {{ $t('Close') }}
                         </button>
                     </div>
                 </template>
@@ -1086,21 +1081,21 @@
     <Teleport to="body" v-if="showYoutubeLinkModal">
         <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" @click.self="showYoutubeLinkModal = false">
             <div class="bg-gray-900 border border-white/10 rounded-xl p-5 shadow-2xl max-w-sm mx-4">
-                <h3 class="text-sm font-bold text-white mb-3">Link YouTube Video</h3>
+                <h3 class="text-sm font-bold text-white mb-3">{{ $t('Link YouTube Video') }}</h3>
                 <input
                     v-model="youtubeLinkInput"
                     type="text"
-                    placeholder="YouTube URL or video ID"
+                    :placeholder="$t('YouTube URL or video ID')"
                     class="w-full px-3 py-2 text-sm bg-gray-800 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500/50"
                     @keyup.enter="linkYoutube"
                 >
                 <p v-if="youtubeLinkError" class="text-red-400 text-xs mt-2">{{ youtubeLinkError }}</p>
                 <div class="flex gap-2 justify-end mt-4">
                     <button @click="showYoutubeLinkModal = false" class="px-3 py-1.5 text-xs font-medium text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors">
-                        Cancel
+                        {{ $t('Cancel') }}
                     </button>
                     <button @click="linkYoutube" :disabled="youtubeLinkSaving" class="px-3 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
-                        {{ youtubeLinkSaving ? '...' : 'Link' }}
+                        {{ youtubeLinkSaving ? '...' : $t('Link') }}
                     </button>
                 </div>
             </div>
@@ -1129,12 +1124,12 @@
                         <h3 class="text-sm font-bold text-white truncate">
                             {{ getDemoForReport.map_name || record.mapname }}
                         </h3>
-                        <p class="text-xs text-gray-500 mt-0.5">Demo details</p>
+                        <p class="text-xs text-gray-500 mt-0.5">{{ $t('Demo details') }}</p>
                     </div>
                     <button
                         @click="showDemoInfo = false"
                         class="flex-shrink-0 p-1 text-gray-500 hover:text-white transition-colors"
-                        aria-label="Close">
+                        :aria-label="$t('Close')">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -1149,14 +1144,14 @@
                     <button
                         @click="showDemoInfo = false"
                         class="px-3 py-1.5 text-xs font-medium text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors">
-                        Cancel
+                        {{ $t('Cancel') }}
                     </button>
                     <a
                         :href="demoDownloadUrl"
                         @click="showDemoInfo = false"
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-200 bg-blue-600/30 hover:bg-blue-600/40 border border-blue-500/40 rounded-lg transition-colors">
                         <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
-                        Download
+                        {{ $t('Download') }}
                     </a>
                 </div>
             </div>

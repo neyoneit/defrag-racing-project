@@ -51,7 +51,7 @@
             <div class="p-5">
                 <div class="flex justify-between items-center">
                     <h2 class="font-semibold text-xl text-gray-200 leading-tight">
-                        Invite Player
+                        {{ $t('Invite Player') }}
                     </h2>
 
                     <div class="text-gray-200 cursor-pointer rounded-full hover:bg-grayop-700 p-1" @click="close">
@@ -74,12 +74,12 @@
                     </div>
 
                     <div class="text-gray-500" v-if="user_id.length > 0">
-                        Selected Player: <span class="text-gray-300" v-html="q3tohtml(selectedUser)"></span>
+                        {{ $t('Selected Player:') }} <span class="text-gray-300" v-html="q3tohtml(selectedUser)"></span>
                     </div>
 
                     <div class="flex justify-center">
                         <PrimaryButton type="submit" class="w-32 justify-center">
-                            Invite
+                            {{ $t('Invite') }}
                         </PrimaryButton>
                     </div>
                 </form>

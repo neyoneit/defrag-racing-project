@@ -20,11 +20,11 @@
     
                 <div class="flex" v-if="management">
                     <Link :href="route('tournaments.faqs.edit', {tournament: faq.tournament_id, faq: faq.id})" class="text-gray-300 font-bold bg-grayop-700 cursor-pointer hover:bg-grayop-600 text-center rounded-lg p-3 mr-4 mb-3">
-                        Edit
+                        {{ $t('Edit') }}
                     </Link>
     
                     <Link :href="route('tournaments.faqs.destroy', {tournament: faq.tournament_id, faq: faq.id})" class="text-gray-300 font-bold bg-grayop-700 cursor-pointer hover:bg-grayop-600 text-center rounded-lg p-3 mr-4 mb-3">
-                        Delete
+                        {{ $t('Delete') }}
                     </Link>
                 </div>
             </div>

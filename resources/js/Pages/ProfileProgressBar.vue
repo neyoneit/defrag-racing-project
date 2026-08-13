@@ -136,7 +136,7 @@ const fontImportUrl = computed(() => {
 </script>
 
 <template>
-    <Head title="Map Progress" />
+    <Head :title="$t('Map Progress')" />
     <component v-if="fontImportUrl" is="link" rel="stylesheet" :href="fontImportUrl" />
 
     <div class="ppb-page" :style="{ backgroundColor: pageBackground }">
@@ -152,7 +152,7 @@ const fontImportUrl = computed(() => {
                 <div
                     v-if="s.text_subtitle.visible"
                     :style="textStyle(s.text_subtitle)"
-                >Map Completionist Progress</div>
+                >{{ $t('Map Completionist Progress') }}</div>
             </div>
             <div
                 v-if="s.text_count.visible"

@@ -19,9 +19,9 @@
             <div class="text-base font-black text-white group-hover:text-purple-400 transition-colors truncate mb-0.5" v-html="q3tohtml(player.name)"></div>
             <div class="text-xs text-gray-400 font-semibold">
                 <span v-if="player.country">{{ player.country }}</span>
-                <span v-else>Player</span>
-                <span v-if="player.matched_alias" class="text-gray-500"> - alias: <span v-html="q3tohtml(player.matched_alias)"></span></span>
-                <span v-else-if="player.mdd_name" class="text-gray-500"> - MDD: <span v-html="q3tohtml(player.mdd_name)"></span></span>
+                <span v-else>{{ $t('Player') }}</span>
+                <span v-if="player.matched_alias" class="text-gray-500"> {{ $t('- alias:') }} <span v-html="q3tohtml(player.matched_alias)"></span></span>
+                <span v-else-if="player.mdd_name" class="text-gray-500"> {{ $t('- MDD:') }} <span v-html="q3tohtml(player.mdd_name)"></span></span>
             </div>
         </div>
 

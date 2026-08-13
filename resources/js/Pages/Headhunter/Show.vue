@@ -1,7 +1,9 @@
 <script setup>
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { t } from '@/utils/i18n';
 
+import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
 const page = usePage();
 
 const props = defineProps({
@@ -116,6 +118,7 @@ const allParticipants = computed(() => {
 
 // Expiration countdown
 const countdown = ref('');
+const expired = ref(false);
 const countdownInterval = ref(null);
 
 const updateCountdown = () => {
@@ -128,7 +131,8 @@ const updateCountdown = () => {
     const diff = expires - now;
 
     if (diff <= 0) {
-        countdown.value = 'Expired';
+        expired.value = true;
+        countdown.value = t('Expired');
         if (countdownInterval.value) clearInterval(countdownInterval.value);
         return;
     }
@@ -138,11 +142,11 @@ const updateCountdown = () => {
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
     if (days > 0) {
-        countdown.value = `${days}d ${hours}h ${minutes}m`;
+        countdown.value = t(':days d :hours h :minutes m', { days, hours, minutes });
     } else if (hours > 0) {
-        countdown.value = `${hours}h ${minutes}m`;
+        countdown.value = t(':hours h :minutes m', { hours, minutes });
     } else {
-        countdown.value = `${minutes}m`;
+        countdown.value = t(':minutes m', { minutes });
     }
 };
 
@@ -326,10 +330,10 @@ const getStatusColor = (status) => {
 
 const getParticipantStatusLabel = (status) => {
     const labels = {
-        'participating': 'Joined',
-        'submitted': 'Proof Submitted',
-        'approved': 'Approved',
-        'rejected': 'Rejected',
+        'participating': t('Joined'),
+        'submitted': t('Proof Submitted'),
+        'approved': t('Approved'),
+        'rejected': t('Rejected'),
     };
     return labels[status] || status;
 };
@@ -346,7 +350,7 @@ const getParticipantStatusLabel = (status) => {
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                     </svg>
-                    Back to Challenges
+                    {{ $t('Back to Challenges') }}
                 </Link>
             </div>
         </div>
@@ -361,7 +365,7 @@ const getParticipantStatusLabel = (status) => {
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                     </svg>
                     <div class="text-sm text-yellow-300">
-                        <strong>Disclaimer:</strong> Defrag Racing is not responsible for the fulfillment of rewards. All challenges and rewards are agreements between the creator and participants. Creators who fail to honor rewards may be banned from creating future challenges.
+                        <strong>{{ $t('Disclaimer:') }}</strong> {{ $t('Defrag Racing is not responsible for the fulfillment of rewards. All challenges and rewards are agreements between the creator and participants. Creators who fail to honor rewards may be banned from creating future challenges.') }}
                     </div>
                 </div>
             </div>
@@ -382,11 +386,11 @@ const getParticipantStatusLabel = (status) => {
                     <div class="text-right">
                         <div v-if="challenge.reward_amount" class="mb-2">
                             <div class="text-4xl font-black text-green-400">{{ challenge.reward_currency }} {{ challenge.reward_amount }}</div>
-                            <div class="text-sm text-gray-500">Reward</div>
+                            <div class="text-sm text-gray-500">{{ $t('Reward') }}</div>
                         </div>
                         <div v-else-if="challenge.reward_description" class="mb-2">
                             <div class="text-lg font-semibold text-blue-400">{{ challenge.reward_description }}</div>
-                            <div class="text-sm text-gray-500">Reward</div>
+                            <div class="text-sm text-gray-500">{{ $t('Reward') }}</div>
                         </div>
                     </div>
                 </div>
@@ -395,7 +399,7 @@ const getParticipantStatusLabel = (status) => {
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <!-- Map with thumbnail -->
                     <div class="bg-black/40 border border-white/10 rounded-xl p-4">
-                        <div class="text-sm text-gray-400 mb-1">Map</div>
+                        <div class="text-sm text-gray-400 mb-1">{{ $t('Map') }}</div>
                         <Link :href="`/maps/${encodeURIComponent(challenge.mapname)}`" class="block hover:opacity-80 transition-opacity">
                             <div v-if="map?.thumbnail" class="mb-2">
                                 <img :src="`/storage/${map.thumbnail}`" @error="$event.target.style.display='none'" class="w-full h-16 object-cover rounded" />
@@ -405,7 +409,7 @@ const getParticipantStatusLabel = (status) => {
                     </div>
 
                     <div class="bg-black/40 border border-white/10 rounded-xl p-4">
-                        <div class="text-sm text-gray-400 mb-1">Physics & Mode</div>
+                        <div class="text-sm text-gray-400 mb-1">{{ $t('Physics & Mode') }}</div>
                         <div class="flex items-center gap-2">
                             <img :src="`/images/modes/${challenge.physics}-icon.svg`" class="w-5 h-5" :alt="challenge.physics" />
                             <span class="text-white font-bold capitalize">{{ challenge.mode }}</span>
@@ -413,31 +417,31 @@ const getParticipantStatusLabel = (status) => {
                     </div>
 
                     <div class="bg-black/40 border border-white/10 rounded-xl p-4">
-                        <div class="text-sm text-gray-400 mb-1">Target Time</div>
+                        <div class="text-sm text-gray-400 mb-1">{{ $t('Target Time') }}</div>
                         <div class="text-yellow-400 font-black text-xl">{{ formatTime(challenge.target_time) }}</div>
                     </div>
 
                     <div class="bg-black/40 border border-white/10 rounded-xl p-4">
-                        <div class="text-sm text-gray-400 mb-1">Participants</div>
+                        <div class="text-sm text-gray-400 mb-1">{{ $t('Participants') }}</div>
                         <div class="text-white font-bold text-xl">{{ allParticipants.length }}</div>
                     </div>
 
                     <!-- Expiration countdown -->
                     <div class="bg-black/40 border border-white/10 rounded-xl p-4">
-                        <div class="text-sm text-gray-400 mb-1">Expires</div>
+                        <div class="text-sm text-gray-400 mb-1">{{ $t('Expires') }}</div>
                         <div v-if="challenge.expires_at">
-                            <div v-if="countdown === 'Expired'" class="text-red-400 font-bold">Expired</div>
+                            <div v-if="expired" class="text-red-400 font-bold">{{ $t('Expired') }}</div>
                             <div v-else class="text-orange-400 font-bold">{{ countdown }}</div>
                             <div class="text-xs text-gray-500 mt-0.5">{{ new Date(challenge.expires_at).toLocaleDateString() }}</div>
                         </div>
-                        <div v-else class="text-gray-500 font-semibold">No expiry</div>
+                        <div v-else class="text-gray-500 font-semibold">{{ $t('No expiry') }}</div>
                     </div>
                 </div>
 
                 <!-- Creator info + stats -->
                 <div class="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div class="flex items-center gap-2 text-sm text-gray-400">
-                        <span>Created by</span>
+                        <span>{{ $t('Created by') }}</span>
                         <Link
                             v-if="challenge.creator"
                             :href="route('profile.index', challenge.creator.id)"
@@ -460,18 +464,18 @@ const getParticipantStatusLabel = (status) => {
                                 v-html="q3tohtml(challenge.creator?.name)"
                             ></span>
                         </Link>
-                        <span v-else class="text-gray-500">Unknown</span>
+                        <span v-else class="text-gray-500">{{ $t('Unknown') }}</span>
 
                         <!-- Creator reputation badges -->
                         <div v-if="creatorStats" class="flex items-center gap-2 ml-2">
-                            <span class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-500/15 text-blue-400 border border-blue-500/20" :title="`${creatorStats.challenges_created} challenges created`">
-                                {{ creatorStats.challenges_created }} created
+                            <span class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-500/15 text-blue-400 border border-blue-500/20" :title="$t(':count challenges created', { count: creatorStats.challenges_created })">
+                                {{ $t(':count created', { count: creatorStats.challenges_created }) }}
                             </span>
-                            <span v-if="creatorStats.total_approved > 0" class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-green-500/15 text-green-400 border border-green-500/20" :title="`${creatorStats.total_approved} submissions approved`">
-                                {{ creatorStats.total_approved }} approved
+                            <span v-if="creatorStats.total_approved > 0" class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-green-500/15 text-green-400 border border-green-500/20" :title="$t(':count submissions approved', { count: creatorStats.total_approved })">
+                                {{ $t(':count approved', { count: creatorStats.total_approved }) }}
                             </span>
-                            <span v-if="creatorStats.disputes_count > 0" class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-red-500/15 text-red-400 border border-red-500/20" :title="`${creatorStats.disputes_count} disputes filed`">
-                                {{ creatorStats.disputes_count }} disputes
+                            <span v-if="creatorStats.disputes_count > 0" class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-red-500/15 text-red-400 border border-red-500/20" :title="$t(':count disputes filed', { count: creatorStats.disputes_count })">
+                                {{ $t(':count disputes', { count: creatorStats.disputes_count }) }}
                             </span>
                         </div>
                     </div>
@@ -481,7 +485,7 @@ const getParticipantStatusLabel = (status) => {
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                         </svg>
-                        Grace period active - you can still edit
+                        {{ $t('Grace period active - you can still edit') }}
                     </div>
                 </div>
 
@@ -494,7 +498,7 @@ const getParticipantStatusLabel = (status) => {
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
                         </svg>
-                        Log in to participate in this challenge
+                        {{ $t('Log in to participate in this challenge') }}
                     </Link>
                 </div>
 
@@ -508,7 +512,7 @@ const getParticipantStatusLabel = (status) => {
                             class="px-4 py-2 bg-blue-600/20 border border-blue-500/30 text-blue-400 font-semibold rounded-lg hover:bg-blue-600/30 transition-colors flex items-center gap-2"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
-                            Edit Challenge
+                            {{ $t('Edit Challenge') }}
                         </button>
                         <button
                             v-if="!isWithinGracePeriod && challenge.status !== 'closed'"
@@ -516,7 +520,7 @@ const getParticipantStatusLabel = (status) => {
                             class="px-4 py-2 bg-gray-600/20 border border-gray-500/30 text-gray-400 font-semibold rounded-lg hover:bg-gray-600/30 transition-colors flex items-center gap-2"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
-                            Request Edit / Deletion
+                            {{ $t('Request Edit / Deletion') }}
                         </button>
                         <button
                             v-if="challenge.status !== 'closed'"
@@ -524,7 +528,7 @@ const getParticipantStatusLabel = (status) => {
                             class="px-4 py-2 bg-red-600/20 border border-red-500/30 text-red-400 font-semibold rounded-lg hover:bg-red-600/30 transition-colors flex items-center gap-2"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
-                            Close Challenge
+                            {{ $t('Close Challenge') }}
                         </button>
                     </div>
 
@@ -534,18 +538,18 @@ const getParticipantStatusLabel = (status) => {
                             @click="participate"
                             class="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
                         >
-                            Participate in Challenge
+                            {{ $t('Participate in Challenge') }}
                         </button>
                         <div v-if="isWithinGracePeriod" class="mt-2 text-xs text-yellow-400 text-center flex items-center justify-center gap-1">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
-                            Grace period active - creator can still edit this challenge (created {{ new Date(challenge.created_at).toLocaleTimeString() }})
+                            {{ $t('Grace period active - creator can still edit this challenge (created :time)', { time: new Date(challenge.created_at).toLocaleTimeString() }) }}
                         </div>
                     </div>
 
                     <div v-else-if="userParticipation">
                         <div class="flex items-center justify-between gap-4">
                             <div class="flex items-center gap-3">
-                                <span class="text-white font-semibold">Your Status:</span>
+                                <span class="text-white font-semibold">{{ $t('Your Status:') }}</span>
                                 <span :class="`px-3 py-1 text-sm font-semibold rounded-full border ${getStatusColor(userParticipation.status)}`">
                                     {{ getParticipantStatusLabel(userParticipation.status) }}
                                 </span>
@@ -557,7 +561,7 @@ const getParticipantStatusLabel = (status) => {
                                     @click="showSubmitModal = true"
                                     class="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl"
                                 >
-                                    Submit Proof
+                                    {{ $t('Submit Proof') }}
                                 </button>
 
                                 <!-- Dispute button for approved participants -->
@@ -566,10 +570,10 @@ const getParticipantStatusLabel = (status) => {
                                     @click="showDisputeModal = true"
                                     class="px-4 py-2 bg-red-600/20 border border-red-500/30 text-red-400 font-semibold rounded-lg hover:bg-red-600/30 transition-colors"
                                 >
-                                    File Dispute
+                                    {{ $t('File Dispute') }}
                                 </button>
                                 <span v-if="hasActiveDispute" class="px-4 py-2 text-sm text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                                    Dispute pending
+                                    {{ $t('Dispute pending') }}
                                 </span>
                             </div>
                         </div>
@@ -577,8 +581,8 @@ const getParticipantStatusLabel = (status) => {
                         <!-- Progress indicator -->
                         <div v-if="userProgress && userParticipation.status === 'participating'" class="mt-4 p-4 bg-black/30 border border-white/5 rounded-lg">
                             <div class="flex items-center justify-between text-sm mb-2">
-                                <span class="text-gray-400">Your best time: <span class="text-white font-bold">{{ formatTime(userProgress.bestTime) }}</span></span>
-                                <span class="text-gray-400">Target: <span class="text-yellow-400 font-bold">{{ formatTime(challenge.target_time) }}</span></span>
+                                <span class="text-gray-400">{{ $t('Your best time:') }} <span class="text-white font-bold">{{ formatTime(userProgress.bestTime) }}</span></span>
+                                <span class="text-gray-400">{{ $t('Target:') }} <span class="text-yellow-400 font-bold">{{ formatTime(challenge.target_time) }}</span></span>
                             </div>
                             <div class="w-full bg-gray-800 rounded-full h-2">
                                 <div
@@ -588,19 +592,19 @@ const getParticipantStatusLabel = (status) => {
                                 ></div>
                             </div>
                             <div v-if="userProgress.beatTarget" class="text-green-400 text-sm mt-1 font-semibold">
-                                You beat the target! Submit your proof above.
+                                {{ $t('You beat the target! Submit your proof above.') }}
                             </div>
                         </div>
 
                         <div v-if="userParticipation.rejection_reason" class="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-                            <div class="text-sm font-semibold text-red-400 mb-1">Rejection Reason:</div>
+                            <div class="text-sm font-semibold text-red-400 mb-1">{{ $t('Rejection Reason:') }}</div>
                             <div class="text-sm text-gray-300">{{ userParticipation.rejection_reason }}</div>
                             <button
                                 v-if="userParticipation.status === 'rejected'"
                                 @click="showSubmitModal = true"
                                 class="mt-3 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold rounded-lg transition-all duration-300 text-sm"
                             >
-                                Resubmit Proof
+                                {{ $t('Resubmit Proof') }}
                             </button>
                         </div>
                     </div>
@@ -609,8 +613,8 @@ const getParticipantStatusLabel = (status) => {
 
             <!-- Creator: Pending Submissions to Review -->
             <div v-if="isCreator && submittedParticipants.length > 0" class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-yellow-500/30 rounded-2xl p-8 mb-6">
-                <h2 class="text-2xl font-black text-white mb-2">Submissions Awaiting Review</h2>
-                <p class="text-gray-400 text-sm mb-6">Review and approve or reject submitted proofs.</p>
+                <h2 class="text-2xl font-black text-white mb-2">{{ $t('Submissions Awaiting Review') }}</h2>
+                <p class="text-gray-400 text-sm mb-6">{{ $t('Review and approve or reject submitted proofs.') }}</p>
 
                 <div class="space-y-4">
                     <div
@@ -644,12 +648,12 @@ const getParticipantStatusLabel = (status) => {
 
                                 <div class="flex items-center gap-2 text-sm text-gray-400">
                                     <template v-if="participant.record">
-                                        Time: <span class="text-yellow-400 font-bold">{{ formatTime(participant.record.time) }}</span>
-                                        <span class="px-1 py-0.5 text-[9px] font-bold rounded bg-green-500/20 text-green-400 border border-green-500/30">VERIFIED</span>
+                                        {{ $t('Time:') }} <span class="text-yellow-400 font-bold">{{ formatTime(participant.record.time) }}</span>
+                                        <span class="px-1 py-0.5 text-[9px] font-bold rounded bg-green-500/20 text-green-400 border border-green-500/30">{{ $t('VERIFIED') }}</span>
                                     </template>
                                     <template v-else-if="participant.offline_record">
-                                        Time: <span class="text-yellow-400 font-bold">{{ formatTime(participant.offline_record.time_ms) }}</span>
-                                        <span class="px-1 py-0.5 text-[9px] font-bold rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">OFFLINE</span>
+                                        {{ $t('Time:') }} <span class="text-yellow-400 font-bold">{{ formatTime(participant.offline_record.time_ms) }}</span>
+                                        <span class="px-1 py-0.5 text-[9px] font-bold rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">{{ $t('OFFLINE') }}</span>
                                     </template>
                                 </div>
 
@@ -663,19 +667,19 @@ const getParticipantStatusLabel = (status) => {
                                     @click="openApproveConfirm(participant)"
                                     class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors text-sm"
                                 >
-                                    Approve
+                                    {{ $t('Approve') }}
                                 </button>
                                 <button
                                     @click="openRejectModal(participant)"
                                     class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors text-sm"
                                 >
-                                    Reject
+                                    {{ $t('Reject') }}
                                 </button>
                             </div>
                         </div>
 
                         <div v-if="participant.submission_notes" class="mt-2 text-sm text-gray-300 bg-black/20 rounded p-2">
-                            <span class="text-gray-500">Notes:</span> {{ participant.submission_notes }}
+                            <span class="text-gray-500">{{ $t('Notes:') }}</span> {{ participant.submission_notes }}
                         </div>
                     </div>
                 </div>
@@ -683,7 +687,7 @@ const getParticipantStatusLabel = (status) => {
 
             <!-- Current Records (WR) -->
             <div v-if="currentRecords && currentRecords.length > 0" class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl p-8 mb-6">
-                <h2 class="text-2xl font-black text-white mb-6">Current World Records</h2>
+                <h2 class="text-2xl font-black text-white mb-6">{{ $t('Current World Records') }}</h2>
                 <div class="space-y-3">
                     <div
                         v-for="record in currentRecords"
@@ -728,7 +732,7 @@ const getParticipantStatusLabel = (status) => {
 
             <!-- Challenge Leaderboard (approved completions sorted by time) -->
             <div v-if="approvedParticipants.length > 0" class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl p-8 mb-6">
-                <h2 class="text-2xl font-black text-white mb-6">Leaderboard</h2>
+                <h2 class="text-2xl font-black text-white mb-6">{{ $t('Leaderboard') }}</h2>
 
                 <div class="space-y-3">
                     <div
@@ -770,23 +774,23 @@ const getParticipantStatusLabel = (status) => {
                             <div class="flex items-center gap-4">
                                 <div class="flex items-center gap-2">
                                     <span class="text-yellow-400 font-black text-lg">{{ formatTime(getParticipantTime(participant)) }}</span>
-                                    <span v-if="participant.offline_record" class="px-1 py-0.5 text-[9px] font-bold rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">OFFLINE</span>
+                                    <span v-if="participant.offline_record" class="px-1 py-0.5 text-[9px] font-bold rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">{{ $t('OFFLINE') }}</span>
                                 </div>
                                 <span class="text-xs text-gray-500">{{ new Date(participant.submitted_at).toLocaleDateString() }}</span>
                                 <div v-if="isCreator && challenge.status !== 'closed'" class="flex gap-1.5">
                                     <button
                                         @click="unapproveSubmission(participant.id)"
                                         class="px-2 py-1 text-xs bg-yellow-600/20 border border-yellow-500/30 text-yellow-400 font-semibold rounded hover:bg-yellow-600/30 transition-colors"
-                                        title="Revert to submitted status"
+                                        :title="$t('Revert to submitted status')"
                                     >
-                                        Undo
+                                        {{ $t('Undo') }}
                                     </button>
                                     <button
                                         @click="openRemoveConfirm(participant)"
                                         class="px-2 py-1 text-xs bg-red-600/20 border border-red-500/30 text-red-400 font-semibold rounded hover:bg-red-600/30 transition-colors"
-                                        title="Remove participant"
+                                        :title="$t('Remove participant')"
                                     >
-                                        Remove
+                                        {{ $t('Remove') }}
                                     </button>
                                 </div>
                             </div>
@@ -801,8 +805,8 @@ const getParticipantStatusLabel = (status) => {
 
             <!-- Active Disputes (visible to creator) -->
             <div v-if="isCreator && disputes && disputes.length > 0" class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-red-500/30 rounded-2xl p-8 mb-6">
-                <h2 class="text-2xl font-black text-white mb-2">Disputes</h2>
-                <p class="text-gray-400 text-sm mb-6">Review and respond to filed disputes. Unresolved disputes will result in automatic action after 14 days.</p>
+                <h2 class="text-2xl font-black text-white mb-2">{{ $t('Disputes') }}</h2>
+                <p class="text-gray-400 text-sm mb-6">{{ $t('Review and respond to filed disputes. Unresolved disputes will result in automatic action after 14 days.') }}</p>
 
                 <div class="space-y-4">
                     <div
@@ -844,24 +848,24 @@ const getParticipantStatusLabel = (status) => {
                                     'text-green-400 bg-green-500/20 border-green-500/30': dispute.status === 'resolved',
                                     'text-red-400 bg-red-500/20 border-red-500/30': dispute.status === 'auto_banned',
                                 }">
-                                    {{ dispute.status === 'auto_banned' ? 'Auto-banned' : dispute.status }}
+                                    {{ dispute.status === 'auto_banned' ? $t('Auto-banned') : dispute.status }}
                                 </span>
                                 <span v-if="dispute.status === 'pending' && dispute.days_until_auto_ban !== null" class="text-xs text-red-400">
-                                    {{ dispute.days_until_auto_ban }} days left
+                                    {{ $tc(':count day left|:count days left', dispute.days_until_auto_ban) }}
                                 </span>
                             </div>
                         </div>
 
                         <div class="text-sm text-gray-300 mb-2">
-                            <span class="text-gray-500">Reason:</span> {{ dispute.reason }}
+                            <span class="text-gray-500">{{ $t('Reason:') }}</span> {{ dispute.reason }}
                         </div>
                         <div v-if="dispute.evidence" class="text-sm text-gray-300 mb-2">
-                            <span class="text-gray-500">Evidence:</span> {{ dispute.evidence }}
+                            <span class="text-gray-500">{{ $t('Evidence:') }}</span> {{ dispute.evidence }}
                         </div>
 
                         <!-- Creator's response -->
                         <div v-if="dispute.creator_response" class="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm">
-                            <div class="text-blue-400 font-semibold mb-1">Your response:</div>
+                            <div class="text-blue-400 font-semibold mb-1">{{ $t('Your response:') }}</div>
                             <div class="text-gray-300">{{ dispute.creator_response }}</div>
                             <div class="text-xs text-gray-500 mt-1">{{ new Date(dispute.creator_responded_at).toLocaleDateString() }}</div>
                         </div>
@@ -872,7 +876,7 @@ const getParticipantStatusLabel = (status) => {
                                 @click="openDisputeResponse(dispute)"
                                 class="px-4 py-2 bg-blue-600/20 border border-blue-500/30 text-blue-400 font-semibold rounded-lg hover:bg-blue-600/30 transition-colors text-sm"
                             >
-                                Respond to Dispute
+                                {{ $t('Respond to Dispute') }}
                             </button>
                         </div>
                     </div>
@@ -881,7 +885,7 @@ const getParticipantStatusLabel = (status) => {
 
             <!-- All Participants -->
             <div v-if="allParticipants.length > 0" class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl p-8 mb-6">
-                <h2 class="text-2xl font-black text-white mb-6">Participants</h2>
+                <h2 class="text-2xl font-black text-white mb-6">{{ $t('Participants') }}</h2>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     <div
@@ -919,7 +923,7 @@ const getParticipantStatusLabel = (status) => {
                                 v-if="isCreator && challenge.status !== 'closed'"
                                 @click="openRemoveConfirm(participant)"
                                 class="p-1 text-red-400/50 hover:text-red-400 transition-colors"
-                                title="Remove participant"
+                                :title="$t('Remove participant')"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                             </button>
@@ -936,12 +940,12 @@ const getParticipantStatusLabel = (status) => {
 
                 <div class="inline-block align-bottom bg-gradient-to-br from-gray-900/95 to-gray-950/95 border border-white/10 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                     <div class="p-6">
-                        <h3 class="text-2xl font-black text-white mb-4">Submit Proof</h3>
+                        <h3 class="text-2xl font-black text-white mb-4">{{ $t('Submit Proof') }}</h3>
 
                         <form @submit.prevent="submitProof" class="space-y-4">
                             <!-- Demo selection dropdown -->
                             <div v-if="userDemos && userDemos.length > 0">
-                                <label class="block text-sm font-semibold text-gray-300 mb-2">Select your record *</label>
+                                <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Select your record *') }}</label>
                                 <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
                                     <label
                                         v-for="demo in userDemos"
@@ -963,8 +967,8 @@ const getParticipantStatusLabel = (status) => {
                                             <div>
                                                 <div class="flex items-center gap-2">
                                                     <span class="text-white font-bold">{{ formatTime(demo.time) }}</span>
-                                                    <span v-if="demo.source === 'online'" class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-green-500/20 text-green-400 border border-green-500/30">VERIFIED</span>
-                                                    <span v-else class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">OFFLINE</span>
+                                                    <span v-if="demo.source === 'online'" class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-green-500/20 text-green-400 border border-green-500/30">{{ $t('VERIFIED') }}</span>
+                                                    <span v-else class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">{{ $t('OFFLINE') }}</span>
                                                 </div>
                                                 <div class="text-xs text-gray-400">
                                                     <span class="capitalize">{{ demo.mode }}</span>
@@ -973,13 +977,13 @@ const getParticipantStatusLabel = (status) => {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="text-xs text-gray-500">{{ demo.source === 'online' ? '' : 'Offline ' }}#{{ demo.id }}</div>
+                                        <div class="text-xs text-gray-500">{{ demo.source === 'online' ? '' : $t('Offline') + ' ' }}#{{ demo.id }}</div>
                                     </label>
                                 </div>
 
                                 <!-- Offline warning -->
                                 <div v-if="selectedDemo?.source === 'offline'" class="mt-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-xs text-yellow-300">
-                                    Offline records are not server-verified. The challenge creator will need to manually verify your submission.
+                                    {{ $t('Offline records are not server-verified. The challenge creator will need to manually verify your submission.') }}
                                 </div>
 
                                 <div v-if="submitForm.errors.record_id" class="text-red-400 text-sm mt-1">{{ submitForm.errors.record_id }}</div>
@@ -989,18 +993,19 @@ const getParticipantStatusLabel = (status) => {
                             <!-- No eligible demos message -->
                             <div v-else class="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
                                 <div class="text-sm text-red-300">
-                                    <p class="font-semibold mb-1">No eligible records found</p>
-                                    <p>You don't have any records on <strong>{{ challenge.mapname }}</strong> ({{ challenge.physics.toUpperCase() }} {{ challenge.mode }}) that beat the target time of <strong>{{ formatTime(challenge.target_time) }}</strong>.</p>
-                                    <p class="mt-2">Upload a demo first, then come back to submit proof.</p>
+                                    <p class="font-semibold mb-1">{{ $t('No eligible records found') }}</p>
+                                    <p>{{ $t("You don't have any records on") }} <strong>{{ challenge.mapname }}</strong> ({{ challenge.physics.toUpperCase() }} {{ challenge.mode }}) {{ $t('that beat the target time of') }} <strong>{{ formatTime(challenge.target_time) }}</strong>.</p>
+                                    <p class="mt-2">{{ $t('Upload a demo first, then come back to submit proof.') }}</p>
                                 </div>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-semibold text-gray-300 mb-2">Notes (optional)</label>
+                                <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Notes (optional)') }}</label>
+                                <EnglishOnlyNotice />
                                 <textarea
                                     v-model="submitForm.submission_notes"
                                     rows="3"
-                                    placeholder="Any additional notes about your submission..."
+                                    :placeholder="$t('Any additional notes about your submission...')"
                                     class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                                 ></textarea>
                             </div>
@@ -1011,14 +1016,14 @@ const getParticipantStatusLabel = (status) => {
                                     :disabled="submitForm.processing || !selectedDemo"
                                     class="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all duration-300"
                                 >
-                                    {{ submitForm.processing ? 'Submitting...' : 'Submit Proof' }}
+                                    {{ submitForm.processing ? $t('Submitting...') : $t('Submit Proof') }}
                                 </button>
                                 <button
                                     type="button"
                                     @click="showSubmitModal = false"
                                     class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition-all duration-300"
                                 >
-                                    Cancel
+                                    {{ $t('Cancel') }}
                                 </button>
                             </div>
                         </form>
@@ -1034,19 +1039,19 @@ const getParticipantStatusLabel = (status) => {
 
                 <div class="inline-block align-bottom bg-gradient-to-br from-gray-900/95 to-gray-950/95 border border-white/10 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                     <div class="p-6">
-                        <h3 class="text-2xl font-black text-white mb-4">Reject Submission</h3>
+                        <h3 class="text-2xl font-black text-white mb-4">{{ $t('Reject Submission') }}</h3>
                         <p class="text-gray-400 mb-4" v-if="rejectingParticipant">
-                            Rejecting submission from <span class="text-white font-semibold" v-html="q3tohtml(rejectingParticipant.user?.name)"></span>
+                            {{ $t('Rejecting submission from') }} <span class="text-white font-semibold" v-html="q3tohtml(rejectingParticipant.user?.name)"></span>
                         </p>
 
                         <form @submit.prevent="rejectSubmission" class="space-y-4">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-300 mb-2">Reason for rejection *</label>
+                                <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Reason for rejection *') }}</label>
                                 <textarea
                                     v-model="rejectForm.rejection_reason"
                                     rows="3"
                                     required
-                                    placeholder="Explain why you're rejecting this submission..."
+                                    :placeholder="$t('Explain why you\'re rejecting this submission...')"
                                     class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50"
                                 ></textarea>
                                 <div v-if="rejectForm.errors.rejection_reason" class="text-red-400 text-sm mt-1">{{ rejectForm.errors.rejection_reason }}</div>
@@ -1058,14 +1063,14 @@ const getParticipantStatusLabel = (status) => {
                                     :disabled="rejectForm.processing"
                                     class="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded-lg transition-all duration-300"
                                 >
-                                    {{ rejectForm.processing ? 'Rejecting...' : 'Reject Submission' }}
+                                    {{ rejectForm.processing ? $t('Rejecting...') : $t('Reject Submission') }}
                                 </button>
                                 <button
                                     type="button"
                                     @click="showRejectModal = false"
                                     class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition-all duration-300"
                                 >
-                                    Cancel
+                                    {{ $t('Cancel') }}
                                 </button>
                             </div>
                         </form>
@@ -1081,34 +1086,34 @@ const getParticipantStatusLabel = (status) => {
 
                 <div class="inline-block align-bottom bg-gradient-to-br from-gray-900/95 to-gray-950/95 border border-white/10 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                     <div class="p-6">
-                        <h3 class="text-2xl font-black text-white mb-2">File a Dispute</h3>
-                        <p class="text-gray-400 mb-4">If the challenge creator has not fulfilled the reward, you can file a dispute. The creator has 14 days to respond before automatic action is taken.</p>
+                        <h3 class="text-2xl font-black text-white mb-2">{{ $t('File a Dispute') }}</h3>
+                        <p class="text-gray-400 mb-4">{{ $t('If the challenge creator has not fulfilled the reward, you can file a dispute. The creator has 14 days to respond before automatic action is taken.') }}</p>
 
                         <form @submit.prevent="submitDispute" class="space-y-4">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-300 mb-2">Reason *</label>
+                                <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Reason *') }}</label>
                                 <textarea
                                     v-model="disputeForm.reason"
                                     rows="3"
                                     required
-                                    placeholder="Describe why you're filing this dispute..."
+                                    :placeholder="$t('Describe why you\'re filing this dispute...')"
                                     class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50"
                                 ></textarea>
                                 <div v-if="disputeForm.errors.reason" class="text-red-400 text-sm mt-1">{{ disputeForm.errors.reason }}</div>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-semibold text-gray-300 mb-2">Evidence (optional)</label>
+                                <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Evidence (optional)') }}</label>
                                 <textarea
                                     v-model="disputeForm.evidence"
                                     rows="2"
-                                    placeholder="Links to screenshots, conversations, etc."
+                                    :placeholder="$t('Links to screenshots, conversations, etc.')"
                                     class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                                 ></textarea>
                             </div>
 
                             <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-sm text-yellow-300">
-                                Filing a false dispute may result in account penalties. Only file a dispute if the creator has genuinely not fulfilled the reward.
+                                {{ $t('Filing a false dispute may result in account penalties. Only file a dispute if the creator has genuinely not fulfilled the reward.') }}
                             </div>
 
                             <div class="flex items-center gap-3 pt-4">
@@ -1117,14 +1122,14 @@ const getParticipantStatusLabel = (status) => {
                                     :disabled="disputeForm.processing"
                                     class="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold rounded-lg transition-all duration-300"
                                 >
-                                    {{ disputeForm.processing ? 'Filing...' : 'File Dispute' }}
+                                    {{ disputeForm.processing ? $t('Filing...') : $t('File Dispute') }}
                                 </button>
                                 <button
                                     type="button"
                                     @click="showDisputeModal = false"
                                     class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition-all duration-300"
                                 >
-                                    Cancel
+                                    {{ $t('Cancel') }}
                                 </button>
                             </div>
                         </form>
@@ -1140,55 +1145,57 @@ const getParticipantStatusLabel = (status) => {
 
                 <div class="inline-block align-bottom bg-gradient-to-br from-gray-900/95 to-gray-950/95 border border-white/10 rounded-2xl text-left shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
                     <div class="p-6">
-                        <h3 class="text-2xl font-black text-white mb-4">Edit Challenge</h3>
-                        <p class="text-sm text-blue-400 mb-4">You are within the 1-hour grace period. After this period, you will need to request edits from an administrator.</p>
+                        <h3 class="text-2xl font-black text-white mb-4">{{ $t('Edit Challenge') }}</h3>
+                        <p class="text-sm text-blue-400 mb-4">{{ $t('You are within the 1-hour grace period. After this period, you will need to request edits from an administrator.') }}</p>
 
                         <form @submit.prevent="submitEdit" class="space-y-4">
+                            <EnglishOnlyNotice :compact="false" />
+
                             <div>
-                                <label class="block text-sm font-semibold text-gray-300 mb-2">Title *</label>
+                                <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Title *') }}</label>
                                 <input v-model="editForm.title" type="text" required class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50" />
                                 <div v-if="editForm.errors.title" class="text-red-400 text-sm mt-1">{{ editForm.errors.title }}</div>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-semibold text-gray-300 mb-2">Description *</label>
+                                <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Description *') }}</label>
                                 <textarea v-model="editForm.description" rows="3" required class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"></textarea>
                                 <div v-if="editForm.errors.description" class="text-red-400 text-sm mt-1">{{ editForm.errors.description }}</div>
                             </div>
 
                             <div class="grid grid-cols-3 gap-4">
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-300 mb-2">Target Time *</label>
+                                    <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Target Time *') }}</label>
                                     <input v-model="editForm.target_time" type="text" required placeholder="M:SS.mmm" class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50" />
                                     <div v-if="editForm.errors.target_time" class="text-red-400 text-sm mt-1">{{ editForm.errors.target_time }}</div>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-300 mb-2">Reward Amount</label>
+                                    <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Reward Amount') }}</label>
                                     <input v-model="editForm.reward_amount" type="number" step="0.01" class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50" />
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-300 mb-2">Currency</label>
+                                    <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Currency') }}</label>
                                     <input v-model="editForm.reward_currency" type="text" class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50" />
                                 </div>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-semibold text-gray-300 mb-2">Reward Description</label>
+                                <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Reward Description') }}</label>
                                 <input v-model="editForm.reward_description" type="text" class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50" />
                             </div>
 
                             <div>
-                                <label class="block text-sm font-semibold text-gray-300 mb-2">Expiration Date</label>
+                                <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Expiration Date') }}</label>
                                 <input v-model="editForm.expires_at" type="datetime-local" @click="$event.target.showPicker?.()" style="color-scheme: dark" class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 cursor-pointer [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:cursor-pointer" />
-                                <p class="text-xs text-gray-500 mt-1">Leave empty for no expiration</p>
+                                <p class="text-xs text-gray-500 mt-1">{{ $t('Leave empty for no expiration') }}</p>
                             </div>
 
                             <div class="flex items-center gap-3 pt-4">
                                 <button type="submit" :disabled="editForm.processing" class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-lg transition-all duration-300">
-                                    {{ editForm.processing ? 'Saving...' : 'Save Changes' }}
+                                    {{ editForm.processing ? $t('Saving...') : $t('Save Changes') }}
                                 </button>
                                 <button type="button" @click="showEditModal = false" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition-all duration-300">
-                                    Cancel
+                                    {{ $t('Cancel') }}
                                 </button>
                             </div>
                         </form>
@@ -1204,17 +1211,17 @@ const getParticipantStatusLabel = (status) => {
 
                 <div class="inline-block align-bottom bg-gradient-to-br from-gray-900/95 to-gray-950/95 border border-white/10 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                     <div class="p-6">
-                        <h3 class="text-2xl font-black text-white mb-2">Request Edit / Deletion</h3>
-                        <p class="text-gray-400 mb-4">The grace period for direct editing has passed. Describe what changes you need and an administrator will review your request.</p>
+                        <h3 class="text-2xl font-black text-white mb-2">{{ $t('Request Edit / Deletion') }}</h3>
+                        <p class="text-gray-400 mb-4">{{ $t('The grace period for direct editing has passed. Describe what changes you need and an administrator will review your request.') }}</p>
 
                         <form @submit.prevent="submitRequestEdit" class="space-y-4">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-300 mb-2">What do you want to change? *</label>
+                                <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('What do you want to change? *') }}</label>
                                 <textarea
                                     v-model="requestEditForm.reason"
                                     rows="4"
                                     required
-                                    placeholder="Describe the changes or deletion you need..."
+                                    :placeholder="$t('Describe the changes or deletion you need...')"
                                     class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                                 ></textarea>
                                 <div v-if="requestEditForm.errors.reason" class="text-red-400 text-sm mt-1">{{ requestEditForm.errors.reason }}</div>
@@ -1222,10 +1229,10 @@ const getParticipantStatusLabel = (status) => {
 
                             <div class="flex items-center gap-3 pt-4">
                                 <button type="submit" :disabled="requestEditForm.processing" class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-lg transition-all duration-300">
-                                    {{ requestEditForm.processing ? 'Sending...' : 'Send Request' }}
+                                    {{ requestEditForm.processing ? $t('Sending...') : $t('Send Request') }}
                                 </button>
                                 <button type="button" @click="showRequestEditModal = false" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition-all duration-300">
-                                    Cancel
+                                    {{ $t('Cancel') }}
                                 </button>
                             </div>
                         </form>
@@ -1241,29 +1248,29 @@ const getParticipantStatusLabel = (status) => {
 
                 <div class="inline-block align-bottom bg-gradient-to-br from-gray-900/95 to-gray-950/95 border border-white/10 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
                     <div class="p-6">
-                        <h3 class="text-2xl font-black text-white mb-2">Approve Submission</h3>
+                        <h3 class="text-2xl font-black text-white mb-2">{{ $t('Approve Submission') }}</h3>
                         <p class="text-gray-400 mb-4">
-                            Are you sure you want to approve the submission from
+                            {{ $t('Are you sure you want to approve the submission from') }}
                             <span class="text-white font-semibold" v-if="approvingParticipant" v-html="q3tohtml(approvingParticipant.user?.name)"></span>?
                         </p>
 
                         <div v-if="approvingParticipant" class="bg-black/40 border border-white/10 rounded-lg p-3 mb-4 text-sm">
                             <template v-if="approvingParticipant.record">
-                                Time: <span class="text-yellow-400 font-bold">{{ formatTime(approvingParticipant.record.time) }}</span>
-                                <span class="ml-2 px-1 py-0.5 text-[9px] font-bold rounded bg-green-500/20 text-green-400 border border-green-500/30">VERIFIED</span>
+                                {{ $t('Time:') }} <span class="text-yellow-400 font-bold">{{ formatTime(approvingParticipant.record.time) }}</span>
+                                <span class="ml-2 px-1 py-0.5 text-[9px] font-bold rounded bg-green-500/20 text-green-400 border border-green-500/30">{{ $t('VERIFIED') }}</span>
                             </template>
                             <template v-else-if="approvingParticipant.offline_record">
-                                Time: <span class="text-yellow-400 font-bold">{{ formatTime(approvingParticipant.offline_record.time_ms) }}</span>
-                                <span class="ml-2 px-1 py-0.5 text-[9px] font-bold rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">OFFLINE</span>
+                                {{ $t('Time:') }} <span class="text-yellow-400 font-bold">{{ formatTime(approvingParticipant.offline_record.time_ms) }}</span>
+                                <span class="ml-2 px-1 py-0.5 text-[9px] font-bold rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">{{ $t('OFFLINE') }}</span>
                             </template>
                         </div>
 
                         <div class="flex items-center gap-3">
                             <button @click="approveSubmission" class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-all duration-300">
-                                Yes, Approve
+                                {{ $t('Yes, Approve') }}
                             </button>
                             <button @click="showApproveConfirm = false" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition-all duration-300">
-                                Cancel
+                                {{ $t('Cancel') }}
                             </button>
                         </div>
                     </div>
@@ -1278,19 +1285,19 @@ const getParticipantStatusLabel = (status) => {
 
                 <div class="inline-block align-bottom bg-gradient-to-br from-gray-900/95 to-gray-950/95 border border-white/10 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
                     <div class="p-6">
-                        <h3 class="text-2xl font-black text-white mb-2">Remove Participant</h3>
+                        <h3 class="text-2xl font-black text-white mb-2">{{ $t('Remove Participant') }}</h3>
                         <p class="text-gray-400 mb-4">
-                            Are you sure you want to remove
+                            {{ $t('Are you sure you want to remove') }}
                             <span class="text-white font-semibold" v-if="removingParticipant" v-html="q3tohtml(removingParticipant.user?.name)"></span>
-                            from this challenge? This action cannot be undone.
+                            {{ $t('from this challenge? This action cannot be undone.') }}
                         </p>
 
                         <div class="flex items-center gap-3">
                             <button @click="removeParticipant" class="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-all duration-300">
-                                Yes, Remove
+                                {{ $t('Yes, Remove') }}
                             </button>
                             <button @click="showRemoveConfirm = false" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition-all duration-300">
-                                Cancel
+                                {{ $t('Cancel') }}
                             </button>
                         </div>
                     </div>
@@ -1305,26 +1312,26 @@ const getParticipantStatusLabel = (status) => {
 
                 <div class="inline-block align-bottom bg-gradient-to-br from-gray-900/95 to-gray-950/95 border border-white/10 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                     <div class="p-6">
-                        <h3 class="text-2xl font-black text-white mb-2">Respond to Dispute</h3>
-                        <p class="text-gray-400 mb-4">Provide your response. An administrator will review both sides and make a decision.</p>
+                        <h3 class="text-2xl font-black text-white mb-2">{{ $t('Respond to Dispute') }}</h3>
+                        <p class="text-gray-400 mb-4">{{ $t('Provide your response. An administrator will review both sides and make a decision.') }}</p>
 
                         <div v-if="respondingDispute" class="bg-black/40 border border-white/10 rounded-lg p-3 mb-4 text-sm">
-                            <div class="text-gray-500 mb-1">Dispute reason:</div>
+                            <div class="text-gray-500 mb-1">{{ $t('Dispute reason:') }}</div>
                             <div class="text-gray-300">{{ respondingDispute.reason }}</div>
                             <div v-if="respondingDispute.evidence" class="mt-2">
-                                <div class="text-gray-500 mb-1">Evidence:</div>
+                                <div class="text-gray-500 mb-1">{{ $t('Evidence:') }}</div>
                                 <div class="text-gray-300">{{ respondingDispute.evidence }}</div>
                             </div>
                         </div>
 
                         <form @submit.prevent="submitDisputeResponse" class="space-y-4">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-300 mb-2">Your response *</label>
+                                <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Your response *') }}</label>
                                 <textarea
                                     v-model="disputeResponseForm.creator_response"
                                     rows="4"
                                     required
-                                    placeholder="Explain your side of the situation..."
+                                    :placeholder="$t('Explain your side of the situation...')"
                                     class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                                 ></textarea>
                                 <div v-if="disputeResponseForm.errors.creator_response" class="text-red-400 text-sm mt-1">{{ disputeResponseForm.errors.creator_response }}</div>
@@ -1332,10 +1339,10 @@ const getParticipantStatusLabel = (status) => {
 
                             <div class="flex items-center gap-3 pt-4">
                                 <button type="submit" :disabled="disputeResponseForm.processing" class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-lg transition-all duration-300">
-                                    {{ disputeResponseForm.processing ? 'Sending...' : 'Submit Response' }}
+                                    {{ disputeResponseForm.processing ? $t('Sending...') : $t('Submit Response') }}
                                 </button>
                                 <button type="button" @click="showDisputeResponseModal = false" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition-all duration-300">
-                                    Cancel
+                                    {{ $t('Cancel') }}
                                 </button>
                             </div>
                         </form>
@@ -1351,19 +1358,19 @@ const getParticipantStatusLabel = (status) => {
 
                 <div class="inline-block align-bottom bg-gradient-to-br from-gray-900/95 to-gray-950/95 border border-white/10 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
                     <div class="p-6">
-                        <h3 class="text-2xl font-black text-white mb-2">Close Challenge</h3>
-                        <p class="text-gray-400 mb-4">Are you sure? All participants will be notified. This action cannot be undone.</p>
+                        <h3 class="text-2xl font-black text-white mb-2">{{ $t('Close Challenge') }}</h3>
+                        <p class="text-gray-400 mb-4">{{ $t('Are you sure? All participants will be notified. This action cannot be undone.') }}</p>
 
                         <div v-if="allParticipants.length > 0" class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-4 text-sm text-yellow-300">
-                            This challenge has {{ allParticipants.length }} participant(s). Make sure you have fulfilled any pending rewards before closing.
+                            {{ $tc('This challenge has :count participant. Make sure you have fulfilled any pending rewards before closing.|This challenge has :count participants. Make sure you have fulfilled any pending rewards before closing.', allParticipants.length) }}
                         </div>
 
                         <div class="flex items-center gap-3">
                             <button @click="closeChallenge" class="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-all duration-300">
-                                Yes, Close Challenge
+                                {{ $t('Yes, Close Challenge') }}
                             </button>
                             <button @click="showCloseConfirm = false" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition-all duration-300">
-                                Cancel
+                                {{ $t('Cancel') }}
                             </button>
                         </div>
                     </div>

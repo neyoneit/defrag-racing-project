@@ -30,7 +30,7 @@
 
         <div class="mb-5 p-5 rounded-md mx-auto bg-grayop-900" v-if="item.type == 'round_start'">
             <div class="text-white font-bold text-xl">
-                {{ item.title }} Started
+                {{ $t(':title Started', { title: item.title }) }}
             </div>
     
             <div class="my-3" style="width: 100%; height: 1px; background-color: #72727244"></div>
@@ -44,7 +44,7 @@
 
         <div class="mb-5 p-5 rounded-md mx-auto bg-grayop-900" v-if="item.type == 'round_end'">
             <div class="text-white font-bold text-xl">
-                {{ item.title }} Ended
+                {{ $t(':title Ended', { title: item.title }) }}
             </div>
     
             <div class="my-3" style="width: 100%; height: 1px; background-color: #72727244"></div>

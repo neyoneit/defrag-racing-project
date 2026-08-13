@@ -7,6 +7,7 @@ const page = usePage();
 import ModelViewer from '@/Components/ModelViewer.vue';
 import ShadowViewer from '@/Components/ShadowViewer.vue';
 import { generateShadowStill, generateShadowRotateGif } from '@/utils/gifGenerator.js';
+import { t } from '@/utils/i18n';
 
 const props = defineProps({
     model: Object,
@@ -157,25 +158,25 @@ const isWeaponModel = computed(() => props.model.category === 'weapon');
 const isShadowModel = computed(() => props.model.category === 'shadow');
 
 // Ground textures for shadow viewer
-const groundTextures = [
-    { path: '/baseq3-hd/textures/base_wall/concrete.jpg', label: 'Concrete' },
-    { path: '/baseq3-hd/textures/base_floor/metfloor1.jpg', label: 'Metal' },
-    { path: '/baseq3-hd/textures/base_floor/diamond2c.jpg', label: 'Diamond' },
-    { path: '/baseq3-hd/textures/base_floor/tilefloor7.jpg', label: 'Tile' },
+const groundTextures = computed(() => [
+    { path: '/baseq3-hd/textures/base_wall/concrete.jpg', label: t('Concrete') },
+    { path: '/baseq3-hd/textures/base_floor/metfloor1.jpg', label: t('Metal') },
+    { path: '/baseq3-hd/textures/base_floor/diamond2c.jpg', label: t('Diamond') },
+    { path: '/baseq3-hd/textures/base_floor/tilefloor7.jpg', label: t('Tile') },
     { path: '/baseq3-hd/textures/base_floor/clangdark.jpg', label: 'Clang Dark' },
     { path: '/baseq3-hd/textures/base_floor/clang_floor.jpg', label: 'Clang' },
-    { path: '/baseq3-hd/textures/base_floor/clang_floor2.jpg', label: 'Grid' },
-    { path: '/baseq3-hd/textures/base_floor/dirt.jpg', label: 'Dirt' },
-    { path: '/baseq3-hd/textures/base_floor/smallstone.jpg', label: 'Stone' },
-    { path: '/baseq3-hd/textures/base_floor/hfloor3.jpg', label: 'Hex' },
-    { path: '/baseq3-hd/textures/base_floor/metalbridge06.jpg', label: 'Bridge' },
-    { path: '/baseq3-hd/textures/gothic_floor/blocks17floor.jpg', label: 'Gothic' },
-    { path: '/baseq3-hd/textures/gothic_floor/largeblockfloor3.jpg', label: 'Blocks' },
+    { path: '/baseq3-hd/textures/base_floor/clang_floor2.jpg', label: t('Grid') },
+    { path: '/baseq3-hd/textures/base_floor/dirt.jpg', label: t('Dirt') },
+    { path: '/baseq3-hd/textures/base_floor/smallstone.jpg', label: t('Stone') },
+    { path: '/baseq3-hd/textures/base_floor/hfloor3.jpg', label: t('Hex') },
+    { path: '/baseq3-hd/textures/base_floor/metalbridge06.jpg', label: t('Bridge') },
+    { path: '/baseq3-hd/textures/gothic_floor/blocks17floor.jpg', label: t('Gothic') },
+    { path: '/baseq3-hd/textures/gothic_floor/largeblockfloor3.jpg', label: t('Blocks') },
     { path: '/baseq3-hd/textures/gothic_floor/q1metal7_99.jpg', label: 'Q1 Metal' },
-    { path: '/baseq3-hd/textures/stone/rockwall.jpg', label: 'Rock' },
-    { path: '/baseq3-hd/textures/stone/pjrock1.jpg', label: 'Pebbles' },
-];
-const selectedGroundTexture = ref(groundTextures[0].path);
+    { path: '/baseq3-hd/textures/stone/rockwall.jpg', label: t('Rock') },
+    { path: '/baseq3-hd/textures/stone/pjrock1.jpg', label: t('Pebbles') },
+]);
+const selectedGroundTexture = ref(groundTextures.value[0].path);
 
 // Get the path to the model file (MD3 files for the 3D geometry)
 const modelFilePath = computed(() => {
@@ -558,7 +559,7 @@ const copyCommand = () => {
 
 const downloadModel = () => {
     if (isBaseQ3Model.value) {
-        showErrorNotification('Base Q3 models cannot be downloaded. They are included with Quake 3.');
+        showErrorNotification(t('Base Q3 models cannot be downloaded. They are included with Quake 3.'));
         return;
     }
     window.location.href = route('models.download', props.model.id);
@@ -590,7 +591,7 @@ const approveModel = async () => {
         await axios.post(`/models/${props.model.id}/approve`);
         router.reload();
     } catch (e) {
-        alert('Failed to approve: ' + (e.response?.data?.message || e.message));
+        alert(t('Failed to approve: :error', { error: e.response?.data?.message || e.message }));
     } finally {
         isApproving.value = false;
     }
@@ -601,7 +602,7 @@ const rejectModel = async () => {
         await axios.post(`/models/${props.model.id}/reject`);
         router.reload();
     } catch (e) {
-        alert('Failed to reject: ' + (e.response?.data?.message || e.message));
+        alert(t('Failed to reject: :error', { error: e.response?.data?.message || e.message }));
     }
 };
 
@@ -611,7 +612,7 @@ const deleteModel = async () => {
         await axios.delete(`/models/${props.model.id}`);
         window.location.href = '/models';
     } catch (e) {
-        alert('Failed to delete: ' + (e.response?.data?.message || e.message));
+        alert(t('Failed to delete: :error', { error: e.response?.data?.message || e.message }));
         isDeleting.value = false;
     }
 };
@@ -657,12 +658,12 @@ if (typeof window !== 'undefined') {
 
 const generateHeadIcon = async () => {
     if (!viewer3D.value) {
-        showErrorNotification('3D model is not loaded yet');
+        showErrorNotification(t('3D model is not loaded yet'));
         return;
     }
 
     isGeneratingHeadIcon.value = true;
-    headIconProgress.value = 'Focusing on head...';
+    headIconProgress.value = t('Focusing on head...');
 
     try {
         const THREE = await import('three');
@@ -734,7 +735,7 @@ const generateHeadIcon = async () => {
         renderer.render(scene, camera);
         await new Promise(resolve => requestAnimationFrame(resolve));
 
-        headIconProgress.value = 'Capturing...';
+        headIconProgress.value = t('Capturing...');
 
         // Capture screenshot
         const canvas = renderer.domElement;
@@ -751,7 +752,7 @@ const generateHeadIcon = async () => {
         // Convert to blob
         const headIconBlob = await new Promise(resolve => finalCanvas.toBlob(resolve, 'image/png'));
 
-        headIconProgress.value = 'Uploading...';
+        headIconProgress.value = t('Uploading...');
 
         // Upload to server
         const formData = new FormData();
@@ -768,8 +769,8 @@ const generateHeadIcon = async () => {
         const data = await response.json();
 
         if (data.success) {
-            headIconProgress.value = 'Done!';
-            showSuccessNotification('Head icon generated successfully!');
+            headIconProgress.value = t('Done!');
+            showSuccessNotification(t('Head icon generated successfully!'));
         } else {
             throw new Error(data.message || 'Failed to save head icon');
         }
@@ -781,7 +782,7 @@ const generateHeadIcon = async () => {
 
     } catch (error) {
         console.error('Head icon error:', error);
-        showErrorNotification('Failed to generate head icon: ' + error.message);
+        showErrorNotification(t('Failed to generate head icon: :error', { error: error.message }));
     }
 
     isGeneratingHeadIcon.value = false;
@@ -797,17 +798,17 @@ function captureFrameToCanvas(renderer, scene, camera, canvas, tempCtx, tempCanv
 
 const generateGifThumbnail = async () => {
     if (!viewer3D.value) {
-        showErrorNotification('3D model is not loaded yet');
+        showErrorNotification(t('3D model is not loaded yet'));
         return;
     }
 
     if (isGeneratingGif.value) {
-        showErrorNotification('GIF generation already in progress');
+        showErrorNotification(t('GIF generation already in progress'));
         return;
     }
 
     isGeneratingGif.value = true;
-    gifProgress.value = 'Preparing...';
+    gifProgress.value = t('Preparing...');
 
     try {
         // Shadow models use dedicated generators
@@ -816,20 +817,20 @@ const generateGifThumbnail = async () => {
             let rotateBlob = null;
 
             try {
-                gifProgress.value = 'Generating shadow still...';
+                gifProgress.value = t('Generating shadow still...');
                 thumbnailBlob = await generateShadowStill(viewer3D, (s) => { gifProgress.value = s; });
             } catch (e) {
                 console.warn('Shadow still failed:', e.message);
             }
 
             try {
-                gifProgress.value = 'Generating shadow rotation GIF...';
+                gifProgress.value = t('Generating shadow rotation GIF...');
                 rotateBlob = await generateShadowRotateGif(viewer3D, (s) => { gifProgress.value = s; });
             } catch (e) {
                 console.warn('Shadow rotate GIF failed:', e.message);
             }
 
-            gifProgress.value = 'Uploading...';
+            gifProgress.value = t('Uploading...');
             const formData = new FormData();
             if (rotateBlob) formData.append('rotate_gif', rotateBlob, `model_${props.model.id}_rotate.gif`);
             if (thumbnailBlob) formData.append('thumbnail', thumbnailBlob, `model_${props.model.id}_still.png`);
@@ -846,8 +847,8 @@ const generateGifThumbnail = async () => {
                 const generated = [];
                 if (rotateBlob) generated.push('rotate');
                 if (thumbnailBlob) generated.push('thumbnail');
-                gifProgress.value = `Done! Generated: ${generated.join(', ')}`;
-                showSuccessNotification(`Generated shadow thumbnails!`);
+                gifProgress.value = t('Done! Generated: :list', { list: generated.join(', ') });
+                showSuccessNotification(t('Generated shadow thumbnails!'));
             } else {
                 throw new Error(data.message || 'Failed to save thumbnails');
             }
@@ -893,7 +894,7 @@ const generateGifThumbnail = async () => {
         };
 
         // ---- 1. ROTATE GIF ----
-        gifProgress.value = '[1/4] Rotate GIF...';
+        gifProgress.value = t('[1/4] Rotate GIF...');
         const GIF = (await import('gif.js')).default;
         const rotateGif = new GIF({
             workers: 1,
@@ -905,7 +906,7 @@ const generateGifThumbnail = async () => {
         const numRotateFrames = 36;
         let shaderTime = 0; // Track shader time for wave/scroll effects across all GIFs
         for (let i = 0; i < numRotateFrames; i++) {
-            gifProgress.value = `[Rotate] Frame ${i + 1}/${numRotateFrames}`;
+            gifProgress.value = t('[Rotate] Frame :i/:total', { i: i + 1, total: numRotateFrames });
             const angle = startAngle + (i * (Math.PI * 2) / numRotateFrames);
             camera.position.x = target.x + Math.sin(angle) * radius;
             camera.position.z = target.z + Math.cos(angle) * radius;
@@ -921,11 +922,11 @@ const generateGifThumbnail = async () => {
             await new Promise(resolve => setTimeout(resolve, 50));
         }
         restoreCamera();
-        gifProgress.value = 'Encoding rotate GIF...';
+        gifProgress.value = t('Encoding rotate GIF...');
         const rotateBlob = await new Promise((resolve, reject) => {
             const timeout = setTimeout(() => reject(new Error('GIF encoding timed out')), 60000);
             rotateGif.on('finished', (blob) => { clearTimeout(timeout); resolve(blob); });
-            rotateGif.on('progress', (p) => { gifProgress.value = `Encoding rotate: ${Math.round(p * 100)}%`; });
+            rotateGif.on('progress', (p) => { gifProgress.value = t('Encoding rotate: :percent%', { percent: Math.round(p * 100) }); });
             rotateGif.render();
         });
 
@@ -936,7 +937,7 @@ const generateGifThumbnail = async () => {
         if (isWeaponModel.value) {
             // Weapon idle: front view with shader animations (~3s at 15fps)
             try {
-                gifProgress.value = '[2/5] Weapon Idle GIF...';
+                gifProgress.value = t('[2/5] Weapon Idle GIF...');
                 const numIdleFrames = 45;
                 const idleFps = 15;
                 const idleDelay = Math.round(1000 / idleFps);
@@ -957,7 +958,7 @@ const generateGifThumbnail = async () => {
                     workerScript: '/gif.worker.js'
                 });
                 for (let i = 0; i < numIdleFrames; i++) {
-                    gifProgress.value = `[Weapon Idle] Frame ${i + 1}/${numIdleFrames}`;
+                    gifProgress.value = t('[Weapon Idle] Frame :i/:total', { i: i + 1, total: numIdleFrames });
                     shaderTime += idleDt;
                     viewer3D.value.updateShaderAnimations(shaderTime);
                     scene.updateMatrixWorld(true);
@@ -967,11 +968,11 @@ const generateGifThumbnail = async () => {
                     await new Promise(resolve => setTimeout(resolve, 30));
                 }
                 restoreCamera();
-                gifProgress.value = 'Encoding weapon idle GIF...';
+                gifProgress.value = t('Encoding weapon idle GIF...');
                 idleBlob = await new Promise((resolve, reject) => {
                     const timeout = setTimeout(() => reject(new Error('GIF encoding timed out')), 60000);
                     gif.on('finished', (blob) => { clearTimeout(timeout); resolve(blob); });
-                    gif.on('progress', (p) => { gifProgress.value = `Encoding idle: ${Math.round(p * 100)}%`; });
+                    gif.on('progress', (p) => { gifProgress.value = t('Encoding idle: :percent%', { percent: Math.round(p * 100) }); });
                     gif.render();
                 });
             } catch (e) {
@@ -986,7 +987,7 @@ const generateGifThumbnail = async () => {
             viewer3D.value.pauseAnimationLoop();
 
             try {
-                gifProgress.value = '[2/4] Idle GIF...';
+                gifProgress.value = t('[2/4] Idle GIF...');
                 const anims = viewer3D.value.getAvailableAnimations();
                 const legsData = anims.legs?.['LEGS_IDLE'] || anims.both?.['LEGS_IDLE'];
                 const torsoData = anims.torso?.['TORSO_STAND'] || anims.both?.['TORSO_STAND'];
@@ -1029,7 +1030,7 @@ const generateGifThumbnail = async () => {
                         workerScript: '/gif.worker.js'
                     });
                     for (let i = 0; i < numFrames; i++) {
-                        gifProgress.value = `[Idle] Frame ${i + 1}/${numFrames} (${animFps}fps, delay=${frameDelay}ms)`;
+                        gifProgress.value = t('[Idle] Frame :i/:total (:fps fps, delay=:delay ms)', { i: i + 1, total: numFrames, fps: animFps, delay: frameDelay });
                         if (i > 0) animManager.update(dt);
                         shaderTime += dt;
                         viewer3D.value.updateShaderAnimations(shaderTime);
@@ -1043,11 +1044,11 @@ const generateGifThumbnail = async () => {
                     animManager.resetToIdle();
                     restoreCamera();
 
-                    gifProgress.value = 'Encoding idle GIF...';
+                    gifProgress.value = t('Encoding idle GIF...');
                     idleBlob = await new Promise((resolve, reject) => {
                         const timeout = setTimeout(() => reject(new Error('GIF encoding timed out')), 60000);
                         gif.on('finished', (blob) => { clearTimeout(timeout); resolve(blob); });
-                        gif.on('progress', (p) => { gifProgress.value = `Encoding idle: ${Math.round(p * 100)}%`; });
+                        gif.on('progress', (p) => { gifProgress.value = t('Encoding idle: :percent%', { percent: Math.round(p * 100) }); });
                         gif.render();
                     });
                 }
@@ -1058,7 +1059,7 @@ const generateGifThumbnail = async () => {
 
             // ---- 3. GESTURE GIF (LEGS_IDLE + TORSO_GESTURE) - player models only ----
             if (!isWeaponModel.value) try {
-                gifProgress.value = '[3/4] Gesture GIF...';
+                gifProgress.value = t('[3/4] Gesture GIF...');
                 const anims = viewer3D.value.getAvailableAnimations();
                 const legsData = anims.legs?.['LEGS_IDLE'] || anims.both?.['LEGS_IDLE'];
                 const torsoData = anims.torso?.['TORSO_GESTURE'] || anims.both?.['TORSO_GESTURE'];
@@ -1097,7 +1098,7 @@ const generateGifThumbnail = async () => {
                         workerScript: '/gif.worker.js'
                     });
                     for (let i = 0; i < numFrames; i++) {
-                        gifProgress.value = `[Gesture] Frame ${i + 1}/${numFrames} (${animFps}fps, delay=${frameDelay}ms)`;
+                        gifProgress.value = t('[Gesture] Frame :i/:total (:fps fps, delay=:delay ms)', { i: i + 1, total: numFrames, fps: animFps, delay: frameDelay });
                         if (i > 0) animManager.update(dt);
                         shaderTime += dt;
                         viewer3D.value.updateShaderAnimations(shaderTime);
@@ -1111,11 +1112,11 @@ const generateGifThumbnail = async () => {
                     animManager.resetToIdle();
                     restoreCamera();
 
-                    gifProgress.value = 'Encoding gesture GIF...';
+                    gifProgress.value = t('Encoding gesture GIF...');
                     gestureBlob = await new Promise((resolve, reject) => {
                         const timeout = setTimeout(() => reject(new Error('GIF encoding timed out')), 60000);
                         gif.on('finished', (blob) => { clearTimeout(timeout); resolve(blob); });
-                        gif.on('progress', (p) => { gifProgress.value = `Encoding gesture: ${Math.round(p * 100)}%`; });
+                        gif.on('progress', (p) => { gifProgress.value = t('Encoding gesture: :percent%', { percent: Math.round(p * 100) }); });
                         gif.render();
                     });
                 }
@@ -1129,7 +1130,7 @@ const generateGifThumbnail = async () => {
         }
 
         // ---- 4. STILL THUMBNAIL (capture middle frame of idle pose) ----
-        gifProgress.value = '[4/5] Still thumbnail...';
+        gifProgress.value = t('[4/5] Still thumbnail...');
         let thumbnailBlob = null;
         try {
             // Position camera at front view (same as idle)
@@ -1184,7 +1185,7 @@ const generateGifThumbnail = async () => {
         }
 
         // ---- 5. HEAD ICON (player models only) ----
-        gifProgress.value = '[5/5] Head icon...';
+        gifProgress.value = t('[5/5] Head icon...');
         let headIconBlob = null;
         if (!isWeaponModel.value) try {
             const THREE = await import('three');
@@ -1231,7 +1232,7 @@ const generateGifThumbnail = async () => {
         tempCanvas.width = 0; tempCanvas.height = 0;
 
         // ---- Upload all variants ----
-        gifProgress.value = 'Uploading...';
+        gifProgress.value = t('Uploading...');
         const formData = new FormData();
         if (rotateBlob) formData.append('rotate_gif', rotateBlob, `model_${props.model.id}_rotate.gif`);
         if (idleBlob) formData.append('idle_gif', idleBlob, `model_${props.model.id}_idle.gif`);
@@ -1254,15 +1255,15 @@ const generateGifThumbnail = async () => {
             if (rotateBlob) generated.push('rotate');
             if (idleBlob) generated.push('idle');
             if (gestureBlob) generated.push('gesture');
-            gifProgress.value = `Done! Generated: ${generated.join(', ')}`;
-            showSuccessNotification(`Generated ${generated.length} GIF variants + head icon!`);
+            gifProgress.value = t('Done! Generated: :list', { list: generated.join(', ') });
+            showSuccessNotification(t('Generated :count GIF variants + head icon!', { count: generated.length }));
         } else {
             throw new Error(data.message || 'Failed to save thumbnails');
         }
 
     } catch (error) {
         console.error('GIF generation error:', error);
-        showErrorNotification('Failed to generate thumbnails: ' + error.message);
+        showErrorNotification(t('Failed to generate thumbnails: :error', { error: error.message }));
     } finally {
         isGeneratingGif.value = false;
     }
@@ -1359,10 +1360,10 @@ const updateBackPosition = (axis, event) => {
 // Model type badge helpers
 const getModelTypeLabel = (type) => {
     const labels = {
-        'complete': 'Complete Model',
-        'skin': 'Skin Pack',
-        'sound': 'Sound Pack',
-        'mixed': 'Mixed Pack'
+        'complete': t('Complete Model'),
+        'skin': t('Skin Pack'),
+        'sound': t('Sound Pack'),
+        'mixed': t('Mixed Pack')
     };
     return labels[type] || type;
 };
@@ -1403,7 +1404,7 @@ const flagAsNsfw = async () => {
         await axios.post(`/models/${props.model.id}/flag-nsfw`);
         localIsNsfw.value = true;
     } catch (e) {
-        alert('Failed to flag: ' + (e.response?.data?.message || e.message));
+        alert(t('Failed to flag: :error', { error: e.response?.data?.message || e.message }));
     } finally {
         flaggingNsfw.value = false;
     }
@@ -1416,7 +1417,7 @@ const unflagNsfw = async () => {
         await axios.post(`/models/${props.model.id}/unflag-nsfw`);
         localIsNsfw.value = false;
     } catch (e) {
-        alert('Failed to unflag: ' + (e.response?.data?.message || e.message));
+        alert(t('Failed to unflag: :error', { error: e.response?.data?.message || e.message }));
     } finally {
         flaggingNsfw.value = false;
     }
@@ -1440,14 +1441,14 @@ const confirmNsfw = () => {
     <div v-if="needsNsfwGate && !isThumbnailMode" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90">
         <div class="max-w-md mx-auto p-8 bg-gray-900/90 border border-red-500/30 rounded-2xl text-center shadow-2xl">
             <div class="text-5xl mb-4">🔞</div>
-            <h2 class="text-2xl font-black text-white mb-3">Age-Restricted Content</h2>
-            <p class="text-gray-400 mb-6">This model contains NSFW content. You must confirm that you are at least 18 years old to view it.</p>
+            <h2 class="text-2xl font-black text-white mb-3">{{ $t('Age-Restricted Content') }}</h2>
+            <p class="text-gray-400 mb-6">{{ $t('This model contains NSFW content. You must confirm that you are at least 18 years old to view it.') }}</p>
             <div class="flex gap-3 justify-center">
                 <Link :href="route('models.index')" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-xl transition-colors">
-                    Go Back
+                    {{ $t('Go Back') }}
                 </Link>
                 <button @click="confirmNsfw" :disabled="confirmingNsfw" class="px-6 py-3 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold rounded-xl transition-colors">
-                    {{ confirmingNsfw ? 'Confirming...' : 'I am 18+' }}
+                    {{ confirmingNsfw ? $t('Confirming...') : $t('I am 18+') }}
                 </button>
             </div>
         </div>
@@ -1465,7 +1466,7 @@ const confirmNsfw = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                     </svg>
-                    Back to Models
+                    {{ $t('Back to Models') }}
                 </button>
             </div>
         </div>
@@ -1505,7 +1506,7 @@ const confirmNsfw = () => {
                                         <div v-if="inGameCommand && !isShadowModel && !isWeaponModel" class="flex items-center gap-1.5 shrink-0">
                                             <code class="text-emerald-300 font-mono text-xs font-bold bg-emerald-500/10 border border-emerald-500/20 rounded px-2 py-0.5">{{ inGameCommand }}</code>
                                             <button @click="copyCommand" class="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 text-[10px] font-semibold hover:bg-emerald-500/25 transition-colors">
-                                                {{ commandCopied ? 'Copied!' : 'Copy' }}
+                                                {{ commandCopied ? $t('Copied!') : $t('Copy') }}
                                             </button>
                                         </div>
                                     </div>
@@ -1519,29 +1520,29 @@ const confirmNsfw = () => {
                                 </div>
                                 <!-- Pending approval banner (admin only) -->
                                 <div v-if="model.approval_status === 'pending' && $page.props.auth?.user && ($page.props.auth.user.admin || $page.props.auth.user.is_moderator || $page.props.auth.user.id === model.user_id)" class="mt-2 flex items-center gap-3 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                                    <span class="text-yellow-400 text-xs font-semibold">Pending Approval</span>
+                                    <span class="text-yellow-400 text-xs font-semibold">{{ $t('Pending Approval') }}</span>
                                     <button v-if="$page.props.auth.user.admin || $page.props.auth.user.is_moderator" @click="approveModel" :disabled="isApproving"
                                         class="px-3 py-1 rounded bg-green-500/20 border border-green-500/30 text-green-400 text-xs font-semibold hover:bg-green-500/30 transition-all disabled:opacity-50">
-                                        {{ isApproving ? 'Approving...' : 'Approve' }}
+                                        {{ isApproving ? $t('Approving...') : $t('Approve') }}
                                     </button>
                                     <button v-if="$page.props.auth.user.admin || $page.props.auth.user.is_moderator" @click="rejectModel"
                                         class="px-3 py-1 rounded bg-orange-500/20 border border-orange-500/30 text-orange-400 text-xs font-semibold hover:bg-orange-500/30 transition-all">
-                                        Reject
+                                        {{ $t('Reject') }}
                                     </button>
                                     <button v-if="$page.props.auth.user.admin || $page.props.auth.user.id === model.user_id" @click="showDeleteConfirm = true"
                                         class="px-3 py-1 rounded bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-500/30 transition-all">
-                                        Delete
+                                        {{ $t('Delete') }}
                                     </button>
                                 </div>
                                 <!-- Row 2: Author + Base Model -->
                                 <div class="flex items-center gap-4 mt-2 text-sm">
                                     <div v-if="model.author" class="flex items-center gap-1.5">
-                                        <span class="text-gray-500">Author:</span>
+                                        <span class="text-gray-500">{{ $t('Author:') }}</span>
                                         <Link :href="route('models.index', { authors: model.author })" class="hover:text-blue-300 transition-colors font-semibold" v-html="q3tohtml(model.author)"></Link>
                                         <span v-if="model.author_email && model.author_email.includes('@') && model.author_email.length < 100" class="text-gray-500 text-xs">({{ model.author_email }})</span>
                                     </div>
                                     <div v-if="model.base_model" class="flex items-center gap-1.5">
-                                        <span class="text-gray-500">Base model:</span>
+                                        <span class="text-gray-500">{{ $t('Base model:') }}</span>
                                         <Link :href="route('models.index', { base_model: model.base_model })" class="text-blue-400 hover:text-blue-300 transition-colors font-semibold">{{ model.base_model }}</Link>
                                     </div>
                                 </div>
@@ -1555,7 +1556,7 @@ const confirmNsfw = () => {
                                         ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                                         : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
                                 ]">
-                                    {{ autoRotate ? '🔄 Auto-Rotate ON' : '🔄 Auto-Rotate OFF' }}
+                                    {{ autoRotate ? $t('🔄 Auto-Rotate ON') : $t('🔄 Auto-Rotate OFF') }}
                                 </button>
                                 <button @click="showWireframe = !showWireframe" :class="[
                                     'px-3 py-1 rounded-lg text-xs font-semibold transition-all',
@@ -1563,7 +1564,7 @@ const confirmNsfw = () => {
                                         ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
                                         : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
                                 ]">
-                                    {{ showWireframe ? '📐 Wireframe ON' : '📐 Wireframe OFF' }}
+                                    {{ showWireframe ? $t('📐 Wireframe ON') : $t('📐 Wireframe OFF') }}
                                 </button>
                                 <div class="flex items-center bg-gray-500/20 rounded-lg border border-gray-500/30 overflow-hidden">
                                     <button @click="bgColor = 'black'" :class="[
@@ -1579,7 +1580,7 @@ const confirmNsfw = () => {
 
                             <!-- Skin Selector -->
                             <div v-if="viewerLoaded && availableSkins.length > 1 && !isThumbnailMode" class="flex gap-2 mb-4">
-                                <span class="text-xs text-gray-400 self-center">Skin:</span>
+                                <span class="text-xs text-gray-400 self-center">{{ $t('Skin:') }}</span>
                                 <button
                                     v-for="skin in availableSkins"
                                     :key="skin"
@@ -1596,7 +1597,7 @@ const confirmNsfw = () => {
 
                             <!-- Ground texture selector for shadow models -->
                             <div v-if="isShadowModel && shadowData && viewerLoaded && !isThumbnailMode" class="flex items-center gap-1.5 mb-3">
-                                <span class="text-xs text-gray-500 mr-1">Ground:</span>
+                                <span class="text-xs text-gray-500 mr-1">{{ $t('Ground:') }}</span>
                                 <button
                                     v-for="gt in groundTextures"
                                     :key="gt.path"
@@ -1663,7 +1664,7 @@ const confirmNsfw = () => {
                                     <div class="text-8xl mb-4">
                                         {{ model.category === 'player' ? '🏃' : model.category === 'weapon' ? '🔫' : '👤' }}
                                     </div>
-                                    <p class="text-gray-400 text-sm">No 3D Model Available</p>
+                                    <p class="text-gray-400 text-sm">{{ $t('No 3D Model Available') }}</p>
                                 </div>
                             </div>
                             <!-- Download (bottom of viewer card) -->
@@ -1680,18 +1681,16 @@ const confirmNsfw = () => {
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                                         </svg>
-                                        {{ isBaseQ3Model ? 'Included with Quake 3' : 'Download Model' }}
+                                        {{ isBaseQ3Model ? $t('Included with Quake 3') : $t('Download Model') }}
                                     </span>
                                 </button>
                                 <p v-if="isBaseQ3Model" class="text-center text-gray-500 text-xs mt-1">
-                                    This model is part of the base Quake 3 installation
+                                    {{ $t('This model is part of the base Quake 3 installation') }}
                                 </p>
-                                <p v-else-if="isShadowModel || isWeaponModel" class="text-center text-gray-500 text-xs mt-1">
-                                    Copy to your <span class="text-gray-400 font-medium">quake3/defrag</span> directory
-                                </p>
-                                <p v-else class="text-center text-gray-500 text-xs mt-1">
-                                    Copy to your <span class="text-gray-400 font-medium">quake3/baseq3</span> directory
-                                </p>
+                                <p v-else-if="isShadowModel || isWeaponModel" class="text-center text-gray-500 text-xs mt-1 [&_span]:text-gray-400 [&_span]:font-medium"
+                                   v-html="$t('Copy to your <span>quake3/defrag</span> directory')"></p>
+                                <p v-else class="text-center text-gray-500 text-xs mt-1 [&_span]:text-gray-400 [&_span]:font-medium"
+                                   v-html="$t('Copy to your <span>quake3/baseq3</span> directory')"></p>
 
                                 <!-- Extras download (source files from author) -->
                                 <div v-if="model.extras_zip_path" class="mt-3 pt-3 border-t border-white/10">
@@ -1700,10 +1699,10 @@ const confirmNsfw = () => {
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                                         </svg>
-                                        Download Author Source Files
+                                        {{ $t('Download Author Source Files') }}
                                     </a>
                                     <p class="text-center text-gray-600 text-[10px] mt-1">
-                                        Not required for the model to work. Included by the author (e.g. source files, documentation).
+                                        {{ $t('Not required for the model to work. Included by the author (e.g. source files, documentation).') }}
                                     </p>
                                 </div>
                             </div>
@@ -1715,13 +1714,13 @@ const confirmNsfw = () => {
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                     <div class="text-sm">
-                                        <p class="text-amber-200 font-semibold text-xs mb-1">Texture Dependency</p>
+                                        <p class="text-amber-200 font-semibold text-xs mb-1">{{ $t('Texture Dependency') }}</p>
                                         <p class="text-gray-300 text-xs">
-                                            Requires
+                                            {{ $t('Requires') }}
                                             <Link :href="route('models.show', baseModelData.id)" class="text-amber-400 font-semibold hover:text-amber-300 transition-colors">
                                                 {{ baseModelData.display_name || baseModelData.name }}
                                             </Link>
-                                            — textures reference files from that PK3.
+                                            {{ $t('— textures reference files from that PK3.') }}
                                         </p>
                                         <a v-if="baseModelData.zip_path"
                                            :href="`/storage/${baseModelData.zip_path}`"
@@ -1729,7 +1728,7 @@ const confirmNsfw = () => {
                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                             </svg>
-                                            Download {{ baseModelData.display_name || baseModelData.name }}
+                                            {{ $t('Download :name', { name: baseModelData.display_name || baseModelData.name }) }}
                                         </a>
                                     </div>
                                 </div>
@@ -1741,9 +1740,9 @@ const confirmNsfw = () => {
                                     <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                     </svg>
-                                    <span class="text-blue-200 text-sm font-semibold">Bundled With</span>
+                                    <span class="text-blue-200 text-sm font-semibold">{{ $t('Bundled With') }}</span>
                                 </div>
-                                <p class="text-gray-400 text-xs mb-3">Packaged together by the author, may be required to work properly.</p>
+                                <p class="text-gray-400 text-xs mb-3">{{ $t('Packaged together by the author, may be required to work properly.') }}</p>
                                 <div class="space-y-3">
                                     <div v-for="(group, zipPath) in bundledByPk3" :key="zipPath" class="flex items-center justify-between gap-3">
                                         <div class="flex items-center gap-3 min-w-0 flex-wrap">
@@ -1759,7 +1758,7 @@ const confirmNsfw = () => {
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                             </svg>
-                                            Download
+                                            {{ $t('Download') }}
                                         </a>
                                     </div>
                                 </div>
@@ -1768,31 +1767,31 @@ const confirmNsfw = () => {
 
                         <!-- Technical Details -->
                         <div class="bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-6 border border-white/10 mb-6">
-                            <h3 class="text-lg font-bold text-white mb-4">Technical Details</h3>
+                            <h3 class="text-lg font-bold text-white mb-4">{{ $t('Technical Details') }}</h3>
                             <div class="grid grid-cols-2 gap-4">
                                 <div v-if="model.poly_count">
-                                    <div class="text-gray-400 text-sm mb-1">Polygon Count</div>
+                                    <div class="text-gray-400 text-sm mb-1">{{ $t('Polygon Count') }}</div>
                                     <div class="text-white font-bold">{{ model.poly_count.toLocaleString() }}</div>
                                 </div>
                                 <div v-if="model.vert_count">
-                                    <div class="text-gray-400 text-sm mb-1">Vertex Count</div>
+                                    <div class="text-gray-400 text-sm mb-1">{{ $t('Vertex Count') }}</div>
                                     <div class="text-white font-bold">{{ model.vert_count.toLocaleString() }}</div>
                                 </div>
                                 <div>
-                                    <div class="text-gray-400 text-sm mb-1">Custom Sounds</div>
-                                    <div class="text-white font-bold">{{ model.has_sounds ? 'Yes ✓' : 'No' }}</div>
+                                    <div class="text-gray-400 text-sm mb-1">{{ $t('Custom Sounds') }}</div>
+                                    <div class="text-white font-bold">{{ model.has_sounds ? $t('Yes ✓') : $t('No') }}</div>
                                 </div>
                                 <div>
-                                    <div class="text-gray-400 text-sm mb-1">CTF Skins</div>
-                                    <div class="text-white font-bold">{{ model.has_ctf_skins ? 'Yes ✓' : 'No' }}</div>
+                                    <div class="text-gray-400 text-sm mb-1">{{ $t('CTF Skins') }}</div>
+                                    <div class="text-white font-bold">{{ model.has_ctf_skins ? $t('Yes ✓') : $t('No') }}</div>
                                 </div>
                                 <div>
-                                    <div class="text-gray-400 text-sm mb-1">Downloads</div>
+                                    <div class="text-gray-400 text-sm mb-1">{{ $t('Downloads') }}</div>
                                     <div class="text-white font-bold">{{ model.downloads }}</div>
                                 </div>
                                 <div>
-                                    <div class="text-gray-400 text-sm mb-1">Uploaded</div>
-                                    <div class="text-white font-bold">{{ new Date(model.created_at).toLocaleDateString() }}</div>
+                                    <div class="text-gray-400 text-sm mb-1">{{ $t('Uploaded') }}</div>
+                                    <div class="text-white font-bold">{{ new Date(model.created_at).toLocaleDateString($page.props.locale) }}</div>
                                 </div>
                             </div>
                             <!-- Uploaded By (inline) -->
@@ -1802,7 +1801,7 @@ const confirmNsfw = () => {
                                          :alt="model.user.name"
                                          class="w-8 h-8 rounded-full object-cover ring-2 ring-white/10">
                                     <div>
-                                        <div class="text-gray-400 text-xs">Uploaded by</div>
+                                        <div class="text-gray-400 text-xs">{{ $t('Uploaded by') }}</div>
                                         <div class="text-white text-sm font-semibold" v-html="q3tohtml(model.user.name)"></div>
                                     </div>
                                 </Link>
@@ -1811,7 +1810,7 @@ const confirmNsfw = () => {
 
                         <!-- Description / Author Notes -->
                         <div v-if="model.description" class="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-xl p-4 border border-white/10 mb-6">
-                            <h3 class="text-sm font-semibold text-gray-400 mb-2">Author Notes</h3>
+                            <h3 class="text-sm font-semibold text-gray-400 mb-2">{{ $t('Author Notes') }}</h3>
                             <p class="text-gray-400 text-xs whitespace-pre-line leading-relaxed">{{ model.description }}</p>
                         </div>
                     </div>
@@ -1830,7 +1829,7 @@ const confirmNsfw = () => {
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
                                     </svg>
-                                    Generate GIF
+                                    {{ $t('Generate GIF') }}
                                 </span>
                                 <span v-else class="flex items-center justify-center gap-1.5">
                                     <svg class="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1847,7 +1846,7 @@ const confirmNsfw = () => {
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                                 </svg>
-                                Edit
+                                {{ $t('Edit') }}
                             </a>
                             <button
                                 v-if="$page.props.auth?.user?.admin"
@@ -1856,105 +1855,105 @@ const confirmNsfw = () => {
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                                 </svg>
-                                Delete
+                                {{ $t('Delete') }}
                             </button>
                         </div>
                         <!-- Asset status badges (admin/mod only) -->
                         <div v-if="$page.props.auth?.user && ($page.props.auth.user.admin || $page.props.auth.user.is_moderator)" class="flex flex-wrap gap-1.5 mb-4">
                             <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border" :class="model.idle_gif ? 'bg-green-500/15 border-green-500/30 text-green-400' : 'bg-red-500/15 border-red-500/30 text-red-400'">
-                                Idle {{ model.idle_gif ? 'OK' : 'Missing' }}
+                                Idle {{ model.idle_gif ? 'OK' : $t('Missing') }}
                             </span>
                             <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border" :class="model.rotate_gif ? 'bg-green-500/15 border-green-500/30 text-green-400' : 'bg-red-500/15 border-red-500/30 text-red-400'">
-                                Rotate {{ model.rotate_gif ? 'OK' : 'Missing' }}
+                                Rotate {{ model.rotate_gif ? 'OK' : $t('Missing') }}
                             </span>
                             <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border" :class="model.gesture_gif ? 'bg-green-500/15 border-green-500/30 text-green-400' : 'bg-red-500/15 border-red-500/30 text-red-400'">
-                                Gesture {{ model.gesture_gif ? 'OK' : 'Missing' }}
+                                Gesture {{ model.gesture_gif ? 'OK' : $t('Missing') }}
                             </span>
                             <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border" :class="model.head_icon ? 'bg-green-500/15 border-green-500/30 text-green-400' : 'bg-red-500/15 border-red-500/30 text-red-400'">
-                                Head Icon {{ model.head_icon ? 'OK' : 'Missing' }}
+                                Head Icon {{ model.head_icon ? 'OK' : $t('Missing') }}
                             </span>
                             <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border" :class="model.thumbnail ? 'bg-green-500/15 border-green-500/30 text-green-400' : 'bg-red-500/15 border-red-500/30 text-red-400'">
-                                Thumbnail {{ model.thumbnail ? 'OK' : 'Missing' }}
+                                Thumbnail {{ model.thumbnail ? 'OK' : $t('Missing') }}
                             </span>
                         </div>
                         <!-- Delete confirmation (admin or owner of pending) -->
                         <div v-if="showDeleteConfirm && $page.props.auth?.user && ($page.props.auth.user.admin || (model.approval_status === 'pending' && $page.props.auth.user.id === model.user_id))" class="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
                             <div class="text-red-400 text-xs font-semibold mb-2">
                                 <template v-if="siblingModels?.length">
-                                    This will also delete {{ siblingModels.length }} other model{{ siblingModels.length > 1 ? 's' : '' }} from the same PK3:
+                                    {{ $tc('This will also delete :count other model from the same PK3:|This will also delete :count other models from the same PK3:', siblingModels.length) }}
                                 </template>
                                 <template v-else>
-                                    Delete this model permanently?
+                                    {{ $t('Delete this model permanently?') }}
                                 </template>
                             </div>
                             <div v-if="siblingModels?.length" class="mb-3 space-y-1">
                                 <div v-for="s in siblingModels" :key="s.id" class="flex items-center gap-2 text-xs text-gray-300 pl-2 border-l-2 border-red-500/20">
                                     <span class="font-semibold text-white">{{ s.name }}</span>
-                                    <span class="text-gray-500">by</span>
-                                    <span class="text-blue-400">{{ s.user?.name || 'Unknown' }}</span>
-                                    <span class="text-gray-500">{{ new Date(s.created_at).toLocaleString() }}</span>
+                                    <span class="text-gray-500">{{ $t('by') }}</span>
+                                    <span class="text-blue-400">{{ s.user?.name || $t('Unknown') }}</span>
+                                    <span class="text-gray-500">{{ new Date(s.created_at).toLocaleString($page.props.locale) }}</span>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
                                 <button @click="deleteModel" :disabled="isDeleting"
                                     class="px-3 py-1 rounded bg-red-600/30 border border-red-500/40 text-red-300 text-xs font-bold hover:bg-red-600/40 transition-all disabled:opacity-50">
-                                    {{ isDeleting ? 'Deleting...' : `Yes, Delete${siblingModels?.length ? ` All (${siblingModels.length + 1})` : ''}` }}
+                                    {{ isDeleting ? $t('Deleting...') : (siblingModels?.length ? $t('Yes, Delete All (:count)', { count: siblingModels.length + 1 }) : $t('Yes, Delete')) }}
                                 </button>
                                 <button @click="showDeleteConfirm = false"
                                     class="px-2 py-1 text-gray-400 text-xs hover:text-gray-300 transition-colors">
-                                    Cancel
+                                    {{ $t('Cancel') }}
                                 </button>
                             </div>
                         </div>
                         <!-- GIF Status (admin only) -->
                         <div v-if="$page.props.auth?.user?.admin" class="flex flex-wrap items-center gap-2 mb-4 text-xs">
-                            <span class="text-gray-500 font-semibold">Assets:</span>
+                            <span class="text-gray-500 font-semibold">{{ $t('Assets:') }}</span>
                             <a v-if="model.idle_gif" :href="`/storage/${model.idle_gif}`" target="_blank"
                                 class="px-2 py-0.5 rounded border text-green-400 bg-green-500/10 border-green-500/20 font-medium hover:bg-green-500/20 transition cursor-pointer"
-                                title="Default preview in model listing (Idle mode)">
-                                Idle OK
+                                :title="$t('Default preview in model listing (Idle mode)')">
+                                {{ $t('Idle OK') }}
                             </a>
                             <span v-else class="px-2 py-0.5 rounded border text-red-400 bg-red-500/10 border-red-500/20 font-medium"
-                                title="Default preview in model listing (Idle mode)">
-                                Idle MISSING
+                                :title="$t('Default preview in model listing (Idle mode)')">
+                                {{ $t('Idle MISSING') }}
                             </span>
                             <a v-if="model.rotate_gif" :href="`/storage/${model.rotate_gif}`" target="_blank"
                                 class="px-2 py-0.5 rounded border text-green-400 bg-green-500/10 border-green-500/20 font-medium hover:bg-green-500/20 transition cursor-pointer"
-                                title="Preview in model listing (Rotate mode)">
-                                Rotate OK
+                                :title="$t('Preview in model listing (Rotate mode)')">
+                                {{ $t('Rotate OK') }}
                             </a>
                             <span v-else class="px-2 py-0.5 rounded border text-red-400 bg-red-500/10 border-red-500/20 font-medium"
-                                title="Preview in model listing (Rotate mode)">
-                                Rotate MISSING
+                                :title="$t('Preview in model listing (Rotate mode)')">
+                                {{ $t('Rotate MISSING') }}
                             </span>
                             <template v-if="!isWeaponModel">
                             <a v-if="model.gesture_gif" :href="`/storage/${model.gesture_gif}`" target="_blank"
                                 class="px-2 py-0.5 rounded border text-green-400 bg-green-500/10 border-green-500/20 font-medium hover:bg-green-500/20 transition cursor-pointer"
-                                title="Preview in model listing (Gesture mode)">
-                                Gesture OK
+                                :title="$t('Preview in model listing (Gesture mode)')">
+                                {{ $t('Gesture OK') }}
                             </a>
                             <span v-else class="px-2 py-0.5 rounded border text-red-400 bg-red-500/10 border-red-500/20 font-medium"
-                                title="Preview in model listing (Gesture mode)">
-                                Gesture MISSING
+                                :title="$t('Preview in model listing (Gesture mode)')">
+                                {{ $t('Gesture MISSING') }}
                             </span>
                             <a v-if="model.head_icon" :href="`/storage/${model.head_icon}`" target="_blank"
                                 class="px-2 py-0.5 rounded border text-green-400 bg-green-500/10 border-green-500/20 font-medium hover:bg-green-500/20 transition cursor-pointer"
-                                title="Head icon (used in HUD/scoreboard)">
-                                Head Icon OK
+                                :title="$t('Head icon (used in HUD/scoreboard)')">
+                                {{ $t('Head Icon OK') }}
                             </a>
                             <span v-else class="px-2 py-0.5 rounded border text-red-400 bg-red-500/10 border-red-500/20 font-medium"
-                                title="Head icon (used in HUD/scoreboard)">
-                                Head Icon MISSING
+                                :title="$t('Head icon (used in HUD/scoreboard)')">
+                                {{ $t('Head Icon MISSING') }}
                             </span>
                             </template>
                             <a v-if="model.thumbnail" :href="`/storage/${model.thumbnail}`" target="_blank"
                                 class="px-2 py-0.5 rounded border text-green-400 bg-green-500/10 border-green-500/20 font-medium hover:bg-green-500/20 transition cursor-pointer"
-                                title="Thumbnail (static image used as fallback)">
-                                Thumbnail OK
+                                :title="$t('Thumbnail (static image used as fallback)')">
+                                {{ $t('Thumbnail OK') }}
                             </a>
                             <span v-else class="px-2 py-0.5 rounded border text-red-400 bg-red-500/10 border-red-500/20 font-medium"
-                                title="Thumbnail (static image used as fallback)">
-                                Thumbnail MISSING
+                                :title="$t('Thumbnail (static image used as fallback)')">
+                                {{ $t('Thumbnail MISSING') }}
                             </span>
                         </div>
 
@@ -1964,7 +1963,7 @@ const confirmNsfw = () => {
                                 <input
                                     v-model="wsUrl"
                                     type="text"
-                                    placeholder="ws.q3df.org URL (e.g. /model/crash/skin/bump/)"
+                                    :placeholder="$t('ws.q3df.org URL (e.g. /model/crash/skin/bump/)')"
                                     class="flex-1 px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-gray-500 focus:border-cyan-500/50 focus:outline-none"
                                 />
                                 <button
@@ -1972,12 +1971,12 @@ const confirmNsfw = () => {
                                     :disabled="!wsUrl || scrapingWs"
                                     class="px-3 py-1.5 bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 font-semibold rounded-lg hover:bg-cyan-500/30 transition-all text-xs disabled:opacity-50 whitespace-nowrap"
                                 >
-                                    {{ scrapingWs ? 'Scraping...' : 'Scrape WS' }}
+                                    {{ scrapingWs ? $t('Scraping...') : $t('Scrape WS') }}
                                 </button>
                             </div>
                             <div v-if="scrapeResult" class="mt-1.5 text-xs">
                                 <span v-if="scrapeResult.success" class="text-green-400">
-                                    Updated: {{ Object.entries(scrapeResult.updated).map(([k,v]) => `${k}=${v}`).join(', ') }}
+                                    {{ $t('Updated: :list', { list: Object.entries(scrapeResult.updated).map(([k,v]) => `${k}=${v}`).join(', ') }) }}
                                 </span>
                                 <span v-else class="text-red-400">{{ scrapeResult.error }}</span>
                             </div>
@@ -1992,7 +1991,7 @@ const confirmNsfw = () => {
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" />
                             </svg>
-                            {{ flaggingNsfw ? 'Flagging...' : 'Flag this model as NSFW content' }}
+                            {{ flaggingNsfw ? $t('Flagging...') : $t('Flag this model as NSFW content') }}
                         </button>
 
                         <!-- Unflag NSFW (admin only) -->
@@ -2004,16 +2003,16 @@ const confirmNsfw = () => {
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" />
                             </svg>
-                            {{ flaggingNsfw ? 'Removing...' : 'Remove NSFW flag from this model' }}
+                            {{ flaggingNsfw ? $t('Removing...') : $t('Remove NSFW flag from this model') }}
                         </button>
 
                         <!-- ANIMATION BUTTONS -->
                         <div v-if="animationsReady && !isWeaponModel" class="relative bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-4 border border-white/10 mb-6">
-                            <h3 class="text-sm font-bold text-white mb-3">Animations</h3>
+                            <h3 class="text-sm font-bold text-white mb-3">{{ $t('Animations') }}</h3>
 
                             <!-- LEGS ANIMATIONS -->
                             <div class="mb-3">
-                                <h4 class="text-[10px] font-bold text-blue-400 mb-1.5 uppercase tracking-wider">Legs ({{ Object.keys(availableAnimations.legs || {}).length }})</h4>
+                                <h4 class="text-[10px] font-bold text-blue-400 mb-1.5 uppercase tracking-wider">{{ $t('Legs (:count)', { count: Object.keys(availableAnimations.legs || {}).length }) }}</h4>
                                 <div class="flex flex-wrap gap-1">
                                     <button
                                         v-for="(_, animName) in availableAnimations.legs"
@@ -2032,7 +2031,7 @@ const confirmNsfw = () => {
 
                             <!-- TORSO ANIMATIONS -->
                             <div class="mb-3">
-                                <h4 class="text-[10px] font-bold text-green-400 mb-1.5 uppercase tracking-wider">Torso ({{ Object.keys(availableAnimations.torso || {}).length }})</h4>
+                                <h4 class="text-[10px] font-bold text-green-400 mb-1.5 uppercase tracking-wider">{{ $t('Torso (:count)', { count: Object.keys(availableAnimations.torso || {}).length }) }}</h4>
                                 <div class="flex flex-wrap gap-1">
                                     <button
                                         v-for="(_, animName) in availableAnimations.torso"
@@ -2051,7 +2050,7 @@ const confirmNsfw = () => {
 
                             <!-- BOTH ANIMATIONS -->
                             <div v-if="availableAnimations.both && Object.keys(availableAnimations.both || {}).length > 0" class="mb-2">
-                                <h4 class="text-[10px] font-bold text-purple-400 mb-1.5 uppercase tracking-wider">Both ({{ Object.keys(availableAnimations.both || {}).length }})</h4>
+                                <h4 class="text-[10px] font-bold text-purple-400 mb-1.5 uppercase tracking-wider">{{ $t('Both (:count)', { count: Object.keys(availableAnimations.both || {}).length }) }}</h4>
                                 <div class="flex flex-wrap gap-1 mb-2">
                                     <button
                                         v-for="(_, animName) in availableAnimations.both"
@@ -2062,13 +2061,13 @@ const confirmNsfw = () => {
                                     </button>
                                 </div>
                                 <div class="text-[10px] text-gray-400 italic">
-                                    One-shot animations hold 2s, then return to idle
+                                    {{ $t('One-shot animations hold 2s, then return to idle') }}
                                 </div>
                             </div>
 
                             <!-- Animation Speed -->
                             <div class="flex items-center gap-3 mt-4 pt-3 border-t border-white/10">
-                                <span class="text-xs text-gray-400 w-16">Speed:</span>
+                                <span class="text-xs text-gray-400 w-16">{{ $t('Speed:') }}</span>
                                 <input
                                     type="range"
                                     min="0.1"
@@ -2085,19 +2084,19 @@ const confirmNsfw = () => {
                         <!-- Light Controls Card (not for shadow models) -->
                         <div v-if="viewerLoaded && !isThumbnailMode && !isShadowModel" class="relative bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 p-6 mb-6">
                             <div class="flex items-center justify-between mb-4">
-                                <h4 class="text-sm font-bold text-gray-300">Lighting</h4>
+                                <h4 class="text-sm font-bold text-gray-300">{{ $t('Lighting') }}</h4>
                                 <button @click="showLightControls = !showLightControls" class="px-3 py-1 rounded text-xs font-semibold transition-all bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/30">
-                                    {{ showLightControls ? '💡 Hide' : '💡 Show' }}
+                                    {{ showLightControls ? $t('💡 Hide') : $t('💡 Show') }}
                                 </button>
                             </div>
 
                             <div v-if="showLightControls" class="space-y-4">
                                 <!-- Ambient Light -->
                                 <div class="border-t border-white/10 pt-4">
-                                    <h5 class="text-xs font-bold text-gray-400 mb-3">AMBIENT LIGHT</h5>
+                                    <h5 class="text-xs font-bold text-gray-400 mb-3">{{ $t('AMBIENT LIGHT') }}</h5>
                                     <div class="space-y-2">
                                         <div class="flex items-center gap-3">
-                                            <span class="text-xs text-gray-400 w-20">Intensity:</span>
+                                            <span class="text-xs text-gray-400 w-20">{{ $t('Intensity:') }}</span>
                                             <input
                                                 type="range"
                                                 min="0"
@@ -2110,7 +2109,7 @@ const confirmNsfw = () => {
                                             <span class="text-xs text-gray-400 w-12 text-right">{{ lightSettings.ambient.intensity.toFixed(1) }}</span>
                                         </div>
                                         <div class="flex items-center gap-3">
-                                            <span class="text-xs text-gray-400 w-20">Color:</span>
+                                            <span class="text-xs text-gray-400 w-20">{{ $t('Color:') }}</span>
                                             <input
                                                 type="color"
                                                 :value="lightSettings.ambient.color"
@@ -2124,10 +2123,10 @@ const confirmNsfw = () => {
 
                                 <!-- Directional Light -->
                                 <div class="border-t border-white/10 pt-4">
-                                    <h5 class="text-xs font-bold text-gray-400 mb-3">MAIN LIGHT</h5>
+                                    <h5 class="text-xs font-bold text-gray-400 mb-3">{{ $t('MAIN LIGHT') }}</h5>
                                     <div class="space-y-2">
                                         <div class="flex items-center gap-3">
-                                            <span class="text-xs text-gray-400 w-20">Intensity:</span>
+                                            <span class="text-xs text-gray-400 w-20">{{ $t('Intensity:') }}</span>
                                             <input
                                                 type="range"
                                                 min="0"
@@ -2140,7 +2139,7 @@ const confirmNsfw = () => {
                                             <span class="text-xs text-gray-400 w-12 text-right">{{ lightSettings.directional.intensity.toFixed(1) }}</span>
                                         </div>
                                         <div class="flex items-center gap-3">
-                                            <span class="text-xs text-gray-400 w-20">Color:</span>
+                                            <span class="text-xs text-gray-400 w-20">{{ $t('Color:') }}</span>
                                             <input
                                                 type="color"
                                                 :value="lightSettings.directional.color"
@@ -2150,7 +2149,7 @@ const confirmNsfw = () => {
                                             <span class="text-xs text-gray-400">{{ lightSettings.directional.color }}</span>
                                         </div>
                                         <div class="flex items-center gap-3">
-                                            <span class="text-xs text-gray-400 w-20">Position X:</span>
+                                            <span class="text-xs text-gray-400 w-20">{{ $t('Position X:') }}</span>
                                             <input
                                                 type="range"
                                                 min="-200"
@@ -2163,7 +2162,7 @@ const confirmNsfw = () => {
                                             <span class="text-xs text-gray-400 w-12 text-right">{{ lightSettings.directional.position.x }}</span>
                                         </div>
                                         <div class="flex items-center gap-3">
-                                            <span class="text-xs text-gray-400 w-20">Position Y:</span>
+                                            <span class="text-xs text-gray-400 w-20">{{ $t('Position Y:') }}</span>
                                             <input
                                                 type="range"
                                                 min="-200"
@@ -2176,7 +2175,7 @@ const confirmNsfw = () => {
                                             <span class="text-xs text-gray-400 w-12 text-right">{{ lightSettings.directional.position.y }}</span>
                                         </div>
                                         <div class="flex items-center gap-3">
-                                            <span class="text-xs text-gray-400 w-20">Position Z:</span>
+                                            <span class="text-xs text-gray-400 w-20">{{ $t('Position Z:') }}</span>
                                             <input
                                                 type="range"
                                                 min="-200"
@@ -2193,10 +2192,10 @@ const confirmNsfw = () => {
 
                                 <!-- Back Light -->
                                 <div class="border-t border-white/10 pt-4">
-                                    <h5 class="text-xs font-bold text-gray-400 mb-3">BACK LIGHT (Rim)</h5>
+                                    <h5 class="text-xs font-bold text-gray-400 mb-3">{{ $t('BACK LIGHT (Rim)') }}</h5>
                                     <div class="space-y-2">
                                         <div class="flex items-center gap-3">
-                                            <span class="text-xs text-gray-400 w-20">Intensity:</span>
+                                            <span class="text-xs text-gray-400 w-20">{{ $t('Intensity:') }}</span>
                                             <input
                                                 type="range"
                                                 min="0"
@@ -2209,7 +2208,7 @@ const confirmNsfw = () => {
                                             <span class="text-xs text-gray-400 w-12 text-right">{{ lightSettings.back.intensity.toFixed(1) }}</span>
                                         </div>
                                         <div class="flex items-center gap-3">
-                                            <span class="text-xs text-gray-400 w-20">Color:</span>
+                                            <span class="text-xs text-gray-400 w-20">{{ $t('Color:') }}</span>
                                             <input
                                                 type="color"
                                                 :value="lightSettings.back.color"
@@ -2219,7 +2218,7 @@ const confirmNsfw = () => {
                                             <span class="text-xs text-gray-400">{{ lightSettings.back.color }}</span>
                                         </div>
                                         <div class="flex items-center gap-3">
-                                            <span class="text-xs text-gray-400 w-20">Position X:</span>
+                                            <span class="text-xs text-gray-400 w-20">{{ $t('Position X:') }}</span>
                                             <input
                                                 type="range"
                                                 min="-200"
@@ -2232,7 +2231,7 @@ const confirmNsfw = () => {
                                             <span class="text-xs text-gray-400 w-12 text-right">{{ lightSettings.back.position.x }}</span>
                                         </div>
                                         <div class="flex items-center gap-3">
-                                            <span class="text-xs text-gray-400 w-20">Position Y:</span>
+                                            <span class="text-xs text-gray-400 w-20">{{ $t('Position Y:') }}</span>
                                             <input
                                                 type="range"
                                                 min="-200"
@@ -2245,7 +2244,7 @@ const confirmNsfw = () => {
                                             <span class="text-xs text-gray-400 w-12 text-right">{{ lightSettings.back.position.y }}</span>
                                         </div>
                                         <div class="flex items-center gap-3">
-                                            <span class="text-xs text-gray-400 w-20">Position Z:</span>
+                                            <span class="text-xs text-gray-400 w-20">{{ $t('Position Z:') }}</span>
                                             <input
                                                 type="range"
                                                 min="-200"
@@ -2267,7 +2266,7 @@ const confirmNsfw = () => {
                         <!-- Sounds -->
                         <div v-if="soundsReady && !isThumbnailMode" class="relative bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 p-4 mb-6">
                             <div class="flex items-center justify-between mb-3">
-                                <h4 class="text-sm font-bold text-gray-300">Sounds</h4>
+                                <h4 class="text-sm font-bold text-gray-300">{{ $t('Sounds') }}</h4>
                                 <button @click="toggleSounds" :class="[
                                     'px-3 py-1 rounded text-xs font-semibold transition-all',
                                     soundsEnabled
@@ -2281,7 +2280,7 @@ const confirmNsfw = () => {
                             <!-- Volume Slider -->
                             <div class="mb-3">
                                 <div class="flex items-center gap-3">
-                                    <span class="text-xs text-gray-400 w-16">Volume:</span>
+                                    <span class="text-xs text-gray-400 w-16">{{ $t('Volume:') }}</span>
                                     <input
                                         type="range"
                                         min="0"
@@ -2354,7 +2353,7 @@ const confirmNsfw = () => {
                                     'text-lg font-bold mb-1',
                                     notificationType === 'success' ? 'text-green-300' : 'text-red-300'
                                 ]">
-                                    {{ notificationType === 'success' ? 'Success!' : 'Error' }}
+                                    {{ notificationType === 'success' ? $t('Success!') : $t('Error') }}
                                 </h3>
                                 <p class="text-white text-sm">{{ notificationMessage }}</p>
                             </div>

@@ -14,6 +14,7 @@
     import MemberNoteEditor from './MemberNoteEditor.vue';
     import { Cropper } from 'vue-advanced-cropper';
 import 'vue-advanced-cropper/dist/style.css';
+import { t } from '@/utils/i18n';
 import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
     import { usePage } from '@inertiajs/vue3';
     import { router } from '@inertiajs/vue3';
@@ -382,7 +383,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         };
 
         if (! image.type.startsWith('image/')) {
-            form.errors.image = 'The file must be an Image.';
+            form.errors.image = t('The file must be an Image.');
             imageInput.value = '';
             return;
         }
@@ -390,7 +391,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         // 1MB size limit for avatar
         const maxSize = 1 * 1024 * 1024; // 1MB in bytes
         if (image.size > maxSize) {
-            form.errors.image = 'The avatar image must be smaller than 1MB.';
+            form.errors.image = t('The avatar image must be smaller than 1MB.');
             imageInput.value.value = '';
             return;
         }
@@ -444,7 +445,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         };
 
         if (! background.type.startsWith('image/')) {
-            form.errors.background = 'The file must be an Image.';
+            form.errors.background = t('The file must be an Image.');
             backgroundInput.value = '';
             return;
         }
@@ -452,7 +453,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         // 5MB size limit
         const maxSize = 5 * 1024 * 1024; // 5MB in bytes
         if (background.size > maxSize) {
-            form.errors.background = 'The image must be smaller than 5MB.';
+            form.errors.background = t('The image must be smaller than 5MB.');
             backgroundInput.value.value = '';
             return;
         }
@@ -497,19 +498,19 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
 <template>
     <div class="pb-4">
-        <Head title="Clans" />
+        <Head :title="$t('Clans')" />
 
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex flex-col md:flex-row justify-between items-center gap-6">
                     <div>
-                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">Clans</h1>
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">{{ $t('Clans') }}</h1>
                         <div class="flex items-center gap-2 text-gray-400">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
                             </svg>
-                            <span class="text-sm font-semibold">Join forces with other players</span>
+                            <span class="text-sm font-semibold">{{ $t('Join forces with other players') }}</span>
                         </div>
                     </div>
 
@@ -522,13 +523,13 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
                                 </svg>
-                                <span>Invitations</span>
+                                <span>{{ $t('Invitations') }}</span>
                                 <span v-if="invitations.length > 0" class="px-2 py-0.5 bg-blue-500 rounded-full text-xs font-bold">{{ invitations.length }}</span>
                             </button>
 
                             <template v-if="!$page.props.isVerified">
                                 <Link href="/email/verify" class="flex items-center gap-2 px-6 py-3 bg-red-600/80 hover:bg-red-500 text-white font-bold rounded-xl transition-all duration-300 text-sm">
-                                    Verify Email to Join or Create
+                                    {{ $t('Verify Email to Join or Create') }}
                                 </Link>
                             </template>
                             <template v-else>
@@ -540,7 +541,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM4 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 10.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
                                     </svg>
-                                    <span>Request to Join</span>
+                                    <span>{{ $t('Request to Join') }}</span>
                                 </button>
 
                                 <button
@@ -551,7 +552,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                                     </svg>
-                                    Create New Clan
+                                    {{ $t('Create New Clan') }}
                                 </button>
                             </template>
                         </template>
@@ -563,7 +564,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
                             </svg>
-                            Log in to create or join a clan
+                            {{ $t('Log in to create or join a clan') }}
                         </Link>
                     </div>
                 </div>
@@ -577,7 +578,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-blue-400">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
                     </svg>
-                    My Clan
+                    {{ $t('My Clan') }}
                 </h2>
                 <div class="relative">
                     <div class="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-blue-700/5 pointer-events-none"></div>
@@ -601,20 +602,20 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                         <div v-if="showEditClan && myClan.admin_id === $page.props.auth.user.id" class="mt-6">
                             <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5 flex items-center justify-between">
-                                    <h3 class="text-lg font-medium text-white">Edit Clan</h3>
+                                    <h3 class="text-lg font-medium text-white">{{ $t('Edit Clan') }}</h3>
                                     <PrimaryButton @click="submitForm" type="button">
-                                        Save Changes
+                                        {{ $t('Save Changes') }}
                                     </PrimaryButton>
                                 </div>
 
                                 <form @submit.prevent="submitForm" class="p-6 space-y-8">
                                     <!-- Basic Information Section -->
                                     <div class="space-y-4">
-                                        <h4 class="text-base font-bold text-white uppercase tracking-wide border-b border-white/20 pb-2">Basic Information</h4>
+                                        <h4 class="text-base font-bold text-white uppercase tracking-wide border-b border-white/20 pb-2">{{ $t('Basic Information') }}</h4>
                                         <div class="grid grid-cols-2 gap-4">
                                         <div>
                                             <label class="block text-sm font-medium text-gray-300 mb-2">
-                                                Clan Name: <span v-html="q3tohtml(form.name)"></span>
+                                                {{ $t('Clan Name:') }} <span v-html="q3tohtml(form.name)"></span>
                                             </label>
                                             <TextInput
                                                 id="name"
@@ -625,24 +626,24 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                                 autocomplete="name"
                                             />
                                             <div class="text-xs text-gray-400 mt-2">
-                                                Quake3 color codes: ^1Red^2Green
+                                                {{ $t('Quake3 color codes:') }} ^1Red^2Green
                                             </div>
                                             <InputError class="mt-2" :message="form.errors.name" />
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-gray-300 mb-2">
-                                                Clan Tag: <span v-if="form.tag" v-html="q3tohtml(form.tag)"></span>
+                                                {{ $t('Clan Tag:') }} <span v-if="form.tag" v-html="q3tohtml(form.tag)"></span>
                                             </label>
                                             <TextInput
                                                 id="tag"
                                                 v-model="form.tag"
                                                 type="text"
                                                 class="w-full"
-                                                placeholder="e.g. TRY"
+                                                :placeholder="$t('e.g. TRY')"
                                                 maxlength="10"
                                             />
                                             <div class="text-xs text-gray-400 mt-2">
-                                                Short tag (optional, 2-10 chars). Quake3 color codes: ^1Red^2Green
+                                                {{ $t('Short tag (optional, 2-10 chars). Quake3 color codes:') }} ^1Red^2Green
                                             </div>
                                             <InputError class="mt-2" :message="form.errors.tag" />
                                         </div>
@@ -651,11 +652,11 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                                     <!-- Visual Effects Section -->
                                     <div class="space-y-4">
-                                        <h4 class="text-base font-bold text-white uppercase tracking-wide border-b border-white/20 pb-2">Visual Effects</h4>
+                                        <h4 class="text-base font-bold text-white uppercase tracking-wide border-b border-white/20 pb-2">{{ $t('Visual Effects') }}</h4>
                                         <div>
-                                        <label class="block text-sm font-semibold text-gray-200 mb-2">Clan Name Effect, Color & Shadow</label>
+                                        <label class="block text-sm font-semibold text-gray-200 mb-2">{{ $t('Clan Name Effect, Color & Shadow') }}</label>
                                         <div class="text-xs text-gray-400 mb-3">
-                                            Animated effect and shadow to highlight your clan name on the detail page
+                                            {{ $t('Animated effect and shadow to highlight your clan name on the detail page') }}
                                         </div>
 
                                         <div class="grid grid-cols-2 gap-4">
@@ -665,21 +666,21 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                                     v-model="form.name_effect"
                                                     class="w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
                                                 >
-                                                    <option value="none">None</option>
-                                                    <option value="particles">Particles</option>
-                                                    <option value="orbs">Orbs</option>
-                                                    <option value="lines">Lines</option>
-                                                    <option value="matrix">Matrix</option>
-                                                    <option value="glitch">Glitch</option>
-                                                    <option value="wave">Wave</option>
-                                                    <option value="neon">Neon Pulse</option>
-                                                    <option value="rgb">RGB Split</option>
-                                                    <option value="flicker">Flicker</option>
-                                                    <option value="hologram">Hologram</option>
+                                                    <option value="none">{{ $t('None') }}</option>
+                                                    <option value="particles">{{ $t('Particles') }}</option>
+                                                    <option value="orbs">{{ $t('Orbs') }}</option>
+                                                    <option value="lines">{{ $t('Lines') }}</option>
+                                                    <option value="matrix">{{ $t('Matrix') }}</option>
+                                                    <option value="glitch">{{ $t('Glitch') }}</option>
+                                                    <option value="wave">{{ $t('Wave') }}</option>
+                                                    <option value="neon">{{ $t('Neon Pulse') }}</option>
+                                                    <option value="rgb">{{ $t('RGB Split') }}</option>
+                                                    <option value="flicker">{{ $t('Flicker') }}</option>
+                                                    <option value="hologram">{{ $t('Hologram') }}</option>
                                                 </select>
 
                                                 <div>
-                                                    <label class="block text-xs text-gray-400 mb-1">Effect Color</label>
+                                                    <label class="block text-xs text-gray-400 mb-1">{{ $t('Effect Color') }}</label>
                                                     <div class="flex items-center gap-3">
                                                         <input
                                                             type="color"
@@ -698,14 +699,14 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                                                 <div>
                                                     <div class="flex items-center justify-between mb-2">
-                                                        <label class="block text-xs text-gray-400">Shadow Color</label>
+                                                        <label class="block text-xs text-gray-400">{{ $t('Shadow Color') }}</label>
                                                         <label class="flex items-center gap-2 cursor-pointer">
                                                             <input
                                                                 type="checkbox"
                                                                 v-model="form.name_shadow_enabled"
                                                                 class="w-4 h-4 rounded border-gray-300 dark:border-gray-700 bg-gray-900 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-600 cursor-pointer"
                                                             />
-                                                            <span class="text-xs text-gray-400">Enable</span>
+                                                            <span class="text-xs text-gray-400">{{ $t('Enable') }}</span>
                                                         </label>
                                                     </div>
                                                     <div class="flex items-center gap-3" :class="{ 'opacity-50 pointer-events-none': !form.name_shadow_enabled }">
@@ -804,7 +805,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                                     <!-- Images Section -->
                                     <div class="space-y-4">
-                                        <h4 class="text-base font-bold text-white uppercase tracking-wide border-b border-white/20 pb-2">Images</h4>
+                                        <h4 class="text-base font-bold text-white uppercase tracking-wide border-b border-white/20 pb-2">{{ $t('Images') }}</h4>
 
                                     <!-- Clan Avatar -->
                                     <div>
@@ -817,9 +818,9 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                             @change="updateimagePreview"
                                         >
 
-                                        <label class="block text-sm font-medium text-gray-300 mb-2">Clan Avatar</label>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Clan Avatar') }}</label>
                                         <div class="text-xs text-gray-400 mb-3">
-                                            Max 1MB. GIF supported (no compression).
+                                            {{ $t('Max 1MB. GIF supported (no compression).') }}
                                         </div>
 
                                         <div class="flex items-center gap-4">
@@ -831,7 +832,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                             </div>
 
                                             <SecondaryButton v-if="!showImageCropper" type="button" @click.prevent="selectNewImage">
-                                                Change Avatar
+                                                {{ $t('Change Avatar') }}
                                             </SecondaryButton>
                                         </div>
 
@@ -855,10 +856,10 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                             </div>
                                             <div class="flex gap-3 mt-3">
                                                 <PrimaryButton type="button" @click="handleImageCrop">
-                                                    Crop & Apply
+                                                    {{ $t('Crop & Apply') }}
                                                 </PrimaryButton>
                                                 <SecondaryButton type="button" @click="cancelImageCrop">
-                                                    Cancel
+                                                    {{ $t('Cancel') }}
                                                 </SecondaryButton>
                                             </div>
                                         </div>
@@ -868,9 +869,9 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                                     <!-- Avatar Effect -->
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-300 mb-2">Avatar Effect & Color</label>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Avatar Effect & Color') }}</label>
                                         <div class="text-xs text-gray-400 mb-3">
-                                            Visual effect and color applied to your clan avatar
+                                            {{ $t('Visual effect and color applied to your clan avatar') }}
                                         </div>
 
                                         <div class="grid grid-cols-2 gap-4">
@@ -880,14 +881,14 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                                     v-model="form.avatar_effect"
                                                     class="w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
                                                 >
-                                                    <option value="none">None</option>
-                                                    <option value="glow">Glow</option>
-                                                    <option value="pulse">Pulse</option>
-                                                    <option value="ring">Rotating Ring</option>
-                                                    <option value="shine">Shine</option>
-                                                    <option value="border">Animated Border</option>
-                                                    <option value="particles">Particle Orbit</option>
-                                                    <option value="spin">Spin</option>
+                                                    <option value="none">{{ $t('None') }}</option>
+                                                    <option value="glow">{{ $t('Glow') }}</option>
+                                                    <option value="pulse">{{ $t('Pulse') }}</option>
+                                                    <option value="ring">{{ $t('Rotating Ring') }}</option>
+                                                    <option value="shine">{{ $t('Shine') }}</option>
+                                                    <option value="border">{{ $t('Animated Border') }}</option>
+                                                    <option value="particles">{{ $t('Particle Orbit') }}</option>
+                                                    <option value="spin">{{ $t('Spin') }}</option>
                                                 </select>
 
                                                 <div class="flex items-center gap-3">
@@ -961,16 +962,16 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                             @change="updateBackgroundPreview"
                                         >
 
-                                        <label class="block text-sm font-medium text-gray-300 mb-2">Clan Background</label>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Clan Background') }}</label>
                                         <div class="text-xs text-gray-400 mb-3">
-                                            Recommended size: 1920x400px (wide banner format). Max 5MB. GIF supported (no compression).
+                                            {{ $t('Recommended size: 1920x400px (wide banner format). Max 5MB. GIF supported (no compression).') }}
                                         </div>
 
                                         <div v-if="backgroundPreview || myClan.background" class="mb-3">
                                             <div class="grid grid-cols-2 gap-4">
                                                 <!-- Detail Page Preview -->
                                                 <div>
-                                                    <div class="text-xs text-gray-400 mb-2">Detail page preview:</div>
+                                                    <div class="text-xs text-gray-400 mb-2">{{ $t('Detail page preview:') }}</div>
                                                     <img
                                                         :src="backgroundPreview || '/storage/' + myClan.background"
                                                         class="rounded-lg w-full h-40 object-cover border border-white/20"
@@ -978,7 +979,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                                 </div>
                                                 <!-- List Card Preview -->
                                                 <div>
-                                                    <div class="text-xs text-gray-400 mb-2">Card preview:</div>
+                                                    <div class="text-xs text-gray-400 mb-2">{{ $t('Card preview:') }}</div>
                                                     <img
                                                         :src="backgroundPreview || '/storage/' + myClan.background"
                                                         class="rounded-lg w-full h-24 object-cover border border-white/20"
@@ -988,7 +989,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                         </div>
 
                                         <SecondaryButton v-if="!showBackgroundCropper" type="button" @click.prevent="selectNewBackground">
-                                            {{ myClan.background ? 'Change Background' : 'Add Background' }}
+                                            {{ myClan.background ? $t('Change Background') : $t('Add Background') }}
                                         </SecondaryButton>
 
                                         <!-- Background Cropper -->
@@ -1011,10 +1012,10 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                             </div>
                                             <div class="flex gap-3 mt-3">
                                                 <PrimaryButton type="button" @click="handleBackgroundCrop">
-                                                    Crop & Apply
+                                                    {{ $t('Crop & Apply') }}
                                                 </PrimaryButton>
                                                 <SecondaryButton type="button" @click="cancelBackgroundCrop">
-                                                    Cancel
+                                                    {{ $t('Cancel') }}
                                                 </SecondaryButton>
                                             </div>
                                         </div>
@@ -1025,13 +1026,13 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                                     <!-- Other Settings Section -->
                                     <div class="space-y-4">
-                                        <h4 class="text-base font-bold text-white uppercase tracking-wide border-b border-white/20 pb-2">Other Settings</h4>
+                                        <h4 class="text-base font-bold text-white uppercase tracking-wide border-b border-white/20 pb-2">{{ $t('Other Settings') }}</h4>
 
                                     <!-- Featured Stats (Multi-Select) -->
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-300 mb-2">Featured Stats (Select up to 3)</label>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Featured Stats (Select up to 3)') }}</label>
                                         <div class="text-xs text-gray-400 mb-3">
-                                            Choose which stats to display on your clan card. You can select 1-3 stats or none.
+                                            {{ $t('Choose which stats to display on your clan card. You can select 1-3 stats or none.') }}
                                         </div>
 
                                         <div class="space-y-2">
@@ -1049,8 +1050,8 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
                                                     </svg>
                                                     <div>
-                                                        <div class="text-sm font-medium text-gray-200">Total Records</div>
-                                                        <div class="text-xs text-gray-500">Display total number of records</div>
+                                                        <div class="text-sm font-medium text-gray-200">{{ $t('Total Records') }}</div>
+                                                        <div class="text-xs text-gray-500">{{ $t('Display total number of records') }}</div>
                                                     </div>
                                                 </div>
                                             </label>
@@ -1069,8 +1070,8 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
                                                     </svg>
                                                     <div>
-                                                        <div class="text-sm font-medium text-gray-200">World Records</div>
-                                                        <div class="text-xs text-gray-500">Display #1 world record positions</div>
+                                                        <div class="text-sm font-medium text-gray-200">{{ $t('World Records') }}</div>
+                                                        <div class="text-xs text-gray-500">{{ $t('Display #1 world record positions') }}</div>
                                                     </div>
                                                 </div>
                                             </label>
@@ -1089,8 +1090,8 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
                                                     </svg>
                                                     <div>
-                                                        <div class="text-sm font-medium text-gray-200">Top 3 Positions</div>
-                                                        <div class="text-xs text-gray-500">Display podium finishes (1st, 2nd, 3rd)</div>
+                                                        <div class="text-sm font-medium text-gray-200">{{ $t('Top 3 Positions') }}</div>
+                                                        <div class="text-xs text-gray-500">{{ $t('Display podium finishes (1st, 2nd, 3rd)') }}</div>
                                                     </div>
                                                 </div>
                                             </label>
@@ -1109,8 +1110,8 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5m.75-9 3-3 2.148 2.148A12.061 12.061 0 0 1 16.5 7.605" />
                                                     </svg>
                                                     <div>
-                                                        <div class="text-sm font-medium text-gray-200">Top 10 Positions</div>
-                                                        <div class="text-xs text-gray-500">Display top 10 finishes</div>
+                                                        <div class="text-sm font-medium text-gray-200">{{ $t('Top 10 Positions') }}</div>
+                                                        <div class="text-xs text-gray-500">{{ $t('Display top 10 finishes') }}</div>
                                                     </div>
                                                 </div>
                                             </label>
@@ -1129,8 +1130,8 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                                     </svg>
                                                     <div>
-                                                        <div class="text-sm font-medium text-gray-200">Average WR Age</div>
-                                                        <div class="text-xs text-gray-500">Display average age of world records</div>
+                                                        <div class="text-sm font-medium text-gray-200">{{ $t('Average WR Age') }}</div>
+                                                        <div class="text-xs text-gray-500">{{ $t('Display average age of world records') }}</div>
                                                     </div>
                                                 </div>
                                             </label>
@@ -1149,15 +1150,15 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
                                                     </svg>
                                                     <div>
-                                                        <div class="text-sm font-medium text-gray-200">Map Coverage</div>
-                                                        <div class="text-xs text-gray-500">Display map completion percentage</div>
+                                                        <div class="text-sm font-medium text-gray-200">{{ $t('Map Coverage') }}</div>
+                                                        <div class="text-xs text-gray-500">{{ $t('Display map completion percentage') }}</div>
                                                     </div>
                                                 </div>
                                             </label>
                                         </div>
 
                                         <div class="text-xs text-gray-500 mt-2">
-                                            Selected: {{ form.featured_stats.length }}/3
+                                            {{ $t('Selected: :count/3', { count: form.featured_stats.length }) }}
                                         </div>
 
                                         <InputError :message="form.errors.featured_stats" class="mt-2" />
@@ -1171,7 +1172,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                         <div v-if="showEditMemberNotes && myClan.admin_id === $page.props.auth.user.id" class="mt-6">
                             <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
-                                    <h3 class="text-lg font-medium text-white">Member Details</h3>
+                                    <h3 class="text-lg font-medium text-white">{{ $t('Member Details') }}</h3>
                                 </div>
 
                                 <div class="p-6 space-y-4">
@@ -1189,12 +1190,12 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                         <div v-if="showInvitePlayer && myClan.admin_id === $page.props.auth.user.id" class="mt-6 relative z-50">
                             <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
-                                    <h3 class="text-lg font-medium text-white">Invite Player</h3>
+                                    <h3 class="text-lg font-medium text-white">{{ $t('Invite Player') }}</h3>
                                 </div>
 
                                 <form @submit.prevent="submitInviteForm" class="p-6 space-y-4">
                                     <div class="relative z-50">
-                                        <label class="block text-sm font-medium text-gray-300 mb-2">Select Player</label>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Select Player') }}</label>
                                         <PlayerSelectDefrag
                                             id="invite_player_id"
                                             v-model="inviteUserId"
@@ -1205,11 +1206,11 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                     </div>
 
                                     <div v-if="inviteUserId.length > 0" class="text-sm text-gray-400">
-                                        Selected: <span class="text-white font-medium" v-html="q3tohtml(users.find(p => p.id === inviteUserId[0])?.name || '')"></span>
+                                        {{ $t('Selected:') }} <span class="text-white font-medium" v-html="q3tohtml(users.find(p => p.id === inviteUserId[0])?.name || '')"></span>
                                     </div>
 
                                     <PrimaryButton type="submit" class="w-full justify-center">
-                                        Invite Player
+                                        {{ $t('Invite Player') }}
                                     </PrimaryButton>
                                 </form>
                             </div>
@@ -1219,12 +1220,12 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                         <div v-if="showKickPlayer && myClan.admin_id === $page.props.auth.user.id" class="mt-6 relative z-50">
                             <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
-                                    <h3 class="text-lg font-medium text-white">Kick Player</h3>
+                                    <h3 class="text-lg font-medium text-white">{{ $t('Kick Player') }}</h3>
                                 </div>
 
                                 <form @submit.prevent="submitKickForm" class="p-6 space-y-4">
                                     <div class="relative z-50">
-                                        <label class="block text-sm font-medium text-gray-300 mb-2">Select Player</label>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Select Player') }}</label>
                                         <PlayerSelectDefrag
                                             id="kick_player_id"
                                             v-model="kickUserId"
@@ -1235,11 +1236,11 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                     </div>
 
                                     <div v-if="kickUserId.length > 0" class="text-sm text-gray-400">
-                                        Selected: <span class="text-white font-medium" v-html="q3tohtml(myClan.players.map(p => p.user).find(p => p.id === kickUserId[0])?.name || '')"></span>
+                                        {{ $t('Selected:') }} <span class="text-white font-medium" v-html="q3tohtml(myClan.players.map(p => p.user).find(p => p.id === kickUserId[0])?.name || '')"></span>
                                     </div>
 
                                     <PrimaryButton type="submit" class="w-full justify-center bg-orange-600 hover:bg-orange-500">
-                                        Kick Player
+                                        {{ $t('Kick Player') }}
                                     </PrimaryButton>
                                 </form>
                             </div>
@@ -1249,12 +1250,12 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                         <div v-if="showTransferOwnership && myClan.admin_id === $page.props.auth.user.id" class="mt-6 relative z-50">
                             <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
-                                    <h3 class="text-lg font-medium text-white">Transfer Ownership</h3>
+                                    <h3 class="text-lg font-medium text-white">{{ $t('Transfer Ownership') }}</h3>
                                 </div>
 
                                 <form @submit.prevent="submitTransferForm" class="p-6 space-y-4">
                                     <div class="relative z-50">
-                                        <label class="block text-sm font-medium text-gray-300 mb-2">Select New Owner</label>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">{{ $t('Select New Owner') }}</label>
                                         <PlayerSelectDefrag
                                             id="transfer_player_id"
                                             v-model="transferUserId"
@@ -1265,11 +1266,11 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                     </div>
 
                                     <div v-if="transferUserId.length > 0" class="text-sm text-gray-400">
-                                        Selected: <span class="text-white font-medium" v-html="q3tohtml(myClan.players.map(p => p.user).find(p => p.id === transferUserId[0])?.name || '')"></span>
+                                        {{ $t('Selected:') }} <span class="text-white font-medium" v-html="q3tohtml(myClan.players.map(p => p.user).find(p => p.id === transferUserId[0])?.name || '')"></span>
                                     </div>
 
                                     <PrimaryButton type="submit" class="w-full justify-center bg-sky-600 hover:bg-sky-500">
-                                        Transfer Ownership
+                                        {{ $t('Transfer Ownership') }}
                                     </PrimaryButton>
                                 </form>
                             </div>
@@ -1279,17 +1280,17 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                         <div v-if="showLeaveClan && myClan.admin_id !== $page.props.auth.user.id" class="mt-6">
                             <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
-                                    <h3 class="text-lg font-medium text-white">Leave Clan</h3>
+                                    <h3 class="text-lg font-medium text-white">{{ $t('Leave Clan') }}</h3>
                                 </div>
 
                                 <div class="p-6 space-y-4">
-                                    <p class="text-gray-300">Are you sure you want to leave the clan? To join again you will need to be invited by the clan's admin!</p>
+                                    <p class="text-gray-300">{{ $t("Are you sure you want to leave the clan? To join again you will need to be invited by the clan's admin!") }}</p>
                                     <div class="flex gap-3">
                                         <PrimaryButton @click="submitLeaveForm" class="flex-1 justify-center bg-red-600 hover:bg-red-500">
-                                            Leave Clan
+                                            {{ $t('Leave Clan') }}
                                         </PrimaryButton>
                                         <PrimaryButton @click="showLeaveClan = false" class="flex-1 justify-center bg-gray-600 hover:bg-gray-500">
-                                            Cancel
+                                            {{ $t('Cancel') }}
                                         </PrimaryButton>
                                     </div>
                                 </div>
@@ -1300,17 +1301,17 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                         <div v-if="showDismantleClan && myClan.admin_id === $page.props.auth.user.id" class="mt-6">
                             <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
-                                    <h3 class="text-lg font-medium text-white">Dismantle Clan</h3>
+                                    <h3 class="text-lg font-medium text-white">{{ $t('Dismantle Clan') }}</h3>
                                 </div>
 
                                 <div class="p-6 space-y-4">
-                                    <p class="text-gray-300">Are you sure you want to delete this clan? This action cannot be undone.</p>
+                                    <p class="text-gray-300">{{ $t('Are you sure you want to delete this clan? This action cannot be undone.') }}</p>
                                     <div class="flex gap-3">
                                         <PrimaryButton @click="submitDismantleForm" class="flex-1 justify-center bg-red-600 hover:bg-red-500">
-                                            Delete Clan
+                                            {{ $t('Delete Clan') }}
                                         </PrimaryButton>
                                         <PrimaryButton @click="showDismantleClan = false" class="flex-1 justify-center bg-gray-600 hover:bg-gray-500">
-                                            Cancel
+                                            {{ $t('Cancel') }}
                                         </PrimaryButton>
                                     </div>
                                 </div>
@@ -1321,12 +1322,12 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                         <div v-if="showJoinRequests && myClan.admin_id === $page.props.auth.user.id" class="mt-6">
                             <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5 flex items-center justify-between">
-                                    <h3 class="text-lg font-medium text-white">Pending Join Requests</h3>
+                                    <h3 class="text-lg font-medium text-white">{{ $t('Pending Join Requests') }}</h3>
                                     <button
                                         @click="showBlockedUsers = !showBlockedUsers"
                                         class="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10 transition-all"
                                     >
-                                        {{ showBlockedUsers ? 'Show Requests' : 'Blocked Users' }}
+                                        {{ showBlockedUsers ? $t('Show Requests') : $t('Blocked Users') }}
                                         <span v-if="!showBlockedUsers && blockedUsers && blockedUsers.length > 0" class="ml-1 text-red-400">({{ blockedUsers.length }})</span>
                                     </button>
                                 </div>
@@ -1337,7 +1338,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10 text-gray-600 mx-auto mb-2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
                                         </svg>
-                                        <p class="text-gray-500 text-sm">No pending join requests</p>
+                                        <p class="text-gray-500 text-sm">{{ $t('No pending join requests') }}</p>
                                     </div>
 
                                     <div v-for="request in joinRequests" :key="request.id" class="flex items-center justify-between bg-black/30 rounded-xl p-4 border border-white/5">
@@ -1365,7 +1366,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                             <button
                                                 @click="acceptRequest(request)"
                                                 :disabled="requestForm.processing"
-                                                title="Accept"
+                                                :title="$t('Accept')"
                                                 class="p-2 rounded-full bg-green-600/20 hover:bg-green-600/40 text-green-400 hover:text-green-300 border border-green-500/30 transition-all"
                                             >
                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
@@ -1375,7 +1376,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                             <button
                                                 @click="rejectRequest(request)"
                                                 :disabled="requestForm.processing"
-                                                title="Reject"
+                                                :title="$t('Reject')"
                                                 class="p-2 rounded-full bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 border border-red-500/30 transition-all"
                                             >
                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
@@ -1385,7 +1386,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                             <button
                                                 @click="blockRequest(request)"
                                                 :disabled="requestForm.processing"
-                                                title="Block - reject and permanently prevent future requests"
+                                                :title="$t('Block - reject and permanently prevent future requests')"
                                                 class="p-2 rounded-full bg-gray-600/20 hover:bg-gray-600/40 text-gray-400 hover:text-gray-300 border border-gray-500/30 transition-all"
                                             >
                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
@@ -1402,7 +1403,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10 text-gray-600 mx-auto mb-2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
                                         </svg>
-                                        <p class="text-gray-500 text-sm">No blocked users</p>
+                                        <p class="text-gray-500 text-sm">{{ $t('No blocked users') }}</p>
                                     </div>
 
                                     <div v-for="blocked in blockedUsers" :key="blocked.id" class="flex items-center justify-between bg-black/30 rounded-xl p-4 border border-white/5">
@@ -1414,7 +1415,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                             />
                                             <div>
                                                 <div class="text-gray-400 font-semibold" v-html="q3tohtml(blocked.user.name)"></div>
-                                                <div class="text-xs text-red-400/60">Blocked</div>
+                                                <div class="text-xs text-red-400/60">{{ $t('Blocked') }}</div>
                                             </div>
                                         </Link>
 
@@ -1423,7 +1424,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                             :disabled="requestForm.processing"
                                             class="px-3 py-1.5 text-sm rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10 transition-all"
                                         >
-                                            Unblock
+                                            {{ $t('Unblock') }}
                                         </button>
                                     </div>
                                 </div>
@@ -1440,7 +1441,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
             <!-- All Clans Section -->
             <div>
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                    <h2 class="text-2xl font-bold text-white">All Clans</h2>
+                    <h2 class="text-2xl font-bold text-white">{{ $t('All Clans') }}</h2>
 
                     <!-- Sorting Controls -->
                     <div class="flex flex-wrap gap-2 relative z-10 bg-black/40 backdrop-blur-sm rounded-xl border border-white/5 p-2">
@@ -1456,7 +1457,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
                             </svg>
-                            Name
+                            {{ $t('Name') }}
                             <span v-if="currentSort === 'name'" class="ml-1">
                                 {{ currentDir === 'asc' ? '↑' : '↓' }}
                             </span>
@@ -1474,7 +1475,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
                             </svg>
-                            Members
+                            {{ $t('Members') }}
                             <span v-if="currentSort === 'members'" class="ml-1">
                                 {{ currentDir === 'asc' ? '↑' : '↓' }}
                             </span>
@@ -1492,7 +1493,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
                             </svg>
-                            World Records
+                            {{ $t('World Records') }}
                             <span v-if="currentSort === 'wrs'" class="ml-1">
                                 {{ currentDir === 'asc' ? '↑' : '↓' }}
                             </span>
@@ -1510,7 +1511,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
                             </svg>
-                            Top 3 Positions
+                            {{ $t('Top 3 Positions') }}
                             <span v-if="currentSort === 'top3'" class="ml-1">
                                 {{ currentDir === 'asc' ? '↑' : '↓' }}
                             </span>
@@ -1545,8 +1546,8 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
                             </svg>
                         </div>
-                        <p class="text-gray-400 text-lg">No clans to show yet</p>
-                        <p class="text-gray-500 text-sm mt-2">Be the first to create one!</p>
+                        <p class="text-gray-400 text-lg">{{ $t('No clans to show yet') }}</p>
+                        <p class="text-gray-500 text-sm mt-2">{{ $t('Be the first to create one!') }}</p>
                     </div>
 
                     <div class="border-t border-white/5 bg-transparent p-3" v-if="clans && clans.total > clans.per_page">
@@ -1579,41 +1580,41 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                     <div class="fixed inset-0 bg-black/60"></div>
                     <div class="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6">
                         <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-bold text-white">Create New Clan</h3>
+                            <h3 class="text-lg font-bold text-white">{{ $t('Create New Clan') }}</h3>
                             <button @click="showCreateClanModal = false" class="text-gray-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition">
                                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                             </button>
                         </div>
                         <form @submit.prevent="submitCreateClan" class="space-y-4">
                             <div>
-                                <label class="block text-sm font-bold text-gray-300 mb-1" v-html="'Clan Name ' + (createClanForm.name ? '(' + q3tohtml(createClanForm.name) + ')' : '')"></label>
+                                <label class="block text-sm font-bold text-gray-300 mb-1" v-html="$t('Clan Name') + ' ' + (createClanForm.name ? '(' + q3tohtml(createClanForm.name) + ')' : '')"></label>
                                 <input v-model="createClanForm.name" type="text" required autofocus
                                     class="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 transition-all"
-                                    placeholder="Q3 color codes supported: ^1Red^2Green" />
+                                    :placeholder="$t('Q3 color codes supported:') + ' ^1Red^2Green'" />
                             </div>
                             <div>
                                 <input ref="createClanImageInput" type="file" class="hidden" accept="image/*" @change="updateCreateClanImage" />
-                                <label class="block text-sm font-bold text-gray-300 mb-1">Clan Avatar</label>
+                                <label class="block text-sm font-bold text-gray-300 mb-1">{{ $t('Clan Avatar') }}</label>
                                 <div class="flex items-center gap-3">
                                     <div v-if="createClanImagePreview" class="shrink-0">
                                         <img :src="createClanImagePreview" class="rounded-full h-14 w-14 object-cover border-2 border-white/20">
                                     </div>
                                     <div v-else class="shrink-0 w-14 h-14 rounded-full bg-gray-700 border-2 border-dashed border-white/20 flex items-center justify-center">
-                                        <span class="text-[10px] text-gray-500">No image</span>
+                                        <span class="text-[10px] text-gray-500">{{ $t('No image') }}</span>
                                     </div>
                                     <button type="button" @click="selectCreateClanImage" class="px-3 py-1.5 bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 text-sm rounded-lg transition-all">
-                                        Select Image
+                                        {{ $t('Select Image') }}
                                     </button>
                                 </div>
                             </div>
                             <div class="flex gap-3 pt-2">
                                 <button type="submit" :disabled="createClanForm.processing"
                                     class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-lg transition-colors">
-                                    {{ createClanForm.processing ? 'Creating...' : 'Create Clan' }}
+                                    {{ createClanForm.processing ? $t('Creating...') : $t('Create Clan') }}
                                 </button>
                                 <button type="button" @click="showCreateClanModal = false"
                                     class="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors">
-                                    Cancel
+                                    {{ $t('Cancel') }}
                                 </button>
                             </div>
                         </form>
@@ -1634,7 +1635,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                     <div class="fixed inset-0 bg-black/60"></div>
                     <div class="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl max-w-lg w-full p-6">
                         <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-xl font-bold text-white">Request to Join a Clan</h3>
+                            <h3 class="text-xl font-bold text-white">{{ $t('Request to Join a Clan') }}</h3>
                             <button @click="showRequestJoinModal = false" class="text-gray-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -1642,11 +1643,11 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                             </button>
                         </div>
 
-                        <p class="text-gray-400 text-sm mb-4">Select a clan from the list to send a join request. The clan admin will be notified.</p>
+                        <p class="text-gray-400 text-sm mb-4">{{ $t('Select a clan from the list to send a join request. The clan admin will be notified.') }}</p>
 
                         <div class="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                             <div v-if="!clans || !clans.data || availableClansForRequest.length === 0" class="text-center py-8 text-gray-500">
-                                No clans available. Browse the list first.
+                                {{ $t('No clans available. Browse the list first.') }}
                             </div>
 
                             <button
@@ -1666,7 +1667,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                 />
                                 <div class="flex-1 min-w-0">
                                     <div class="text-white font-semibold truncate" v-html="q3tohtml(clan.name)"></div>
-                                    <div class="text-xs text-gray-500">{{ clan.players_count }} members</div>
+                                    <div class="text-xs text-gray-500">{{ $tc(':count member|:count members', clan.players_count) }}</div>
                                 </div>
                                 <svg v-if="requestJoinClanId.includes(clan.id)" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-green-400 shrink-0">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
@@ -1680,13 +1681,13 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                 :disabled="requestJoinClanId.length === 0 || requestJoinForm.processing"
                                 class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors"
                             >
-                                {{ requestJoinForm.processing ? 'Sending...' : 'Send Request' }}
+                                {{ requestJoinForm.processing ? $t('Sending...') : $t('Send Request') }}
                             </button>
                             <button
                                 @click="showRequestJoinModal = false"
                                 class="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 font-semibold rounded-xl border border-white/10 transition-colors"
                             >
-                                Cancel
+                                {{ $t('Cancel') }}
                             </button>
                         </div>
                     </div>

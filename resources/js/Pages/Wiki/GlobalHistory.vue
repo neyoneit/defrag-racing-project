@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { getCurrentInstance } from 'vue';
 import Pagination from '@/Components/Basic/Pagination.vue';
+import { t, currentLocale } from '@/utils/i18n';
 
 const { proxy } = getCurrentInstance();
 const q3tohtml = proxy.q3tohtml;
@@ -12,7 +13,7 @@ const props = defineProps({
 });
 
 const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', {
+    return new Date(date).toLocaleDateString(currentLocale(), {
         year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 };
@@ -21,35 +22,35 @@ const relativeTime = (date) => {
     const now = new Date();
     const d = new Date(date);
     const diff = Math.floor((now - d) / 1000);
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    if (diff < 60) return t('just now');
+    if (diff < 3600) return t(':count m ago', { count: Math.floor(diff / 60) });
+    if (diff < 86400) return t(':count h ago', { count: Math.floor(diff / 3600) });
+    if (diff < 604800) return t(':count d ago', { count: Math.floor(diff / 86400) });
     return formatDate(date);
 };
 </script>
 
 <template>
     <div class="pb-4">
-        <Head title="Recent Changes - Wiki" />
+        <Head :title="$t('Recent Changes - Wiki')" />
 
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-5xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex items-center gap-2 text-sm text-gray-500 mb-2">
-                    <Link :href="route('wiki.index')" class="hover:text-gray-300 transition">Wiki</Link>
+                    <Link :href="route('wiki.index')" class="hover:text-gray-300 transition">{{ $t('Wiki') }}</Link>
                     <span>/</span>
-                    <span class="text-gray-400">Recent Changes</span>
+                    <span class="text-gray-400">{{ $t('Recent Changes') }}</span>
                 </div>
                 <div class="flex items-center justify-between">
                     <div>
-                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">Recent Changes</h1>
-                        <p class="text-gray-500 mt-1">All edits across the wiki</p>
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('Recent Changes') }}</h1>
+                        <p class="text-gray-500 mt-1">{{ $t('All edits across the wiki') }}</p>
                     </div>
                     <Link
                         :href="route('wiki.index')"
                         class="px-4 py-2 bg-gray-700/60 hover:bg-gray-700 text-gray-300 text-sm font-medium rounded-lg transition"
                     >
-                        Back to Wiki
+                        {{ $t('Back to Wiki') }}
                     </Link>
                 </div>
             </div>
@@ -79,7 +80,7 @@ const relativeTime = (date) => {
                                 >
                                     {{ revision.page.title }}
                                 </Link>
-                                <span v-else class="text-sm font-semibold text-gray-500 italic">deleted page</span>
+                                <span v-else class="text-sm font-semibold text-gray-500 italic">{{ $t('deleted page') }}</span>
 
                                 <!-- Separator -->
                                 <span class="text-gray-700">-</span>
@@ -91,7 +92,7 @@ const relativeTime = (date) => {
                                     class="text-sm text-gray-400 hover:text-blue-400 transition"
                                     v-html="q3tohtml(revision.user.name || revision.user.username)"
                                 ></Link>
-                                <span v-else class="text-sm text-gray-500">System</span>
+                                <span v-else class="text-sm text-gray-500">{{ $t('System') }}</span>
 
                                 <!-- Time -->
                                 <span class="text-xs text-gray-600" :title="formatDate(revision.created_at)">
@@ -111,20 +112,20 @@ const relativeTime = (date) => {
                                 class="px-3 py-1.5 text-xs bg-purple-600/40 hover:bg-purple-600/70 text-purple-300 rounded-lg transition flex items-center gap-1.5"
                             >
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                                Diff
+                                {{ $t('Diff') }}
                             </Link>
                             <Link
                                 v-if="revision.page"
                                 :href="route('wiki.revision', { slug: revision.page.slug, revision: revision.id })"
                                 class="px-3 py-1.5 text-xs bg-gray-700/60 hover:bg-gray-700 text-gray-300 rounded-lg transition"
                             >
-                                View
+                                {{ $t('View') }}
                             </Link>
                         </div>
                     </div>
                 </div>
                 <div v-else class="text-center py-16 text-gray-500">
-                    No changes recorded yet.
+                    {{ $t('No changes recorded yet.') }}
                 </div>
             </div>
 

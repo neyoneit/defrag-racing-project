@@ -152,6 +152,12 @@ class HandleInertiaRequests extends Middleware
             // Separator before the milliseconds in a run time: 'colon' is
             // what the engine prints and what the site has always shown.
             'timeFormat'                =>      $request->user()?->global_profile_preferences['time_format'] ?? 'colon',
+            // Only the code travels in the payload. The strings themselves are
+            // a lazily loaded chunk on the frontend, because shipping a few
+            // thousand of them with every single Inertia response would cost
+            // more than the whole feature is worth.
+            'locale'                    =>      app()->getLocale(),
+            'locales'                   =>      config('locales.supported'),
             'availableBadges'           =>      $request->user() ? $this->getAvailableBadges($request->user()) : [],
             'globalLatestAnnouncement'  =>      !$request->user() ? Cache::remember('global:latest_announcement', 300, function () {
                 return Announcement::where('type', 'home')->orderBy('created_at', 'DESC')->first(['id', 'title', 'created_at']);

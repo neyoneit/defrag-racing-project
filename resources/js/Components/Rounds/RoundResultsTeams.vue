@@ -11,7 +11,7 @@
 </script>
 
 <template>
-    <h1 class="font-black text-3xl dark:text-white mb-3">Team Results</h1>
+    <h1 class="font-black text-3xl dark:text-white mb-3">{{ $t('Team Results') }}</h1>
 
     <div class="tech-line-overview my-4"></div>
 
@@ -23,7 +23,7 @@
         <div class="w-full">
             <!-- Heading -->
             <div class="w-full flex items-center bg-gray-700 rounded-tl-md dark:bg-opacity-25 bg-opacity-15 p-2 shadow-md">
-                <div class="uppercase font-black text-2xl dark:text-gray-200 text-center w-full">Team</div>
+                <div class="uppercase font-black text-2xl dark:text-gray-200 text-center w-full">{{ $t('Team') }}</div>
             </div>
         </div>
 

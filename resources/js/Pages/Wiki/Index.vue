@@ -63,14 +63,14 @@ const displayPages = () => reordering.value ? localPages.value : props.pages;
 
 <template>
     <div class="pb-4">
-        <Head title="Wiki" />
+        <Head :title="$t('Wiki')" />
 
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-5xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex items-center justify-between mb-6">
                     <div>
-                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">Wiki</h1>
-                        <p class="text-gray-400">Community knowledge base for Quake III DeFRaG</p>
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">{{ $t('Wiki') }}</h1>
+                        <p class="text-gray-400">{{ $t('Community knowledge base for Quake III DeFRaG') }}</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <Link
@@ -78,7 +78,7 @@ const displayPages = () => reordering.value ? localPages.value : props.pages;
                             class="px-4 py-2.5 bg-gray-700/60 hover:bg-gray-700 text-gray-300 text-sm font-medium rounded-lg transition flex items-center gap-2"
                         >
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            Recent Changes
+                            {{ $t('Recent Changes') }}
                         </Link>
                         <template v-if="isStaff">
                             <button
@@ -86,20 +86,20 @@ const displayPages = () => reordering.value ? localPages.value : props.pages;
                                 @click="reordering = true; localPages = [...pages]"
                                 class="px-4 py-2.5 bg-gray-700/60 hover:bg-gray-700 text-gray-300 text-sm font-medium rounded-lg transition"
                             >
-                                Reorder
+                                {{ $t('Reorder') }}
                             </button>
                             <template v-else>
                                 <button
                                     @click="cancelReorder"
                                     class="px-4 py-2.5 bg-gray-700/60 hover:bg-gray-700 text-gray-300 text-sm font-medium rounded-lg transition"
                                 >
-                                    Cancel
+                                    {{ $t('Cancel') }}
                                 </button>
                                 <button
                                     @click="saveOrder"
                                     class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition"
                                 >
-                                    Save Order
+                                    {{ $t('Save Order') }}
                                 </button>
                             </template>
                         </template>
@@ -108,7 +108,7 @@ const displayPages = () => reordering.value ? localPages.value : props.pages;
                             :href="route('wiki.create')"
                             class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
                         >
-                            New Page
+                            {{ $t('New Page') }}
                         </Link>
                     </div>
                 </div>
@@ -121,7 +121,7 @@ const displayPages = () => reordering.value ? localPages.value : props.pages;
                     <svg class="w-5 h-5 text-gray-500 group-hover:text-gray-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
-                    <span class="text-sm">Search wiki pages, sections, and content...</span>
+                    <span class="text-sm">{{ $t('Search wiki pages, sections, and content...') }}</span>
                     <kbd class="ml-auto hidden sm:inline-flex items-center px-2 py-0.5 text-xs text-gray-600 bg-gray-800/80 border border-gray-700 rounded">Ctrl+K</kbd>
                 </button>
             </div>
@@ -180,7 +180,7 @@ const displayPages = () => reordering.value ? localPages.value : props.pages;
                                 v-if="page.children && page.children.length > 0"
                                 class="ml-auto text-xs text-gray-600"
                             >
-                                {{ page.children.length }} {{ page.children.length === 1 ? 'page' : 'pages' }}
+                                {{ $tc(':count page|:count pages', page.children.length) }}
                             </span>
                         </div>
 
@@ -207,13 +207,13 @@ const displayPages = () => reordering.value ? localPages.value : props.pages;
                 </template>
 
                 <div v-if="!pages || pages.length === 0" class="text-center py-20">
-                    <p class="text-gray-500 text-lg">No wiki pages yet.</p>
+                    <p class="text-gray-500 text-lg">{{ $t('No wiki pages yet.') }}</p>
                 </div>
             </div>
 
             <!-- Wiki Moderators -->
             <div v-if="wikiModerators && wikiModerators.length > 0" class="mt-6 bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl px-5 py-4">
-                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Wiki Moderators</h3>
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">{{ $t('Wiki Moderators') }}</h3>
                 <div class="flex flex-wrap gap-3">
                     <Link
                         v-for="mod in wikiModerators"

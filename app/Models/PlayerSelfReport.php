@@ -37,11 +37,18 @@ class PlayerSelfReport extends Model
      * When the player wants it handled. `mode` was already taken by the game
      * mode of the run, so the column is `handling` - naming it `mode` twice
      * would have been a bug waiting for whoever reads this next.
+     *
+     * A method rather than a const so lang:sync can see the literals - see
+     * RecordFlagController::flagTypes() for why a const put them out of reach.
+     * The keys go in the database; only the labels are translated.
      */
-    public const HANDLING = [
-        'immediate' => 'Hide it here as soon as an admin approves',
-        'on_merge' => 'Wait for the MDD merge and do both at once',
-    ];
+    public static function handling(): array
+    {
+        return [
+            'immediate' => __('Hide it here as soon as an admin approves'),
+            'on_merge' => __('Wait for the MDD merge and do both at once'),
+        ];
+    }
 
     public const RESOLUTIONS = [
         'hidden' => 'Hidden by an admin',
@@ -84,20 +91,20 @@ class PlayerSelfReport extends Model
     public function stateLabel(): string
     {
         if ($this->wasBeaten()) {
-            return 'Beaten - resolved';
+            return __('Beaten - resolved');
         }
 
         if ($this->wasRestored()) {
-            return 'Put back on the board';
+            return __('Put back on the board');
         }
 
         if ($this->isProcessed()) {
-            return 'Off the board';
+            return __('Off the board');
         }
 
         return $this->handling === 'immediate'
-            ? 'Waiting for an admin'
-            : 'Queued for the MDD merge';
+            ? __('Waiting for an admin')
+            : __('Queued for the MDD merge');
     }
 
     /**

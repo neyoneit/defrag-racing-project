@@ -48,15 +48,15 @@
                         <div class="text-xl text-white" v-html="q3tohtml(demo.user.name)"></div>
                     </div>
                     <div class="text-sm text-green-500" v-if="demo.approved">
-                        Approved
+                        {{ $t('Approved') }}
                     </div>
 
                     <div class="text-sm text-red-500" v-else-if="demo.rejected">
-                        Rejected
+                        {{ $t('Rejected') }}
                     </div>
 
                     <div class="text-sm text-gray-500" v-else>
-                        Unvalidated
+                        {{ $t('Unvalidated') }}
                     </div>
                 </div>
             </div>
@@ -76,7 +76,7 @@
             <TextInput
                 id="reason"
                 v-model="form.reason"
-                placeholder="Reason"
+                :placeholder="$t('Reason')"
                 type="text"
                 class="w-full"
             />

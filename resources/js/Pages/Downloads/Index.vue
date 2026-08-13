@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch, getCurrentInstance, onBeforeUnmount } from 'vue';
+import { currentLocale } from '@/utils/i18n';
 import { Head, Link, router } from '@inertiajs/vue3';
 import DownloadCategoryNode from '@/Components/DownloadCategoryNode.vue';
 import DefragModPanel from '@/Components/Downloads/DefragModPanel.vue';
@@ -107,7 +108,7 @@ const formatSize = (bytes) => {
 
 const formatDate = (value) => {
     if (!value) return '-';
-    return new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    return new Date(value).toLocaleDateString(currentLocale() === 'en' ? 'en-GB' : currentLocale(), { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 const formatCount = (n) => (n >= 1000 ? (n / 1000).toFixed(1) + 'k' : n ?? 0);
@@ -130,15 +131,15 @@ const isNew = (d) => {
 
 <template>
     <div>
-        <Head title="Downloads" />
+        <Head :title="$t('Downloads')" />
 
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex flex-wrap items-end justify-between gap-4">
                     <div>
-                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">Downloads</h1>
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">{{ $t('Downloads') }}</h1>
                         <p class="text-sm text-gray-400">
-                            {{ totalCount }} files shared by the community
+                            {{ $tc(':count file shared by the community|:count files shared by the community', totalCount) }}
                         </p>
                     </div>
                     <Link
@@ -149,7 +150,7 @@ const isNew = (d) => {
                             <path stroke-linecap="round" stroke-linejoin="round"
                                   d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
                         </svg>
-                        Upload
+                        {{ $t('Upload') }}
                     </Link>
                 </div>
             </div>
@@ -229,7 +230,7 @@ const isNew = (d) => {
                                 <input
                                     v-model="search"
                                     type="text"
-                                    placeholder="Search downloads..."
+                                    :placeholder="$t('Search downloads...')"
                                     class="w-full bg-black/40 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-600 focus:border-cyan-500/50 focus:ring-0 transition-colors" />
                             </div>
 
@@ -240,7 +241,7 @@ const isNew = (d) => {
                                 :class="filters.defrag
                                     ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300'
                                     : 'bg-black/40 border-white/10 text-gray-500 hover:text-white'">
-                                DeFRaG only
+                                {{ $t('DeFRaG only') }}
                             </button>
 
                             <select
@@ -250,9 +251,9 @@ const isNew = (d) => {
                                 <!-- The popup is drawn by the OS and ignores the
                                      wrapper's styling, so the options carry
                                      their own dark background. -->
-                                <option class="bg-gray-900" value="newest">Newest</option>
-                                <option class="bg-gray-900" value="popular">Most downloaded</option>
-                                <option class="bg-gray-900" value="name">Name</option>
+                                <option class="bg-gray-900" value="newest">{{ $t('Newest') }}</option>
+                                <option class="bg-gray-900" value="popular">{{ $t('Most downloaded') }}</option>
+                                <option class="bg-gray-900" value="name">{{ $t('Name') }}</option>
                             </select>
                         </div>
                     </div>
@@ -260,7 +261,7 @@ const isNew = (d) => {
                     <!-- Category header -->
                     <div v-if="current" class="mb-3">
                         <div class="flex items-center gap-2 text-xs text-gray-500 mb-1">
-                            <Link href="/downloads" class="hover:text-cyan-400 transition-colors">Downloads</Link>
+                            <Link href="/downloads" class="hover:text-cyan-400 transition-colors">{{ $t('Downloads') }}</Link>
                             <template v-for="crumb in current.breadcrumb" :key="crumb.id">
                                 <span class="text-gray-700">/</span>
                                 <Link :href="`/downloads/${crumb.id}/${crumb.slug}`" class="hover:text-cyan-400 transition-colors">
@@ -272,7 +273,7 @@ const isNew = (d) => {
                             <h2 class="text-lg font-black text-white">{{ current.name }}</h2>
                             <span v-if="current.is_locked"
                                   class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                                AUTO
+                                {{ $t('AUTO') }}
                             </span>
                         </div>
                         <p v-if="current.description" class="text-xs text-gray-500 mt-1 max-w-3xl">
@@ -293,12 +294,12 @@ const isNew = (d) => {
                             <table class="w-full text-sm">
                                 <thead>
                                     <tr class="text-left text-[11px] uppercase tracking-wider text-gray-500 bg-white/[0.03]">
-                                        <th class="font-semibold px-4 py-2.5">Name</th>
-                                        <th class="font-semibold px-3 py-2.5 hidden md:table-cell">Category</th>
-                                        <th class="font-semibold px-3 py-2.5 hidden lg:table-cell">Author</th>
-                                        <th class="font-semibold px-3 py-2.5 hidden sm:table-cell text-right">Size</th>
-                                        <th class="font-semibold px-3 py-2.5 hidden lg:table-cell text-right">Date</th>
-                                        <th class="font-semibold px-3 py-2.5 text-right">DL</th>
+                                        <th class="font-semibold px-4 py-2.5">{{ $t('Name') }}</th>
+                                        <th class="font-semibold px-3 py-2.5 hidden md:table-cell">{{ $t('Category') }}</th>
+                                        <th class="font-semibold px-3 py-2.5 hidden lg:table-cell">{{ $t('Author') }}</th>
+                                        <th class="font-semibold px-3 py-2.5 hidden sm:table-cell text-right">{{ $t('Size') }}</th>
+                                        <th class="font-semibold px-3 py-2.5 hidden lg:table-cell text-right">{{ $t('Date') }}</th>
+                                        <th class="font-semibold px-3 py-2.5 text-right">{{ $t('DL') }}</th>
                                         <th class="px-3 py-2.5"></th>
                                     </tr>
                                 </thead>
@@ -315,7 +316,7 @@ const isNew = (d) => {
                                                 </span>
                                                 <span v-if="isNew(d)"
                                                       class="flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
-                                                    NEW
+                                                    {{ $t('NEW') }}
                                                 </span>
                                                 <svg v-if="d.is_locked" class="w-3 h-3 flex-shrink-0 text-amber-500/60"
                                                      fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -340,7 +341,7 @@ const isNew = (d) => {
                                             <Link v-if="d.user" :href="`/profile/${d.user.id}`"
                                                   class="text-xs text-gray-500 hover:text-white transition-colors"
                                                   v-html="q3tohtml(d.user.name)"></Link>
-                                            <span v-else class="text-xs text-gray-700">system</span>
+                                            <span v-else class="text-xs text-gray-700">{{ $t('system') }}</span>
                                         </td>
 
                                         <td class="px-3 py-2.5 hidden sm:table-cell text-right text-xs text-gray-500 whitespace-nowrap">
@@ -366,7 +367,7 @@ const isNew = (d) => {
                                                     :href="partUrl(p)"
                                                     :target="p.external_url ? '_blank' : '_self'"
                                                     rel="noopener"
-                                                    :title="`Part ${p.label} - ${formatSize(p.size)}`"
+                                                    :title="$t('Part :label - :size', { label: p.label, size: formatSize(p.size) })"
                                                     class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-xs font-semibold text-gray-400 hover:bg-cyan-500/15 hover:border-cyan-500/40 hover:text-cyan-300 transition-all">
                                                     <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -386,7 +387,7 @@ const isNew = (d) => {
                                                     <path stroke-linecap="round" stroke-linejoin="round"
                                                           d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                                                 </svg>
-                                                Get
+                                                {{ $t('Get') }}
                                             </a>
                                         </td>
                                     </tr>
@@ -402,7 +403,7 @@ const isNew = (d) => {
                                   d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
                         </svg>
                         <p class="text-sm text-gray-500">
-                            {{ filters.q ? `Nothing matches "${filters.q}".` : 'Nothing here yet.' }}
+                            {{ filters.q ? $t('Nothing matches ":query".', { query: filters.q }) : $t('Nothing here yet.') }}
                         </p>
                     </div>
 

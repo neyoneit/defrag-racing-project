@@ -18,13 +18,13 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
 
 <template>
     <div>
-        <Head title="Email Verification" />
+        <Head :title="$t('Email Verification')" />
 
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center">
-                    <h1 class="text-2xl md:text-3xl font-black text-white mb-2">Verify Email</h1>
-                    <p class="text-gray-400">One more step to get started</p>
+                    <h1 class="text-2xl md:text-3xl font-black text-white mb-2">{{ $t('Verify Email') }}</h1>
+                    <p class="text-gray-400">{{ $t('One more step to get started') }}</p>
                 </div>
             </div>
         </div>
@@ -33,17 +33,17 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
             <div class="w-full max-w-md">
                 <div class="bg-black/40 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-white/10">
                     <div class="mb-4 text-sm text-gray-400">
-                        Before continuing, could you verify your email address by clicking on the link we just emailed to you? If you didn't receive the email, we will gladly send you another.
+                        {{ $t('Before continuing, could you verify your email address by clicking on the link we just emailed to you? If you didn\'t receive the email, we will gladly send you another.') }}
                     </div>
 
                     <div v-if="verificationLinkSent" class="mb-4 p-4 rounded-lg bg-green-500/10 border border-green-500/30">
-                        <p class="text-sm font-medium text-green-400">A new verification link has been sent to the email address you provided in your profile settings.</p>
+                        <p class="text-sm font-medium text-green-400">{{ $t('A new verification link has been sent to the email address you provided in your profile settings.') }}</p>
                     </div>
 
                     <form @submit.prevent="submit">
                         <div class="mt-4 flex items-center justify-between">
                             <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                                Resend Verification Email
+                                {{ $t('Resend Verification Email') }}
                             </PrimaryButton>
 
                             <div class="flex items-center gap-3">
@@ -51,7 +51,7 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
                                     :href="route('settings.show')"
                                     class="text-sm text-gray-400 hover:text-white transition-colors"
                                 >
-                                    Edit Profile
+                                    {{ $t('Edit Profile') }}
                                 </Link>
 
                                 <Link
@@ -60,7 +60,7 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
                                     as="button"
                                     class="text-sm text-gray-400 hover:text-white transition-colors"
                                 >
-                                    Log Out
+                                    {{ $t('Log Out') }}
                                 </Link>
                             </div>
                         </div>

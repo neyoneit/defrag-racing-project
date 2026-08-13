@@ -1,6 +1,7 @@
 <script setup>
 import { computed, watch } from 'vue';
 import { useForm, usePage } from '@inertiajs/vue3';
+import { t } from '@/utils/i18n';
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
@@ -36,9 +37,9 @@ const autoSave = () => {
 watch(() => [form.avatar_effects_intensity, form.avatar_effects_speed, form.name_effects_intensity, form.name_effects_speed], autoSave);
 
 const speedLabel = (val) => {
-    if (val === 0) return 'Paused';
-    if (val <= 50) return 'Slow';
-    return 'Normal';
+    if (val === 0) return t('Paused');
+    if (val <= 50) return t('Slow');
+    return t('Normal');
 };
 
 const speedBadgeClass = (val) => {
@@ -66,29 +67,29 @@ const toggleName = () => {
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
                         </svg>
                     </div>
-                    <h2 class="text-sm font-bold text-white">Effects Settings</h2>
+                    <h2 class="text-sm font-bold text-white">{{ $t('Effects Settings') }}</h2>
                 </div>
                 <div class="flex items-center gap-2">
                     <div v-if="form.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
                         <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                        <span class="text-xs font-medium text-green-400">Saved</span>
+                        <span class="text-xs font-medium text-green-400">{{ $t('Saved') }}</span>
                     </div>
                     <div v-else-if="form.processing" class="flex items-center gap-1.5 px-2 py-1 rounded bg-blue-500/10 border border-blue-500/20">
-                        <span class="text-xs font-medium text-blue-400">Saving...</span>
+                        <span class="text-xs font-medium text-blue-400">{{ $t('Saving...') }}</span>
                     </div>
                 </div>
             </div>
 
-            <p class="text-xs text-gray-500 mb-4">Control how you see other players' effects. This only affects your view.</p>
+            <p class="text-xs text-gray-500 mb-4">{{ $t('Control how you see other players\' effects. This only affects your view.') }}</p>
 
             <div class="grid grid-cols-2 gap-4">
                 <!-- Avatar Effects -->
                 <div class="space-y-3">
-                    <h3 class="text-xs font-bold text-purple-400 uppercase tracking-wider">Avatar Effects</h3>
+                    <h3 class="text-xs font-bold text-purple-400 uppercase tracking-wider">{{ $t('Avatar Effects') }}</h3>
 
                     <!-- Avatar On/Off -->
                     <div class="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/10">
-                        <span class="text-xs font-medium text-gray-300">Show Effects</span>
+                        <span class="text-xs font-medium text-gray-300">{{ $t('Show Effects') }}</span>
                         <button @click="toggleAvatar" class="relative w-10 h-5 rounded-full transition-colors" :class="form.avatar_effects_intensity > 0 ? 'bg-purple-600' : 'bg-gray-700'">
                             <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform" :class="form.avatar_effects_intensity > 0 ? 'translate-x-5' : ''"></span>
                         </button>
@@ -97,7 +98,7 @@ const toggleName = () => {
                     <!-- Avatar Animation Speed -->
                     <div>
                         <div class="flex items-center justify-between mb-1">
-                            <label class="text-xs font-medium text-gray-300">Animation Speed</label>
+                            <label class="text-xs font-medium text-gray-300">{{ $t('Animation Speed') }}</label>
                             <span class="text-[10px] font-bold px-1.5 py-0.5 rounded" :class="speedBadgeClass(form.avatar_effects_speed)">{{ speedLabel(form.avatar_effects_speed) }}</span>
                         </div>
                         <input type="range" v-model.number="form.avatar_effects_speed" min="0" max="100" step="10"
@@ -105,20 +106,20 @@ const toggleName = () => {
                             :style="`background: linear-gradient(to right, rgb(168 85 247) ${form.avatar_effects_speed}%, rgb(55 65 81) ${form.avatar_effects_speed}%)`"
                         />
                         <div class="flex justify-between text-[10px] text-gray-600 mt-0.5">
-                            <span>Paused</span>
-                            <span>Slow</span>
-                            <span>Normal</span>
+                            <span>{{ $t('Paused') }}</span>
+                            <span>{{ $t('Slow') }}</span>
+                            <span>{{ $t('Normal') }}</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Name Effects -->
                 <div class="space-y-3">
-                    <h3 class="text-xs font-bold text-pink-400 uppercase tracking-wider">Name Effects</h3>
+                    <h3 class="text-xs font-bold text-pink-400 uppercase tracking-wider">{{ $t('Name Effects') }}</h3>
 
                     <!-- Name On/Off -->
                     <div class="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/10">
-                        <span class="text-xs font-medium text-gray-300">Show Effects</span>
+                        <span class="text-xs font-medium text-gray-300">{{ $t('Show Effects') }}</span>
                         <button @click="toggleName" class="relative w-10 h-5 rounded-full transition-colors" :class="form.name_effects_intensity > 0 ? 'bg-pink-600' : 'bg-gray-700'">
                             <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform" :class="form.name_effects_intensity > 0 ? 'translate-x-5' : ''"></span>
                         </button>
@@ -127,7 +128,7 @@ const toggleName = () => {
                     <!-- Name Animation Speed -->
                     <div>
                         <div class="flex items-center justify-between mb-1">
-                            <label class="text-xs font-medium text-gray-300">Animation Speed</label>
+                            <label class="text-xs font-medium text-gray-300">{{ $t('Animation Speed') }}</label>
                             <span class="text-[10px] font-bold px-1.5 py-0.5 rounded" :class="speedBadgeClass(form.name_effects_speed)">{{ speedLabel(form.name_effects_speed) }}</span>
                         </div>
                         <input type="range" v-model.number="form.name_effects_speed" min="0" max="100" step="10"
@@ -135,9 +136,9 @@ const toggleName = () => {
                             :style="`background: linear-gradient(to right, rgb(236 72 153) ${form.name_effects_speed}%, rgb(55 65 81) ${form.name_effects_speed}%)`"
                         />
                         <div class="flex justify-between text-[10px] text-gray-600 mt-0.5">
-                            <span>Paused</span>
-                            <span>Slow</span>
-                            <span>Normal</span>
+                            <span>{{ $t('Paused') }}</span>
+                            <span>{{ $t('Slow') }}</span>
+                            <span>{{ $t('Normal') }}</span>
                         </div>
                     </div>
                 </div>

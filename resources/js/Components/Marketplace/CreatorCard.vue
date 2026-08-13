@@ -1,16 +1,21 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import { t } from '@/utils/i18n';
 
 const props = defineProps({
     creator: Object,
 });
 
-const specialtyLabels = {
-    map: 'Mapping',
-    player_model: 'Player Models',
-    weapon_model: 'Weapon Models',
-    shadow_model: 'Shadow Models',
-};
+// A computed, not a plain object: a plain one is built once at module load and
+// would keep whichever language happened to be loaded then. The keys are the
+// values stored on the creator, so only the labels are translated.
+const specialtyLabels = computed(() => ({
+    map: t('Mapping'),
+    player_model: t('Player Models'),
+    weapon_model: t('Weapon Models'),
+    shadow_model: t('Shadow Models'),
+}));
 
 const specialtyColors = {
     map: 'text-emerald-400 bg-emerald-500/15',
@@ -39,10 +44,10 @@ const specialtyColors = {
                 </div>
             </div>
             <div v-if="creator.accepting_commissions" class="px-2 py-0.5 text-xs font-semibold rounded bg-green-500/20 text-green-400 border border-green-500/30">
-                Available
+                {{ $t('Available') }}
             </div>
             <div v-else class="px-2 py-0.5 text-xs font-semibold rounded bg-gray-500/20 text-gray-400 border border-gray-500/30">
-                Busy
+                {{ $t('Busy') }}
             </div>
         </div>
 
@@ -71,11 +76,11 @@ const specialtyColors = {
         <!-- Rates -->
         <div class="space-y-1 text-sm mb-3">
             <div v-if="creator.rate_maps" class="flex items-center justify-between">
-                <span class="text-gray-400">Maps:</span>
+                <span class="text-gray-400">{{ $t('Maps:') }}</span>
                 <span class="text-white font-semibold">{{ creator.rate_maps }}</span>
             </div>
             <div v-if="creator.rate_models" class="flex items-center justify-between">
-                <span class="text-gray-400">Models:</span>
+                <span class="text-gray-400">{{ $t('Models:') }}</span>
                 <span class="text-white font-semibold">{{ creator.rate_models }}</span>
             </div>
         </div>

@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import Pagination from '@/Components/Basic/Pagination.vue';
+import { t } from '@/utils/i18n';
 
 const props = defineProps({
     models: Object,
@@ -89,17 +90,17 @@ onMounted(() => {
     }
 });
 
-const categories = [
-    { value: 'all', label: 'All Models', icon: '🎨' },
-    { value: 'player', label: 'Player Models', icon: '🏃' },
-    { value: 'weapon', label: 'Weapon Models', icon: '🔫' },
-    { value: 'shadow', label: 'Player Shadows', icon: '👤' },
-];
+const categories = computed(() => [
+    { value: 'all', label: t('All Models'), icon: '🎨' },
+    { value: 'player', label: t('Player Models'), icon: '🏃' },
+    { value: 'weapon', label: t('Weapon Models'), icon: '🔫' },
+    { value: 'shadow', label: t('Shadow Models'), icon: '👤' },
+]);
 
-const sortOptions = [
-    { value: 'newest', label: 'Newest First' },
-    { value: 'oldest', label: 'Oldest First' },
-];
+const sortOptions = computed(() => [
+    { value: 'newest', label: t('Newest First') },
+    { value: 'oldest', label: t('Oldest First') },
+]);
 
 const gridCols = ref(4);
 const searchQuery = ref(props.search || '');
@@ -227,9 +228,9 @@ const changeApprovalStatus = (status) => applyFilters({ approval_status: status 
 
 const getApprovalStatusLabel = (status) => {
     const labels = {
-        'pending': 'Pending Approval',
-        'approved': 'Approved',
-        'rejected': 'Rejected'
+        'pending': t('Pending Approval'),
+        'approved': t('Approved'),
+        'rejected': t('Rejected')
     };
     return labels[status] || status;
 };
@@ -256,10 +257,10 @@ const getSkinName = (model) => {
 
 const getModelTypeLabel = (type) => {
     const labels = {
-        'complete': 'Complete Model',
-        'skin': 'Skin Pack',
-        'sound': 'Sound Pack',
-        'mixed': 'Mixed Pack'
+        'complete': t('Complete Model'),
+        'skin': t('Skin Pack'),
+        'sound': t('Sound Pack'),
+        'mixed': t('Mixed Pack')
     };
     return labels[type] || type;
 };
@@ -276,7 +277,7 @@ const getModelTypeBadgeClass = (type) => {
 </script>
 
 <template>
-    <Head title="Models" />
+    <Head :title="$t('Models')" />
     <!-- Models Index Page -->
     <div class="">
         <!-- Header Section -->
@@ -284,15 +285,15 @@ const getModelTypeBadgeClass = (type) => {
             <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between mb-6">
                     <div>
-                        <h1 class="text-2xl md:text-3xl font-black text-white mb-2">Quake 3 Models</h1>
-                        <p class="text-gray-400">Browse and download custom player and weapon models</p>
+                        <h1 class="text-2xl md:text-3xl font-black text-white mb-2">{{ $t('Quake 3 Models') }}</h1>
+                        <p class="text-gray-400">{{ $t('Browse and download custom player and weapon models') }}</p>
                     </div>
                     <div class="flex items-center gap-3">
                     <div class="relative group">
                         <Link v-if="$page.props.auth.user && !$page.props.isVerified"
                               href="/email/verify"
                               class="px-6 py-3 bg-red-600/80 hover:bg-red-500 text-white font-bold rounded-xl transition-all shadow-lg inline-block text-sm">
-                            Verify Email to Upload
+                            {{ $t('Verify Email to Upload') }}
                         </Link>
                         <Link v-else-if="$page.props.auth.user"
                               :href="route('models.create')"
@@ -301,7 +302,7 @@ const getModelTypeBadgeClass = (type) => {
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                                 </svg>
-                                Upload Model
+                                {{ $t('Upload Model') }}
                             </span>
                         </Link>
                         <button v-else
@@ -311,12 +312,12 @@ const getModelTypeBadgeClass = (type) => {
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                                 </svg>
-                                Upload Model
+                                {{ $t('Upload Model') }}
                             </span>
                         </button>
                         <!-- Tooltip for non-logged-in users -->
                         <div v-if="!$page.props.auth.user" class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                            To upload a model, please login
+                            {{ $t('To upload a model, please login') }}
                             <div class="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
                         </div>
                     </div>
@@ -337,8 +338,8 @@ const getModelTypeBadgeClass = (type) => {
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                                 </svg>
-                                My Uploads
-                                <span v-if="myUploads" class="font-normal text-xs text-gray-500">(click to deselect)</span>
+                                {{ $t('My Uploads') }}
+                                <span v-if="myUploads" class="font-normal text-xs text-gray-500">{{ $t('(click to deselect)') }}</span>
                             </h3>
                             <div class="flex gap-1">
                                 <button
@@ -349,7 +350,7 @@ const getModelTypeBadgeClass = (type) => {
                                             ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50'
                                             : 'text-gray-500 hover:bg-white/5 hover:text-white'
                                     ]">
-                                    Pending
+                                    {{ $t('Pending') }}
                                 </button>
                                 <button
                                     @click="applyFilters({ my_uploads: !(myUploads && approvalStatus === 'approved'), approval_status: myUploads && approvalStatus === 'approved' ? null : 'approved' })"
@@ -359,7 +360,7 @@ const getModelTypeBadgeClass = (type) => {
                                             ? 'bg-green-500/30 text-green-300 border border-green-500/50'
                                             : 'text-gray-500 hover:bg-white/5 hover:text-white'
                                     ]">
-                                    Approved
+                                    {{ $t('Approved') }}
                                 </button>
                                 <button
                                     @click="applyFilters({ my_uploads: !(myUploads && approvalStatus === 'rejected'), approval_status: myUploads && approvalStatus === 'rejected' ? null : 'rejected' })"
@@ -369,7 +370,7 @@ const getModelTypeBadgeClass = (type) => {
                                             ? 'bg-red-500/30 text-red-300 border border-red-500/50'
                                             : 'text-gray-500 hover:bg-white/5 hover:text-white'
                                     ]">
-                                    Rejected
+                                    {{ $t('Rejected') }}
                                 </button>
                             </div>
                         </div>
@@ -380,13 +381,13 @@ const getModelTypeBadgeClass = (type) => {
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                                 </svg>
-                                Search
+                                {{ $t('Search') }}
                             </h3>
                             <input
                                 v-model="searchQuery"
                                 @input="onSearchInput"
                                 type="text"
-                                placeholder="Name, author, base model..."
+                                :placeholder="$t('Name, author, base model...')"
                                 class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                             />
                         </div>
@@ -397,7 +398,7 @@ const getModelTypeBadgeClass = (type) => {
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                                 </svg>
-                                Category
+                                {{ $t('Category') }}
                             </h3>
                             <div class="space-y-1">
                                 <button v-for="cat in categories" :key="cat.value"
@@ -419,14 +420,14 @@ const getModelTypeBadgeClass = (type) => {
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
                                 </svg>
-                                Base Model
+                                {{ $t('Base Model') }}
                                 <span v-if="selectedBaseModels.length" class="ml-auto text-xs bg-blue-500/30 text-blue-300 px-1.5 py-0.5 rounded-full">{{ selectedBaseModels.length }}</span>
                             </h3>
                             <input
                                 ref="baseModelSearchInput"
                                 v-model="baseModelSearch"
                                 type="text"
-                                :placeholder="selectedBaseModels.length ? selectedBaseModels.join(', ') : 'Search base models...'"
+                                :placeholder="selectedBaseModels.length ? selectedBaseModels.join(', ') : $t('Search base models...')"
                                 class="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 transition-colors"
                                 :class="{ 'placeholder-white': selectedBaseModels.length }"
                                 @focus="baseModelDropdownOpen = true"
@@ -450,10 +451,10 @@ const getModelTypeBadgeClass = (type) => {
                                         <span class="text-gray-300 truncate flex-1">{{ name }}</span>
                                         <span class="text-gray-600 text-xs">{{ count }}</span>
                                     </label>
-                                    <div v-if="filteredBaseModels.length === 0" class="px-3 py-4 text-center text-gray-500 text-sm">No results</div>
+                                    <div v-if="filteredBaseModels.length === 0" class="px-3 py-4 text-center text-gray-500 text-sm">{{ $t('No results') }}</div>
                                 </div>
                                 <button v-if="selectedBaseModels.length" @click.stop="clearBaseModels" class="w-full px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 border-t border-white/10 transition-colors">
-                                    Clear selection
+                                    {{ $t('Clear selection') }}
                                 </button>
                             </div>
                         </div>
@@ -464,14 +465,14 @@ const getModelTypeBadgeClass = (type) => {
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                                 </svg>
-                                Author
+                                {{ $t('Author') }}
                                 <span v-if="selectedAuthors.length" class="ml-auto text-xs bg-blue-500/30 text-blue-300 px-1.5 py-0.5 rounded-full">{{ selectedAuthors.length }}</span>
                             </h3>
                             <input
                                 ref="authorSearchInput"
                                 v-model="authorSearch"
                                 type="text"
-                                :placeholder="selectedAuthors.length ? selectedAuthors.join(', ') : 'Search authors...'"
+                                :placeholder="selectedAuthors.length ? selectedAuthors.join(', ') : $t('Search authors...')"
                                 class="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 transition-colors"
                                 :class="{ 'placeholder-white': selectedAuthors.length }"
                                 @focus="authorDropdownOpen = true"
@@ -495,10 +496,10 @@ const getModelTypeBadgeClass = (type) => {
                                         <span class="text-gray-300 truncate flex-1">{{ name }}</span>
                                         <span class="text-gray-600 text-xs">{{ count }}</span>
                                     </label>
-                                    <div v-if="filteredAuthors.length === 0" class="px-3 py-4 text-center text-gray-500 text-sm">No results</div>
+                                    <div v-if="filteredAuthors.length === 0" class="px-3 py-4 text-center text-gray-500 text-sm">{{ $t('No results') }}</div>
                                 </div>
                                 <button v-if="selectedAuthors.length" @click.stop="clearAuthors" class="w-full px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 border-t border-white/10 transition-colors">
-                                    Clear selection
+                                    {{ $t('Clear selection') }}
                                 </button>
                             </div>
                         </div>
@@ -511,11 +512,11 @@ const getModelTypeBadgeClass = (type) => {
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.64 0 8.577 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.64 0-8.577-3.007-9.963-7.178z" />
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
-                                    Preview
+                                    {{ $t('Preview') }}
                                 </div>
                                 <div class="flex gap-1">
                                     <button
-                                        v-for="mode in [{ value: 'idle', label: 'Idle' }, { value: 'rotate', label: 'Rotate' }, ...(category === 'player' || category === 'all' ? [{ value: 'gesture', label: 'Gesture' }] : []), { value: 'preview', label: 'Thumb' }]"
+                                        v-for="mode in [{ value: 'idle', label: $t('Idle') }, { value: 'rotate', label: $t('Rotate') }, ...(category === 'player' || category === 'all' ? [{ value: 'gesture', label: $t('Gesture') }] : []), { value: 'preview', label: $t('Thumb') }]"
                                         :key="mode.value"
                                         @click="setPreviewMode(mode.value)"
                                         :class="[
@@ -533,7 +534,7 @@ const getModelTypeBadgeClass = (type) => {
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
                                     </svg>
-                                    Sort
+                                    {{ $t('Sort') }}
                                 </div>
                                 <div class="flex gap-1">
                                     <button
@@ -556,7 +557,7 @@ const getModelTypeBadgeClass = (type) => {
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                                         </svg>
-                                        Per Page
+                                        {{ $t('Per Page') }}
                                     </div>
                                     <div class="flex gap-1">
                                         <button
@@ -578,7 +579,7 @@ const getModelTypeBadgeClass = (type) => {
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 018.25 20.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6z" />
                                         </svg>
-                                        Grid
+                                        {{ $t('Grid') }}
                                     </div>
                                     <div class="flex gap-1">
                                         <button
@@ -606,13 +607,13 @@ const getModelTypeBadgeClass = (type) => {
                     <!-- Active Filters -->
                     <div v-if="selectedBaseModels.length || selectedAuthors.length || searchQuery" class="mb-6 flex flex-wrap gap-2">
                         <div v-for="bm in selectedBaseModels" :key="'bm-'+bm" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 border border-blue-500/30 rounded-lg text-sm text-blue-300">
-                            <span class="text-xs text-blue-400">Base:</span> {{ bm }}
+                            <span class="text-xs text-blue-400">{{ $t('Base:') }}</span> {{ bm }}
                             <button @click="toggleBaseModel(bm)" class="text-blue-400 hover:text-blue-200 ml-0.5">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
                         </div>
                         <div v-for="a in selectedAuthors" :key="'au-'+a" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/20 border border-purple-500/30 rounded-lg text-sm text-purple-300">
-                            <span class="text-xs text-purple-400">Author:</span> {{ a }}
+                            <span class="text-xs text-purple-400">{{ $t('Author:') }}</span> {{ a }}
                             <button @click="toggleAuthor(a)" class="text-purple-400 hover:text-purple-200 ml-0.5">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
@@ -691,7 +692,7 @@ const getModelTypeBadgeClass = (type) => {
                                 </h3>
 
                                 <div class="text-sm text-gray-400" :class="gridCols < 6 ? 'mb-3' : 'mb-1'">
-                                    <p v-if="model.author" :class="[gridCols >= 6 ? 'text-xs' : '', 'truncate']" :title="model.author">by <span v-html="q3tohtml(model.author)"></span></p>
+                                    <p v-if="model.author" :class="[gridCols >= 6 ? 'text-xs' : '', 'truncate']" :title="model.author">{{ $t('by') }} <span v-html="q3tohtml(model.author)"></span></p>
                                     <p v-if="model.base_model && gridCols <= 3" class="text-xs text-gray-500 font-mono">/model {{ model.base_model }}{{ getSkinName(model) }}</p>
                                 </div>
                             </div>
@@ -701,14 +702,14 @@ const getModelTypeBadgeClass = (type) => {
                     <!-- Empty State -->
                     <div v-else class="text-center py-20">
                         <div class="text-6xl mb-4">📦</div>
-                        <h3 class="text-xl font-bold text-white mb-2">No models found</h3>
+                        <h3 class="text-xl font-bold text-white mb-2">{{ $t('No models found') }}</h3>
                         <p class="text-gray-400 mb-6">
-                            <template v-if="myUploads">You haven't uploaded any models yet.</template>
-                            <template v-else>Be the first to upload a {{ category === 'all' ? '' : category }} model!</template>
+                            <template v-if="myUploads">{{ $t('You haven\'t uploaded any models yet.') }}</template>
+                            <template v-else>{{ $t('Be the first to upload a :category model!', { category: category === 'all' ? '' : category }) }}</template>
                         </p>
                         <Link v-if="$page.props.auth.user" :href="route('models.create')"
                               class="inline-block px-6 py-3 bg-blue-500 text-white font-bold rounded-xl hover:bg-blue-600 transition-all">
-                            Upload Model
+                            {{ $t('Upload Model') }}
                         </Link>
                     </div>
 

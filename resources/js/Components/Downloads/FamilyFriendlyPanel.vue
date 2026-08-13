@@ -1,4 +1,6 @@
 <script setup>
+import { currentLocale } from '@/utils/i18n';
+
 defineProps({
     panel: Object,
 });
@@ -13,7 +15,7 @@ const formatSize = (bytes) => {
 
 const formatDate = (value) => {
     if (!value) return null;
-    return new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    return new Date(value).toLocaleDateString(currentLocale() === 'en' ? 'en-GB' : currentLocale(), { day: '2-digit', month: 'short', year: 'numeric' });
 };
 </script>
 
@@ -23,16 +25,14 @@ const formatDate = (value) => {
         <!-- Intro -->
         <div class="bg-black/45 backdrop-blur-xl rounded-xl border border-white/[0.08] p-5">
             <p class="text-sm text-gray-400 leading-relaxed max-w-3xl">
-                Quake III ships with gore and adult artwork. These pk3s swap it for clean alternatives,
-                which is what you want when you stream, play at work, or hand the game to a kid. Physics,
-                timing and records are untouched, so anything you run with these is still a valid demo.
+                {{ $t('Quake III ships with gore and adult artwork. These pk3s swap it for clean alternatives, which is what you want when you stream, play at work, or hand the game to a kid. Physics, timing and records are untouched, so anything you run with these is still a valid demo.') }}
             </p>
         </div>
 
         <!-- Files -->
         <div class="bg-black/45 backdrop-blur-xl rounded-xl border border-white/[0.08] overflow-hidden">
             <div class="px-4 py-3 border-b border-white/5">
-                <h2 class="text-sm font-black text-white">The pack</h2>
+                <h2 class="text-sm font-black text-white">{{ $t('The pack') }}</h2>
             </div>
 
             <div v-if="panel.files.length > 0">
@@ -44,7 +44,7 @@ const formatDate = (value) => {
                             <code class="text-[11px] text-cyan-400/80 bg-black/50 px-1.5 py-0.5 rounded">{{ f.filename }}</code>
                             <span class="text-[11px] text-gray-500">{{ formatSize(f.size) }}</span>
                             <span v-if="f.updated_at" class="text-[11px] text-gray-600">
-                                updated {{ formatDate(f.updated_at) }}
+                                {{ $t('updated :date', { date: formatDate(f.updated_at) }) }}
                             </span>
                         </div>
                         <p class="text-xs text-gray-500 mt-1 max-w-2xl leading-relaxed">{{ f.description }}</p>
@@ -55,26 +55,19 @@ const formatDate = (value) => {
                             <path stroke-linecap="round" stroke-linejoin="round"
                                   d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                         </svg>
-                        Download
+                        {{ $t('Download') }}
                     </a>
                 </div>
             </div>
 
-            <p v-else class="px-4 py-6 text-sm text-gray-600">Nothing published yet.</p>
+            <p v-else class="px-4 py-6 text-sm text-gray-600">{{ $t('Nothing published yet.') }}</p>
         </div>
 
         <!-- Install -->
         <div class="bg-black/45 backdrop-blur-xl rounded-xl border border-white/[0.08] p-5">
-            <h2 class="text-sm font-black text-white mb-2">Installation</h2>
-            <p class="text-sm text-gray-400 leading-relaxed">
-                Drop the .pk3 files into your
-                <code class="bg-black/60 text-cyan-300 px-1.5 py-0.5 rounded text-xs">baseq3</code>
-                folder. Quake loads pk3s in alphabetical order and the last one wins, so the
-                <code class="bg-black/60 text-cyan-300 px-1.5 py-0.5 rounded text-xs">zzz</code>
-                prefix is what lets them override the stock artwork.
-                <strong class="text-gray-200">Do not rename them.</strong>
-                To undo it, delete the files again.
-            </p>
+            <h2 class="text-sm font-black text-white mb-2">{{ $t('Installation') }}</h2>
+            <p class="text-sm text-gray-400 leading-relaxed [&_code]:bg-black/60 [&_code]:text-cyan-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_strong]:text-gray-200"
+               v-html="$t('Drop the .pk3 files into your <code>baseq3</code> folder. Quake loads pk3s in alphabetical order and the last one wins, so the <code>zzz</code> prefix is what lets them override the stock artwork. <strong>Do not rename them.</strong> To undo it, delete the files again.')"></p>
         </div>
     </div>
 </template>

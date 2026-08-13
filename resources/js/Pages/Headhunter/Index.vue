@@ -1,7 +1,8 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import Pagination from '@/Components/Basic/Pagination.vue';
+import { t } from '@/utils/i18n';
 
 const props = defineProps({
     challenges: Object,
@@ -33,17 +34,17 @@ const search = ref(props.filters?.search || '');
 const statusFilter = ref(props.filters?.status || '');
 const statusDropdownOpen = ref(false);
 
-const statuses = [
-    { value: '', label: 'All Statuses' },
-    { value: 'open', label: 'Open' },
-    { value: 'claimed', label: 'Claimed' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'disputed', label: 'Disputed' },
-    { value: 'closed', label: 'Closed' },
-];
+const statuses = computed(() => [
+    { value: '', label: t('All Statuses') },
+    { value: 'open', label: t('Open') },
+    { value: 'claimed', label: t('Claimed') },
+    { value: 'completed', label: t('Completed') },
+    { value: 'disputed', label: t('Disputed') },
+    { value: 'closed', label: t('Closed') },
+]);
 
 const selectedStatusLabel = () => {
-    return statuses.find(s => s.value === statusFilter.value)?.label || 'All Statuses';
+    return statuses.value.find(s => s.value === statusFilter.value)?.label || t('All Statuses');
 };
 
 const selectStatus = (value) => {
@@ -88,29 +89,29 @@ const getStatusColor = (status) => {
 
 <template>
     <div class="pb-4">
-        <Head title="Headhunter" />
+        <Head :title="$t('Headhunter')" />
 
         <!-- Header Section with gradient fade -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex items-center justify-between mb-8">
                     <div>
-                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">Headhunter</h1>
-                        <p class="text-gray-400">Community-created challenges with rewards</p>
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">{{ $t('Headhunter') }}</h1>
+                        <p class="text-gray-400">{{ $t('Community-created challenges with rewards') }}</p>
                     </div>
                     <Link
                         v-if="$page.props.auth.user && !$page.props.isVerified"
                         href="/email/verify"
                         class="px-6 py-3 bg-red-600/80 hover:bg-red-500 text-white font-bold rounded-lg transition-all duration-300 text-sm"
                     >
-                        Verify Email to Create
+                        {{ $t('Verify Email to Create') }}
                     </Link>
                     <Link
                         v-else-if="$page.props.auth.user && $page.props.auth.user.mdd_id"
                         :href="route('headhunter.create')"
                         class="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
                     >
-                        Create Challenge
+                        {{ $t('Create Challenge') }}
                     </Link>
                     <Link
                         v-else-if="$page.props.auth.user"
@@ -120,7 +121,7 @@ const getStatusColor = (status) => {
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
                         </svg>
-                        Link Account to Create
+                        {{ $t('Link Account to Create') }}
                     </Link>
                     <Link
                         v-else
@@ -130,7 +131,7 @@ const getStatusColor = (status) => {
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
                         </svg>
-                        Log in to create challenges
+                        {{ $t('Log in to create challenges') }}
                     </Link>
                 </div>
             </div>
@@ -146,7 +147,7 @@ const getStatusColor = (status) => {
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                     </svg>
                     <div class="text-sm text-yellow-300">
-                        <strong>Disclaimer:</strong> Defrag Racing is not responsible for the fulfillment of rewards. All challenges and rewards are agreements between the creator and participants. Creators who fail to honor rewards may be banned from creating future challenges.
+                        <strong>{{ $t('Disclaimer:') }}</strong> {{ $t('Defrag Racing is not responsible for the fulfillment of rewards. All challenges and rewards are agreements between the creator and participants. Creators who fail to honor rewards may be banned from creating future challenges.') }}
                     </div>
                 </div>
             </div>
@@ -158,7 +159,7 @@ const getStatusColor = (status) => {
                         v-model="search"
                         @input="filterChallenges"
                         type="text"
-                        placeholder="Search by title or map..."
+                        :placeholder="$t('Search by title or map...')"
                         class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                     />
                     <div class="relative">
@@ -271,15 +272,15 @@ const getStatusColor = (status) => {
                             <div class="text-right flex-shrink-0">
                                 <div v-if="challenge.reward_amount" class="mb-2">
                                     <div class="text-2xl font-black text-green-400">{{ challenge.reward_currency }} {{ challenge.reward_amount }}</div>
-                                    <div class="text-xs text-gray-500">Reward</div>
+                                    <div class="text-xs text-gray-500">{{ $t('Reward') }}</div>
                                 </div>
                                 <div v-else-if="challenge.reward_description" class="mb-2">
                                     <div class="text-sm font-semibold text-blue-400">{{ challenge.reward_description }}</div>
-                                    <div class="text-xs text-gray-500">Reward</div>
+                                    <div class="text-xs text-gray-500">{{ $t('Reward') }}</div>
                                 </div>
 
                                 <div class="flex items-center justify-end gap-1.5 mt-3 text-sm text-gray-400">
-                                    <span>by</span>
+                                    <span>{{ $t('by') }}</span>
                                     <Link
                                         v-if="challenge.creator"
                                         :href="route('profile.index', challenge.creator.id)"
@@ -303,7 +304,7 @@ const getStatusColor = (status) => {
                                             v-html="q3tohtml(challenge.creator?.name)"
                                         ></span>
                                     </Link>
-                                    <span v-else class="text-gray-500">Unknown</span>
+                                    <span v-else class="text-gray-500">{{ $t('Unknown') }}</span>
                                 </div>
                             </div>
                         </div>
@@ -315,8 +316,8 @@ const getStatusColor = (status) => {
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-gray-600 mx-auto mb-4">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                     </svg>
-                    <h3 class="text-xl font-bold text-white mb-2">No Challenges Found</h3>
-                    <p class="text-gray-400">Be the first to create a challenge!</p>
+                    <h3 class="text-xl font-bold text-white mb-2">{{ $t('No Challenges Found') }}</h3>
+                    <p class="text-gray-400">{{ $t('Be the first to create a challenge!') }}</p>
                 </div>
             </div>
 

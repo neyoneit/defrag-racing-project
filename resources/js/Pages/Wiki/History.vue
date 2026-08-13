@@ -2,12 +2,13 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { getCurrentInstance } from 'vue';
 import Pagination from '@/Components/Basic/Pagination.vue';
+import { t, currentLocale } from '@/utils/i18n';
 
 const { proxy } = getCurrentInstance();
 const q3tohtml = proxy.q3tohtml;
 
 const deleteRevision = (revisionId) => {
-    if (!confirm('Delete this revision permanently?')) return;
+    if (!confirm(t('Delete this revision permanently?'))) return;
     router.delete(route('wiki.deleteRevision', { slug: props.page.slug, revision: revisionId }));
 };
 
@@ -19,7 +20,7 @@ const props = defineProps({
 });
 
 const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', {
+    return new Date(date).toLocaleDateString(currentLocale(), {
         year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 };
@@ -27,18 +28,18 @@ const formatDate = (date) => {
 
 <template>
     <div class="pb-4">
-        <Head :title="page.title + ' - History - Wiki'" />
+        <Head :title="$t(':title - History - Wiki', { title: page.title })" />
 
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex items-center gap-2 text-sm text-gray-500 mb-2">
-                    <Link :href="route('wiki.index')" class="hover:text-gray-300 transition">Wiki</Link>
+                    <Link :href="route('wiki.index')" class="hover:text-gray-300 transition">{{ $t('Wiki') }}</Link>
                     <span>/</span>
                     <Link :href="route('wiki.show', page.slug)" class="hover:text-gray-300 transition">{{ page.title }}</Link>
                     <span>/</span>
-                    <span class="text-gray-400">History</span>
+                    <span class="text-gray-400">{{ $t('History') }}</span>
                 </div>
-                <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">History: {{ page.title }}</h1>
+                <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('History: :title', { title: page.title }) }}</h1>
             </div>
         </div>
 
@@ -56,11 +57,11 @@ const formatDate = (date) => {
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-2">
                                 <Link v-if="revision.user" :href="'/profile/' + revision.user.id" class="text-sm text-gray-300 font-medium hover:text-blue-400 transition" v-html="q3tohtml(revision.user.name || revision.user.username)"></Link>
-                                <span v-else class="text-sm text-gray-300 font-medium">System</span>
+                                <span v-else class="text-sm text-gray-300 font-medium">{{ $t('System') }}</span>
                                 <span class="text-xs text-gray-500">{{ formatDate(revision.created_at) }}</span>
                             </div>
                             <p v-if="revision.summary" class="text-sm text-gray-500 truncate mt-0.5">{{ revision.summary }}</p>
-                            <p v-else class="text-sm text-gray-600 italic mt-0.5">No summary</p>
+                            <p v-else class="text-sm text-gray-600 italic mt-0.5">{{ $t('No summary') }}</p>
                         </div>
                         <div class="flex items-center gap-2 flex-shrink-0">
                             <Link
@@ -68,13 +69,13 @@ const formatDate = (date) => {
                                 class="px-3 py-1.5 text-xs bg-purple-600/40 hover:bg-purple-600/70 text-purple-300 rounded-lg transition flex items-center gap-1.5"
                             >
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                                Diff
+                                {{ $t('Diff') }}
                             </Link>
                             <Link
                                 :href="route('wiki.revision', { slug: page.slug, revision: revision.id })"
                                 class="px-3 py-1.5 text-xs bg-gray-700/60 hover:bg-gray-700 text-gray-300 rounded-lg transition"
                             >
-                                View
+                                {{ $t('View') }}
                             </Link>
                             <Link
                                 v-if="isStaff"
@@ -83,20 +84,20 @@ const formatDate = (date) => {
                                 as="button"
                                 class="px-3 py-1.5 text-xs bg-yellow-600/60 hover:bg-yellow-600 text-white rounded-lg transition"
                             >
-                                Revert
+                                {{ $t('Revert') }}
                             </Link>
                             <button
                                 v-if="isAdmin"
                                 @click="deleteRevision(revision.id)"
                                 class="px-3 py-1.5 text-xs bg-red-600/60 hover:bg-red-600 text-white rounded-lg transition"
                             >
-                                Delete
+                                {{ $t('Delete') }}
                             </button>
                         </div>
                     </div>
                 </div>
                 <div v-else class="text-center py-16 text-gray-500">
-                    No revisions yet. This page hasn't been edited.
+                    {{ $t('No revisions yet. This page hasn\'t been edited.') }}
                 </div>
             </div>
 

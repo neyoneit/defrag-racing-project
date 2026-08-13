@@ -148,7 +148,7 @@
                 class="w-full bg-white/5 border border-white/20 text-white text-sm placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 rounded-md px-3 py-1.5 transition-all outline-none"
                 v-model="search"
                 @input="filterOptions"
-                placeholder="Search players..."
+                :placeholder="$t('Search players...')"
                 autocomplete="off"
             />
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none">
@@ -163,7 +163,7 @@
                 <img :src="`/images/flags/${getCountry(user)}.png`" onerror="this.src='/images/flags/_404.png'" class="w-4 h-3 object-cover rounded flex-shrink-0">
                 <span class="truncate max-w-[140px]" v-html="q3tohtml(getName(user))"></span>
                 <button @click.prevent.stop="removeOption(user.id)" type="button"
-                    class="text-blue-200/70 hover:text-red-300 transition flex-shrink-0" title="Remove">
+                    class="text-blue-200/70 hover:text-red-300 transition flex-shrink-0" :title="$t('Remove')">
                     <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                 </button>
             </span>

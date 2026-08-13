@@ -43,11 +43,11 @@
     <div>
         <FormSection @submitted="finishBasicInformation">
             <template #title>
-                <div>FAQ Details</div>
+                <div>{{ $t('FAQ Details') }}</div>
             </template>
     
             <template #description>
-                <div>Add the details of the new faq</div>
+                <div>{{ $t('Add the details of the new faq') }}</div>
             </template>
     
             <template #form>
@@ -80,7 +80,7 @@
     
             <template #actions>
                 <div class="flex justify-between w-full">
-                    <PrimaryButton>Submit</PrimaryButton>
+                    <PrimaryButton>{{ $t('Submit') }}</PrimaryButton>
                 </div>
             </template>
         </FormSection>

@@ -26,15 +26,15 @@
 <template>
     <div class="my-2 w-full flex">
         <Link :href="active === 'single' ? '#' : route(url, ...args)" class="p-2 rounded-l-md flex-1 text-gray-300 text-lg font-bold text-center cursor-pointer" :class="getClasses('single')">
-            Individual Results
+            {{ $t('Individual Results') }}
         </Link>
 
         <Link :href="active === 'clans' ? '#' : route(url.replace('index', 'clans'), ...args)" class="p-2 flex-1 text-gray-300 text-lg font-bold text-center cursor-pointer" :class="getClasses('clans')">
-            Clan Results
+            {{ $t('Clan Results') }}
         </Link>
 
         <Link :href="active === 'teams' ? '#' : route(url.replace('index', 'teams'), ...args)" v-if="tournament.has_teams" class="p-2 rounded-r-md flex-1 text-gray-300 text-lg font-bold text-center cursor-pointer" :class="getClasses('teams')">
-            Team Results
+            {{ $t('Team Results') }}
         </Link>
     </div>
 </template>

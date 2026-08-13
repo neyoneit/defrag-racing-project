@@ -102,7 +102,7 @@
 
 <template>
     <div class="pb-4">
-        <Head title="Records" />
+        <Head :title="$t('Records')" />
 
         <!-- Resolution Debug Indicator -->
         <div class="fixed bottom-2 right-2 z-[99999] bg-black/80 border border-white/20 rounded-lg px-3 py-1.5 text-xs font-mono text-green-400 pointer-events-none">
@@ -115,12 +115,12 @@
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <!-- Title -->
                     <div>
-                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">Latest Records</h1>
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">{{ $t('Latest Records') }}</h1>
                         <div class="flex items-center gap-2 text-gray-400">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
                             </svg>
-                            <span class="text-sm font-semibold">{{ (vq3Records?.total || 0) + (cpmRecords?.total || 0) }} total records</span>
+                            <span class="text-sm font-semibold">{{ $tc(':count total record|:count total records', (vq3Records?.total || 0) + (cpmRecords?.total || 0)) }}</span>
                         </div>
                     </div>
 
@@ -138,7 +138,7 @@
                                         ? 'bg-white/30 border-white/50 text-white'
                                         : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
                                 ]">
-                                ALL MODES
+                                {{ $t('ALL MODES') }}
                             </button>
                         </div>
 
@@ -152,7 +152,7 @@
                                         ? 'bg-green-500/30 border-green-400/50 text-white'
                                         : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
                                 ]">
-                                RUN
+                                {{ $t('RUN') }}
                             </button>
                         </div>
 
@@ -166,7 +166,7 @@
                                         ? 'bg-red-500/30 border-red-400/50 text-white'
                                         : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
                                 ]">
-                                ALL CTF
+                                {{ $t('ALL CTF') }}
                             </button>
                             <button
                                 v-for="i in 7" :key="'ctf' + i"
@@ -213,10 +213,10 @@
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 pt-1 pb-1">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <h2 class="text-lg font-bold text-blue-400">VQ3 Records <span class="text-sm font-normal text-gray-400">({{ vq3Records.total }})</span></h2>
+                                <h2 class="text-lg font-bold text-blue-400">{{ $t('VQ3 Records') }} <span class="text-sm font-normal text-gray-400">({{ vq3Records.total }})</span></h2>
                             </div>
                             <Link v-if="page.props.auth?.user" href="/user/settings?tab=global-customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
-                                Swap VQ3/CPM sides
+                                {{ $t('Swap VQ3/CPM sides') }}
                             </Link>
                         </div>
                     </div>
@@ -224,13 +224,13 @@
                         <!-- Column Headers -->
                         <div class="flex items-center gap-2 sm:gap-3 mb-1 pb-1 border-b border-white/15">
                             <div class="w-5 sm:w-8 flex-shrink-0 text-center pl-0.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold -ml-3">#</div>
-                            <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Player</div>
+                            <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">{{ $t('Player') }}</div>
                             <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                                <div class="w-16 min-[500px]:w-20 sm:w-40 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-left">Map</div>
+                                <div class="w-16 min-[500px]:w-20 sm:w-40 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-left">{{ $t('Map') }}</div>
                                 <div class="flex items-center gap-0.5 ml-auto -mr-3">
-                                    <div class="w-[60px] min-[500px]:w-[80px] text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
-                                    <div class="hidden sm:block w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold" style="padding-left: 5px">Score</div>
-                                    <div v-if="windowWidth >= 400" :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
+                                    <div class="w-[60px] min-[500px]:w-[80px] text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">{{ $t('Time') }}</div>
+                                    <div class="hidden sm:block w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold" style="padding-left: 5px">{{ $t('Score') }}</div>
+                                    <div v-if="windowWidth >= 400" :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">{{ $t('Date') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -247,10 +247,10 @@
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 pt-1 pb-1">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <h2 class="text-lg font-bold text-purple-400">CPM Records <span class="text-sm font-normal text-gray-400">({{ cpmRecords.total }})</span></h2>
+                                <h2 class="text-lg font-bold text-purple-400">{{ $t('CPM Records') }} <span class="text-sm font-normal text-gray-400">({{ cpmRecords.total }})</span></h2>
                             </div>
                             <Link v-if="page.props.auth?.user" href="/user/settings?tab=global-customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
-                                Swap VQ3/CPM sides
+                                {{ $t('Swap VQ3/CPM sides') }}
                             </Link>
                         </div>
                     </div>
@@ -258,13 +258,13 @@
                         <!-- Column Headers -->
                         <div class="flex items-center gap-2 sm:gap-3 mb-1 pb-1 border-b border-white/15">
                             <div class="w-5 sm:w-8 flex-shrink-0 text-center pl-0.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold -ml-3">#</div>
-                            <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Player</div>
+                            <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">{{ $t('Player') }}</div>
                             <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                                <div class="w-16 min-[500px]:w-20 sm:w-40 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-left">Map</div>
+                                <div class="w-16 min-[500px]:w-20 sm:w-40 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-left">{{ $t('Map') }}</div>
                                 <div class="flex items-center gap-0.5 ml-auto -mr-3">
-                                    <div class="w-[60px] min-[500px]:w-[80px] text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
-                                    <div class="hidden sm:block w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold" style="padding-left: 5px">Score</div>
-                                    <div v-if="windowWidth >= 400" :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
+                                    <div class="w-[60px] min-[500px]:w-[80px] text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">{{ $t('Time') }}</div>
+                                    <div class="hidden sm:block w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold" style="padding-left: 5px">{{ $t('Score') }}</div>
+                                    <div v-if="windowWidth >= 400" :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">{{ $t('Date') }}</div>
                                 </div>
                             </div>
                         </div>
@@ -286,11 +286,11 @@
     <Teleport to="body">
         <div v-if="scoreTooltip" :style="scoreTooltipStyle"
             class="px-3 py-2 rounded-lg bg-gray-900 border border-white/15 text-[10px] text-gray-300 whitespace-nowrap shadow-2xl pointer-events-none">
-            <div>Reltime: <span class="text-blue-400">{{ scoreTooltip.reltime }}</span></div>
-            <div v-if="scoreTooltip.base_score != null">Base score: <span class="text-gray-100">{{ scoreTooltip.base_score }}</span></div>
-            <div v-if="scoreTooltip.rank_multiplier != null">Rank mult: <span class="text-purple-400">× {{ scoreTooltip.rank_multiplier }}</span></div>
-            <div v-if="scoreTooltip.multiplier != null">Map mult: <span class="text-green-400">× {{ scoreTooltip.multiplier }}</span></div>
-            <div class="border-t border-white/10 mt-1 pt-1">Score: <span class="text-yellow-400 font-bold">{{ scoreTooltip.score }}</span></div>
+            <div>{{ $t('Reltime:') }} <span class="text-blue-400">{{ scoreTooltip.reltime }}</span></div>
+            <div v-if="scoreTooltip.base_score != null">{{ $t('Base score:') }} <span class="text-gray-100">{{ scoreTooltip.base_score }}</span></div>
+            <div v-if="scoreTooltip.rank_multiplier != null">{{ $t('Rank mult:') }} <span class="text-purple-400">× {{ scoreTooltip.rank_multiplier }}</span></div>
+            <div v-if="scoreTooltip.multiplier != null">{{ $t('Map mult:') }} <span class="text-green-400">× {{ scoreTooltip.multiplier }}</span></div>
+            <div class="border-t border-white/10 mt-1 pt-1">{{ $t('Score:') }} <span class="text-yellow-400 font-bold">{{ scoreTooltip.score }}</span></div>
         </div>
     </Teleport>
 </template>

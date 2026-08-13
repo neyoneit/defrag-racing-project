@@ -63,7 +63,7 @@ onMounted(async () => {
             </div>
 
             <div class="text-xs text-gray-400 mt-2 text-center group-hover:text-gray-300 transition-colors">
-                Click to view donation history and support defrag.racing projects!
+                {{ $t('Click to view donation history and support defrag.racing projects!') }}
             </div>
         </div>
     </Link>

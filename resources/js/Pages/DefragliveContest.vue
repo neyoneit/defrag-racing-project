@@ -172,7 +172,7 @@ const statusColor = (s) => ({
 </script>
 
 <template>
-    <Head title="DefragLive Watch Contest" />
+    <Head :title="$t('DefragLive Watch Contest')" />
 
     <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-8">
         <!-- Evergreen intro: what this is + live stream. Independent of any
@@ -184,29 +184,27 @@ const statusColor = (s) => ({
                          not each deserve one, and stacking them pushed the
                          actual heading down to a third row. -->
                     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mb-1">
-                        <span class="text-xs uppercase tracking-widest text-purple-300/80 font-semibold">DefragLive Watch Contest</span>
+                        <span class="text-xs uppercase tracking-widest text-purple-300/80 font-semibold">{{ $t('DefragLive Watch Contest') }}</span>
                         <a :href="`https://twitch.tv/${TWITCH_CHANNEL}`" target="_blank" rel="noopener"
                             class="inline-flex items-center gap-1.5 text-sm font-semibold text-[#a970ff] hover:text-[#bf94ff] hover:underline">
                             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M11.64 5.93h1.43v4.28h-1.43m3.93-4.28H17v4.28h-1.43M7 2L3.43 5.57v12.86h4.28V22l3.58-3.57h2.85L20.57 12V2m-1.43 9.29l-2.85 2.85h-2.86l-2.5 2.5v-2.5H7.71V3.43h11.43z"/></svg>
                             twitch.tv/{{ TWITCH_CHANNEL }}
                         </a>
                     </div>
-                    <h1 class="text-2xl md:text-3xl font-black text-white">Get watched, get rewarded</h1>
+                    <h1 class="text-2xl md:text-3xl font-black text-white">{{ $t('Get watched, get rewarded') }}</h1>
                     <!-- Kept to what this is and who it is for. How the winner
                          is chosen has its own section below; saying any of it
                          twice is what made this column a wall. -->
                     <div class="text-gray-400 mt-3 text-sm space-y-2 leading-relaxed">
                         <p>
-                            <span class="text-gray-200 font-semibold">DefragLive</span> streams defrag to Twitch around the clock,
-                            so anyone can watch from anywhere with no install and no setup. The players it spectates are the ones
-                            putting on that show, and this contest is <span class="text-gray-200 font-semibold">their reward for it</span>.
+                            <span class="text-gray-200 font-semibold">{{ $t('DefragLive') }}</span> {{ $t('streams defrag to Twitch around the clock, so anyone can watch from anywhere with no install and no setup. The players it spectates are the ones putting on that show, and this contest is') }} <span class="text-gray-200 font-semibold">{{ $t('their reward for it') }}</span>.
                         </p>
                         <p>
-                            Let the bot watch you and you are in. There is nothing to sign up for and nothing to play differently.
+                            {{ $t('Let the bot watch you and you are in. There is nothing to sign up for and nothing to play differently.') }}
                         </p>
                         <p class="text-xs text-gray-500">
-                            <Link href="/defraglive/maps" class="text-[#a970ff] hover:text-[#bf94ff] font-semibold hover:underline">Full map log</Link>
-                            - every map streamed, when, and who was spectated.
+                            <Link href="/defraglive/maps" class="text-[#a970ff] hover:text-[#bf94ff] font-semibold hover:underline">{{ $t('Full map log') }}</Link>
+                            {{ $t('- every map streamed, when, and who was spectated.') }}
                         </p>
                     </div>
 
@@ -214,7 +212,7 @@ const statusColor = (s) => ({
                         <svg class="w-5 h-5 shrink-0 mt-px text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span>This prize comes <strong class="text-white">straight out of my own pocket</strong> - it is <strong class="text-white">not</strong> funded by the donations you send to support the site. 100% a personal gift to the community.</span>
+                        <span>{{ $t('This prize comes') }} <strong class="text-white">{{ $t('straight out of my own pocket') }}</strong> {{ $t('- it is') }} <strong class="text-white">{{ $t('not') }}</strong> {{ $t('funded by the donations you send to support the site. 100% a personal gift to the community.') }}</span>
                     </div>
 
                     <!-- Heading stays in this column so it follows the prize
@@ -222,8 +220,8 @@ const statusColor = (s) => ({
                          the stream card, which is taller than this column, and
                          leave a hole the height of the difference. -->
                     <div class="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                        <h2 class="text-lg font-bold text-white">How the winner is picked</h2>
-                        <p class="text-sm text-gray-500">Watch time buys tickets, then one ticket is drawn. That is the whole of it.</p>
+                        <h2 class="text-lg font-bold text-white">{{ $t('How the winner is picked') }}</h2>
+                        <p class="text-sm text-gray-500">{{ $t('Watch time buys tickets, then one ticket is drawn. That is the whole of it.') }}</p>
                     </div>
                 </div>
 
@@ -247,7 +245,7 @@ const statusColor = (s) => ({
                                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
                                 <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
                             </span>
-                            Live now
+                            {{ $t('Live now') }}
                         </div>
 
                         <!-- Play affordance on hover -->
@@ -259,14 +257,14 @@ const statusColor = (s) => ({
 
                         <div class="absolute bottom-0 inset-x-0 p-4">
                             <template v-if="nowWatching">
-                                <div class="text-[11px] uppercase tracking-wide text-gray-300">Now spectating</div>
+                                <div class="text-[11px] uppercase tracking-wide text-gray-300">{{ $t('Now spectating') }}</div>
                                 <div class="text-2xl md:text-3xl font-black leading-tight" v-html="q3tohtml(nowWatching.name)"></div>
-                                <div v-if="nowWatching.mapname" class="text-sm text-gray-300 mt-0.5">on <span class="font-semibold text-white">{{ nowWatching.mapname }}</span></div>
-                                <div class="text-xs text-purple-200 mt-1">Watched for {{ fmtWatch(currentWatchSeconds) }}</div>
+                                <div v-if="nowWatching.mapname" class="text-sm text-gray-300 mt-0.5">{{ $t('on') }} <span class="font-semibold text-white">{{ nowWatching.mapname }}</span></div>
+                                <div class="text-xs text-purple-200 mt-1">{{ $t('Watched for :time', { time: fmtWatch(currentWatchSeconds) }) }}</div>
                             </template>
                             <template v-else>
-                                <div class="text-xl font-black text-white">DefragLive</div>
-                                <div class="text-sm text-gray-300">streaming defrag 24/7</div>
+                                <div class="text-xl font-black text-white">{{ $t('DefragLive') }}</div>
+                                <div class="text-sm text-gray-300">{{ $t('streaming defrag 24/7') }}</div>
                             </template>
                         </div>
                     </div>
@@ -274,9 +272,9 @@ const statusColor = (s) => ({
                     <div class="flex flex-col items-center text-center gap-2 p-4">
                         <span class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#9147ff] group-hover:bg-[#772ce8] text-white font-bold transition-colors w-full justify-center">
                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M11.64 5.93h1.43v4.28h-1.43m3.93-4.28H17v4.28h-1.43M7 2L3.43 5.57v12.86h4.28V22l3.58-3.57h2.85L20.57 12V2m-1.43 9.29l-2.85 2.85h-2.86l-2.5 2.5v-2.5H7.71V3.43h11.43z"/></svg>
-                            Watch on Twitch
+                            {{ $t('Watch on Twitch') }}
                         </span>
-                        <div class="text-[11px] text-gray-500">The interactive overlay (player list, controls) works on Twitch.</div>
+                        <div class="text-[11px] text-gray-500">{{ $t('The interactive overlay (player list, controls) works on Twitch.') }}</div>
                     </div>
                 </a>
             </div>
@@ -289,9 +287,9 @@ const statusColor = (s) => ({
             <div class="mt-3">
             <div class="grid gap-3 md:grid-cols-3">
                 <div v-for="(step, i) in [
-                    { head: '1 minute watched = 1 ticket', body: 'Whole minutes, and nothing else earns any. Under a minute across the entire period is no ticket and no entry.' },
-                    { head: 'One ticket is drawn at random', body: 'At the end of the period, from every ticket in the pool. Whoever is holding it takes the prize.' },
-                    { head: 'Most tickets is best odds, not a win', body: 'Hold 5% of the pool and you win one time in twenty. Hold 40% and you lose three times out of five.' },
+                    { head: $t('1 minute watched = 1 ticket'), body: $t('Whole minutes, and nothing else earns any. Under a minute across the entire period is no ticket and no entry.') },
+                    { head: $t('One ticket is drawn at random'), body: $t('At the end of the period, from every ticket in the pool. Whoever is holding it takes the prize.') },
+                    { head: $t('Most tickets is best odds, not a win'), body: $t('Hold 5% of the pool and you win one time in twenty. Hold 40% and you lose three times out of five.') },
                 ]" :key="i" class="rounded-xl border border-white/10 bg-black/30 p-4">
                     <div class="flex items-center gap-2.5 mb-1.5">
                         <span class="shrink-0 w-6 h-6 rounded-full bg-purple-500/25 border border-purple-400/40 text-purple-200 text-xs font-black flex items-center justify-center">{{ i + 1 }}</span>
@@ -303,9 +301,7 @@ const statusColor = (s) => ({
 
             <div class="mt-3 flex flex-col lg:flex-row lg:items-center gap-3">
                 <p class="flex-1 text-sm text-amber-200 bg-amber-500/10 border border-amber-400/30 rounded-lg px-4 py-2.5">
-                    Being first on the list below does <strong class="text-white">not</strong> mean you win. It means the draw is
-                    most likely to go your way. Weight it any harder and whoever is watched most would take every period,
-                    leaving nobody else a reason to play.
+                    {{ $t('Being first on the list below does') }} <strong class="text-white">{{ $t('not') }}</strong> {{ $t('mean you win. It means the draw is most likely to go your way. Weight it any harder and whoever is watched most would take every period, leaving nobody else a reason to play.') }}
                 </p>
 
                 <!-- "It is random" is exactly the claim somebody who has just
@@ -313,19 +309,14 @@ const statusColor = (s) => ({
                      written out and the drawn number is stored, not promised. -->
                 <details class="lg:w-80 shrink-0 rounded-lg border border-white/10 bg-black/30 px-4 py-2.5">
                     <summary class="cursor-pointer select-none text-sm text-purple-300 hover:text-purple-200 transition">
-                        How the draw works, exactly
+                        {{ $t('How the draw works, exactly') }}
                     </summary>
                     <div class="mt-2.5 pt-2.5 border-t border-white/10 text-sm text-gray-400 space-y-2">
                         <p>
-                            Everyone with at least one ticket goes in. The tickets are laid end to end and numbered from 1 to
-                            the size of the pool, so 300 tickets is 300 consecutive numbers. One number is drawn with the
-                            operating system's cryptographic random generator and whoever holds it wins. It is the textbook
-                            weighted raffle, sometimes called roulette wheel selection: no seed anyone can guess, nothing
-                            that favours a name.
+                            {{ $t("Everyone with at least one ticket goes in. The tickets are laid end to end and numbered from 1 to the size of the pool, so 300 tickets is 300 consecutive numbers. One number is drawn with the operating system's cryptographic random generator and whoever holds it wins. It is the textbook weighted raffle, sometimes called roulette wheel selection: no seed anyone can guess, nothing that favours a name.") }}
                         </p>
                         <p>
-                            The drawn number, the winner's tickets and the size of the pool are recorded at the moment of the
-                            draw and shown under past winners, so a result can be checked instead of taken on trust.
+                            {{ $t("The drawn number, the winner's tickets and the size of the pool are recorded at the moment of the draw and shown under past winners, so a result can be checked instead of taken on trust.") }}
                         </p>
                     </div>
                 </details>
@@ -337,17 +328,17 @@ const statusColor = (s) => ({
         <div class="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm p-5 md:p-6 mb-6 shadow-2xl">
             <div v-if="contest" class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">Current contest</div>
+                    <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">{{ $t('Current contest') }}</div>
                     <h2 class="text-xl md:text-2xl font-black text-white">{{ contest.title }}</h2>
                     <div v-if="nowWatching" class="mt-2 flex items-center gap-2 text-sm">
                         <span class="relative flex h-2.5 w-2.5">
                             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
                             <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
                         </span>
-                        <span class="text-gray-400">Now spectating</span>
+                        <span class="text-gray-400">{{ $t('Now spectating') }}</span>
                         <span class="font-bold" v-html="q3tohtml(nowWatching.name)"></span>
-                        <span v-if="nowWatching.mapname" class="text-gray-500">on {{ nowWatching.mapname }}</span>
-                        <span class="text-purple-300 font-semibold">for {{ fmtWatch(currentWatchSeconds) }}</span>
+                        <span v-if="nowWatching.mapname" class="text-gray-500">{{ $t('on :map', { map: nowWatching.mapname }) }}</span>
+                        <span class="text-purple-300 font-semibold">{{ $t('for :time', { time: fmtWatch(currentWatchSeconds) }) }}</span>
                     </div>
                 </div>
 
@@ -356,12 +347,10 @@ const statusColor = (s) => ({
                         <div class="text-3xl md:text-4xl font-black text-emerald-400">
                             {{ formatPrize(contest.prize_amount, contest.prize_currency) }}
                         </div>
-                        <div class="text-sm font-bold uppercase tracking-widest text-gray-300">prize</div>
+                        <div class="text-sm font-bold uppercase tracking-widest text-gray-300">{{ $t('prize') }}</div>
                         <!-- Pool transparency: base prize vs what previous winners forwarded in -->
                         <div v-if="contest.carried_over_amount > 0" class="text-[11px] text-purple-200/90 mt-1 leading-snug">
-                            {{ formatPrize(contest.prize_amount - contest.carried_over_amount, contest.prize_currency) }} base
-                            + {{ formatPrize(contest.carried_over_amount, contest.prize_currency) }}
-                            carried over from previous winners
+                            {{ $t(':base base + :carried carried over from previous winners', { base: formatPrize(contest.prize_amount - contest.carried_over_amount, contest.prize_currency), carried: formatPrize(contest.carried_over_amount, contest.prize_currency) }) }}
                         </div>
                     </div>
                     <div v-if="timeLeft && !timeLeft.ended" class="flex gap-2.5 font-mono">
@@ -371,34 +360,34 @@ const statusColor = (s) => ({
                             <div class="text-sm font-bold uppercase tracking-widest text-gray-300 mt-1">{{ part[0] }}</div>
                         </div>
                     </div>
-                    <div v-else-if="timeLeft" class="text-base text-amber-400 font-semibold">Period ended<br>awaiting draw</div>
+                    <div v-else-if="timeLeft" class="text-base text-amber-400 font-semibold">{{ $t('Period ended') }}<br>{{ $t('awaiting draw') }}</div>
                 </div>
             </div>
 
             <div v-else class="text-center py-2 text-gray-400">
-                <span class="font-semibold text-gray-300">No contest running right now.</span>
-                The next one starts soon - keep getting spectated and you'll be in it.
+                <span class="font-semibold text-gray-300">{{ $t('No contest running right now.') }}</span>
+                {{ $t("The next one starts soon - keep getting spectated and you'll be in it.") }}
             </div>
         </div>
 
         <!-- My odds -->
         <div v-if="myEntry" class="rounded-xl border border-emerald-500/25 bg-black/40 backdrop-blur-sm p-4 mb-6 flex flex-wrap items-center gap-x-8 gap-y-2">
             <div>
-                <div class="text-xs uppercase text-gray-500">Your rank</div>
+                <div class="text-xs uppercase text-gray-500">{{ $t('Your rank') }}</div>
                 <div class="text-2xl font-black text-white">#{{ myEntry.rank }}</div>
             </div>
             <div>
-                <div class="text-xs uppercase text-gray-500">Watched</div>
+                <div class="text-xs uppercase text-gray-500">{{ $t('Watched') }}</div>
                 <div class="text-2xl font-black text-white">{{ fmtWatch(entrySeconds(myEntry)) }}</div>
             </div>
             <div>
-                <div class="text-xs uppercase text-gray-500">Tickets</div>
+                <div class="text-xs uppercase text-gray-500">{{ $t('Tickets') }}</div>
                 <div class="text-2xl font-black text-white">{{ myEntry.tickets }}</div>
             </div>
             <div>
-                <div class="text-xs uppercase text-gray-500">Chance in the draw</div>
+                <div class="text-xs uppercase text-gray-500">{{ $t('Chance in the draw') }}</div>
                 <div class="text-2xl font-black text-emerald-400">{{ myEntry.odds }}%</div>
-                <div class="text-[11px] text-gray-500">odds, not a place</div>
+                <div class="text-[11px] text-gray-500">{{ $t('odds, not a place') }}</div>
             </div>
         </div>
 
@@ -406,10 +395,10 @@ const statusColor = (s) => ({
         <div class="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm overflow-hidden mb-8 shadow-2xl">
             <div class="px-4 py-3 border-b border-white/10 flex items-center justify-between">
                 <div>
-                    <h2 class="font-bold text-gray-200">Most watched this period</h2>
-                    <p class="text-xs text-gray-500 mt-0.5">Watch time and odds, not a ranking of who wins - the winner is drawn.</p>
+                    <h2 class="font-bold text-gray-200">{{ $t('Most watched this period') }}</h2>
+                    <p class="text-xs text-gray-500 mt-0.5">{{ $t('Watch time and odds, not a ranking of who wins - the winner is drawn.') }}</p>
                 </div>
-                <span class="text-xs text-gray-500">{{ totalTickets }} tickets in the pool</span>
+                <span class="text-xs text-gray-500">{{ $tc(':count ticket in the pool|:count tickets in the pool', totalTickets) }}</span>
             </div>
 
             <div v-if="leaderboard.length" class="divide-y divide-white/5"
@@ -425,7 +414,7 @@ const statusColor = (s) => ({
                         <component :is="e.user ? Link : 'span'" :href="e.user ? `/profile/${e.user.id}` : undefined"
                             class="font-semibold truncate block" :class="e.user ? 'hover:underline' : ''">
                             <span v-html="q3tohtml(e.name)"></span>
-                            <span v-if="e.is_current" class="ml-2 text-[10px] uppercase tracking-wider text-red-400">Live</span>
+                            <span v-if="e.is_current" class="ml-2 text-[10px] uppercase tracking-wider text-red-400">{{ $t('Live') }}</span>
                         </component>
                         <div class="mt-1 h-1.5 rounded-full bg-gray-800 overflow-hidden">
                             <div class="h-full rounded-full bg-gradient-to-r from-purple-500 to-emerald-400"
@@ -435,13 +424,13 @@ const statusColor = (s) => ({
 
                     <div class="text-right shrink-0">
                         <div class="font-bold text-white tabular-nums">{{ fmtWatch(entrySeconds(e)) }}</div>
-                        <div class="text-xs text-gray-500">{{ e.tickets }} tickets &middot; {{ odds(e.tickets).toFixed(1) }}%</div>
+                        <div class="text-xs text-gray-500">{{ $tc(':count ticket|:count tickets', e.tickets) }} &middot; {{ odds(e.tickets).toFixed(1) }}%</div>
                     </div>
                 </div>
             </div>
 
             <div v-else class="px-4 py-12 text-center text-gray-500">
-                No watch time recorded yet this period. Hop on a server the bot is spectating!
+                {{ $t('No watch time recorded yet this period. Hop on a server the bot is spectating!') }}
             </div>
 
             <!-- Everyone competing, not just the top 10 - fairness: anyone can
@@ -450,9 +439,9 @@ const statusColor = (s) => ({
                 <button @click="toggleBoard"
                     class="text-xs font-semibold text-purple-300 hover:text-purple-200 disabled:opacity-50"
                     :disabled="boardLoading">
-                    <span v-if="boardLoading">Loading...</span>
-                    <span v-else-if="!boardExpanded">Show everyone ({{ leaderboardTotal }})</span>
-                    <span v-else>Show top 10 only</span>
+                    <span v-if="boardLoading">{{ $t('Loading...') }}</span>
+                    <span v-else-if="!boardExpanded">{{ $t('Show everyone (:count)', { count: leaderboardTotal }) }}</span>
+                    <span v-else>{{ $t('Show top 10 only') }}</span>
                 </button>
             </div>
 
@@ -460,7 +449,7 @@ const statusColor = (s) => ({
                  transparency (farmed time was voided) and deterrence. No
                  hours or avatars on purpose - no trophy for cheating. -->
             <div v-if="exclusions?.length" class="px-4 py-3 border-t border-white/10">
-                <div class="text-[10px] uppercase tracking-wider text-gray-500 mb-1.5">Removed from this contest</div>
+                <div class="text-[10px] uppercase tracking-wider text-gray-500 mb-1.5">{{ $t('Removed from this contest') }}</div>
                 <div v-for="(x, i) in exclusions" :key="i" class="text-xs text-gray-500">
                     <span class="font-semibold text-gray-400">{{ x.name }}</span>
                     <span class="mx-1">-</span>{{ x.reason }}
@@ -473,7 +462,7 @@ const statusColor = (s) => ({
              left/right, newest draw at the top. Collapses to a single left-lined
              column on mobile. -->
         <div v-if="pastWinners.length">
-            <h2 class="font-bold text-gray-300 mb-4">Past winners</h2>
+            <h2 class="font-bold text-gray-300 mb-4">{{ $t('Past winners') }}</h2>
             <div class="relative">
                 <div class="absolute top-1 bottom-1 left-4 sm:left-1/2 w-px bg-gradient-to-b from-purple-400/70 via-white/20 to-transparent"></div>
                 <div v-for="(w, i) in pastWinners" :key="i"
@@ -513,7 +502,7 @@ const statusColor = (s) => ({
         <!-- Hall of Fame - all-time winners -->
         <div v-if="hallOfFame.length" class="mt-8">
             <h2 class="font-bold text-gray-300 mb-3 flex items-center gap-2">
-                <span>🏆</span> Hall of Fame <span class="text-xs font-normal text-gray-500">all-time winners</span>
+                <span>🏆</span> {{ $t('Hall of Fame') }} <span class="text-xs font-normal text-gray-500">{{ $t('all-time winners') }}</span>
             </h2>
             <div class="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm overflow-hidden shadow-2xl divide-y divide-white/5">
                 <div v-for="(h, i) in hallOfFame" :key="i" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5">
@@ -544,7 +533,7 @@ const statusColor = (s) => ({
             </button>
             <div v-if="showAllTime && allTimeWatchers?.length" class="mt-3 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm overflow-hidden shadow-2xl">
                 <div class="px-4 py-2.5 text-xs text-gray-500 border-b border-white/5">
-                    Everyone who has ever been watched on the DefragLive stream - total spectated time across all contests.
+                    {{ $t('Everyone who has ever been watched on the DefragLive stream - total spectated time across all contests.') }}
                 </div>
                 <div class="max-h-96 overflow-y-auto divide-y divide-white/5" @scroll.passive="onWatchersScroll">
                     <div v-for="(t, i) in allTimeWatchers" :key="i" class="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5">
@@ -560,11 +549,11 @@ const statusColor = (s) => ({
                             <div class="text-[11px] text-gray-500">{{ t.sessions }} {{ t.sessions === 1 ? 'session' : 'sessions' }}</div>
                         </div>
                     </div>
-                    <div v-if="allTimeLoading" class="py-3 text-center text-xs text-gray-500">Loading more…</div>
-                    <div v-else-if="watchersDone" class="py-3 text-center text-xs text-gray-600">That's everyone!</div>
+                    <div v-if="allTimeLoading" class="py-3 text-center text-xs text-gray-500">{{ $t('Loading more…') }}</div>
+                    <div v-else-if="watchersDone" class="py-3 text-center text-xs text-gray-600">{{ $t("That's everyone!") }}</div>
                 </div>
             </div>
-            <div v-else-if="showAllTime" class="mt-3 text-center text-sm text-gray-500 py-4">No watch time recorded yet.</div>
+            <div v-else-if="showAllTime" class="mt-3 text-center text-sm text-gray-500 py-4">{{ $t('No watch time recorded yet.') }}</div>
         </div>
     </div>
 </template>

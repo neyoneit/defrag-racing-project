@@ -43,19 +43,19 @@
     <div>
         <FormSection @submitted="finishBasicInformation">
             <template #title>
-                <div>Related Tournament Details</div>
+                <div>{{ $t('Related Tournament Details') }}</div>
             </template>
     
             <template #description>
-                <div>Add the details of the new related tournament</div>
+                <div>{{ $t('Add the details of the new related tournament') }}</div>
             </template>
     
             <template #form>
                 <div class="col-span-6">
                     <div class="mb-3">
-                        <InputLabel for="related_tournament_id" value="Related Tournament" />
+                        <InputLabel for="related_tournament_id" :value="$t('Related Tournament')" />
                         <select v-model="form.related_tournament_id" id="related_tournament_id" name="related_tournament_id" class="mt-2 border-2 border-grayop-700 bg-grayop-900 text-gray-300 focus:border-blue-600 focus:ring-blue-600 rounded-md shadow-sm w-full">
-                            <option value="">Select a tournament</option>
+                            <option value="">{{ $t('Select a tournament') }}</option>
                             <option v-for="pTournament in tournaments" :value="pTournament.id" :key="pTournament.id">
                                 {{ pTournament.name }}
                             </option>
@@ -67,7 +67,7 @@
     
             <template #actions>
                 <div class="flex justify-between w-full">
-                    <PrimaryButton>Submit</PrimaryButton>
+                    <PrimaryButton>{{ $t('Submit') }}</PrimaryButton>
                 </div>
             </template>
         </FormSection>

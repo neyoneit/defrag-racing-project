@@ -1,7 +1,9 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
+import { t } from '@/utils/i18n';
 
+import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
 const props = defineProps({
     maps: {
         type: Array,
@@ -37,13 +39,13 @@ const physicsOptions = [
     { value: 'cpm', label: 'CPM' },
 ];
 
-const modeOptions = [
+const modeOptions = computed(() => [
     { value: 'run', label: 'Run' },
-    { value: 'strafe', label: 'Strafe' },
+    { value: 'strafe', label: t('Strafe') },
     { value: 'freestyle', label: 'Freestyle' },
     { value: 'fastcaps', label: 'Fastcaps' },
-    { value: 'any', label: 'Any' },
-];
+    { value: 'any', label: t('Any') },
+]);
 
 const rewardType = ref('fiat');
 
@@ -118,7 +120,7 @@ const submit = () => {
 
 <template>
     <div class="pb-4">
-        <Head title="Create Challenge" />
+        <Head :title="$t('Create Challenge')" />
 
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
@@ -128,7 +130,7 @@ const submit = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                     </svg>
-                    Back to Challenges
+                    {{ $t('Back to Challenges') }}
                 </Link>
             </div>
         </div>
@@ -143,24 +145,26 @@ const submit = () => {
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                         </svg>
                         <div class="text-sm text-yellow-300">
-                            <strong>Disclaimer:</strong> Defrag Racing is not responsible for the fulfillment of rewards. All challenges and rewards are agreements between the creator and participants. By creating a challenge, you agree to honor the stated rewards. Failure to do so may result in a ban.
+                            <strong>{{ $t('Disclaimer:') }}</strong> {{ $t('Defrag Racing is not responsible for the fulfillment of rewards. All challenges and rewards are agreements between the creator and participants. By creating a challenge, you agree to honor the stated rewards. Failure to do so may result in a ban.') }}
                         </div>
                     </div>
                 </div>
 
                 <!-- Form -->
                 <div class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl p-8">
-                    <h1 class="text-2xl md:text-3xl font-black text-white mb-6">Create New Challenge</h1>
+                    <h1 class="text-2xl md:text-3xl font-black text-white mb-6">{{ $t('Create New Challenge') }}</h1>
 
                     <form @submit.prevent="submit" class="space-y-6">
+                        <EnglishOnlyNotice :compact="false" />
+
                         <!-- Title -->
                         <div>
-                            <label class="block text-sm font-semibold text-gray-300 mb-2">Challenge Title *</label>
+                            <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Challenge Title *') }}</label>
                             <input
                                 v-model="form.title"
                                 type="text"
                                 required
-                                placeholder="Enter a catchy title for your challenge"
+                                :placeholder="$t('Enter a catchy title for your challenge')"
                                 class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                             />
                             <div v-if="form.errors.title" class="text-red-400 text-sm mt-1">{{ form.errors.title }}</div>
@@ -168,12 +172,12 @@ const submit = () => {
 
                         <!-- Description -->
                         <div>
-                            <label class="block text-sm font-semibold text-gray-300 mb-2">Description *</label>
+                            <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Description *') }}</label>
                             <textarea
                                 v-model="form.description"
                                 rows="4"
                                 required
-                                placeholder="Describe the challenge, rules, and any special requirements..."
+                                :placeholder="$t('Describe the challenge, rules, and any special requirements...')"
                                 class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                             ></textarea>
                             <div v-if="form.errors.description" class="text-red-400 text-sm mt-1">{{ form.errors.description }}</div>
@@ -182,7 +186,7 @@ const submit = () => {
                         <!-- Map Details -->
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div class="relative">
-                                <label class="block text-sm font-semibold text-gray-300 mb-2">Map Name *</label>
+                                <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Map Name *') }}</label>
                                 <div class="relative">
                                     <input
                                         v-model="mapSearch"
@@ -191,7 +195,7 @@ const submit = () => {
                                         type="text"
                                         required
                                         autocomplete="off"
-                                        placeholder="Start typing map name..."
+                                        :placeholder="$t('Start typing map name...')"
                                         :class="[
                                             'w-full bg-black/40 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:ring-1 transition-colors',
                                             selectedMap ? 'border border-green-500/50 focus:border-green-500/50 focus:ring-green-500/50' : mapSearch ? 'border border-red-500/30 focus:border-red-500/50 focus:ring-red-500/50' : 'border border-white/10 focus:border-blue-500/50 focus:ring-blue-500/50'
@@ -207,7 +211,7 @@ const submit = () => {
                                 <!-- Map thumbnail preview -->
                                 <div v-if="selectedMap" class="mt-2 flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-lg p-2">
                                     <img v-if="selectedMap.thumbnail" :src="`/storage/${selectedMap.thumbnail}`" @error="$event.target.style.display='none'" class="w-16 h-10 object-cover rounded" />
-                                    <div v-else class="w-16 h-10 bg-black/40 rounded flex items-center justify-center text-gray-600 text-xs">No img</div>
+                                    <div v-else class="w-16 h-10 bg-black/40 rounded flex items-center justify-center text-gray-600 text-xs">{{ $t('No img') }}</div>
                                     <span class="text-sm text-green-400 font-medium">{{ selectedMap.name }}</span>
                                 </div>
                                 <div v-if="mapDropdownOpen && filteredMaps.length > 0" class="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-white/10 rounded-lg overflow-y-auto max-h-60 z-50 shadow-2xl">
@@ -222,7 +226,7 @@ const submit = () => {
                             </div>
 
                             <div>
-                                <label class="block text-sm font-semibold text-gray-300 mb-2">Physics *</label>
+                                <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Physics *') }}</label>
                                 <div class="relative">
                                     <button type="button" @click="physicsOpen = !physicsOpen" class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white text-left flex items-center justify-between hover:border-white/20 transition-colors">
                                         <span>{{ physicsOptions.find(o => o.value === form.physics)?.label }}</span>
@@ -237,7 +241,7 @@ const submit = () => {
                             </div>
 
                             <div>
-                                <label class="block text-sm font-semibold text-gray-300 mb-2">Mode *</label>
+                                <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Mode *') }}</label>
                                 <div class="relative">
                                     <button type="button" @click="modeOpen = !modeOpen" class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white text-left flex items-center justify-between hover:border-white/20 transition-colors">
                                         <span>{{ modeOptions.find(o => o.value === form.mode)?.label }}</span>
@@ -254,48 +258,48 @@ const submit = () => {
 
                         <!-- Target Time -->
                         <div>
-                            <label class="block text-sm font-semibold text-gray-300 mb-2">Target Time *</label>
+                            <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Target Time *') }}</label>
                             <input
                                 v-model="form.target_time"
                                 type="text"
                                 required
-                                placeholder="e.g., 1:23.456 or 1.23.456 or 45.123"
+                                :placeholder="$t('e.g., 1:23.456 or 1.23.456 or 45.123')"
                                 class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                             />
-                            <p class="text-xs text-gray-500 mt-1">Format: M:SS.mmm or M.SS.mmm or SS.mmm</p>
+                            <p class="text-xs text-gray-500 mt-1">{{ $t('Format: M:SS.mmm or M.SS.mmm or SS.mmm') }}</p>
                             <div v-if="form.errors.target_time" class="text-red-400 text-sm mt-1">{{ form.errors.target_time }}</div>
                         </div>
 
                         <!-- Reward Section -->
                         <div class="border-t border-white/10 pt-6">
-                            <h3 class="text-xl font-bold text-white mb-4">Reward (Optional)</h3>
+                            <h3 class="text-xl font-bold text-white mb-4">{{ $t('Reward (Optional)') }}</h3>
 
                             <div class="space-y-4">
                                 <!-- Fiat / Crypto Toggle -->
                                 <div class="flex gap-2 mb-2">
                                     <button type="button" @click="rewardType = 'fiat'" :class="rewardType === 'fiat' ? 'bg-blue-600 text-white' : 'bg-black/40 text-gray-400 hover:bg-white/10'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors border border-white/10">
-                                        Fiat
+                                        {{ $t('Fiat') }}
                                     </button>
                                     <button type="button" @click="rewardType = 'crypto'" :class="rewardType === 'crypto' ? 'bg-orange-600 text-white' : 'bg-black/40 text-gray-400 hover:bg-white/10'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors border border-white/10">
-                                        Crypto
+                                        {{ $t('Crypto') }}
                                     </button>
                                 </div>
 
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div class="md:col-span-2">
-                                        <label class="block text-sm font-semibold text-gray-300 mb-2">{{ rewardType === 'crypto' ? 'Crypto Reward' : 'Monetary Reward' }}</label>
+                                        <label class="block text-sm font-semibold text-gray-300 mb-2">{{ rewardType === 'crypto' ? $t('Crypto Reward') : $t('Monetary Reward') }}</label>
                                         <input
                                             v-model="form.reward_amount"
                                             type="number"
                                             step="0.01"
-                                            placeholder="Amount (e.g., 50.00)"
+                                            :placeholder="$t('Amount (e.g., 50.00)')"
                                             class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                                         />
                                         <div v-if="form.errors.reward_amount" class="text-red-400 text-sm mt-1">{{ form.errors.reward_amount }}</div>
                                     </div>
 
                                     <div>
-                                        <label class="block text-sm font-semibold text-gray-300 mb-2">Currency</label>
+                                        <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Currency') }}</label>
                                         <div class="relative">
                                             <button type="button" @click="currencyOpen = !currencyOpen" class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white text-left flex items-center justify-between hover:border-white/20 transition-colors">
                                                 <span>{{ currencyOptions.find(o => o.value === form.reward_currency)?.label || form.reward_currency }}</span>
@@ -309,14 +313,14 @@ const submit = () => {
                                     </div>
                                 </div>
 
-                                <div class="text-center text-gray-500 text-sm">OR</div>
+                                <div class="text-center text-gray-500 text-sm">{{ $t('OR') }}</div>
 
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-300 mb-2">Non-Monetary Reward</label>
+                                    <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Non-Monetary Reward') }}</label>
                                     <input
                                         v-model="form.reward_description"
                                         type="text"
-                                        placeholder="e.g., Custom server config, shoutout, etc."
+                                        :placeholder="$t('e.g., Custom server config, shoutout, etc.')"
                                         class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                                     />
                                     <div v-if="form.errors.reward_description" class="text-red-400 text-sm mt-1">{{ form.errors.reward_description }}</div>
@@ -326,7 +330,7 @@ const submit = () => {
 
                         <!-- Expiration Date -->
                         <div>
-                            <label class="block text-sm font-semibold text-gray-300 mb-2">Expiration Date (Optional)</label>
+                            <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Expiration Date (Optional)') }}</label>
                             <input
                                 v-model="form.expires_at"
                                 type="datetime-local"
@@ -334,7 +338,7 @@ const submit = () => {
                                 style="color-scheme: dark"
                                 class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 cursor-pointer [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                             />
-                            <p class="text-xs text-gray-500 mt-1">Leave empty for no expiration</p>
+                            <p class="text-xs text-gray-500 mt-1">{{ $t('Leave empty for no expiration') }}</p>
                             <div v-if="form.errors.expires_at" class="text-red-400 text-sm mt-1">{{ form.errors.expires_at }}</div>
                         </div>
 
@@ -345,12 +349,12 @@ const submit = () => {
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                                 </svg>
                                 <div class="text-sm">
-                                    <div class="font-semibold text-yellow-400 mb-1">Important:</div>
+                                    <div class="font-semibold text-yellow-400 mb-1">{{ $t('Important:') }}</div>
                                     <ul class="text-yellow-300 space-y-1 list-disc list-inside">
-                                        <li>You are responsible for paying any monetary rewards</li>
-                                        <li>Failure to pay or respond to disputes within 14 days will result in a ban from creating challenges</li>
-                                        <li>False or misleading challenges may result in account penalties</li>
-                                        <li>You have a 1-hour grace period after creation to edit your challenge freely. After that, edits require admin approval.</li>
+                                        <li>{{ $t('You are responsible for paying any monetary rewards') }}</li>
+                                        <li>{{ $t('Failure to pay or respond to disputes within 14 days will result in a ban from creating challenges') }}</li>
+                                        <li>{{ $t('False or misleading challenges may result in account penalties') }}</li>
+                                        <li>{{ $t('You have a 1-hour grace period after creation to edit your challenge freely. After that, edits require admin approval.') }}</li>
                                     </ul>
                                 </div>
                             </div>
@@ -363,14 +367,14 @@ const submit = () => {
                                 :disabled="form.processing"
                                 class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl"
                             >
-                                {{ form.processing ? 'Creating...' : 'Create Challenge' }}
+                                {{ form.processing ? $t('Creating...') : $t('Create Challenge') }}
                             </button>
 
                             <Link
                                 :href="route('headhunter.index')"
                                 class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition-all duration-300"
                             >
-                                Cancel
+                                {{ $t('Cancel') }}
                             </Link>
                         </div>
                     </form>

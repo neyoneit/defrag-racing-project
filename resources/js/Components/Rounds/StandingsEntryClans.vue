@@ -35,7 +35,7 @@
             <div class="w-2/12 inline-flex justify-end flex-wrap">
                 <div class="flex flex-col items-center">
                     <div class="text-sm text-gray-200 text-center">
-                        {{ item.points / item.number }} <span class="text-gray-500">Pts</span>
+                        {{ item.points / item.number }} <span class="text-gray-500">{{ $t('Pts') }}</span>
                     </div>
                 </div>
             </div>

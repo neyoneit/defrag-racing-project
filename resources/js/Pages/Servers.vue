@@ -6,6 +6,8 @@ import OnlinePlayer from '@/Components/OnlinePlayer.vue';
 import CopyButton from '@/Components/Basic/CopyButton.vue';
 import LauncherBanner from '@/Components/LauncherBanner.vue';
 import CheatsBanner from '@/Components/CheatsBanner.vue';
+import { t } from '@/utils/i18n';
+import { getWeaponIcon, getWeaponName, getItemIcon, getItemName, getFunctionIcon, getFunctionName } from '@/utils/gameItems';
 const AddToMaplistModal = defineAsyncComponent(() => import('@/Components/Maplists/AddToMaplistModal.vue'));
 
 const page = usePage();
@@ -35,7 +37,7 @@ const pingClass = (ms) => ms < 50
     : ms < 100
         ? 'bg-yellow-500/25 border-yellow-400/50 text-yellow-200'
         : 'bg-red-500/25 border-red-400/50 text-red-300';
-const pingTitle = 'Estimated ping from your location (approximate - excludes your local connection)';
+const pingTitle = computed(() => t('Estimated ping from your location (approximate - excludes your local connection)'));
 
 const formatRecordDate = (value) => {
     if (!value) return '';
@@ -52,14 +54,22 @@ const formatRecordDate = (value) => {
     return `${yy}/${mm}/${dd}`;
 };
 
-// Get layout from cookie or default to 'large'
+// Three ways to read this page, kept in a cookie for a year.
+//
+// `large` is called that in the cookie and Modern on screen: it was the only
+// layout for a long time and renaming the stored value would have reset the
+// choice for everyone still carrying the old one.
+const LAYOUTS = ['large', 'compact', 'oldschool'];
+
 const getLayoutFromCookie = () => {
     const cookies = document.cookie.split(';');
     const layoutCookie = cookies.find(c => c.trim().startsWith('servers_layout='));
-    return layoutCookie ? layoutCookie.split('=')[1] : 'large';
+    const stored = layoutCookie ? layoutCookie.split('=')[1] : null;
+
+    return LAYOUTS.includes(stored) ? stored : 'large';
 };
 
-const layout = ref(getLayoutFromCookie()); // 'large' or 'compact'
+const layout = ref(getLayoutFromCookie());
 
 // Filters - restore from localStorage
 const savedFilters = JSON.parse(localStorage.getItem('servers_filters') || '{}');
@@ -141,8 +151,8 @@ const getServerName = (name) => {
     return name.replace(colorRegex, '');
 }
 
-const toggleLayout = () => {
-    layout.value = layout.value === 'large' ? 'compact' : 'large';
+const setLayout = (value) => {
+    layout.value = value;
     // Save to cookie (expires in 1 year)
     const expires = new Date();
     expires.setFullYear(expires.getFullYear() + 1);
@@ -162,6 +172,37 @@ const toggleSort = (type) => {
         sortingOrder.value = 'desc';
     }
 }
+
+/**
+ * Which tab a server belongs under. Pulled out of the filter so the cheats
+ * warning can ask the same question - freestyle answers it differently and
+ * there must not be two ideas of what freestyle means.
+ */
+const effectiveGametype = (server) => {
+    const serverType = server.type?.toLowerCase() || 'run';
+    const serverName = (server.name || '').replace(/\^\d|\^x[\da-fA-F]{2}|\^[\da-fA-F]{6}/g, '').toLowerCase();
+
+    let effectiveType = serverType;
+    if (effectiveType === 'teamruns') effectiveType = 'team';
+    if (effectiveType === 'cpm' || effectiveType === 'vq3' || effectiveType === 'mixed') effectiveType = 'run';
+
+    if (effectiveType === 'run') {
+        if (serverName.includes('fastcap') || serverName.includes('ctf')) effectiveType = 'fastcaps';
+        else if (serverName.includes('freestyle')) effectiveType = 'freestyle';
+        else if (serverName.includes('teamrun') || serverName.includes('team run')) effectiveType = 'team';
+    }
+
+    return effectiveType;
+};
+
+/**
+ * On a freestyle server sv_cheats is the point rather than a problem: nothing
+ * there is a timed result, so there is nothing for it to invalidate. The
+ * warning still shows, because it is true and someone should be able to see
+ * it, but quietly - a full red bar there is crying wolf, and a warning that
+ * fires where it does not matter is one people stop reading where it does.
+ */
+const cheatsAreExpected = (server) => effectiveGametype(server) === 'freestyle';
 
 const filteredAndSortedServers = computed(() => {
     if (!localServers.value || localServers.value.length === 0) return [];
@@ -191,15 +232,7 @@ const filteredAndSortedServers = computed(() => {
             // where a gametype belongs — so it is normalised first. Without
             // that, the twelve servers typed by physics matched no tab at
             // all and the two 'teamruns' ones were invisible to the team tab.
-            let effectiveType = serverType;
-            if (effectiveType === 'teamruns') effectiveType = 'team';
-            if (effectiveType === 'cpm' || effectiveType === 'vq3' || effectiveType === 'mixed') effectiveType = 'run';
-
-            if (effectiveType === 'run') {
-                if (serverName.includes('fastcap') || serverName.includes('ctf')) effectiveType = 'fastcaps';
-                else if (serverName.includes('freestyle')) effectiveType = 'freestyle';
-                else if (serverName.includes('teamrun') || serverName.includes('team run')) effectiveType = 'team';
-            }
+            const effectiveType = effectiveGametype(server);
 
             switch (filters.value.gametype) {
                 case 'run':
@@ -257,150 +290,18 @@ const filteredAndSortedServers = computed(() => {
 
 const serverCount = computed(() => filteredAndSortedServers.value.length);
 
-// Helper functions for weapon/item/function icons and names (from MapView.vue)
-const getWeaponIcon = (abbr) => {
-    const icons = {
-        'gauntlet': '/images/weapons/iconw_gauntlet.svg',
-        'gt': '/images/weapons/iconw_gauntlet.svg',
-        'mg': '/images/weapons/iconw_machinegun.svg',
-        'sg': '/images/weapons/iconw_shotgun.svg',
-        'gl': '/images/weapons/iconw_grenade.svg',
-        'rl': '/images/weapons/iconw_rocket.svg',
-        'lg': '/images/weapons/iconw_lightning.svg',
-        'rg': '/images/weapons/iconw_railgun.svg',
-        'pg': '/images/weapons/iconw_plasma.svg',
-        'bfg': '/images/weapons/iconw_bfg.svg',
-        'grapple': '/images/weapons/iconw_grapple.svg',
-        'hook': '/images/weapons/iconw_grapple.svg',
-        'gh': '/images/weapons/iconw_grapple.svg'
-    };
-    return icons[abbr.toLowerCase().trim()] || '/images/weapons/iconw_gauntlet.svg';
-};
-
-const getWeaponName = (abbr) => {
-    const weapons = {
-        'gauntlet': 'Gauntlet',
-        'gt': 'Gauntlet',
-        'mg': 'Machine Gun',
-        'sg': 'Shotgun',
-        'gl': 'Grenade Launcher',
-        'rl': 'Rocket Launcher',
-        'lg': 'Lightning Gun',
-        'rg': 'Rail Gun',
-        'pg': 'Plasma Gun',
-        'bfg': 'BFG',
-        'grapple': 'Grappling Hook',
-        'hook': 'Grappling Hook',
-        'gh': 'Grappling Hook'
-    };
-    return weapons[abbr.toLowerCase().trim()] || abbr.toUpperCase();
-};
-
-const getItemIcon = (abbr) => {
-    const icons = {
-        // Powerups
-        'enviro': '/images/powerups/envirosuit.svg',
-        'haste': '/images/powerups/haste.svg',
-        'quad': '/images/powerups/quad.svg',
-        'regen': '/images/powerups/regen.svg',
-        'invis': '/images/powerups/invis.svg',
-        'flight': '/images/powerups/flight.svg',
-        // Health
-        'health': '/images/items/iconh_yellow.svg',
-        'smallhealth': '/images/items/iconh_green.svg',
-        'bighealth': '/images/items/iconh_red.svg',
-        'mega': '/images/items/iconh_mega.svg',
-        'medkit': '/images/items/medkit.svg',
-        // Armor
-        'shard': '/images/items/iconr_shard.svg',
-        'ya': '/images/items/iconr_yellow.svg',
-        'ra': '/images/items/iconr_red.svg',
-        // CTF
-        'flag': '/images/items/iconf_blu2.svg'
-    };
-    return icons[abbr.toLowerCase().trim()] || '/images/items/iconh_yellow.svg';
-};
-
-const getItemName = (abbr) => {
-    const items = {
-        // Powerups
-        'enviro': 'Battle Suit',
-        'haste': 'Haste',
-        'quad': 'Quad Damage',
-        'regen': 'Regeneration',
-        'invis': 'Invisibility',
-        'flight': 'Flight',
-        // Health
-        'health': 'Health (+25)',
-        'smallhealth': 'Small Health (+5)',
-        'bighealth': 'Large Health (+50)',
-        'mega': 'Mega Health (+100)',
-        'medkit': 'Medkit',
-        // Armor
-        'shard': 'Armor Shard (+5)',
-        'ya': 'Yellow Armor (+50)',
-        'ra': 'Red Armor (+100)',
-        // CTF
-        'flag': 'Flag'
-    };
-    return items[abbr.toLowerCase().trim()] || abbr;
-};
-
-const getFunctionIcon = (abbr) => {
-    const icons = {
-        'tele': '/images/functions/tele.svg',
-        'teleporter': '/images/functions/teleporter.svg',
-        'slick': '/images/functions/slick.svg',
-        'timer': '/images/functions/timer.svg',
-        'fog': '/images/functions/fog.svg',
-        'water': '/images/functions/water.svg',
-        'lava': '/images/functions/lava.svg',
-        'moving': '/images/functions/moving.svg',
-        'door': '/images/functions/door.svg',
-        'button': '/images/functions/button.svg',
-        'push': '/images/functions/push.svg',
-        'break': '/images/functions/break.svg',
-        'slime': '/images/functions/slime.svg',
-        'shootergl': '/images/functions/shootergl.svg',
-        'shooterpg': '/images/functions/shooterpg.svg',
-        'shooterrl': '/images/functions/shooterrl.svg'
-    };
-    return icons[abbr.toLowerCase().trim()] || '/images/functions/timer.svg';
-};
-
-const getFunctionName = (abbr) => {
-    const functions = {
-        'tele': 'Teleporter',
-        'teleporter': 'Teleporter',
-        'slick': 'Slick Surface',
-        'timer': 'Timer',
-        'fog': 'Fog',
-        'water': 'Water',
-        'lava': 'Lava',
-        'moving': 'Moving Platforms',
-        'door': 'Doors',
-        'button': 'Buttons',
-        'push': 'Push Trigger',
-        'break': 'Breakable',
-        'slime': 'Slime',
-        'shootergl': 'Grenade Shooter',
-        'shooterpg': 'Plasma Shooter',
-        'shooterrl': 'Rocket Shooter'
-    };
-    return functions[abbr.toLowerCase().trim()] || abbr;
-};
 </script>
 
 <template>
     <div class="">
-        <Head title="Servers" />
+        <Head :title="$t('Servers')" />
 
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">
-                        Live Servers
+                        {{ $t('Live Servers') }}
                     </h1>
 
                     <Link :href="route('launcher')"
@@ -410,8 +311,8 @@ const getFunctionName = (abbr) => {
                             <polyline points="7 10 12 15 17 10"/>
                             <line x1="12" y1="15" x2="12" y2="3"/>
                         </svg>
-                        <span class="font-bold text-white whitespace-nowrap">Get the launcher</span>
-                        <span class="hidden sm:inline text-blue-200/80 font-semibold text-xs">connect to servers in 1 click + many more features</span>
+                        <span class="font-bold text-white whitespace-nowrap">{{ $t('Get the launcher') }}</span>
+                        <span class="hidden lg:inline text-blue-200/80 font-semibold text-xs">{{ $t('connect in one click, and more') }}</span>
                     </Link>
 
                     <!-- The rules belong where people are about to join a
@@ -423,25 +324,29 @@ const getFunctionName = (abbr) => {
                         <svg class="w-5 h-5 text-amber-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 0 1-2.031.352 5.988 5.988 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971Zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 0 1-2.031.352 5.989 5.989 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971Z" />
                         </svg>
-                        <span class="font-bold text-white whitespace-nowrap">Rules</span>
-                        <span class="hidden sm:inline text-amber-200/80 font-semibold text-xs">read before you set a record</span>
+                        <span class="font-bold text-white whitespace-nowrap">{{ $t('Rules') }}</span>
+                        <span class="hidden lg:inline text-amber-200/80 font-semibold text-xs">{{ $t('read before you play') }}</span>
                     </Link>
 
-                    <div class="flex items-center gap-3 text-sm">
+                    <!-- text-xs, matching the filter row below. At text-sm
+                         these two pills alone were ~50px wider, which is what
+                         pushed the Polish and Russian header onto a second
+                         line while English still fit. -->
+                    <div class="flex items-center gap-2 text-xs">
                         <div class="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg border border-blue-400/30">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-blue-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-blue-400">
                                 <path d="M4.5 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM14.25 8.625a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0ZM1.5 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122ZM17.25 19.128l-.001.144a2.25 2.25 0 0 1-.233.96 10.088 10.088 0 0 0 5.06-1.01.75.75 0 0 0 .42-.643 4.875 4.875 0 0 0-6.957-4.611 8.586 8.586 0 0 1 1.71 5.157v.003Z" />
                             </svg>
                             <span class="font-bold text-blue-300">{{ players }}</span>
-                            <span class="text-gray-300 font-semibold">Players Online</span>
+                            <span class="text-gray-300 font-semibold">{{ $t('Players Online') }}</span>
                         </div>
                         <div class="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/10">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-gray-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-gray-300">
                                 <path d="M4.5 3.75a3 3 0 0 0-3 3v.75h21v-.75a3 3 0 0 0-3-3h-15Z" />
                                 <path fill-rule="evenodd" d="M22.5 9.75h-21v7.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3v-7.5Zm-18 3.75a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3a.75.75 0 0 0 0-1.5h-3Z" clip-rule="evenodd" />
                             </svg>
                             <span class="font-bold text-white">{{ serverCount }}</span>
-                            <span class="text-gray-300 font-semibold">Active Servers</span>
+                            <span class="text-gray-300 font-semibold">{{ $t('Active Servers') }}</span>
                         </div>
 
                     </div>
@@ -450,85 +355,104 @@ const getFunctionName = (abbr) => {
                 <!-- Filters & Controls -->
                 <div class="mt-6">
                     <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/5 p-4 shadow-2xl">
-                <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
-                    <!-- Gametype Filter -->
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <label class="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">Gametype:</label>
-                        <div class="flex gap-1.5 flex-wrap">
-                            <button @click="filters.gametype = 'all'" :class="filters.gametype === 'all' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all">
-                                All
+                <!-- Four segmented pills rather than sixteen loose ones.
+                     The old row spent roughly 150px on gaps and per-button
+                     borders, which English could afford and Polish and
+                     Russian could not - their labels are a third longer and
+                     the row broke onto a second line. Each group is now one
+                     bordered pill with its label as a leading chip, and the
+                     groups are told apart by hue instead of by whitespace. -->
+                <!-- Two halves, not one run of four: what filters the list
+                     sits on the left, what only changes how it is shown sits
+                     against the right edge. It also gives a long language
+                     somewhere to grow - the gap in the middle absorbs it
+                     before anything has to wrap. -->
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- Gametype Filter -->
+                        <div class="flex flex-wrap items-stretch rounded-lg border border-sky-400/25 bg-sky-500/[0.07] overflow-hidden">
+                            <span class="flex items-center px-2.5 py-1.5 bg-sky-500/10 text-[11px] font-bold text-sky-300/80 uppercase whitespace-nowrap">{{ $t('Gametype:') }}</span>
+                            <button @click="filters.gametype = 'all'" :class="filters.gametype === 'all' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                {{ $t('All') }}
                             </button>
-                            <button @click="filters.gametype = 'run'" :class="filters.gametype === 'run' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all">
+                            <button @click="filters.gametype = 'run'" :class="filters.gametype === 'run' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
                                 Run
                             </button>
-                            <button @click="filters.gametype = 'ctf'" :class="filters.gametype === 'ctf' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all">
+                            <button @click="filters.gametype = 'ctf'" :class="filters.gametype === 'ctf' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
                                 CTF
                             </button>
-                            <button @click="filters.gametype = 'freestyle'" :class="filters.gametype === 'freestyle' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all">
+                            <button @click="filters.gametype = 'freestyle'" :class="filters.gametype === 'freestyle' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
                                 Freestyle
                             </button>
-                            <button @click="filters.gametype = 'teamrun'" :class="filters.gametype === 'teamrun' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all">
+                            <button @click="filters.gametype = 'teamrun'" :class="filters.gametype === 'teamrun' ? 'bg-sky-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-sky-400/20 text-xs font-bold transition-colors whitespace-nowrap">
                                 Teamrun
                             </button>
                         </div>
-                    </div>
 
-                    <!-- Physics Filter -->
-                    <div class="flex items-center gap-2">
-                        <label class="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">Physics:</label>
-                        <div class="flex gap-1.5">
-                            <button @click="filters.physics = 'all'" :class="filters.physics === 'all' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="flex-1 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all">
-                                All
+                        <!-- Physics Filter -->
+                        <div class="flex flex-wrap items-stretch rounded-lg border border-violet-400/25 bg-violet-500/[0.07] overflow-hidden">
+                            <span class="flex items-center px-2.5 py-1.5 bg-violet-500/10 text-[11px] font-bold text-violet-300/80 uppercase whitespace-nowrap">{{ $t('Physics:') }}</span>
+                            <button @click="filters.physics = 'all'" :class="filters.physics === 'all' ? 'bg-violet-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-violet-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                {{ $t('All') }}
                             </button>
-                            <button @click="filters.physics = 'cpm'" :class="filters.physics === 'cpm' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="flex-1 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all">
+                            <button @click="filters.physics = 'cpm'" :class="filters.physics === 'cpm' ? 'bg-violet-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-violet-400/20 text-xs font-bold transition-colors whitespace-nowrap">
                                 CPM
                             </button>
-                            <button @click="filters.physics = 'vq3'" :class="filters.physics === 'vq3' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="flex-1 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all">
+                            <button @click="filters.physics = 'vq3'" :class="filters.physics === 'vq3' ? 'bg-violet-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-violet-400/20 text-xs font-bold transition-colors whitespace-nowrap">
                                 VQ3
                             </button>
                         </div>
                     </div>
 
-                    <!-- Sort Options -->
-                    <div class="flex items-center gap-2">
-                        <label class="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">Sort:</label>
-                        <div class="flex gap-1.5">
-                            <button @click="toggleSort('popularity')" :class="sorting === 'popularity' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="flex-1 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center justify-center gap-1">
-                                Popularity
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- Sort Options -->
+                        <div class="flex flex-wrap items-stretch rounded-lg border border-emerald-400/25 bg-emerald-500/[0.07] overflow-hidden">
+                            <span class="flex items-center px-2.5 py-1.5 bg-emerald-500/10 text-[11px] font-bold text-emerald-300/80 uppercase whitespace-nowrap">{{ $t('Sort:') }}</span>
+                            <button @click="toggleSort('popularity')" :class="sorting === 'popularity' ? 'bg-emerald-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-emerald-400/20 text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1">
+                                {{ $t('Popularity') }}
                                 <svg v-if="sorting === 'popularity'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" :class="sortingOrder === 'desc' ? 'rotate-0' : 'rotate-180'" class="w-3 h-3 transition-transform">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                                 </svg>
                             </button>
-                            <button @click="toggleSort('alphabetically')" :class="sorting === 'alphabetically' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="flex-1 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center justify-center gap-1">
+                            <button @click="toggleSort('alphabetically')" :class="sorting === 'alphabetically' ? 'bg-emerald-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-emerald-400/20 text-xs font-bold transition-colors whitespace-nowrap flex items-center gap-1">
                                 A-Z
                                 <svg v-if="sorting === 'alphabetically'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" :class="sortingOrder === 'desc' ? 'rotate-0' : 'rotate-180'" class="w-3 h-3 transition-transform">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                                 </svg>
                             </button>
                         </div>
-                    </div>
 
-                    <!-- Additional Options -->
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                        <label class="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">Options:</label>
-                        <button @click="filters.hideEmpty = !filters.hideEmpty" :class="filters.hideEmpty ? 'bg-red-600 text-white border-red-500' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
-                            </svg>
-                            Hide Empty
-                        </button>
-                        <button @click="filters.showDetails = !filters.showDetails" :class="!filters.showDetails ? 'bg-blue-600 text-white border-blue-500' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
-                            </svg>
-                            Hide Details
-                        </button>
-                        <button @click="toggleLayout" :class="layout !== 'large' ? 'bg-blue-600 text-white border-blue-500' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
-                            </svg>
-                            Compact
-                        </button>
+                        <!-- What to leave out. The word "Hide" was on both
+                             buttons and is now said once, by the chip that
+                             governs them - the buttons name the thing, not the
+                             verb. These are toggles rather than a single
+                             choice, so the active fill is solid and not a
+                             tint like the groups that pick one of several. -->
+                        <div class="flex flex-wrap items-stretch rounded-lg border border-amber-400/25 bg-amber-500/[0.07] overflow-hidden">
+                            <span class="flex items-center px-2.5 py-1.5 bg-amber-500/10 text-[11px] font-bold text-amber-300/80 uppercase whitespace-nowrap">{{ $t('Hide:') }}</span>
+                            <button @click="filters.hideEmpty = !filters.hideEmpty" :class="filters.hideEmpty ? 'bg-amber-500/40 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-amber-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                {{ $t('Empty') }}
+                            </button>
+                            <button @click="filters.showDetails = !filters.showDetails" :class="!filters.showDetails ? 'bg-amber-500/40 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-amber-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                {{ $t('Details') }}
+                            </button>
+                        </div>
+
+                        <!-- Layout is a choice of one, not a switch, so it is
+                             its own group rather than a third toggle sitting
+                             among things it has nothing to do with. -->
+                        <div class="flex flex-wrap items-stretch rounded-lg border border-rose-400/25 bg-rose-500/[0.07] overflow-hidden">
+                            <span class="flex items-center px-2.5 py-1.5 bg-rose-500/10 text-[11px] font-bold text-rose-300/80 uppercase whitespace-nowrap">{{ $t('View:') }}</span>
+                            <button @click="setLayout('large')" :class="layout === 'large' ? 'bg-rose-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-rose-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                {{ $t('Modern') }}
+                            </button>
+                            <button @click="setLayout('compact')" :class="layout === 'compact' ? 'bg-rose-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-rose-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                {{ $t('Compact') }}
+                            </button>
+                            <button @click="setLayout('oldschool')" :class="layout === 'oldschool' ? 'bg-rose-500/35 text-white' : 'text-gray-400 hover:bg-white/5'" class="px-2 py-1.5 border-l border-rose-400/20 text-xs font-bold transition-colors whitespace-nowrap">
+                                {{ $t('Oldschool') }}
+                            </button>
+                        </div>
                     </div>
                 </div>
                     </div>
@@ -554,8 +478,8 @@ const getFunctionName = (abbr) => {
 
             <!-- Large Card Layout -->
             <div v-else-if="layout === 'large'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div v-for="server in filteredAndSortedServers" :key="server.id" :class="['group relative cursor-default bg-black/40 backdrop-blur-sm rounded-2xl border transition-all duration-300 hover:shadow-2xl overflow-hidden player-list-hover-group', server.cheats ? 'border-red-500/60 hover:border-red-400/80 hover:shadow-red-500/20' : 'border-white/10 hover:border-white/20 hover:shadow-blue-500/20']">
-                    <CheatsBanner :cheats="server.cheats" />
+                <div v-for="server in filteredAndSortedServers" :key="server.id" :class="['group relative cursor-default bg-black/40 backdrop-blur-sm rounded-2xl border transition-all duration-300 hover:shadow-2xl overflow-hidden player-list-hover-group', server.cheats && !cheatsAreExpected(server) ? 'border-red-500/60 hover:border-red-400/80 hover:shadow-red-500/20' : 'border-white/10 hover:border-white/20 hover:shadow-blue-500/20']">
+                    <CheatsBanner :cheats="server.cheats" :subdued="cheatsAreExpected(server)" />
                     <!-- Background Image - FIXED SIZE, never changes, keeps aspect ratio -->
                     <div class="absolute top-0 left-0 right-0 h-[450px] rounded-t-2xl pointer-events-none">
                         <div class="relative inline-block w-full">
@@ -597,7 +521,7 @@ const getFunctionName = (abbr) => {
                             <div :class="['flex items-center gap-2 mb-3 map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
                                 <img :src="`/images/flags/${server.location}.png`" class="w-5 h-3.5 rounded" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1)) drop-shadow(0 0 8px rgba(0,0,0,0.8));" :title="server.location" @error="$event.target.style.display='none'">
                                 <h3 class="text-xl font-bold text-white flex-1" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);" v-html="q3tohtml(server.name)"></h3>
-                                <CopyButton :text="server.ip + ':' + server.port" size="sm" label="Copy IP" />
+                                <CopyButton :text="server.ip + ':' + server.port" size="sm" :label="$t('Copy IP')" />
                             </div>
 
                             <!-- Map Info with hover group -->
@@ -605,12 +529,25 @@ const getFunctionName = (abbr) => {
                                 <div v-if="server.map" :class="['bg-white/5 rounded-lg px-3 py-2 border border-white/10 transition-all relative map-features-hover-group', filters.showDetails ? 'map-features-expanded' : '']">
                                     <div class="flex items-center justify-between gap-2">
                                         <div class="flex items-center gap-2">
-                                            <div class="flex items-center gap-2" @mouseenter="hoveredMapServer = server.id" @mouseleave="hoveredMapServer = null">
-                                                <a :href="`/maps/${encodeURIComponent(server.map)}`" class="text-gray-300 text-base font-semibold hover:text-blue-400 transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">Map:</a>
-                                                <a :href="`/maps/${encodeURIComponent(server.map)}`" class="font-bold text-white text-lg hover:text-blue-400 transition-colors map-name-highlight" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ server.map }}</a>
+                                            <!-- No "Map:" in front of it. On a card
+                                                 whose whole top half is the map's
+                                                 own screenshot the word says
+                                                 nothing, and it cost a third of
+                                                 this row - which is the row that
+                                                 has to hold a long map name, the
+                                                 copy button and the save button
+                                                 side by side. -->
+                                            <div class="flex items-center gap-2 min-w-0" @mouseenter="hoveredMapServer = server.id" @mouseleave="hoveredMapServer = null">
+                                                <!-- px-3 -mx-3 is not spacing: truncate
+                                                     is overflow:hidden, which clips at the
+                                                     box edge and took the text-shadow with
+                                                     it. The padding gives the 12px glow room
+                                                     to land inside the box and the negative
+                                                     margin puts the text back where it was. -->
+                                                <a :href="`/maps/${encodeURIComponent(server.map)}`" class="font-bold text-white text-lg hover:text-blue-400 transition-colors map-name-highlight truncate px-3 -mx-3" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ server.map }}</a>
                                             </div>
                                             <!-- Copy map name -->
-                                            <CopyButton :text="server.map" size="xs" />
+                                            <CopyButton :text="server.map" size="xs" :label="$t('Copy map')" />
                                         </div>
                                         <div class="flex items-center gap-2 ml-auto">
                                             <!-- Expand Indicator - only show if map has features -->
@@ -624,12 +561,12 @@ const getFunctionName = (abbr) => {
                                                 v-if="page.props.auth.user && server.mapdata?.id"
                                                 @click.stop="openAddToMaplist(server.mapdata.id)"
                                                 class="save-maplist-btn"
-                                                title="Save to Maplist"
+                                                :title="$t('Save to Maplist')"
                                             >
                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" />
                                                 </svg>
-                                                <span class="text-[10px] font-semibold">Save</span>
+                                                <span class="text-[10px] font-semibold">{{ $t('Save') }}</span>
                                             </button>
                                         </div>
                                     </div>
@@ -639,7 +576,7 @@ const getFunctionName = (abbr) => {
                                         <div class="flex flex-wrap gap-2 pt-2 border-t border-white/10 mt-2">
                                             <!-- Weapons -->
                                             <div v-if="server.mapdata.weapons && server.mapdata.weapons.length > 0" class="flex items-center gap-1.5">
-                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,1)] drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]">Weapons:</span>
+                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,1)] drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]">{{ $t('Weapons:') }}</span>
                                                 <div class="flex gap-1">
                                                     <img v-for="weapon in server.mapdata.weapons.split(',')" :key="weapon"
                                                          :src="getWeaponIcon(weapon)"
@@ -651,7 +588,7 @@ const getFunctionName = (abbr) => {
 
                                             <!-- Items -->
                                             <div v-if="server.mapdata.items && server.mapdata.items.length > 0" class="flex items-center gap-1.5">
-                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,1)] drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]">Items:</span>
+                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,1)] drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]">{{ $t('Items:') }}</span>
                                                 <div class="flex gap-1">
                                                     <img v-for="item in server.mapdata.items.split(',')" :key="item"
                                                          :src="getItemIcon(item)"
@@ -663,7 +600,7 @@ const getFunctionName = (abbr) => {
 
                                             <!-- Functions -->
                                             <div v-if="server.mapdata.functions && server.mapdata.functions.length > 0" class="flex items-center gap-1.5">
-                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,1)] drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]">Functions:</span>
+                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,1)] drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]">{{ $t('Functions:') }}</span>
                                                 <div class="flex gap-1">
                                                     <img v-for="func in server.mapdata.functions.split(',')" :key="func"
                                                          :src="getFunctionIcon(func)"
@@ -686,7 +623,7 @@ const getFunctionName = (abbr) => {
                                 </a>
                                 <div v-if="server.mytime_time && server.mytime_time > 0" :class="['flex items-center gap-2 text-sm map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
                                     <span v-if="server.myrank_position && server.myrank_total" class="text-sm text-gray-400 font-bold flex-shrink-0" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ server.myrank_position }}/{{ server.myrank_total }}</span>
-                                    <span class="font-bold flex-1 text-white text-sm" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">My Time</span>
+                                    <span class="font-bold flex-1 text-white text-sm" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ $t('My Time') }}</span>
                                     <span v-if="server.mytime_date" class="text-sm text-gray-400 font-mono leading-none" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1);">{{ formatRecordDate(server.mytime_date) }}</span>
                                     <span :class="server.defrag.toLowerCase().includes('cpm') ? 'text-purple-400' : 'text-blue-400'" class="font-bold font-mono text-sm leading-none" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ formatTime(server.mytime_time) }}</span>
                                 </div>
@@ -706,13 +643,13 @@ const getFunctionName = (abbr) => {
                         <div v-if="server.online_players.length > 0" :class="['mb-4 mt-2 map-hover-fade relative z-20', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
                             <div class="rounded-lg p-2 border border-white/10 backdrop-blur-[4px]" style="background: rgba(71,85,105,0.55);">
                                 <div class="space-y-1.5">
-                                    <OnlinePlayer v-for="player in server.online_players" :key="player.name" :player="player" />
+                                    <OnlinePlayer v-for="player in server.online_players" :key="player.id" :player="player" :siblings="server.online_players" />
                                 </div>
                             </div>
                         </div>
                         <div v-else :class="['mb-4 mt-2 map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
                             <div class="p-3 rounded-lg border border-white/10 text-center backdrop-blur-[4px]" style="background: rgba(71,85,105,0.55);">
-                                <span class="text-sm text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">No players online</span>
+                                <span class="text-sm text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ $t('No players online') }}</span>
                             </div>
                         </div>
 
@@ -723,7 +660,7 @@ const getFunctionName = (abbr) => {
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
                                     </svg>
-                                    Connect
+                                    {{ $t('Connect') }}
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <span v-if="server.estimated_ping != null" :class="pingClass(server.estimated_ping)" :title="pingTitle"
@@ -742,7 +679,7 @@ const getFunctionName = (abbr) => {
             </div>
 
             <!-- Compact List Layout - Split by Physics -->
-            <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div v-else-if="layout === 'compact'" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- VQ3 Servers (Left) -->
                 <div class="space-y-3">
                     <div class="flex items-center gap-3 mb-4 px-4">
@@ -752,13 +689,13 @@ const getFunctionName = (abbr) => {
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-xl font-black text-white">VQ3 Servers</h3>
-                            <p class="text-sm text-gray-500">{{ filteredAndSortedServers.filter(s => !s.defrag.toLowerCase().includes('cpm')).length }} servers</p>
+                            <h3 class="text-xl font-black text-white">{{ $t('VQ3 Servers') }}</h3>
+                            <p class="text-sm text-gray-500">{{ $tc(':count server|:count servers', filteredAndSortedServers.filter(s => !s.defrag.toLowerCase().includes('cpm')).length) }}</p>
                         </div>
                     </div>
 
-                    <div v-for="server in filteredAndSortedServers.filter(s => !s.defrag.toLowerCase().includes('cpm'))" :key="server.id" :class="['group relative overflow-hidden rounded-xl border transition-all duration-300', server.cheats ? 'border-red-500/60 hover:border-red-400/80 pt-4' : 'border-white/10 hover:border-blue-500/50']">
-                        <CheatsBanner :cheats="server.cheats" compact />
+                    <div v-for="server in filteredAndSortedServers.filter(s => !s.defrag.toLowerCase().includes('cpm'))" :key="server.id" :class="['group relative overflow-hidden rounded-xl border transition-all duration-300', server.cheats && !cheatsAreExpected(server) ? 'border-red-500/60 hover:border-red-400/80 pt-4' : ['border-white/10 hover:border-blue-500/50', server.cheats ? 'pt-4' : '']]">
+                        <CheatsBanner :cheats="server.cheats" compact :subdued="cheatsAreExpected(server)" />
                         <!-- Background Map Thumbnail -->
                         <div v-if="server.mapdata?.thumbnail" class="absolute inset-0 transition-all duration-500">
                             <img
@@ -808,7 +745,7 @@ const getFunctionName = (abbr) => {
                                                     <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clip-rule="evenodd" />
                                                 </svg>
                                                 <span v-if="server.myrank_position && server.myrank_total" class="text-xs font-bold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ server.myrank_position }}/{{ server.myrank_total }}</span>
-                                                <span v-else class="text-xs font-bold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">Me</span>
+                                                <span v-else class="text-xs font-bold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ $t('Me') }}</span>
                                             </div>
                                             <span class="text-xs font-bold text-blue-400 font-mono" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ formatTime(server.mytime_time) }}</span>
                                         </div>
@@ -835,23 +772,23 @@ const getFunctionName = (abbr) => {
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
                                         </svg>
-                                        <span class="text-xs font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">Play</span>
+                                        <span class="text-xs font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ $t('Play') }}</span>
                                     </a>
-                                    <CopyButton :text="server.ip + ':' + server.port" size="sm" label="Copy IP" />
+                                    <CopyButton :text="server.ip + ':' + server.port" size="sm" :label="$t('Copy IP')" />
                                 </div>
                             </div>
 
                             <!-- Players List - Expands on hover -->
                             <div v-if="server.online_players.length > 0" class="mt-0 max-h-0 group-hover:max-h-96 overflow-hidden transition-all duration-300">
                                 <div class="pt-2 space-y-1">
-                                    <OnlinePlayer v-for="player in server.online_players" :key="player.name" :player="player" />
+                                    <OnlinePlayer v-for="player in server.online_players" :key="player.id" :player="player" :siblings="server.online_players" />
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div v-if="filteredAndSortedServers.filter(s => !s.defrag.toLowerCase().includes('cpm')).length === 0" class="text-center py-8  bg-white/5 rounded-xl border border-white/10">
-                        <p class="text-gray-500 text-sm">No VQ3 servers found</p>
+                        <p class="text-gray-500 text-sm">{{ $t('No VQ3 servers found') }}</p>
                     </div>
                 </div>
 
@@ -864,13 +801,13 @@ const getFunctionName = (abbr) => {
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-xl font-black text-white">CPM Servers</h3>
-                            <p class="text-sm text-gray-500">{{ filteredAndSortedServers.filter(s => s.defrag.toLowerCase().includes('cpm')).length }} servers</p>
+                            <h3 class="text-xl font-black text-white">{{ $t('CPM Servers') }}</h3>
+                            <p class="text-sm text-gray-500">{{ $tc(':count server|:count servers', filteredAndSortedServers.filter(s => s.defrag.toLowerCase().includes('cpm')).length) }}</p>
                         </div>
                     </div>
 
-                    <div v-for="server in filteredAndSortedServers.filter(s => s.defrag.toLowerCase().includes('cpm'))" :key="server.id" :class="['group relative overflow-hidden rounded-xl border transition-all duration-300', server.cheats ? 'border-red-500/60 hover:border-red-400/80 pt-4' : 'border-white/10 hover:border-purple-500/50']">
-                        <CheatsBanner :cheats="server.cheats" compact />
+                    <div v-for="server in filteredAndSortedServers.filter(s => s.defrag.toLowerCase().includes('cpm'))" :key="server.id" :class="['group relative overflow-hidden rounded-xl border transition-all duration-300', server.cheats && !cheatsAreExpected(server) ? 'border-red-500/60 hover:border-red-400/80 pt-4' : ['border-white/10 hover:border-purple-500/50', server.cheats ? 'pt-4' : '']]">
+                        <CheatsBanner :cheats="server.cheats" compact :subdued="cheatsAreExpected(server)" />
                         <!-- Background Map Thumbnail -->
                         <div v-if="server.mapdata?.thumbnail" class="absolute inset-0 transition-all duration-500">
                             <img
@@ -919,7 +856,7 @@ const getFunctionName = (abbr) => {
                                                     <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clip-rule="evenodd" />
                                                 </svg>
                                                 <span v-if="server.myrank_position && server.myrank_total" class="text-xs font-bold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ server.myrank_position }}/{{ server.myrank_total }}</span>
-                                                <span v-else class="text-xs font-bold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">Me</span>
+                                                <span v-else class="text-xs font-bold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ $t('Me') }}</span>
                                             </div>
                                             <span class="text-xs font-bold text-purple-400 font-mono" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ formatTime(server.mytime_time) }}</span>
                                         </div>
@@ -946,23 +883,126 @@ const getFunctionName = (abbr) => {
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
                                         </svg>
-                                        <span class="text-xs font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">Play</span>
+                                        <span class="text-xs font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ $t('Play') }}</span>
                                     </a>
-                                    <CopyButton :text="server.ip + ':' + server.port" size="sm" label="Copy IP" />
+                                    <CopyButton :text="server.ip + ':' + server.port" size="sm" :label="$t('Copy IP')" />
                                 </div>
                             </div>
 
                             <!-- Players List - Expands on hover -->
                             <div v-if="server.online_players.length > 0" class="mt-0 max-h-0 group-hover:max-h-96 overflow-hidden transition-all duration-300">
                                 <div class="pt-2 space-y-1">
-                                    <OnlinePlayer v-for="player in server.online_players" :key="player.name" :player="player" />
+                                    <OnlinePlayer v-for="player in server.online_players" :key="player.id" :player="player" :siblings="server.online_players" />
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div v-if="filteredAndSortedServers.filter(s => s.defrag.toLowerCase().includes('cpm')).length === 0" class="text-center py-8  bg-white/5 rounded-xl border border-white/10">
-                        <p class="text-gray-500 text-sm">No CPM servers found</p>
+                        <p class="text-gray-500 text-sm">{{ $t('No CPM servers found') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Oldschool Layout: the shape of the q3df.org serverlist, three
+                 boxes to a row, each one a thumbnail beside the address and a
+                 plain table of who is on. Everything is stated rather than
+                 revealed on hover, which is the whole appeal of it.
+
+                 The shape only. Its grey-on-black and its table borders stay
+                 there; this reads as the rest of the site, and the map, the
+                 player and the record all link where they link everywhere
+                 else here, which on the original they do not. -->
+            <!-- Four to a row and not five. The card has to carry a full
+                 ip:port without shortening it, since that is the thing people
+                 are here to copy, and at five the text column comes up about
+                 40px short however small the thumbnail is made. At four it has
+                 room to spare. -->
+            <div v-else-if="layout === 'oldschool'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                <div v-for="server in filteredAndSortedServers" :key="server.id"
+                     :class="['rounded-xl border bg-black/40 backdrop-blur-sm p-3',
+                              server.cheats && !cheatsAreExpected(server) ? 'border-red-500/50' : 'border-white/10']">
+
+                    <CheatsBanner :cheats="server.cheats" :subdued="cheatsAreExpected(server)" />
+
+                    <div class="flex items-center gap-2 mb-3">
+                        <img v-if="server.location" :src="`/images/flags/${server.location}.png`" :title="server.location"
+                             class="w-5 h-3.5 rounded shrink-0" @error="$event.target.style.display='none'" />
+                        <h3 class="font-bold text-sm truncate" v-html="q3tohtml(server.name)"></h3>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <a :href="server.map ? `/maps/${encodeURIComponent(server.map)}` : '#'" class="shrink-0">
+                            <img :src="`/storage/${server.mapdata?.thumbnail}`"
+                                 @error="$event.target.src='/images/unknown.jpg'"
+                                 class="w-24 h-16 rounded-lg object-cover bg-gray-900 border border-white/10" />
+                        </a>
+
+                        <div class="min-w-0 flex-1 text-xs space-y-1">
+                            <!-- Where the address used to be printed. On the
+                                 original that address is itself the way in -
+                                 it says so at the top of the page - so a
+                                 button that connects belongs in its place
+                                 rather than beside it. The address stays
+                                 reachable: it is the button's tooltip, and
+                                 the copy icon next to it still hands it over
+                                 for anyone typing it somewhere else. -->
+                            <!-- Wraps: at four to a row the column is about
+                                 200px, and Connect plus a labelled Copy IP is
+                                 wider than that in Russian, where the word for
+                                 Connect is longer than an IP address. It drops
+                                 to a second line there rather than squashing
+                                 the button. -->
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <a :href="`defrag://${server.ip}:${server.port}`"
+                                   :title="`${server.ip}:${server.port}`"
+                                   :class="server.defrag?.toLowerCase().includes('cpm') ? 'connect-button-cpm' : 'connect-button-vq3'"
+                                   class="connect-button flex items-center gap-1 px-2 py-1 rounded text-white font-bold transition-all hover:scale-[1.03]">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 shrink-0">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
+                                    </svg>
+                                    {{ $t('Connect') }}
+                                </a>
+                                <CopyButton :text="server.ip + ':' + server.port" size="xs" :label="$t('Copy IP')" />
+                            </div>
+                            <div v-if="server.map" class="flex items-center gap-1 min-w-0">
+                                <a :href="`/maps/${encodeURIComponent(server.map)}`"
+                                   class="font-bold text-white hover:text-blue-400 transition-colors truncate">{{ server.map }}</a>
+                                <CopyButton :text="server.map" size="xs" :label="$t('Copy map')" />
+                            </div>
+                            <div class="uppercase" :class="server.defrag?.toLowerCase().includes('cpm') ? 'text-purple-300' : 'text-blue-300'">
+                                {{ server.defrag }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- The map record, exactly where the original put it. -->
+                    <div v-if="server.besttime_time && server.besttime_time > 0"
+                         class="mt-3 pt-2 border-t border-white/10 text-xs">
+                        <span class="text-gray-500 font-bold uppercase tracking-wide">{{ $t('Best Time') }}</span>
+                        <a :href="server.besttime_url ? `/profile/${server.besttime_url}` : '#'"
+                           class="flex items-center gap-1.5 mt-1 hover:bg-white/5 rounded px-1 -mx-1 py-0.5 transition-colors">
+                            <img v-if="server.besttime_country" :src="`/images/flags/${server.besttime_country}.png`"
+                                 class="w-4 h-3 rounded shrink-0" @error="$event.target.style.display='none'" />
+                            <span class="truncate" v-html="q3tohtml(server.besttime_name || '')"></span>
+                            <span class="ml-auto font-mono font-bold text-yellow-400 shrink-0">{{ formatTime(server.besttime_time) }}</span>
+                        </a>
+                    </div>
+
+                    <!-- Players, then spectators, as two plain lists. Uses the
+                         same row component as everywhere else, so the flag,
+                         the profile link, the padlock and the Twitch dot all
+                         come along rather than being rebuilt here. -->
+                    <div v-if="server.online_players.length > 0" class="mt-3">
+                        <div class="grid grid-cols-[1fr_auto] gap-x-3 text-[10px] font-bold uppercase tracking-wide text-gray-500 border-b border-white/10 pb-1 mb-1">
+                            <span>{{ $t('Player') }}</span>
+                            <span>{{ $t('Time') }}</span>
+                        </div>
+                        <OnlinePlayer v-for="player in server.online_players" :key="player.id" :player="player" :siblings="server.online_players" />
+                    </div>
+
+                    <div v-else class="mt-3 text-xs text-gray-600 italic">
+                        {{ $t('No players online') }}
                     </div>
                 </div>
             </div>
@@ -973,8 +1013,8 @@ const getFunctionName = (abbr) => {
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-gray-500 mx-auto mb-4">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
                     </svg>
-                    <h3 class="text-xl font-bold text-white mb-2">No servers found</h3>
-                    <p class="text-gray-400">Try adjusting your filters</p>
+                    <h3 class="text-xl font-bold text-white mb-2">{{ $t('No servers found') }}</h3>
+                    <p class="text-gray-400">{{ $t('Try adjusting your filters') }}</p>
                 </div>
             </div>
         </div>
@@ -1059,6 +1099,18 @@ const getFunctionName = (abbr) => {
     max-height: 0;
     overflow: hidden;
     opacity: 0;
+    /* The overflow is here to animate the height, but it clips sideways too,
+       and it was cutting the glow off the Functions label and the icons in a
+       straight vertical line. Padding gives the glow room to land inside the
+       box; the negative margin of the same size puts the row back where it
+       was. Only horizontal - the vertical clip is what does the animation. */
+    padding-left: 12px;
+    padding-right: 12px;
+    margin-left: -12px;
+    margin-right: -12px;
+    /* Collapsed the padding has to go, or box-sizing keeps the box 12px tall
+       when max-height says 0 and the row never fully closes. */
+    padding-bottom: 0;
     transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
 }
 
@@ -1066,6 +1118,11 @@ const getFunctionName = (abbr) => {
 .map-features-expanded .map-features-container {
     max-height: 200px;
     opacity: 1;
+    /* The icons sit on the bottom edge of this box, so their drop-shadow was
+       being sliced off flat. This is the room it needs; the negative margin
+       gives the space straight back so nothing below moves. */
+    padding-bottom: 12px;
+    margin-bottom: -12px;
     transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
 }
 

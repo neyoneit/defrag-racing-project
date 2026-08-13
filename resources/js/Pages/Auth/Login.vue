@@ -24,14 +24,14 @@ const submit = () => {
 
 <template>
     <div>
-        <Head title="Login" />
+        <Head :title="$t('Login')" />
 
         <!-- Header Section with Gradient Shadow -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center">
-                    <h1 class="text-2xl md:text-3xl font-black text-white mb-2">Welcome Back</h1>
-                    <p class="text-gray-400">Sign in to your account to continue</p>
+                    <h1 class="text-2xl md:text-3xl font-black text-white mb-2">{{ $t('Welcome Back') }}</h1>
+                    <p class="text-gray-400">{{ $t('Sign in to your account to continue') }}</p>
                 </div>
             </div>
         </div>
@@ -50,7 +50,7 @@ const submit = () => {
                 <form @submit.prevent="submit" class="space-y-6">
                     <!-- Username Field -->
                     <div>
-                        <label for="username" class="block text-sm font-bold text-gray-300 mb-2">Username or Email</label>
+                        <label for="username" class="block text-sm font-bold text-gray-300 mb-2">{{ $t('Username or Email') }}</label>
                         <input
                             id="username"
                             v-model="form.username"
@@ -59,14 +59,14 @@ const submit = () => {
                             autofocus
                             autocomplete="username"
                             class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all"
-                            placeholder="Enter your username or email"
+                            :placeholder="$t('Enter your username or email')"
                         />
                         <p v-if="form.errors.username" class="mt-2 text-sm text-red-400">{{ form.errors.username }}</p>
                     </div>
 
                     <!-- Password Field -->
                     <div>
-                        <label for="password" class="block text-sm font-bold text-gray-300 mb-2">Password</label>
+                        <label for="password" class="block text-sm font-bold text-gray-300 mb-2">{{ $t('Password') }}</label>
                         <input
                             id="password"
                             v-model="form.password"
@@ -74,7 +74,7 @@ const submit = () => {
                             required
                             autocomplete="current-password"
                             class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all"
-                            placeholder="Enter your password"
+                            :placeholder="$t('Enter your password')"
                         />
                         <p v-if="form.errors.password" class="mt-2 text-sm text-red-400">{{ form.errors.password }}</p>
                     </div>
@@ -88,7 +88,7 @@ const submit = () => {
                                 name="remember"
                                 class="w-4 h-4 rounded bg-white/5 border border-white/10 text-blue-600 focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-0 cursor-pointer"
                             />
-                            <span class="ml-2 text-sm text-gray-400 group-hover:text-white transition">Remember me</span>
+                            <span class="ml-2 text-sm text-gray-400 group-hover:text-white transition">{{ $t('Remember me') }}</span>
                         </label>
 
                         <Link
@@ -96,7 +96,7 @@ const submit = () => {
                             :href="route('password.request')"
                             class="text-sm text-blue-400 hover:text-blue-300 transition"
                         >
-                            Forgot password?
+                            {{ $t('Forgot password?') }}
                         </Link>
                     </div>
 
@@ -106,13 +106,13 @@ const submit = () => {
                         :disabled="form.processing"
                         class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-bold rounded-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:transform-none shadow-lg shadow-blue-500/20"
                     >
-                        <span v-if="!form.processing">Log In</span>
+                        <span v-if="!form.processing">{{ $t('Log In') }}</span>
                         <span v-else class="flex items-center justify-center gap-2">
                             <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            Logging in...
+                            {{ $t('Logging in...') }}
                         </span>
                     </button>
                 </form>
@@ -123,7 +123,7 @@ const submit = () => {
                         <div class="w-full border-t border-white/10"></div>
                     </div>
                     <div class="relative flex justify-center text-sm">
-                        <span class="px-4 bg-black/40 text-gray-400">Don't have an account?</span>
+                        <span class="px-4 bg-black/40 text-gray-400">{{ $t("Don't have an account?") }}</span>
                     </div>
                 </div>
 
@@ -132,14 +132,14 @@ const submit = () => {
                     :href="route('register')"
                     class="block w-full text-center py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-medium rounded-lg transition-all"
                 >
-                    Create Account
+                    {{ $t('Create Account') }}
                 </Link>
             </div>
 
                 <!-- Footer Links -->
                 <div class="mt-8 flex justify-center">
                     <Link :href="route('home')" class="px-6 py-3 bg-black/40 backdrop-blur-sm hover:bg-black/50 border border-white/10 hover:border-white/20 text-white font-medium rounded-lg transition-all">
-                        ← Back to Home
+                        ← {{ $t('Back to Home') }}
                     </Link>
                 </div>
             </div>

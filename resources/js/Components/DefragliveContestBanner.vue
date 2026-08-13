@@ -2,6 +2,7 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { formatPrize } from '@/utils/currency';
+import { t } from '@/utils/i18n';
 
 // Sitewide nudge toward the contest while one is live, fed by the
 // `defragliveContest` shared Inertia prop (cached). Three layouts:
@@ -44,9 +45,12 @@ const timeLeft = computed(() => {
     const d = Math.floor(s / 86400);
     const h = Math.floor((s % 86400) / 3600);
     const m = Math.floor((s % 3600) / 60);
-    if (d > 0) return `${d}d ${h}h left`;
-    if (h > 0) return `${h}h ${m}m left`;
-    return `${m}m left`;
+    // One key, with the whole "3d 7h" already formatted. Splitting it per unit
+    // would glue the d/h/m letters onto the placeholder names (:countd), which
+    // survives t() but is a trap for whoever translates the line.
+    if (d > 0) return t(':time left', { time: `${d}d ${h}h` });
+    if (h > 0) return t(':time left', { time: `${h}h ${m}m` });
+    return t(':time left', { time: `${m}m` });
 });
 
 const prize = computed(() => {
@@ -74,14 +78,13 @@ const countdown = computed(() => {
     <!-- Homepage hero card: prize + segmented live countdown -->
     <Link v-if="variant === 'hero' && contest" href="/defraglive/contest"
         class="group relative z-10 flex items-center gap-4 flex-wrap justify-center sm:justify-between px-5 py-3.5 bg-purple-950/70 backdrop-blur-sm border border-[#9147ff]/50 rounded-xl hover:bg-purple-900/60 hover:border-[#9147ff]/80 hover:shadow-[0_0_50px_rgba(145,71,255,0.35)] transition-all shadow-[0_4px_20px_rgba(0,0,0,0.4),0_0_30px_rgba(145,71,255,0.2)]">
-        <div class="absolute -top-2 -right-2 px-2.5 py-0.5 bg-gradient-to-r from-[#9147ff] to-fuchsia-500 rounded-full text-[10px] font-black text-white shadow-lg">LIVE</div>
+        <div class="absolute -top-2 -right-2 px-2.5 py-0.5 bg-gradient-to-r from-[#9147ff] to-fuchsia-500 rounded-full text-[10px] font-black text-white shadow-lg">{{ $t('LIVE') }}</div>
         <div class="flex items-center gap-3 min-w-0">
             <span class="text-2xl leading-none">🏆</span>
             <div class="min-w-0">
-                <div class="text-xs uppercase font-bold tracking-wider text-purple-300">DefragLive Contest</div>
-                <div class="text-sm font-bold text-white truncate">
-                    Most watched player wins <span class="text-emerald-400">{{ prize }}</span>
-                </div>
+                <div class="text-xs uppercase font-bold tracking-wider text-purple-300">{{ $t('DefragLive Contest') }}</div>
+                <div class="text-sm font-bold text-white truncate [&_span]:text-emerald-400"
+                    v-html="$t('Most watched player wins <span>:prize</span>', { prize })"></div>
             </div>
         </div>
         <div class="flex items-center gap-3">
@@ -103,10 +106,11 @@ const countdown = computed(() => {
         class="group block border-y border-[#9147ff]/30 bg-[#9147ff]/10 hover:bg-[#9147ff]/20 transition-colors">
         <div class="max-w-8xl mx-auto px-4 py-2.5 flex items-center justify-center gap-x-3 gap-y-1 flex-wrap text-sm text-center">
             <span class="text-lg leading-none">🏆</span>
-            <span class="font-bold text-white">DefragLive Contest is live</span>
-            <span class="text-gray-300">- win <span class="text-emerald-400 font-bold">{{ prize }}</span> as the most watched player</span>
+            <span class="font-bold text-white">{{ $t('DefragLive Contest is live') }}</span>
+            <span class="text-gray-300 [&_span]:text-emerald-400 [&_span]:font-bold"
+                v-html="$t('- win <span>:prize</span> as the most watched player', { prize })"></span>
             <span v-if="timeLeft" class="text-amber-300 font-semibold">&middot; {{ timeLeft }}</span>
-            <span class="text-[#bf94ff] font-semibold group-hover:underline">Enter now -&gt;</span>
+            <span class="text-[#bf94ff] font-semibold group-hover:underline">{{ $t('Enter now ->') }}</span>
         </div>
     </Link>
 
@@ -121,21 +125,20 @@ const countdown = computed(() => {
 
             <button type="button" @click.prevent.stop="dismiss"
                 class="absolute top-2 right-2 z-10 text-gray-500 hover:text-white w-5 h-5 flex items-center justify-center rounded hover:bg-white/10"
-                title="Dismiss">
+                :title="$t('Dismiss')">
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>
             </button>
 
             <div class="p-3.5">
                 <div class="flex items-center gap-2">
                     <span class="text-xl">🏆</span>
-                    <div class="text-[11px] uppercase tracking-widest font-bold text-purple-300">Contest live</div>
+                    <div class="text-[11px] uppercase tracking-widest font-bold text-purple-300">{{ $t('Contest live') }}</div>
                 </div>
-                <div class="mt-1 font-black text-white leading-tight">
-                    Win <span class="text-emerald-400">{{ prize }}</span> - most watched player
-                </div>
+                <div class="mt-1 font-black text-white leading-tight [&_span]:text-emerald-400"
+                    v-html="$t('Win <span>:prize</span> - most watched player', { prize })"></div>
                 <div class="mt-1.5 flex items-center justify-between text-xs">
                     <span v-if="timeLeft" class="text-amber-300 font-semibold">{{ timeLeft }}</span>
-                    <span class="text-[#bf94ff] font-semibold group-hover:underline ml-auto">Enter now -&gt;</span>
+                    <span class="text-[#bf94ff] font-semibold group-hover:underline ml-auto">{{ $t('Enter now ->') }}</span>
                 </div>
             </div>
         </Link>

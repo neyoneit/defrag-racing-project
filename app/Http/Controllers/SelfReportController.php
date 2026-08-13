@@ -60,7 +60,7 @@ class SelfReportController extends Controller
                     'reason' => $user->amnesty_blocked_reason,
                 ],
                 'records' => ['data' => []],
-                'reasons' => RecordFlagController::FLAG_TYPES,
+                'reasons' => RecordFlagController::flagTypes(),
                 'mine' => ['data' => []],
                 'mineCounts' => [],
                 'mineState' => 'all',
@@ -160,12 +160,12 @@ class SelfReportController extends Controller
             'search' => $search,
             'sort' => $sort,
             'totalRecords' => $total,
-            'reasons' => RecordFlagController::FLAG_TYPES,
+            'reasons' => RecordFlagController::flagTypes(),
             // Your own withdrawals, with the reason you gave. Private like the
             // rest of it, but you are allowed to see what you did and why -
             // months later "which runs did I take down" is a fair question and
             // the answer should not only exist in the admin panel.
-            'handlingOptions' => PlayerSelfReport::HANDLING,
+            'handlingOptions' => PlayerSelfReport::handling(),
             'mineState' => $mineState,
             'mineCounts' => $mineCounts,
             'mine' => $mine
@@ -175,7 +175,7 @@ class SelfReportController extends Controller
                     'physics' => $report->physics,
                     'mode' => $report->mode,
                     'time' => $report->time,
-                    'reason' => RecordFlagController::FLAG_TYPES[$report->reason] ?? $report->reason,
+                    'reason' => RecordFlagController::flagTypes()[$report->reason] ?? $report->reason,
                     'handling' => $report->handling,
                     'note' => $report->note,
                     'processed' => $report->isProcessed(),
@@ -205,8 +205,8 @@ class SelfReportController extends Controller
         $data = $request->validate([
             'record_ids' => ['required', 'array', 'min:1', 'max:100'],
             'record_ids.*' => ['integer'],
-            'reason' => ['required', 'string', 'in:' . implode(',', array_keys(RecordFlagController::FLAG_TYPES))],
-            'handling' => ['required', 'string', 'in:' . implode(',', array_keys(PlayerSelfReport::HANDLING))],
+            'reason' => ['required', 'string', 'in:' . implode(',', array_keys(RecordFlagController::flagTypes()))],
+            'handling' => ['required', 'string', 'in:' . implode(',', array_keys(PlayerSelfReport::handling()))],
             'note' => ['nullable', 'string', 'max:500'],
             'confirm' => ['accepted'],
         ], [

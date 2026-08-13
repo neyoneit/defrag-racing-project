@@ -26,7 +26,7 @@
         <span
             v-if="parsed.teamrun"
             class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium bg-amber-900/50 text-amber-200"
-            title="Teamrun - more than one player in the run"
+            :title="$t('Teamrun - more than one player in the run')"
         >
             TR
         </span>

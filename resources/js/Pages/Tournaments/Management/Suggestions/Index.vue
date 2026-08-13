@@ -13,7 +13,7 @@
 <template>
     <Tournament :tournament="tournament" tab="ManageTournament">
         <div class="text-xl text-gray-300 font-bold mb-5 text-center">
-            Suggestions
+            {{ $t('Suggestions') }}
         </div>
 
         <div v-for="suggestion in suggestions">
@@ -21,11 +21,11 @@
         </div>
 
         <div class="flex justify-center mt-5 text-md text-gray-500" v-if="suggestions.length === 0">
-            There are no suggestions yet.
+            {{ $t('There are no suggestions yet.') }}
         </div>
 
         <div class="text-xl text-gray-300 font-bold mb-5 text-center mt-10" v-if="archivedSuggestions.length > 0">
-            Archived Suggestions
+            {{ $t('Archived Suggestions') }}
         </div>
 
         <div v-for="suggestion in archivedSuggestions" v-if="archivedSuggestions.length > 0">

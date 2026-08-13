@@ -9,6 +9,7 @@
 <script setup>
     import { Head, Link, usePage } from '@inertiajs/vue3';
     import { ref } from 'vue';
+    import { t } from '@/utils/i18n';
 
     const props = defineProps({
         user: Object,
@@ -41,7 +42,7 @@
             image.value = response.data?.image;
             name.value = response.data?.name;
         }).catch((e) => {
-            error.value = e.response?.data?.errors?.profile_link?.[0] || 'Something went wrong';
+            error.value = e.response?.data?.errors?.profile_link?.[0] || t('Something went wrong');
         }).finally(() => {
             processing.value = false;
         });
@@ -55,7 +56,7 @@
             profile_link: profile_link.value
         }).then((response) => {
             if (response.data.success == false) {
-                error.value = 'Verification failed. Make sure you set your profile image to the provided image.';
+                error.value = t('Verification failed. Make sure you set your profile image to the provided image.');
                 return;
             }
             linked.value = true;
@@ -99,15 +100,15 @@
 
 <template>
     <div class="">
-        <Head title="Link Your Account" />
+        <Head :title="$t('Link Your Account')" />
 
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-12">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <!-- Header -->
             <div class="text-center mb-8">
-                <h1 class="text-2xl md:text-3xl font-black text-white mb-3">Link Your Q3DF Profile</h1>
+                <h1 class="text-2xl md:text-3xl font-black text-white mb-3">{{ $t('Link Your Q3DF Profile') }}</h1>
                 <p class="text-lg text-gray-400 max-w-2xl mx-auto">
-                    defrag.racing is built on top of the MDD/Q3DF database. Link your profile to unlock the full experience.
+                    {{ $t('defrag.racing is built on top of the MDD/Q3DF database. Link your profile to unlock the full experience.') }}
                 </p>
             </div>
 
@@ -117,8 +118,8 @@
                 <div class="lg:col-span-2">
                     <div class="bg-black/40 rounded-2xl border border-white/10 shadow-2xl overflow-hidden sticky top-24">
                         <div class="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-b border-white/10 px-6 py-4">
-                            <h2 class="text-lg font-bold text-white">Connect Your MDD Profile</h2>
-                            <p class="text-sm text-gray-400 mt-1">Verify ownership by updating your Q3DF profile image.</p>
+                            <h2 class="text-lg font-bold text-white">{{ $t('Connect Your MDD Profile') }}</h2>
+                            <p class="text-sm text-gray-400 mt-1">{{ $t('Verify ownership by updating your Q3DF profile image.') }}</p>
                         </div>
 
                         <!-- Success State -->
@@ -129,10 +130,10 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                                     </svg>
                                 </div>
-                                <h3 class="text-xl font-bold text-green-400 mb-2">Profile Linked!</h3>
-                                <p class="text-gray-400 text-sm mb-4">Your account is now connected to MDD user #{{ mddId }}.</p>
+                                <h3 class="text-xl font-bold text-green-400 mb-2">{{ $t('Profile Linked!') }}</h3>
+                                <p class="text-gray-400 text-sm mb-4">{{ $t('Your account is now connected to MDD user #:id.', { id: mddId }) }}</p>
                                 <Link :href="route('profile.index', { userId: user.id })" class="inline-block px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors">
-                                    Go to Profile
+                                    {{ $t('Go to Profile') }}
                                 </Link>
                             </div>
                         </div>
@@ -140,7 +141,7 @@
                         <!-- Step 1: Enter Profile Link -->
                         <form v-else @submit.prevent="submit" class="p-6 space-y-4">
                             <div v-if="stage === 1">
-                                <label class="block text-sm font-medium text-white mb-2">MDD Profile Link</label>
+                                <label class="block text-sm font-medium text-white mb-2">{{ $t('MDD Profile Link') }}</label>
                                 <input
                                     v-model="profile_link"
                                     type="text"
@@ -151,11 +152,13 @@
 
                                 <!-- Inline Help -->
                                 <div class="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm text-gray-300 space-y-1.5">
-                                    <p class="font-medium text-gray-200">How to find your profile link:</p>
-                                    <p>1. Open <a href="https://q3df.org/profil" target="_blank" class="text-blue-400 hover:text-blue-300">q3df.org/profil</a> (you must be logged in)</p>
-                                    <p>2. Click <span class="text-white font-semibold">Show all</span> below your avatar</p>
-                                    <p>3. Copy the URL from your browser</p>
-                                    <p class="text-orange-400 pl-3">e.g. https://q3df.org/profil?id=2640</p>
+                                    <p class="font-medium text-gray-200">{{ $t('How to find your profile link:') }}</p>
+                                    <p class="[&_a]:text-blue-400 [&_a:hover]:text-blue-300"
+                                       v-html="$t('1. Open <a href=https://q3df.org/profil target=_blank>q3df.org/profil</a> (you must be logged in)')"></p>
+                                    <p class="[&_span]:text-white [&_span]:font-semibold"
+                                       v-html="$t('2. Click <span>Show all</span> below your avatar')"></p>
+                                    <p>{{ $t('3. Copy the URL from your browser') }}</p>
+                                    <p class="text-orange-400 pl-3">{{ $t('e.g. https://q3df.org/profil?id=2640') }}</p>
                                 </div>
                             </div>
 
@@ -167,11 +170,11 @@
                                 <div class="flex items-start gap-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                                     <div class="w-7 h-7 rounded-full bg-yellow-500 text-black font-black text-sm flex items-center justify-center shrink-0">1</div>
                                     <div class="flex-1">
-                                        <p class="text-sm font-bold text-white mb-2">Download this image</p>
+                                        <p class="text-sm font-bold text-white mb-2">{{ $t('Download this image') }}</p>
                                         <div class="flex flex-col items-center">
                                             <img :src="image" class="max-w-[150px] rounded-lg border border-white/10" />
                                             <button type="button" @click="downloadImage" class="mt-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black text-sm font-bold rounded-lg transition-colors">
-                                                Download Image
+                                                {{ $t('Download Image') }}
                                             </button>
                                         </div>
                                     </div>
@@ -181,10 +184,10 @@
                                 <div class="flex items-start gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                                     <div class="w-7 h-7 rounded-full bg-blue-500 text-white font-black text-sm flex items-center justify-center shrink-0">2</div>
                                     <div class="flex-1">
-                                        <p class="text-sm font-bold text-white mb-1">Upload it as your Q3DF profile image</p>
-                                        <p class="text-xs text-gray-400 mb-2">Don't modify the image. Upload it exactly as downloaded.</p>
+                                        <p class="text-sm font-bold text-white mb-1">{{ $t('Upload it as your Q3DF profile image') }}</p>
+                                        <p class="text-xs text-gray-400 mb-2">{{ $t('Don\'t modify the image. Upload it exactly as downloaded.') }}</p>
                                         <a href="https://q3df.org/profil/edit" target="_blank" class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg transition-colors">
-                                            Open Q3DF Profile Editor
+                                            {{ $t('Open Q3DF Profile Editor') }}
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
                                             </svg>
@@ -196,8 +199,8 @@
                                 <div class="flex items-start gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
                                     <div class="w-7 h-7 rounded-full bg-green-500 text-white font-black text-sm flex items-center justify-center shrink-0">3</div>
                                     <div class="flex-1">
-                                        <p class="text-sm font-bold text-white">Come back here and click Finalize</p>
-                                        <p class="text-xs text-gray-400">We'll verify the image matches and link your account.</p>
+                                        <p class="text-sm font-bold text-white">{{ $t('Come back here and click Finalize') }}</p>
+                                        <p class="text-xs text-gray-400">{{ $t('We\'ll verify the image matches and link your account.') }}</p>
                                     </div>
                                 </div>
 
@@ -207,7 +210,7 @@
                             <!-- Buttons -->
                             <div class="flex justify-between items-center pt-2">
                                 <button v-if="stage === 2" type="button" @click="goBack" class="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white border border-white/20 rounded-lg hover:border-white/40 transition-colors">
-                                    Back
+                                    {{ $t('Back') }}
                                 </button>
                                 <div v-else></div>
 
@@ -216,15 +219,16 @@
                                         <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                                         </svg>
-                                        Processing...
+                                        {{ $t('Processing...') }}
                                     </span>
-                                    <span v-else>{{ stage === 1 ? 'Start' : 'Finalize' }}</span>
+                                    <span v-else>{{ stage === 1 ? $t('Start') : $t('Finalize') }}</span>
                                 </button>
                             </div>
                         </form>
 
                         <div class="px-6 py-4 border-t border-white/5 text-center">
-                            <p class="text-sm text-gray-400">Having trouble? <a href="https://discord.defrag.racing" target="_blank" class="text-blue-400 hover:text-blue-300 font-medium">Contact us on Discord</a> and we'll help you out.</p>
+                            <p class="text-sm text-gray-400 [&_a]:text-blue-400 [&_a:hover]:text-blue-300 [&_a]:font-medium"
+                               v-html="$t('Having trouble? <a href=https://discord.defrag.racing target=_blank>Contact us on Discord</a> and we\'ll help you out.')"></p>
                         </div>
                     </div>
                 </div>
@@ -238,8 +242,8 @@
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-white font-bold text-sm mb-0.5">Records & Rankings</h3>
-                            <p class="text-gray-400 text-xs">Personal records, world records, and global rankings.</p>
+                            <h3 class="text-white font-bold text-sm mb-0.5">{{ $t('Records & Rankings') }}</h3>
+                            <p class="text-gray-400 text-xs">{{ $t('Personal records, world records, and global rankings.') }}</p>
                         </div>
                     </div>
 
@@ -250,8 +254,8 @@
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-white font-bold text-sm mb-0.5">Detailed Statistics</h3>
-                            <p class="text-gray-400 text-xs">Dominance scores, rivals, competitors, and progress.</p>
+                            <h3 class="text-white font-bold text-sm mb-0.5">{{ $t('Detailed Statistics') }}</h3>
+                            <p class="text-gray-400 text-xs">{{ $t('Dominance scores, rivals, competitors, and progress.') }}</p>
                         </div>
                     </div>
 
@@ -262,8 +266,8 @@
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-white font-bold text-sm mb-0.5">Demo Matching</h3>
-                            <p class="text-gray-400 text-xs">Demos automatically matched to your records.</p>
+                            <h3 class="text-white font-bold text-sm mb-0.5">{{ $t('Demo Matching') }}</h3>
+                            <p class="text-gray-400 text-xs">{{ $t('Demos automatically matched to your records.') }}</p>
                         </div>
                     </div>
 
@@ -274,8 +278,8 @@
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-white font-bold text-sm mb-0.5">Record Notifications</h3>
-                            <p class="text-gray-400 text-xs">Get notified when someone beats your records.</p>
+                            <h3 class="text-white font-bold text-sm mb-0.5">{{ $t('Record Notifications') }}</h3>
+                            <p class="text-gray-400 text-xs">{{ $t('Get notified when someone beats your records.') }}</p>
                         </div>
                     </div>
 
@@ -286,8 +290,8 @@
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-white font-bold text-sm mb-0.5">Profile Customization</h3>
-                            <p class="text-gray-400 text-xs">Colored nickname, custom background, and effects.</p>
+                            <h3 class="text-white font-bold text-sm mb-0.5">{{ $t('Profile Customization') }}</h3>
+                            <p class="text-gray-400 text-xs">{{ $t('Colored nickname, custom background, and effects.') }}</p>
                         </div>
                     </div>
 
@@ -298,8 +302,8 @@
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-white font-bold text-sm mb-0.5">Maplists & Tracking</h3>
-                            <p class="text-gray-400 text-xs">Personal maplists and unplayed maps tracking.</p>
+                            <h3 class="text-white font-bold text-sm mb-0.5">{{ $t('Maplists & Tracking') }}</h3>
+                            <p class="text-gray-400 text-xs">{{ $t('Personal maplists and unplayed maps tracking.') }}</p>
                         </div>
                     </div>
 
@@ -310,8 +314,8 @@
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-white font-bold text-sm mb-0.5">Demo Uploads</h3>
-                            <p class="text-gray-400 text-xs">Share your runs and attach demos to records.</p>
+                            <h3 class="text-white font-bold text-sm mb-0.5">{{ $t('Demo Uploads') }}</h3>
+                            <p class="text-gray-400 text-xs">{{ $t('Share your runs and attach demos to records.') }}</p>
                         </div>
                     </div>
 
@@ -323,8 +327,8 @@
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-white font-bold text-sm mb-0.5">Map Tagging</h3>
-                            <p class="text-gray-400 text-xs">Tag maps with categories and help organize the database.</p>
+                            <h3 class="text-white font-bold text-sm mb-0.5">{{ $t('Map Tagging') }}</h3>
+                            <p class="text-gray-400 text-xs">{{ $t('Tag maps with categories and help organize the database.') }}</p>
                         </div>
                     </div>
 
@@ -336,8 +340,8 @@
                             </svg>
                         </div>
                         <div>
-                            <h3 class="text-white font-bold text-sm mb-0.5">Tournaments</h3>
-                            <p class="text-gray-400 text-xs">Compete in community tournaments and special leaderboards.</p>
+                            <h3 class="text-white font-bold text-sm mb-0.5">{{ $t('Tournaments') }}</h3>
+                            <p class="text-gray-400 text-xs">{{ $t('Compete in community tournaments and special leaderboards.') }}</p>
                         </div>
                     </div>
                 </div>
@@ -346,7 +350,7 @@
             <!-- Skip -->
             <div class="text-center mt-4">
                 <Link href="/" class="text-sm text-gray-500 hover:text-gray-400 transition-colors">
-                    Skip for now
+                    {{ $t('Skip for now') }}
                 </Link>
             </div>
         </div>

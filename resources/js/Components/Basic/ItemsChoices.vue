@@ -124,12 +124,12 @@
         <div class="options p-2 m-1 rounded-md" v-show="isOpen">
             <div class="flex justify-between w-full text-white mb-2">
                 <div class="p-2 flex flex-grow items-center rounded-md cursor-pointer" :class="{'bg-green-500': includeOptions.length == options.length, 'bg-red-600': excludeOptions.length == options.length}" @click="clearAll()">
-                    <span class="ml-2"> All </span>
+                    <span class="ml-2"> {{ $t('All') }} </span>
                 </div>
 
                 <div class="flex items-center">
                     <div>
-                        <div title="Must Include" @click="includeAll()" class="p-2 cursor-pointer rounded-md bg-green-600 hover:bg-green-500 ml-1">
+                        <div :title="$t('Must Include')" @click="includeAll()" class="p-2 cursor-pointer rounded-md bg-green-600 hover:bg-green-500 ml-1">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                             </svg>
@@ -147,7 +147,7 @@
 
                     <div class="flex items-center">
                         <div>
-                            <div title="Must Include" @click="includeOption(item.code)" class="p-2 cursor-pointer rounded-md bg-green-600 hover:bg-green-500 ml-1">
+                            <div :title="$t('Must Include')" @click="includeOption(item.code)" class="p-2 cursor-pointer rounded-md bg-green-600 hover:bg-green-500 ml-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                                 </svg>

@@ -5,6 +5,7 @@
     import InputError from '@/Components/Laravel/InputError.vue';
     import InputLabel from '@/Components/Laravel/InputLabel.vue';
 
+    import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
     const props = defineProps({
         closeForm: Function,
         tournament: Object
@@ -31,7 +32,7 @@
     <div class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 w-screen h-screen" style="top: 0px; left: 0px;">
         <div class="bg-gray-800 text-white p-8 rounded-md shadow-lg text-left" style="width: 400px; max-width: 90vw;">
             <div class="flex justify-between">
-                <h2 class="text-xl font-semibold mb-4">Suggest a change</h2>
+                <h2 class="text-xl font-semibold mb-4">{{ $t('Suggest a change') }}</h2>
                 <div @click="closeForm" class="cursor-pointer">
                     <svg class="w-8 h-8" width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M8.00386 9.41816C7.61333 9.02763 7.61334 8.39447 8.00386 8.00395C8.39438 7.61342 9.02755 7.61342 9.41807 8.00395L12.0057 10.5916L14.5907 8.00657C14.9813 7.61605 15.6144 7.61605 16.0049 8.00657C16.3955 8.3971 16.3955 9.03026 16.0049 9.42079L13.4199 12.0058L16.0039 14.5897C16.3944 14.9803 16.3944 15.6134 16.0039 16.0039C15.6133 16.3945 14.9802 16.3945 14.5896 16.0039L12.0057 13.42L9.42097 16.0048C9.03045 16.3953 8.39728 16.3953 8.00676 16.0048C7.61624 15.6142 7.61624 14.9811 8.00676 14.5905L10.5915 12.0058L8.00386 9.41816Z" fill="#aaaaaa"/>
@@ -42,11 +43,13 @@
             <div class="w-1/2 h-1 mb-5" style="background-color: #4d78bf"></div>
 
             <div class="">
-                <p class="text-sm mb-4">Suggest changes to the tournament.</p>
+                <p class="text-sm mb-4">{{ $t('Suggest changes to the tournament.') }}</p>
             </div>
 
             <div class="mt-2">
                 <form method="POST" enctype="multipart/form-data" @submit.prevent="submitSuggestionForm">
+                    <EnglishOnlyNotice :compact="false" />
+
                     <div class="">
                         <div class="">
                             <div>
@@ -71,7 +74,7 @@
                         </div>
     
                         <div class="flex items-start mt-5 justify-center text-center">
-                            <PrimaryButton>Submit Suggestion</PrimaryButton>
+                            <PrimaryButton>{{ $t('Submit Suggestion') }}</PrimaryButton>
                         </div>
                     </div>
                 </form>

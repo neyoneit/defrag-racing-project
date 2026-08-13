@@ -29,16 +29,16 @@ const submit = () => {
 
 <template>
     <div class="pb-4">
-        <Head title="Create Wiki Page" />
+        <Head :title="$t('Create Wiki Page')" />
 
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex items-center gap-2 text-sm text-gray-500 mb-2">
-                    <Link :href="route('wiki.index')" class="hover:text-gray-300 transition">Wiki</Link>
+                    <Link :href="route('wiki.index')" class="hover:text-gray-300 transition">{{ $t('Wiki') }}</Link>
                     <span>/</span>
-                    <span class="text-gray-400">New Page</span>
+                    <span class="text-gray-400">{{ $t('New Page') }}</span>
                 </div>
-                <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">Create Wiki Page</h1>
+                <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('Create Wiki Page') }}</h1>
             </div>
         </div>
 
@@ -47,7 +47,7 @@ const submit = () => {
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-400 mb-1">Title</label>
+                            <label class="block text-sm font-medium text-gray-400 mb-1">{{ $t('Title') }}</label>
                             <input
                                 v-model="form.title"
                                 type="text"
@@ -57,9 +57,9 @@ const submit = () => {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-400 mb-1">
-                                Slug
+                                {{ $t('Slug') }}
                                 <button type="button" @click="autoSlug = !autoSlug" class="ml-2 text-xs text-blue-400 hover:text-blue-300">
-                                    {{ autoSlug ? '(auto - click to edit manually)' : '(manual - click for auto)' }}
+                                    {{ autoSlug ? $t('(auto - click to edit manually)') : $t('(manual - click for auto)') }}
                                 </button>
                             </label>
                             <input
@@ -73,12 +73,12 @@ const submit = () => {
                     </div>
 
                     <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-400 mb-1">Parent Page</label>
+                        <label class="block text-sm font-medium text-gray-400 mb-1">{{ $t('Parent Page') }}</label>
                         <select
                             v-model="form.parent_id"
                             class="w-full bg-gray-900/60 border border-gray-700/50 rounded-lg px-4 py-2 text-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
                         >
-                            <option :value="null">None (top level)</option>
+                            <option :value="null">{{ $t('None (top level)') }}</option>
                             <option v-for="parent in parents" :key="parent.id" :value="parent.id">{{ parent.title }}</option>
                         </select>
                     </div>
@@ -88,13 +88,13 @@ const submit = () => {
                     <p v-if="form.errors.content" class="text-red-400 text-sm mt-1">{{ form.errors.content }}</p>
 
                     <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-700/50">
-                        <Link :href="route('wiki.index')" class="text-gray-400 hover:text-gray-200 text-sm transition">Cancel</Link>
+                        <Link :href="route('wiki.index')" class="text-gray-400 hover:text-gray-200 text-sm transition">{{ $t('Cancel') }}</Link>
                         <button
                             type="submit"
                             :disabled="form.processing"
                             class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-lg transition"
                         >
-                            {{ form.processing ? 'Creating...' : 'Create Page' }}
+                            {{ form.processing ? $t('Creating...') : $t('Create Page') }}
                         </button>
                     </div>
                 </div>

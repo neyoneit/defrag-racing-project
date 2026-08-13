@@ -9,7 +9,7 @@
                 <div class="relative bg-black/80 rounded-xl shadow-2xl max-w-2xl w-full border border-white/10">
                     <!-- Header -->
                     <div class="px-6 py-4 border-b border-white/10">
-                        <h3 class="text-xl font-bold text-white">Report Demo</h3>
+                        <h3 class="text-xl font-bold text-white">{{ $t('Report Demo') }}</h3>
                         <p class="text-sm text-gray-400 mt-1">{{ demo?.processed_filename || demo?.original_filename }}</p>
                     </div>
 
@@ -17,7 +17,7 @@
                     <form @submit.prevent="submitReport" class="px-6 py-4 space-y-4">
                         <!-- Report Type Selection -->
                         <div>
-                            <label class="block text-sm font-semibold text-gray-300 mb-2">Report Type</label>
+                            <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Report Type') }}</label>
                             <div class="space-y-2">
                                 <!-- Wrong Assignment -->
                                 <label class="flex items-start gap-3 bg-white/5 p-4 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
@@ -28,8 +28,8 @@
                                         class="mt-1"
                                     />
                                     <div>
-                                        <div class="text-white font-semibold">Wrong Assignment</div>
-                                        <div class="text-sm text-gray-400">This demo is assigned to the wrong player/record</div>
+                                        <div class="text-white font-semibold">{{ $t('Wrong Assignment') }}</div>
+                                        <div class="text-sm text-gray-400">{{ $t('This demo is assigned to the wrong player/record') }}</div>
                                     </div>
                                 </label>
 
@@ -42,8 +42,8 @@
                                         class="mt-1"
                                     />
                                     <div>
-                                        <div class="text-white font-semibold">Bad Demo</div>
-                                        <div class="text-sm text-gray-400">Demo is corrupted, fake, spam, or inappropriate</div>
+                                        <div class="text-white font-semibold">{{ $t('Bad Demo') }}</div>
+                                        <div class="text-sm text-gray-400">{{ $t('Demo is corrupted, fake, spam, or inappropriate') }}</div>
                                     </div>
                                 </label>
 
@@ -56,8 +56,8 @@
                                         class="mt-1"
                                     />
                                     <div>
-                                        <div class="text-white font-semibold">False Flag</div>
-                                        <div class="text-sm text-gray-400">This record/demo was incorrectly flagged for a validity issue</div>
+                                        <div class="text-white font-semibold">{{ $t('False Flag') }}</div>
+                                        <div class="text-sm text-gray-400">{{ $t('This record/demo was incorrectly flagged for a validity issue') }}</div>
                                     </div>
                                 </label>
                             </div>
@@ -66,14 +66,14 @@
                         <!-- Reason Selection -->
                         <div v-if="form.report_type">
                             <label class="block text-sm font-semibold text-gray-300 mb-2">
-                                Reason <span class="text-red-400">*</span>
+                                {{ $t('Reason') }} <span class="text-red-400">*</span>
                             </label>
                             <select
                                 v-model="form.reason_type"
                                 class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-indigo-500 focus:outline-none [&>option]:text-black [&>option]:bg-white"
                                 required
                             >
-                                <option value="" class="text-gray-500">Select a reason...</option>
+                                <option value="" class="text-gray-500">{{ $t('Select a reason...') }}</option>
                                 <option
                                     v-for="(label, value) in getReasonOptions()"
                                     :key="value"
@@ -88,13 +88,13 @@
                         <!-- Additional Details -->
                         <div v-if="form.report_type">
                             <label class="block text-sm font-semibold text-gray-300 mb-2">
-                                Additional Details (Optional)
+                                {{ $t('Additional Details (Optional)') }}
                             </label>
                             <textarea
                                 v-model="form.reason_details"
                                 rows="3"
                                 maxlength="1000"
-                                placeholder="Provide any additional information that might help..."
+                                :placeholder="$t('Provide any additional information that might help...')"
                                 class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-indigo-500 focus:outline-none resize-none"
                             ></textarea>
                             <div class="text-xs text-gray-500 mt-1">{{ form.reason_details?.length || 0 }}/1000</div>
@@ -108,7 +108,7 @@
                             type="button"
                             class="px-6 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors"
                         >
-                            Cancel
+                            {{ $t('Cancel') }}
                         </button>
                         <button
                             @click="submitReport"
@@ -116,7 +116,7 @@
                             :disabled="!canSubmit || submitting"
                             class="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {{ submitting ? 'Submitting...' : 'Submit Report' }}
+                            {{ submitting ? $t('Submitting...') : $t('Submit Report') }}
                         </button>
                     </div>
                 </div>
@@ -129,6 +129,7 @@
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import axios from 'axios';
+import { t } from '@/utils/i18n';
 
 const props = defineProps({
     show: Boolean,
@@ -152,35 +153,35 @@ const submitting = ref(false);
 const searching = ref(false);
 let searchTimeout = null;
 
-const WRONG_ASSIGNMENT_REASONS = {
-    'wrong_player': 'Wrong player - name doesn\'t match',
-    'wrong_map': 'Wrong map',
-    'wrong_time': 'Wrong time',
-    'duplicate': 'Duplicate demo',
-    'cheated': 'Cheated/Modified demo',
-    'other': 'Other',
-};
+const WRONG_ASSIGNMENT_REASONS = computed(() => ({
+    'wrong_player': t('Wrong player - name doesn\'t match'),
+    'wrong_map': t('Wrong map'),
+    'wrong_time': t('Wrong time'),
+    'duplicate': t('Duplicate demo'),
+    'cheated': t('Cheated/Modified demo'),
+    'other': t('Other'),
+}));
 
-const BAD_DEMO_REASONS = {
-    'corrupted': 'Corrupted demo file',
-    'fake': 'Fake/modified demo',
-    'spam': 'Spam upload',
-    'inappropriate': 'Inappropriate content',
-    'duplicate': 'Duplicate of existing demo',
-    'other': 'Other',
-};
+const BAD_DEMO_REASONS = computed(() => ({
+    'corrupted': t('Corrupted demo file'),
+    'fake': t('Fake/modified demo'),
+    'spam': t('Spam upload'),
+    'inappropriate': t('Inappropriate content'),
+    'duplicate': t('Duplicate of existing demo'),
+    'other': t('Other'),
+}));
 
-const FALSE_FLAG_REASONS = {
-    'legitimate': 'Record is legitimate - flag is incorrect',
-    'wrong_flag': 'Wrong flag type was applied',
-    'resolved': 'Issue was already resolved',
-    'other': 'Other',
-};
+const FALSE_FLAG_REASONS = computed(() => ({
+    'legitimate': t('Record is legitimate - flag is incorrect'),
+    'wrong_flag': t('Wrong flag type was applied'),
+    'resolved': t('Issue was already resolved'),
+    'other': t('Other'),
+}));
 
 const getReasonOptions = () => {
-    if (form.value.report_type === 'wrong_assignment') return WRONG_ASSIGNMENT_REASONS;
-    if (form.value.report_type === 'bad_demo') return BAD_DEMO_REASONS;
-    if (form.value.report_type === 'false_flag') return FALSE_FLAG_REASONS;
+    if (form.value.report_type === 'wrong_assignment') return WRONG_ASSIGNMENT_REASONS.value;
+    if (form.value.report_type === 'bad_demo') return BAD_DEMO_REASONS.value;
+    if (form.value.report_type === 'false_flag') return FALSE_FLAG_REASONS.value;
     return {};
 };
 

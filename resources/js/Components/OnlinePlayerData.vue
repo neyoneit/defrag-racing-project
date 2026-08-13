@@ -20,11 +20,31 @@
         return route('profile.mdd', props.player.mdd_id);
     })
 
+    // Whether this player is on Twitch right now. The flag is written every
+    // two minutes by twitch:check-live-status; the name is what they typed
+    // into their settings, which is sometimes a whole address, so the channel
+    // link is built from the last part of it.
+    const isLive = computed(() => Boolean(props.player.profile?.is_live && twitchChannel.value));
+
+    const twitchChannel = computed(() => {
+        const raw = (props.player.profile?.twitch_name ?? '').trim();
+
+        if (! raw) {
+            return null;
+        }
+
+        const fromUrl = raw.match(/twitch\.tv\/([^/?#\s]+)/i);
+        const name = (fromUrl ? fromUrl[1] : raw).replace(/^@/, '').replace(/\/+$/, '');
+
+        return /^[a-zA-Z0-9_]{4,25}$/.test(name) ? name : null;
+    });
+
 </script>
 
 <template>
     <div>
         <Popper arrow hover :disabled="player.profile == null" style="z-index: 100;">
+            <span class="inline-flex items-center gap-1.5">
             <Link :href="getProfile" v-if="player.mdd_id" class="inline-flex items-center gap-1.5">
                 <img v-if="player.country && player.country !== 'XX'" :src="`/images/flags/${player.country}.png`" class="w-4 h-3 rounded shadow-md flex-shrink-0" :title="player.country" onerror="this.src='/images/flags/_404.png'" />
                 <div class="font-bold inline online-player-name-text" v-html="q3tohtml(player.name)"></div>
@@ -42,8 +62,21 @@
                     <path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25v3a3 3 0 0 0-3 3v6.75a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3v-6.75a3 3 0 0 0-3-3v-3c0-2.9-2.35-5.25-5.25-5.25Zm3.75 8.25v-3a3.75 3.75 0 1 0-7.5 0v3h7.5Z" clip-rule="evenodd" />
                 </svg>
             </div>
-    
-    
+
+            <!-- Streaming right now. Sits outside the profile Link rather
+                 than inside it, because it goes somewhere else and an anchor
+                 inside an anchor is not a thing. A plain dot and not the
+                 Twitch glyph: the ask was to spot a streamer at a glance in a
+                 list of names, and at this size a wordmark is a smudge. -->
+            <a v-if="isLive" :href="`https://www.twitch.tv/${twitchChannel}`"
+               target="_blank" rel="noopener noreferrer"
+               class="relative inline-flex shrink-0 w-2.5 h-2.5"
+               :title="$t('Live on Twitch')" @click.stop>
+                <span class="live-dot-pulse absolute inline-flex w-full h-full rounded-full bg-red-500 opacity-75"></span>
+                <span class="relative inline-flex w-2.5 h-2.5 rounded-full bg-red-500 ring-1 ring-black/40"></span>
+            </a>
+            </span>
+
             <template #content>
                 <div class="flex items-center px-5 py-2" v-if="player.profile">
                     <div class="mr-4">
@@ -52,7 +85,7 @@
     
                     <div>
                         <div class="text-gray-500">
-                            Logged in as
+                            {{ $t('Logged in as') }}
                         </div>
     
                         <img onerror="this.src='/images/flags/_404.png'" :src="`/images/flags/${player.profile.country}.png`" class="w-6 inline mr-2 mb-0.5">
@@ -90,6 +123,21 @@
 <style scoped>
     .online-player-name-text{
         font-size: 14px;
+    }
+
+    /* Slow enough to read as "on air" rather than as something demanding a
+       click. A full server list can carry a dozen of these at once. */
+    .live-dot-pulse {
+        animation: live-dot-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes live-dot-pulse {
+        0%, 100% { transform: scale(1); opacity: .75; }
+        50% { transform: scale(1.9); opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .live-dot-pulse { animation: none; }
     }
 
     .player-name-stroke {

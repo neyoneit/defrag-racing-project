@@ -13,9 +13,9 @@
                             <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
                             </svg>
-                            Flag Record
+                            {{ $t('Flag Record') }}
                         </h3>
-                        <p class="text-sm text-gray-400 mt-1">Select the validity issue for this record</p>
+                        <p class="text-sm text-gray-400 mt-1">{{ $t('Select the validity issue for this record') }}</p>
                     </div>
 
                     <!-- Body -->
@@ -39,13 +39,13 @@
                         <!-- Optional note -->
                         <div v-if="selectedFlag">
                             <label class="block text-sm font-semibold text-gray-300 mb-2">
-                                Note (optional)
+                                {{ $t('Note (optional)') }}
                             </label>
                             <textarea
                                 v-model="note"
                                 rows="2"
                                 maxlength="500"
-                                placeholder="Any additional details..."
+                                :placeholder="$t('Any additional details...')"
                                 class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-red-500 focus:outline-none resize-none text-sm"
                             ></textarea>
                         </div>
@@ -58,7 +58,7 @@
                             type="button"
                             class="px-6 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors"
                         >
-                            Cancel
+                            {{ $t('Cancel') }}
                         </button>
                         <button
                             @click="submitFlag"
@@ -66,7 +66,7 @@
                             :disabled="!selectedFlag || submitting"
                             class="px-6 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {{ submitting ? 'Submitting...' : 'Submit Flag' }}
+                            {{ submitting ? $t('Submitting...') : $t('Submit Flag') }}
                         </button>
                     </div>
                 </div>
@@ -76,8 +76,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { t } from '@/utils/i18n';
 
 const props = defineProps({
     show: Boolean,
@@ -87,25 +88,33 @@ const props = defineProps({
 
 const emit = defineEmits(['close']);
 
-const FLAG_TYPES = {
-    'sv_cheats': 'cheats',
+// The object key is the cvar, and that is what gets submitted - it is never
+// translated. The label beside it is the plain-words version for whoever is
+// clicking, so it is. The exceptions are the labels that ARE the cvar or the
+// console command (timescale, fps, maxfps, pmove, msec, upmove, +left/+right):
+// a player looks those up in the console, not in a dictionary.
+//
+// A computed, not a plain object: a plain one is built once at module load
+// and would keep whichever language was loaded then.
+const FLAG_TYPES = computed(() => ({
+    'sv_cheats': t('cheats'),
     'tool_assisted': 'TAS',
-    'client_finish': 'no finish',
+    'client_finish': t('no finish'),
     'timescale': 'timescale',
-    'g_speed': 'speed',
-    'g_gravity': 'gravity',
+    'g_speed': t('speed'),
+    'g_gravity': t('gravity'),
     'sv_fps': 'fps',
     'com_maxfps': 'maxfps',
     'pmove_fixed': 'pmove',
     'pmove_msec': 'msec',
-    'df_mp_interferenceoff': 'interference',
+    'df_mp_interferenceoff': t('interference'),
     'left_right': '+left/+right',
-    'scripts': 'scripts',
+    'scripts': t('scripts'),
     'upmove': 'upmove',
-    'replay_cheat': 'replay',
-    'engine_cheat': 'engine',
-    'other': 'other',
-};
+    'replay_cheat': t('replay'),
+    'engine_cheat': t('engine'),
+    'other': t('other'),
+}));
 
 const selectedFlag = ref(null);
 const note = ref('');

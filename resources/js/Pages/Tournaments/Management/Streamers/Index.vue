@@ -11,7 +11,7 @@
     <Tournament :tournament="tournament" tab="ManageTournament">
         <div class="flex justify-center items-center">
             <Link :href="route('tournaments.streamers.create', tournament.id)" class="text-gray-300 font-bold bg-grayop-700 cursor-pointer hover:bg-grayop-600 text-center rounded-lg p-3 mr-4 mb-3">
-                Add New Streamer
+                {{ $t('Add New Streamer') }}
             </Link>
         </div>
 
@@ -25,11 +25,11 @@
         
                     <div class="flex">
                         <Link :href="route('tournaments.streamers.edit', {tournament: streamer.tournament_id, streamer: streamer.id})" class="text-gray-300 font-bold bg-grayop-700 cursor-pointer hover:bg-grayop-600 text-center rounded-lg p-3 mr-4 mb-3">
-                            Edit
+                            {{ $t('Edit') }}
                         </Link>
         
                         <Link :href="route('tournaments.streamers.destroy', {tournament: streamer.tournament_id, streamer: streamer.id})" class="text-gray-300 font-bold bg-grayop-700 cursor-pointer hover:bg-grayop-600 text-center rounded-lg p-3 mr-4 mb-3">
-                            Delete
+                            {{ $t('Delete') }}
                         </Link>
                     </div>
                 </div>
@@ -37,7 +37,7 @@
         </div>
 
         <div class="flex justify-center mt-5 text-md text-gray-500" v-if="tournament.streamers.length === 0">
-            There are no streamers yet.
+            {{ $t('There are no streamers yet.') }}
         </div>
     </Tournament>
 </template>

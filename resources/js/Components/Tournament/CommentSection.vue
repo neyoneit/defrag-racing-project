@@ -5,6 +5,7 @@
     import { ref } from 'vue';
     import CommentPart from '@/Components/Tournament/CommentPart.vue';
 
+    import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
     const date = (created_at) => {
         return moment(created_at).fromNow();
     }
@@ -50,12 +51,13 @@
         </div>
 
         <div class="bg-blackop-30 p-4 rounded-md mt-5" v-show="showSection">
+            <EnglishOnlyNotice />
             <div class="flex justify-between items-center">
                 <textarea
                     v-model="form.comment"
                     name="comment"
                     type="text"
-                    placeholder="Type your comment..."
+                    :placeholder="$t('Type your comment...')"
                     rows="1"
                     class="textarea mt-1 block w-full border-2 border-grayop-700 bg-grayop-900 text-gray-300 focus:border-blue-600 focus:ring-blue-600 rounded-md shadow-sm"
                     v-on:keyup.enter="onComment()"
@@ -75,7 +77,7 @@
                 </div>
 
                 <div class="text-center text-gray-400" v-if="comments.length === 0">
-                    There are no comments yet.
+                    {{ $t('There are no comments yet.') }}
                 </div>
             </div>
         </div>

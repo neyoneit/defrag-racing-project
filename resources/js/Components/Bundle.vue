@@ -29,7 +29,7 @@
             </div>
             <div class="flex-shrink-0 self-center flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/15 border border-cyan-500/20 group-hover:bg-cyan-500/25 group-hover:border-cyan-500/40 transition">
                 <svg class="w-4 h-4 text-cyan-400 group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m0 0l-6-6m6 6l6-6" /></svg>
-                <span class="text-xs font-bold text-cyan-400">Download</span>
+                <span class="text-xs font-bold text-cyan-400">{{ $t('Download') }}</span>
             </div>
         </div>
     </a>

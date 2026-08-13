@@ -3,6 +3,7 @@
     import { useForm } from '@inertiajs/vue3';
     import { ref } from 'vue';
     import InputError from '@/Components/Laravel/InputError.vue';
+    import { t } from '@/utils/i18n';
 
     const form = useForm({
         _method: 'POST',
@@ -28,12 +29,12 @@
         const image = imageInput.value.files[0];
 
         if (! image) {
-            form.errors.image = 'The image field is required.';
+            form.errors.image = t('The image field is required.');
             return;
         };
 
         if (! image.type.startsWith('image/')) {
-            form.errors.image = 'The file must be an Image.';
+            form.errors.image = t('The file must be an Image.');
             imageInput.value = '';
             return;
         }
@@ -53,13 +54,13 @@
 
 <template>
     <div>
-        <Head title="Create Clan" />
+        <Head :title="$t('Create Clan')" />
 
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center">
-                    <h1 class="text-2xl md:text-3xl font-black text-white mb-2">Create Clan</h1>
-                    <p class="text-gray-400">Create a new clan and manage it as admin</p>
+                    <h1 class="text-2xl md:text-3xl font-black text-white mb-2">{{ $t('Create Clan') }}</h1>
+                    <p class="text-gray-400">{{ $t('Create a new clan and manage it as admin') }}</p>
                 </div>
             </div>
         </div>
@@ -69,7 +70,7 @@
                 <div class="bg-black/40 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-white/10">
                     <form @submit.prevent="submitForm" class="space-y-6">
                         <div>
-                            <label for="name" class="block text-sm font-bold text-gray-300 mb-2" v-html="'Clan Name ' + (form.name ? '(' + q3tohtml(form.name) + ')' : '')"></label>
+                            <label for="name" class="block text-sm font-bold text-gray-300 mb-2" v-html="$t('Clan Name') + ' ' + (form.name ? '(' + q3tohtml(form.name) + ')' : '')"></label>
                             <input
                                 id="name"
                                 v-model="form.name"
@@ -77,9 +78,9 @@
                                 required
                                 autofocus
                                 class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all"
-                                placeholder="Enter clan name (Q3 color codes supported)"
+                                :placeholder="$t('Enter clan name (Q3 color codes supported)')"
                             />
-                            <p class="text-xs text-gray-500 mt-1">Example: ^1Red^2Green</p>
+                            <p class="text-xs text-gray-500 mt-1">{{ $t('Example:') }} ^1Red^2Green</p>
                             <InputError class="mt-2" :message="form.errors.name" />
                         </div>
 
@@ -91,16 +92,16 @@
                                 accept="image/*"
                                 @change="updateimagePreview"
                             >
-                            <label class="block text-sm font-bold text-gray-300 mb-2">Clan Avatar</label>
+                            <label class="block text-sm font-bold text-gray-300 mb-2">{{ $t('Clan Avatar') }}</label>
                             <div class="flex items-center gap-4">
                                 <div v-if="imagePreview" class="shrink-0">
                                     <img :src="imagePreview" class="rounded-full h-16 w-16 object-cover border-2 border-white/20 shadow-lg">
                                 </div>
                                 <div v-else class="shrink-0 w-16 h-16 rounded-full bg-gray-700 border-2 border-dashed border-white/20 flex items-center justify-center">
-                                    <span class="text-xs text-gray-500">No image</span>
+                                    <span class="text-xs text-gray-500">{{ $t('No image') }}</span>
                                 </div>
                                 <button type="button" @click="selectNewImage" class="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 text-sm font-semibold rounded-lg transition-all">
-                                    Select Image
+                                    {{ $t('Select Image') }}
                                 </button>
                             </div>
                             <InputError :message="form.errors.image" class="mt-2" />
@@ -111,7 +112,7 @@
                             :disabled="form.processing"
                             class="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-lg transition-colors"
                         >
-                            {{ form.processing ? 'Creating...' : 'Create Clan' }}
+                            {{ form.processing ? $t('Creating...') : $t('Create Clan') }}
                         </button>
                     </form>
                 </div>

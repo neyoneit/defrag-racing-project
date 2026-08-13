@@ -2,6 +2,7 @@
     import { Head, router, Link } from '@inertiajs/vue3';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import { ref, computed, onMounted, getCurrentInstance } from 'vue';
+    import { t } from '@/utils/i18n';
 
     const props = defineProps({
         scores: Object,
@@ -36,45 +37,45 @@
         expandedRow.value = expandedRow.value === id ? null : id;
     };
 
-    const categories = [
-        { key: 'demos_uploaded', label: 'Demos Uploaded', icon: '📁', desc: 'Demos uploaded and processed on the site' },
-        { key: 'tags_added', label: 'Tags Added', icon: '🏷', desc: 'Tags added to maps to help others find them' },
-        { key: 'alias_reports', label: 'Alias Reports', icon: '🔍', desc: 'Player alias reports that were resolved' },
-        { key: 'demo_assignment_reports', label: 'Demo Assigns', icon: '📋', desc: 'Demo assignment correction reports submitted' },
-        { key: 'maplists_created', label: 'Maplists Created', icon: '📝', desc: 'Public maplists created for the community' },
-        { key: 'maplist_maps_added', label: 'Maplist Maps', icon: '🗺', desc: 'Maps added to public maplists' },
-        { key: 'maplist_likes_received', label: 'Maplist Likes', icon: '👍', desc: 'Likes received on your maplists' },
-        { key: 'maplist_favorites_received', label: 'Maplist Favorites', icon: '⭐', desc: 'Favorites received on your maplists' },
-        { key: 'play_later_maps', label: 'Play Later Maps', icon: '⏰', desc: 'Maps saved to your Play Later list' },
-        { key: 'marketplace_listings', label: 'Marketplace Listings', icon: '🛒', desc: 'Listings created on the marketplace' },
-        { key: 'marketplace_reviews_written', label: 'Reviews Written', icon: '✍', desc: 'Reviews written for marketplace transactions' },
-        { key: 'marketplace_reviews_received', label: 'Reviews Received', icon: '💬', desc: 'Reviews received from marketplace transactions' },
-        { key: 'headhunter_created', label: 'Challenges Created', icon: '🎯', desc: 'Headhunter challenges created for others' },
-        { key: 'headhunter_completed', label: 'Challenges Completed', icon: '🏅', desc: 'Headhunter challenges completed and approved' },
-        { key: 'record_flags', label: 'Record Flags', icon: '🚩', desc: 'Suspicious records flagged and approved by admin' },
-        { key: 'models_uploaded', label: 'Models Uploaded', icon: '🎮', desc: 'Player models uploaded and approved' },
-        { key: 'render_requests', label: 'Render Requests', icon: '🎬', desc: 'YouTube video renders requested and completed' },
-        { key: 'clan_created', label: 'Clans Created', icon: '⚔', desc: 'Clans founded as owner' },
-        { key: 'clan_membership', label: 'Clan Member', icon: '🛡', desc: 'Being a member of a clan' },
-        { key: 'nsfw_flags', label: 'NSFW Flags', icon: '🔞', desc: 'Maps flagged as NSFW content' },
-        { key: 'wiki_edits', label: 'Wiki Edits', icon: '📖', desc: 'Wiki page revisions contributed' },
-        { key: 'community_tasks_completed', label: 'Community Tasks', icon: '🎰', desc: 'Tasks completed in Community Tasks (assigns, verifications, ratings, tags)' },
-        { key: 'records_count', label: 'Records', icon: '🏆', desc: 'Total records set in the game' },
-        { key: 'maps_authored', label: 'Maps Authored', icon: '🗺', desc: 'Maps you created as a mapper' },
-        { key: 'models_authored', label: 'Models Authored', icon: '🎨', desc: 'Player models you created as a modeler' },
-        { key: 'social_connections', label: 'Social Connected', icon: '🔗', desc: 'Social accounts connected via OAuth' },
-        { key: 'profile_avatar', label: 'Custom Avatar', icon: '🖼', desc: 'Uploaded a custom profile avatar' },
-        { key: 'profile_background', label: 'Custom Background', icon: '🌄', desc: 'Uploaded a custom profile background' },
-        { key: 'profile_layout_customized', label: 'Custom Layout', icon: '📐', desc: 'Customized your profile layout' },
-        { key: 'name_effect_set', label: 'Name Effect', icon: '✨', desc: 'Set a name effect on your profile' },
-        { key: 'avatar_effect_set', label: 'Avatar Effect', icon: '💫', desc: 'Set an avatar effect on your profile' },
-        { key: 'difficulty_ratings', label: 'Difficulty Votes', icon: '📊', desc: 'Map difficulty ratings submitted' },
-        { key: 'donation_total_eur', label: 'Donations (EUR)', icon: '💰', desc: 'Donated to support the site' },
-    ];
+    const categories = computed(() => [
+        { key: 'demos_uploaded', label: t('Demos Uploaded'), icon: '📁', desc: t('Demos uploaded and processed on the site') },
+        { key: 'tags_added', label: t('Tags Added'), icon: '🏷', desc: t('Tags added to maps to help others find them') },
+        { key: 'alias_reports', label: t('Alias Reports'), icon: '🔍', desc: t('Player alias reports that were resolved') },
+        { key: 'demo_assignment_reports', label: t('Demo Assigns'), icon: '📋', desc: t('Demo assignment correction reports submitted') },
+        { key: 'maplists_created', label: t('Maplists Created'), icon: '📝', desc: t('Public maplists created for the community') },
+        { key: 'maplist_maps_added', label: t('Maplist Maps'), icon: '🗺', desc: t('Maps added to public maplists') },
+        { key: 'maplist_likes_received', label: t('Maplist Likes'), icon: '👍', desc: t('Likes received on your maplists') },
+        { key: 'maplist_favorites_received', label: t('Maplist Favorites'), icon: '⭐', desc: t('Favorites received on your maplists') },
+        { key: 'play_later_maps', label: t('Play Later Maps'), icon: '⏰', desc: t('Maps saved to your Play Later list') },
+        { key: 'marketplace_listings', label: t('Marketplace Listings'), icon: '🛒', desc: t('Listings created on the marketplace') },
+        { key: 'marketplace_reviews_written', label: t('Reviews Written'), icon: '✍', desc: t('Reviews written for marketplace transactions') },
+        { key: 'marketplace_reviews_received', label: t('Reviews Received'), icon: '💬', desc: t('Reviews received from marketplace transactions') },
+        { key: 'headhunter_created', label: t('Challenges Created'), icon: '🎯', desc: t('Headhunter challenges created for others') },
+        { key: 'headhunter_completed', label: t('Challenges Completed'), icon: '🏅', desc: t('Headhunter challenges completed and approved') },
+        { key: 'record_flags', label: t('Record Flags'), icon: '🚩', desc: t('Suspicious records flagged and approved by admin') },
+        { key: 'models_uploaded', label: t('Models Uploaded'), icon: '🎮', desc: t('Player models uploaded and approved') },
+        { key: 'render_requests', label: t('Render Requests'), icon: '🎬', desc: t('YouTube video renders requested and completed') },
+        { key: 'clan_created', label: t('Clans Created'), icon: '⚔', desc: t('Clans founded as owner') },
+        { key: 'clan_membership', label: t('Clan Member'), icon: '🛡', desc: t('Being a member of a clan') },
+        { key: 'nsfw_flags', label: t('NSFW Flags'), icon: '🔞', desc: t('Maps flagged as NSFW content') },
+        { key: 'wiki_edits', label: t('Wiki Edits'), icon: '📖', desc: t('Wiki page revisions contributed') },
+        { key: 'community_tasks_completed', label: t('Community Tasks'), icon: '🎰', desc: t('Tasks completed in Community Tasks (assigns, verifications, ratings, tags)') },
+        { key: 'records_count', label: t('Records'), icon: '🏆', desc: t('Total records set in the game') },
+        { key: 'maps_authored', label: t('Maps Authored'), icon: '🗺', desc: t('Maps you created as a mapper') },
+        { key: 'models_authored', label: t('Models Authored'), icon: '🎨', desc: t('Player models you created as a modeler') },
+        { key: 'social_connections', label: t('Social Connected'), icon: '🔗', desc: t('Social accounts connected via OAuth') },
+        { key: 'profile_avatar', label: t('Custom Avatar'), icon: '🖼', desc: t('Uploaded a custom profile avatar') },
+        { key: 'profile_background', label: t('Custom Background'), icon: '🌄', desc: t('Uploaded a custom profile background') },
+        { key: 'profile_layout_customized', label: t('Custom Layout'), icon: '📐', desc: t('Customized your profile layout') },
+        { key: 'name_effect_set', label: t('Name Effect'), icon: '✨', desc: t('Set a name effect on your profile') },
+        { key: 'avatar_effect_set', label: t('Avatar Effect'), icon: '💫', desc: t('Set an avatar effect on your profile') },
+        { key: 'difficulty_ratings', label: t('Difficulty Votes'), icon: '📊', desc: t('Map difficulty ratings submitted') },
+        { key: 'donation_total_eur', label: t('Donations (EUR)'), icon: '💰', desc: t('Donated to support the site') },
+    ]);
 
     const getTopCategories = (score) => {
         if (!score || !props.weights) return [];
-        return categories
+        return categories.value
             .map(c => {
                 let val = score[c.key];
                 if (val === true) val = 1;
@@ -147,14 +148,14 @@
 </script>
 
 <template>
-    <Head title="Defragger Leaderboard" />
+    <Head :title="$t('Defragger Leaderboard')" />
 
     <!-- Header Section with gradient fade -->
     <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
             <div class="mb-8">
                 <div class="flex items-center justify-between gap-4 mb-2">
-                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">Defragger Leaderboard</h1>
+                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('Defragger Leaderboard') }}</h1>
                     <div class="flex-shrink-0 flex flex-wrap justify-end gap-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
                         <div v-for="tier in tiers" :key="tier.key"
                             class="flex items-center gap-1 px-2 py-1 rounded-lg border text-xs"
@@ -166,9 +167,9 @@
                     </div>
                 </div>
                 <div class="text-sm bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2 space-y-1.5">
-                    <p class="text-gray-400">This is the <span class="text-white font-semibold">Community</span> Leaderboard - it rewards user-generated content and contributions that make defrag better for everyone. Uploading demos, tagging maps, writing reviews, creating maplists, and helping moderate all earn significant points here.</p>
-                    <p class="text-gray-500">Records are included with a minimal weight (0.1) because competitive performance already has its own dedicated <a :href="route('ranking')" class="text-blue-400 hover:text-blue-300 underline">Rankings page</a> with a specialized scoring formula. Here, community contributions matter most.</p>
-                    <p class="text-gray-500">Your <span class="text-yellow-400 font-semibold">badge tier</span> is calculated from community score <span class="text-gray-400">without records</span> - purely based on how much you contribute to the community.</p>
+                    <p class="text-gray-400">{{ $t('This is the') }} <span class="text-white font-semibold">{{ $t('Community') }}</span> {{ $t('Leaderboard - it rewards user-generated content and contributions that make defrag better for everyone. Uploading demos, tagging maps, writing reviews, creating maplists, and helping moderate all earn significant points here.') }}</p>
+                    <p class="text-gray-500">{{ $t('Records are included with a minimal weight (0.1) because competitive performance already has its own dedicated') }} <a :href="route('ranking')" class="text-blue-400 hover:text-blue-300 underline">{{ $t('Rankings page') }}</a> {{ $t('with a specialized scoring formula. Here, community contributions matter most.') }}</p>
+                    <p class="text-gray-500">{{ $t('Your') }} <span class="text-yellow-400 font-semibold">{{ $t('badge tier') }}</span> {{ $t('is calculated from community score') }} <span class="text-gray-400">{{ $t('without records') }}</span> {{ $t('- purely based on how much you contribute to the community.') }}</p>
                 </div>
             </div>
         </div>
@@ -179,23 +180,23 @@
         <!-- How it works - right aligned above table -->
         <div class="flex justify-end mb-2">
             <div class="group/how relative">
-                <span class="text-xs text-gray-500 hover:text-gray-300 cursor-help transition border-b border-dashed border-gray-600">How it works</span>
+                <span class="text-xs text-gray-500 hover:text-gray-300 cursor-help transition border-b border-dashed border-gray-600">{{ $t('How it works') }}</span>
                 <div class="absolute right-0 top-full mt-2 hidden group-hover/how:block bg-gray-900/95 border border-white/20 rounded-lg px-4 py-3 text-xs text-gray-200 shadow-xl z-50 pointer-events-none w-80">
-                    <div class="font-bold text-white mb-2">How scoring works</div>
-                    <div class="text-gray-400 mb-2">Points are earned by contributing to the community. Each action has a weight:</div>
+                    <div class="font-bold text-white mb-2">{{ $t('How scoring works') }}</div>
+                    <div class="text-gray-400 mb-2">{{ $t('Points are earned by contributing to the community. Each action has a weight:') }}</div>
                     <div class="text-gray-300 space-y-0.5">
-                        <div><span class="text-yellow-400">5 pts:</span> Headhunter challenges, models/maps authored</div>
-                        <div><span class="text-yellow-400">3 pts:</span> Demo assigns, alias reports, maplists, marketplace listings/reviews, record flags, clan creation, wiki edits</div>
-                        <div><span class="text-yellow-400">2 pts:</span> Demos uploaded, maplist maps, render requests, NSFW flags, avatar, background</div>
-                        <div><span class="text-yellow-400">1 pt:</span> Tags, maplist likes/favs, play later, difficulty ratings, clan membership, socials, layout, effects</div>
-                        <div><span class="text-yellow-400">0.5 pt:</span> Donations (per EUR)</div>
-                        <div><span class="text-yellow-400">0.1 pt:</span> Community Tasks completed (50 tasks = 5 pts)</div>
+                        <div><span class="text-yellow-400">{{ $t('5 pts:') }}</span> {{ $t('Headhunter challenges, models/maps authored') }}</div>
+                        <div><span class="text-yellow-400">{{ $t('3 pts:') }}</span> {{ $t('Demo assigns, alias reports, maplists, marketplace listings/reviews, record flags, clan creation, wiki edits') }}</div>
+                        <div><span class="text-yellow-400">{{ $t('2 pts:') }}</span> {{ $t('Demos uploaded, maplist maps, render requests, NSFW flags, avatar, background') }}</div>
+                        <div><span class="text-yellow-400">{{ $t('1 pt:') }}</span> {{ $t('Tags, maplist likes/favs, play later, difficulty ratings, clan membership, socials, layout, effects') }}</div>
+                        <div><span class="text-yellow-400">{{ $t('0.5 pt:') }}</span> {{ $t('Donations (per EUR)') }}</div>
+                        <div><span class="text-yellow-400">{{ $t('0.1 pt:') }}</span> {{ $t('Community Tasks completed (50 tasks = 5 pts)') }}</div>
                     </div>
                     <div class="mt-2 pt-2 border-t border-white/10">
-                        <div class="text-amber-400 font-semibold mb-1">Badge tier vs Total score</div>
-                        <div class="text-gray-400"><span class="text-white">Total score</span> = everything above + records (0.1 pts each). Used for leaderboard ranking.</div>
-                        <div class="text-gray-400"><span class="text-white">Badge tier</span> = total score <span class="text-red-400">minus records</span>. Only community contributions determine your badge color.</div>
-                        <div class="text-gray-500 mt-1">Scores recalculated every 30 min. Click a row for full breakdown.</div>
+                        <div class="text-amber-400 font-semibold mb-1">{{ $t('Badge tier vs Total score') }}</div>
+                        <div class="text-gray-400"><span class="text-white">{{ $t('Total score') }}</span> {{ $t('= everything above + records (0.1 pts each). Used for leaderboard ranking.') }}</div>
+                        <div class="text-gray-400"><span class="text-white">{{ $t('Badge tier') }}</span> {{ $t('= total score') }} <span class="text-red-400">{{ $t('minus records') }}</span>{{ $t('. Only community contributions determine your badge color.') }}</div>
+                        <div class="text-gray-500 mt-1">{{ $t('Scores recalculated every 30 min. Click a row for full breakdown.') }}</div>
                     </div>
                 </div>
             </div>
@@ -212,7 +213,7 @@
                 <div class="text-xl font-bold" :style="myTier ? { color: myTier.color } : { color: '#9ca3af' }">#{{ myScore.rank }}</div>
                 <div class="flex items-center gap-2">
                     <img :src="$page.props.auth?.user?.profile_photo_path ? '/storage/' + $page.props.auth.user.profile_photo_path : '/images/null.jpg'" class="w-6 h-6 rounded-full object-cover">
-                    <span class="font-semibold text-yellow-300 text-sm">Your Score</span>
+                    <span class="font-semibold text-yellow-300 text-sm">{{ $t('Your Score') }}</span>
                 </div>
                 <div class="flex gap-1.5 flex-wrap flex-1 hidden md:flex">
                     <span v-for="cat in getTopCategories(myScore)" :key="cat.key"
@@ -242,7 +243,7 @@
                                     <div class="flex-1 min-w-0">
                                         <div class="text-xs truncate">{{ cat.label }}</div>
                                         <div class="text-xs font-mono">
-                                            <span>{{ myScore[cat.key] === true ? 'Yes' : myScore[cat.key] === false ? 'No' : myScore[cat.key] }}</span>
+                                            <span>{{ myScore[cat.key] === true ? $t('Yes') : myScore[cat.key] === false ? $t('No') : myScore[cat.key] }}</span>
                                             <span v-if="getCategoryPoints(myScore, cat) > 0" class="text-green-400 ml-1">(+{{ getCategoryPoints(myScore, cat) }})</span>
                                         </div>
                                     </div>
@@ -269,7 +270,7 @@
                         <div class="flex-1 min-w-0">
                             <div class="text-xs truncate">{{ cat.label }}</div>
                             <div class="text-xs font-mono">
-                                <span>{{ myScore[cat.key] === true ? 'Yes' : myScore[cat.key] === false ? 'No' : myScore[cat.key] }}</span>
+                                <span>{{ myScore[cat.key] === true ? $t('Yes') : myScore[cat.key] === false ? $t('No') : myScore[cat.key] }}</span>
                                 <span v-if="getCategoryPoints(myScore, cat) > 0" class="text-green-400 ml-1">(+{{ getCategoryPoints(myScore, cat) }})</span>
                             </div>
                         </div>
@@ -280,8 +281,8 @@
                     </div>
                 </div>
                 <div class="mt-3 pt-3 border-t border-gray-700/50 flex items-center gap-4 text-sm">
-                    <span class="text-gray-400">Total: <span class="text-white font-bold">{{ parseFloat(myScore.total_score).toFixed(1) }}</span></span>
-                    <span class="text-gray-400">Community: <span class="text-white font-bold">{{ parseFloat(myScore.community_badge_score).toFixed(1) }}</span></span>
+                    <span class="text-gray-400">{{ $t('Total:') }} <span class="text-white font-bold">{{ parseFloat(myScore.total_score).toFixed(1) }}</span></span>
+                    <span class="text-gray-400">{{ $t('Community:') }} <span class="text-white font-bold">{{ parseFloat(myScore.community_badge_score).toFixed(1) }}</span></span>
                     <span v-if="myTier" class="inline-flex items-center gap-1 font-semibold" :style="{ color: myTier.color }">
                         <img src="/images/svg/badge-defragger.png" class="w-3.5 h-3.5" :style="{ filter: `drop-shadow(0 0 2px ${myTier.color})` }">
                         {{ myTier.name }}
@@ -314,10 +315,10 @@
             <table class="w-full">
                 <thead>
                     <tr class="border-b border-gray-700 text-gray-400 text-sm">
-                        <th class="text-left py-3 px-4" style="width: 60px;">Rank</th>
-                        <th class="text-left py-3 px-4" style="width: 200px;">Player</th>
-                        <th class="text-left py-3 pr-4 hidden md:table-cell" style="padding-left: 160px;">Top Contributions</th>
-                        <th class="text-right py-3 px-4" style="width: 90px;">Score</th>
+                        <th class="text-left py-3 px-4" style="width: 60px;">{{ $t('Rank') }}</th>
+                        <th class="text-left py-3 px-4" style="width: 200px;">{{ $t('Player') }}</th>
+                        <th class="text-left py-3 pr-4 hidden md:table-cell" style="padding-left: 160px;">{{ $t('Top Contributions') }}</th>
+                        <th class="text-right py-3 px-4" style="width: 90px;">{{ $t('Score') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -353,7 +354,7 @@
                                         {{ cat.icon }} {{ cat.value }}
                                         <div class="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 hidden group-hover/chip:block bg-gray-900/95 border border-white/20 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50 pointer-events-none">
                                             <div class="font-bold text-white">{{ cat.label }}</div>
-                                            <div class="text-green-400 text-[10px]">+{{ cat.points }} pts</div>
+                                            <div class="text-green-400 text-[10px]">{{ $t('+:points pts', { points: cat.points }) }}</div>
                                         </div>
                                     </span>
                                 </div>
@@ -380,15 +381,15 @@
                                                     <div class="flex-1 min-w-0">
                                                         <div class="text-xs truncate">{{ cat.label }}</div>
                                                         <div class="text-xs font-mono">
-                                                            <span>{{ score[cat.key] === true ? 'Yes' : score[cat.key] === false ? 'No' : score[cat.key] }}</span>
+                                                            <span>{{ score[cat.key] === true ? $t('Yes') : score[cat.key] === false ? $t('No') : score[cat.key] }}</span>
                                                             <span v-if="getCategoryPoints(score, cat) > 0" class="text-green-400 ml-1">(+{{ getCategoryPoints(score, cat) }})</span>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div class="mt-3 pt-3 border-t border-gray-700/50 flex items-center gap-4 text-sm">
-                                                <span class="text-gray-400">Total: <span class="text-white font-bold">{{ parseFloat(score.total_score).toFixed(1) }}</span></span>
-                                                <span class="text-gray-400">Community: <span class="text-white font-bold">{{ parseFloat(score.community_badge_score).toFixed(1) }}</span></span>
+                                                <span class="text-gray-400">{{ $t('Total:') }} <span class="text-white font-bold">{{ parseFloat(score.total_score).toFixed(1) }}</span></span>
+                                                <span class="text-gray-400">{{ $t('Community:') }} <span class="text-white font-bold">{{ parseFloat(score.community_badge_score).toFixed(1) }}</span></span>
                                                 <span v-if="getTier(score.community_badge_score)" class="inline-flex items-center gap-1 font-semibold" :style="{ color: getTier(score.community_badge_score)?.color }">
                                                     <img src="/images/svg/badge-defragger.png" class="w-3.5 h-3.5" :style="{ filter: `drop-shadow(0 0 2px ${getTier(score.community_badge_score).color})` }">
                                                     {{ getTier(score.community_badge_score)?.name }}
@@ -418,7 +419,7 @@
                                         <div class="flex-1 min-w-0">
                                             <div class="text-xs truncate">{{ cat.label }}</div>
                                             <div class="text-xs font-mono">
-                                                <span>{{ score[cat.key] === true ? 'Yes' : score[cat.key] === false ? 'No' : score[cat.key] }}</span>
+                                                <span>{{ score[cat.key] === true ? $t('Yes') : score[cat.key] === false ? $t('No') : score[cat.key] }}</span>
                                                 <span v-if="getCategoryPoints(score, cat) > 0" class="text-green-400 ml-1">(+{{ getCategoryPoints(score, cat) }})</span>
                                             </div>
                                         </div>
@@ -430,8 +431,8 @@
                                     </div>
                                 </div>
                                 <div class="mt-3 pt-3 border-t border-gray-700/50 flex items-center gap-4 text-sm">
-                                    <span class="text-gray-400">Total: <span class="text-white font-bold">{{ parseFloat(score.total_score).toFixed(1) }}</span></span>
-                                    <span class="text-gray-400">Community: <span class="text-white font-bold">{{ parseFloat(score.community_badge_score).toFixed(1) }}</span></span>
+                                    <span class="text-gray-400">{{ $t('Total:') }} <span class="text-white font-bold">{{ parseFloat(score.total_score).toFixed(1) }}</span></span>
+                                    <span class="text-gray-400">{{ $t('Community:') }} <span class="text-white font-bold">{{ parseFloat(score.community_badge_score).toFixed(1) }}</span></span>
                                     <span v-if="getTier(score.community_badge_score)" class="inline-flex items-center gap-1 font-semibold" :style="{ color: getTier(score.community_badge_score)?.color }">
                                         <img src="/images/svg/badge-defragger.png" class="w-3.5 h-3.5" :style="{ filter: `drop-shadow(0 0 2px ${getTier(score.community_badge_score).color})` }">
                                         {{ getTier(score.community_badge_score)?.name }}
@@ -451,8 +452,8 @@
 
         <!-- Empty State -->
         <div v-else-if="loaded" class="text-center py-20">
-            <div class="text-gray-500 text-lg">No community scores calculated yet.</div>
-            <div class="text-gray-600 text-sm mt-2">Scores are calculated daily. Check back later.</div>
+            <div class="text-gray-500 text-lg">{{ $t('No community scores calculated yet.') }}</div>
+            <div class="text-gray-600 text-sm mt-2">{{ $t('Scores are calculated daily. Check back later.') }}</div>
         </div>
     </div>
 </template>

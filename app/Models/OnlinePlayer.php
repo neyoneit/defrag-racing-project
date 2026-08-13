@@ -28,7 +28,17 @@ class OnlinePlayer extends Model
         return $this->hasMany(OnlinePlayer::class, 'follow_num', 'client_id');
     }
 
+    /**
+     * The column list is a whitelist, not a tidy-up: this relation is
+     * serialized into the public server list, and handing out a whole User
+     * there once leaked email addresses and live OAuth tokens. Add a column
+     * only if a stranger may read it.
+     *
+     * `is_live` and `twitch_name` qualify - a Twitch channel is public by
+     * definition, and whether it is streaming is what the dot beside the name
+     * in the server list is showing.
+     */
     public function profile() {
-        return $this->belongsTo(User::class, 'mdd_id', 'mdd_id')->select('id', 'name', 'profile_photo_path', 'country', 'mdd_id', 'model');
+        return $this->belongsTo(User::class, 'mdd_id', 'mdd_id')->select('id', 'name', 'profile_photo_path', 'country', 'mdd_id', 'model', 'twitch_name', 'is_live');
     }
 }

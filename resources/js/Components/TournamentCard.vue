@@ -11,7 +11,7 @@
         <Link :href="route('tournaments.show', tournament.id)" class="flex flex-col justify-between mb-4 mx-auto border border-grayop-500 border-4 rounded-lg" :style="`height: 400px; width: 600px; max-width: 100%; background-size: cover; background-image: url(/storage/${tournament.image});`">
             <div class="flex justify-end">
                 <div v-if="! tournament.published" :class="`rounded-md bg-blackop-30 p-2 uppercase text-white font-bold mr-3 mt-2`">
-                    Not Published
+                    {{ $t('Not Published') }}
                 </div>
             </div>
 

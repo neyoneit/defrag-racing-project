@@ -1,5 +1,5 @@
 <script setup>
-    import { ref } from 'vue';
+    import { ref, computed } from 'vue';
     import { useForm } from '@inertiajs/vue3';
     import FormSection from '@/Components/Laravel/FormSection.vue';
     import InputError from '@/Components/Laravel/InputError.vue';
@@ -8,6 +8,8 @@
     import TextInput from '@/Components/Laravel/TextInput.vue';
     import SecondaryButton from '@/Components/Laravel/SecondaryButton.vue';
     import ItemsChoices from '@/Components/Basic/ItemsChoices.vue';
+    import { t } from '@/utils/i18n';
+    import { getFunctionName } from '@/utils/gameItems';
 
 
     const weapons = [
@@ -20,7 +22,7 @@
             'name': 'Machine Gun'
         },{
             'code': 'sg',
-            'name': 'Shot Gun'
+            'name': 'Shotgun'
         },{
             'code': 'gl',
             'name': 'Grenade Launcher'
@@ -29,7 +31,7 @@
             'name': 'Rocket Launcher'
         },{
             'code': 'lg',
-            'name': 'Lightening Gun'
+            'name': 'Lightning Gun'
         },{
             'code': 'rg',
             'name': 'Rail Gun'
@@ -54,49 +56,10 @@
         },
     ];
 
-    const functions = [
-        {
-            'code': 'door',
-            'name': 'Door'
-        },
-        {
-            'code': 'button',
-            'name': 'Button'
-        },{
-            'code': 'tele',
-            'name': 'Teleporter'
-        },{
-            'code': 'jumppad',
-            'name': 'Jump Pad'
-        },{
-            'code': 'moving',
-            'name': 'Moving Object'
-        },{
-            'code': 'slick',
-            'name': 'Slick'
-        },{
-            'code': 'water',
-            'name': 'Water'
-        },{
-            'code': 'fog',
-            'name': 'Fog'
-        },{
-            'code': 'slime',
-            'name': 'Slime'
-        },{
-            'code': 'lava',
-            'name': 'Lava'
-        },{
-            'code': 'break',
-            'name': 'Breakable'
-        },{
-            'code': 'sound',
-            'name': 'Sound'
-        },{
-            'code': 'timer',
-            'name': 'Timer'
-        },
-    ];
+    const functions = computed(() => [
+        'door', 'button', 'tele', 'jumppad', 'moving', 'slick', 'water',
+        'fog', 'slime', 'lava', 'break', 'sound', 'timer',
+    ].map((code) => ({ 'code': code, 'name': getFunctionName(code) })));
 
     const items = [
         {
@@ -227,12 +190,12 @@
         const image = imageInput.value.files[0];
 
         if (! image) {
-            form.errors.image = 'The image field is required.';
+            form.errors.image = t('The image field is required.');
             return;
         };
 
         if (! image.type.startsWith('image/')) {
-            form.errors.image = 'The file must be an Image.';
+            form.errors.image = t('The file must be an Image.');
             imageInput.value = '';
             return;
         }
@@ -254,17 +217,17 @@
     <div>
         <FormSection @submitted="finishBasicInformation">
             <template #title>
-                <div>Round Details</div>
+                <div>{{ $t('Round Details') }}</div>
             </template>
     
             <template #description>
-                <div>Add the details of the new round</div>
+                <div>{{ $t('Add the details of the new round') }}</div>
             </template>
     
             <template #form>
                 <div class="col-span-6">
                     <div class="mb-3">
-                        <InputLabel for="name" value="Round Name" />
+                        <InputLabel for="name" :value="$t('Round Name')" />
                         <TextInput
                             id="name"
                             v-model="form.name"
@@ -276,7 +239,7 @@
                     </div>
                     
                     <div class="mb-3">
-                        <InputLabel for="mapname" value="Map Name" />
+                        <InputLabel for="mapname" :value="$t('Map Name')" />
                         <TextInput
                             id="mapname"
                             v-model="form.mapname"
@@ -288,7 +251,7 @@
                     </div>
                     
                     <div class="mb-3">
-                        <InputLabel for="author" value="Map Author" />
+                        <InputLabel for="author" :value="$t('Map Author')" />
                         <TextInput
                             id="author"
                             v-model="form.author"
@@ -300,7 +263,7 @@
                     </div>
                     
                     <div class="mb-3">
-                        <InputLabel for="category" value="Map Category" />
+                        <InputLabel for="category" :value="$t('Map Category')" />
                         <select id="category" v-model="form.category" class="border-2 border-grayop-700 bg-grayop-900 text-gray-600 focus:border-blue-600 focus:ring-blue-600 rounded-md shadow-sm w-full">
                             <option v-for="category in categories" :value="category">
                                 {{ category }}
@@ -319,7 +282,7 @@
                             @change="updateImagePreview"
                         >
         
-                        <InputLabel for="image" value="Round Image [600 x 400] px" />
+                        <InputLabel for="image" :value="$t('Round Image [600 x 400] px')" />
 
                         <div v-if="imagePreview" class="mt-2">
                             <span
@@ -336,37 +299,37 @@
                         </div>
         
                         <SecondaryButton class="mt-2 me-2" type="button" @click.prevent="selectNewImage">
-                            Select A New Image
+                            {{ $t('Select A New Image') }}
                         </SecondaryButton>
                         <InputError :message="form.errors.image" class="mt-2" />
                     </div>
 
                     <div class="mb-3">
-                        <InputLabel for="start_date" value="Start Date" />
+                        <InputLabel for="start_date" :value="$t('Start Date')" />
                         <TextInput
                             id="start_date"
                             v-model="form.start_date"
                             type="datetime-local"
                             class="mt-1 block w-full"
                         />
-                        <div class="text-sm text-gray-500">Dates are in UTC timezone</div>
+                        <div class="text-sm text-gray-500">{{ $t('Dates are in UTC timezone') }}</div>
                         <InputError :message="form.errors.start_date" class="mt-2" />
                     </div>
 
                     <div class="mb-3">
-                        <InputLabel for="end_date" value="End Date" />
+                        <InputLabel for="end_date" :value="$t('End Date')" />
                         <input
                             id="end_date"
                             v-model="form.end_date"
                             type="datetime-local"
                             class="mt-1 block w-full border-2 border-grayop-700 bg-grayop-900 text-gray-300 focus:border-blue-600 focus:ring-blue-600 rounded-md shadow-sm"
                         />
-                        <div class="text-sm text-gray-500">Dates are in UTC timezone</div>
+                        <div class="text-sm text-gray-500">{{ $t('Dates are in UTC timezone') }}</div>
                         <InputError :message="form.errors.end_date" class="mt-2" />
                     </div>
 
                     <div class="mb-3">
-                        <InputLabel value="Weapons" />
+                        <InputLabel :value="$t('Weapons')" />
                         <div class="flex">
                             <span v-for="element in form.weapons?.include">
                                 <div :class="`sprite-items sprite-${element} w-4 h-4 flex-shrink-0 mx-1`"></div>
@@ -377,13 +340,13 @@
                             :multi="false"
                             v-model="form.weapons"
                             :values="form.weapons"
-                            placeholder="Select Weapons"
+                            :placeholder="$t('Select Weapons')"
                         />
                         <InputError :message="form.errors.weapons" class="mt-2" />
                     </div>
 
                     <div class="mb-3">
-                        <InputLabel value="Items" />
+                        <InputLabel :value="$t('Items')" />
                         <div class="flex">
                             <span v-for="element in form.items?.include">
                                 <div :class="`sprite-items sprite-${element} w-4 h-4 flex-shrink-0 mx-1`"></div>
@@ -394,13 +357,13 @@
                             :multi="false"
                             v-model="form.items"
                             :values="form.items"
-                            placeholder="Select Items"
+                            :placeholder="$t('Select Items')"
                         />
                         <InputError :message="form.errors.items" class="mt-2" />
                     </div>
 
                     <div class="mb-3">
-                        <InputLabel value="Functions" />
+                        <InputLabel :value="$t('Functions')" />
                         <div class="flex">
                             <span v-for="element in form.functions?.include">
                                 <div :class="`sprite-items sprite-${element} w-4 h-4 flex-shrink-0 mx-1`"></div>
@@ -411,7 +374,7 @@
                             :multi="false"
                             v-model="form.functions"
                             :values="form.functions"
-                            placeholder="Select Functions"
+                            :placeholder="$t('Select Functions')"
                         />
                         <InputError :message="form.errors.functions" class="mt-2" />
                     </div>
@@ -420,7 +383,7 @@
     
             <template #actions>
                 <div class="flex justify-between w-full">
-                    <PrimaryButton>Submit</PrimaryButton>
+                    <PrimaryButton>{{ $t('Submit') }}</PrimaryButton>
                 </div>
             </template>
         </FormSection>

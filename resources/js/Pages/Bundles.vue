@@ -55,14 +55,14 @@
 
 <template>
     <div>
-        <Head title="Downloads" />
+        <Head :title="$t('Downloads')" />
 
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div>
-                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">Downloads</h1>
-                    <p class="text-sm text-gray-400">{{ categories.length }} categories</p>
+                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">{{ $t('Downloads') }}</h1>
+                    <p class="text-sm text-gray-400">{{ $tc(':count category|:count categories', categories.length) }}</p>
                 </div>
             </div>
         </div>
@@ -98,7 +98,7 @@
                     <!-- Category Header -->
                     <div v-if="currentCategory" class="flex items-center gap-3 mb-3">
                         <h2 class="text-lg font-black text-white">{{ currentCategory.name }}</h2>
-                        <span class="text-xs text-gray-500">{{ currentCategory.bundles.length }} bundle{{ currentCategory.bundles.length !== 1 ? 's' : '' }}</span>
+                        <span class="text-xs text-gray-500">{{ $tc(':count bundle|:count bundles', currentCategory.bundles.length) }}</span>
                     </div>
 
                     <!-- Bundles Grid -->
@@ -111,7 +111,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mx-auto text-gray-600 mb-3">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
                         </svg>
-                        <p class="text-sm text-gray-500">No bundles in this category yet.</p>
+                        <p class="text-sm text-gray-500">{{ $t('No bundles in this category yet.') }}</p>
                     </div>
                 </div>
             </div>

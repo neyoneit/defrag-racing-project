@@ -111,11 +111,11 @@
 
 <template>
     <div>
-        <div class="text-2xl text-center text-gray-300 mb-3">Add Existing Map</div>
+        <div class="text-2xl text-center text-gray-300 mb-3">{{ $t('Add Existing Map') }}</div>
         <form enctype="multipart/form-data" @submit.prevent="finishBasicInformation" class="flex justify-center">
             <div class="w-80 flex flex-col justify-between">
                 <div class="mb-3">
-                    <InputLabel for="name" value="Search Map Name" />
+                    <InputLabel for="name" :value="$t('Search Map Name')" />
 
                     <div ref="searchSection">
                         <TextInput
@@ -123,38 +123,38 @@
                             @focus="onSearchFocus"
                             type="text"
                             class="mt-1 h-10 hidden sm:block w-full"
-                            placeholder="Search..."
+                            :placeholder="$t('Search...')"
                             @input="performSearch"
                         />
 
                         <div v-if="showResultsSection" class="defrag-scrollbar search-results hidden p-3 sm:block w-80 mt-1 absolute bg-gray-900 border-2 border-grayop-700 rounded-md text-gray-500" style="z-index: 2000;">
                             <div v-if="search.length == 0">
-                                Type a search query...
+                                {{ $t('Type a search query...') }}
                             </div>
 
                             <div ref="resultsSection" v-else>
                                 <div v-if="maps.data?.length > 0 && (searchCategory == 'all' || searchCategory == 'maps')">
                                     <div class="font-bold text-gray-400 capitalized text-sm mb-1">
-                                        Maps
+                                        {{ $t('Maps') }}
                                     </div>
                                     <MapSearchItem v-for="map in maps.data" :map="map" :key="map.id" :isRoute="false" :click="selectMap" />
                                 </div>
 
                                 <div v-if="maps.data?.length == 0">
-                                    There are no results !
+                                    {{ $t('There are no results!') }}
                                 </div>
                             </div>
                         </div>
                     </div>
                     <p class="text-gray-500 text-sm mt-1" v-if="form.mapname">
-                        Selected Map:
+                        {{ $t('Selected Map:') }}
                         <span class="text-gray-300">{{ form.mapname }}</span>
                     </p>
                     <InputError :message="form.errors.name" />
                 </div>
     
                 <div class="flex justify-between w-full">
-                    <PrimaryButton>Submit</PrimaryButton>
+                    <PrimaryButton>{{ $t('Submit') }}</PrimaryButton>
                 </div>
             </div>
         </form>

@@ -54,12 +54,12 @@ const copy = computed(() => {
         </div>
         <Link :href="route('launcher')"
               class="shrink-0 self-center px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors whitespace-nowrap">
-            Get the launcher
+            {{ $t('Get the launcher') }}
         </Link>
         <button type="button"
                 @click="dismiss"
                 class="shrink-0 self-start p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-gray-200 transition-colors"
-                aria-label="Dismiss">
+                :aria-label="$t('Dismiss')">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>

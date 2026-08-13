@@ -1,5 +1,6 @@
 <script setup>
     import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+    import { t, currentLocale } from '@/utils/i18n';
 
     const props = defineProps({
         activityData: {
@@ -47,7 +48,7 @@
     const labelWidth = 32;
     const topPadding = 20;
 
-    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthLabels = computed(() => [t('Jan'), t('Feb'), t('Mar'), t('Apr'), t('May'), t('Jun'), t('Jul'), t('Aug'), t('Sep'), t('Oct'), t('Nov'), t('Dec')]);
 
     // VQ3 = blue (hue 217), CPM = purple (hue 270)
     const VQ3_HUE = 217;
@@ -131,7 +132,7 @@
             for (const day of week) {
                 if (day && day.month !== lastMonth) {
                     positions.push({
-                        label: monthLabels[day.month],
+                        label: monthLabels.value[day.month],
                         x: labelWidth + weekIdx * cellStep.value
                     });
                     lastMonth = day.month;
@@ -208,7 +209,7 @@
 
     function formatDate(dateStr) {
         const date = new Date(dateStr + 'T00:00:00');
-        return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+        return date.toLocaleDateString(currentLocale(), { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
     }
 
     async function switchYear(year) {
@@ -251,20 +252,20 @@
     <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5">
         <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-3">
-                <h3 class="text-lg font-semibold text-white">Activity History</h3>
+                <h3 class="text-lg font-semibold text-white">{{ $t('Activity History') }}</h3>
                 <a v-if="isNew" :href="customizeUrl" class="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-green-500/20 border border-green-500/30 hover:bg-green-500/30 transition-colors">
-                    <span class="text-sm font-bold uppercase tracking-wide text-green-400">New!</span>
-                    <span class="text-sm text-gray-300">Reorder or hide sections</span>
+                    <span class="text-sm font-bold uppercase tracking-wide text-green-400">{{ $t('New!') }}</span>
+                    <span class="text-sm text-gray-300">{{ $t('Reorder or hide sections') }}</span>
                     <svg class="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
                 </a>
             </div>
             <div class="flex items-center gap-3 text-sm">
-                <span class="text-gray-400">{{ totalRecords }} records</span>
+                <span class="text-gray-400">{{ $tc(':count record|:count records', totalRecords) }}</span>
                 <span class="text-white/20">|</span>
                 <span class="text-blue-400">{{ totalVq3 }} VQ3</span>
                 <span class="text-purple-400">{{ totalCpm }} CPM</span>
                 <span class="text-white/20">|</span>
-                <span class="text-gray-400">{{ activeDays }} active days</span>
+                <span class="text-gray-400">{{ $tc(':count active day|:count active days', activeDays) }}</span>
             </div>
         </div>
 
@@ -283,9 +284,9 @@
                 >{{ mp.label }}</text>
 
                 <!-- Day labels -->
-                <text :x="0" :y="topPadding + 1 * cellStep + cellSize - 2" class="fill-gray-600" font-size="10" font-family="sans-serif">Mon</text>
-                <text :x="0" :y="topPadding + 3 * cellStep + cellSize - 2" class="fill-gray-600" font-size="10" font-family="sans-serif">Wed</text>
-                <text :x="0" :y="topPadding + 5 * cellStep + cellSize - 2" class="fill-gray-600" font-size="10" font-family="sans-serif">Fri</text>
+                <text :x="0" :y="topPadding + 1 * cellStep + cellSize - 2" class="fill-gray-600" font-size="10" font-family="sans-serif">{{ $t('Mon') }}</text>
+                <text :x="0" :y="topPadding + 3 * cellStep + cellSize - 2" class="fill-gray-600" font-size="10" font-family="sans-serif">{{ $t('Wed') }}</text>
+                <text :x="0" :y="topPadding + 5 * cellStep + cellSize - 2" class="fill-gray-600" font-size="10" font-family="sans-serif">{{ $t('Fri') }}</text>
 
                 <!-- Cells -->
                 <template v-for="(week, weekIdx) in weeks" :key="weekIdx">
@@ -375,7 +376,7 @@
             >
                 <div class="text-gray-400 text-xs mb-1">{{ formatDate(hoveredDay.date) }}</div>
                 <div class="flex items-center gap-3">
-                    <span class="text-white font-medium">{{ hoveredDay.total }} total</span>
+                    <span class="text-white font-medium">{{ $t(':count total', { count: hoveredDay.total }) }}</span>
                     <span v-if="hoveredDay.vq3" class="text-blue-400">{{ hoveredDay.vq3 }} VQ3</span>
                     <span v-if="hoveredDay.cpm" class="text-purple-400">{{ hoveredDay.cpm }} CPM</span>
                 </div>
@@ -388,7 +389,7 @@
             <div class="flex items-center gap-3 text-xs text-gray-500">
                 <div class="flex items-center gap-1.5">
                     <div class="w-3 h-3 rounded-sm" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.06);"></div>
-                    <span>None</span>
+                    <span>{{ $t('None') }}</span>
                 </div>
                 <div class="flex items-center gap-1.5">
                     <div class="w-3 h-3 rounded-sm" style="background: hsla(217, 85%, 38%, 0.65);"></div>
@@ -400,7 +401,7 @@
                 </div>
                 <div class="flex items-center gap-1">
                     <div class="w-1.5 h-3 rounded-l-sm" style="background: hsla(217, 85%, 46%, 0.8);"></div><div class="w-1.5 h-3 rounded-r-sm" style="background: hsla(270, 85%, 46%, 0.8);"></div>
-                    <span>Both</span>
+                    <span>{{ $t('Both') }}</span>
                 </div>
             </div>
 

@@ -119,7 +119,7 @@
 </script>
 
 <template>
-    <h1 class="font-black text-3xl text-white mb-3">Results</h1>
+    <h1 class="font-black text-3xl text-white mb-3">{{ $t('Results') }}</h1>
 
     <div class="tech-line-overview my-4"></div>
 
@@ -128,14 +128,14 @@
     <div class="tech-line-overview my-4"></div>
 
     <div class="mb-5 pt-5 rounded-md flex justify-between px-3">
-        <a :href="route('tournaments.results.anonymous.download', {tournament: tournament.id, round: round.id})" class="bg-white hover:bg-black hover:text-white text-black font-bold py-2 px-4 rounded-lg">Download Anonymous Results</a>
-        <a :href="route('tournaments.results.download', {tournament: tournament.id, round: round.id})" class="bg-black hover:bg-white hover:text-black text-white font-bold py-2 px-4 rounded-lg">Download Results</a>
+        <a :href="route('tournaments.results.anonymous.download', {tournament: tournament.id, round: round.id})" class="bg-white hover:bg-black hover:text-white text-black font-bold py-2 px-4 rounded-lg">{{ $t('Download Anonymous Results') }}</a>
+        <a :href="route('tournaments.results.download', {tournament: tournament.id, round: round.id})" class="bg-black hover:bg-white hover:text-black text-white font-bold py-2 px-4 rounded-lg">{{ $t('Download Results') }}</a>
     </div>
 
     <div class="p-4 rounded-lg bg-blackop-30 my-5 flex flex-col justify-center items-center" v-if="revealOneByOne">
         <div class="flex justify-between mb-5">
             <button id="revealer-change-button" @click="controlRevealer" class="text-white bg-black hover:bg-gray-600 bg-white hover:bg-black hover:text-white text-black font-bold py-2 px-4 rounded-lg">
-                {{ revealerWorking ? 'Stop' : 'Start' }}
+                {{ revealerWorking ? $t('Stop') : $t('Start') }}
             </button>
     
             <div class="rounded-lg px-2 py-1 flex items-center ml-5">
@@ -144,7 +144,7 @@
                 </div>
         
                 <div class="mx-5 text-white">
-                    Speed: {{ speed }}
+                    {{ $t('Speed:') }} {{ speed }}
                 </div>
         
                 <div class="cursor-pointer" @click="increaseSpeed">
@@ -173,15 +173,15 @@
                 </svg>
             </div>
     
-            <h1 class="text-3xl text-center font-bold">Spoilers</h1>
+            <h1 class="text-3xl text-center font-bold">{{ $t('Spoilers') }}</h1>
     
             <div class="mt-10 text-center">
                 <div class="mb-5">
-                    <button @click="RevealOneByOne" class="bg-white hover:bg-black hover:text-white text-black font-bold py-2 px-4 rounded-lg">Reveal One By One</button>
+                    <button @click="RevealOneByOne" class="bg-white hover:bg-black hover:text-white text-black font-bold py-2 px-4 rounded-lg">{{ $t('Reveal One By One') }}</button>
                 </div>
 
                 <div>
-                    <button @click="RevealAll" class="hover:text-gray-300 text-gray-400">Reveal Results Instantly</button>
+                    <button @click="RevealAll" class="hover:text-gray-300 text-gray-400">{{ $t('Reveal Results Instantly') }}</button>
                 </div>
             </div>
         </div>
@@ -198,7 +198,7 @@
             <DemoResultEntry v-for="(demo, index) in round.vq3_results" :demo="demo" :key="demo.id" v-show="index > visibilityIndex" />
 
             <div v-if="round.vq3_results?.length == 0">
-                <div class="text-xl text-white mt-5 text-center">No Demos Submitted</div>
+                <div class="text-xl text-white mt-5 text-center">{{ $t('No Demos Submitted') }}</div>
             </div>
         </div>
 
@@ -212,7 +212,7 @@
             </div>
 
             <div v-if="round.cpm_results?.length == 0">
-                <div class="text-xl text-white mt-5 text-center">No Demos Submitted</div>
+                <div class="text-xl text-white mt-5 text-center">{{ $t('No Demos Submitted') }}</div>
             </div>
         </div>
     </div>

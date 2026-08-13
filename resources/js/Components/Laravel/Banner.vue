@@ -56,7 +56,7 @@
                             type="button"
                             class="-me-1 flex p-2 rounded-md focus:outline-none sm:-me-2 transition"
                             :class="{ 'hover:bg-blue-600 focus:bg-blue-600': styling == 'success', 'hover:bg-red-600 focus:bg-red-600': styling == 'danger' }"
-                            aria-label="Dismiss"
+                            :aria-label="$t('Dismiss')"
                             @click.prevent="closeBanner"
                         >
                             <svg class="h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">

@@ -2,6 +2,7 @@
 import { Head, usePage } from '@inertiajs/vue3';
 import { ref, computed, nextTick, onMounted } from 'vue';
 import ModelViewer from '@/Components/ModelViewer.vue';
+import { t, tChoice } from '@/utils/i18n';
 
 const page = usePage();
 
@@ -96,7 +97,7 @@ onMounted(() => {
     if (state) {
         modelIdsInput.value = state.ids.join(', ');
         if (state.force) forceMode.value = true;
-        overallProgress.value = `Auto-resuming batch from model ${state.startIndex + 1}/${state.ids.length}...`;
+        overallProgress.value = t('Auto-resuming batch from model :index/:total...', { index: state.startIndex + 1, total: state.ids.length });
         nextTick(() => startBatch(state.startIndex));
     }
 });
@@ -197,11 +198,11 @@ function getBaseModelData(model) {
 // --- Shared GIF helpers ---
 function getViewerComponents() {
     const viewer = viewer3D.value;
-    if (!viewer) throw new Error('Viewer not available');
+    if (!viewer) throw new Error(t('Viewer not available'));
     const renderer = viewer.getRenderer();
     const scene = viewer.getScene();
     const camera = viewer.getCamera();
-    if (!renderer || !scene || !camera) throw new Error('Could not access 3D viewer components');
+    if (!renderer || !scene || !camera) throw new Error(t('Could not access 3D viewer components'));
     return { viewer, renderer, scene, camera };
 }
 
@@ -225,7 +226,7 @@ async function createGifEncoder(gifWidth, gifHeight) {
 
 async function finalizeGif(gif) {
     const blob = await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('GIF encoding timed out')), 60000);
+        const timeout = setTimeout(() => reject(new Error(t('GIF encoding timed out'))), 60000);
         gif.on('finished', (b) => { clearTimeout(timeout); resolve(b); });
         gif.render();
     });
@@ -262,7 +263,7 @@ async function generateRotateGif() {
     const numFrames = 36;
 
     for (let i = 0; i < numFrames; i++) {
-        currentStatus.value = `[Rotate] Capturing frame ${i + 1}/${numFrames}...`;
+        currentStatus.value = t('[Rotate] Capturing frame :i/:total...', { i: i + 1, total: numFrames });
         const angle = startAngle + (i * (Math.PI * 2) / numFrames);
         camera.position.x = target.x + Math.sin(angle) * radius;
         camera.position.z = target.z + Math.cos(angle) * radius;
@@ -282,7 +283,7 @@ async function generateRotateGif() {
     camera.lookAt(originalTarget.x, originalTarget.y, originalTarget.z);
     if (controls) { controls.target.copy(originalTarget); controls.update(); }
 
-    currentStatus.value = 'Encoding rotate GIF...';
+    currentStatus.value = t('Encoding rotate GIF...');
     const blob = await finalizeGif(gif);
     tempCanvas.width = 0; tempCanvas.height = 0;
     return blob;
@@ -368,7 +369,10 @@ async function generateAnimationGif(legsAnim, torsoAnim, label, isLoop = false) 
     const dt = 1 / animFps;
 
     for (let i = 0; i < numFrames; i++) {
-        currentStatus.value = `[${label}] Capturing frame ${i + 1}/${numFrames} (${animFps}fps, delay=${frameDelay}ms)...`;
+        // fps and delay carry their own unit so the key stays readable - a
+        // placeholder glued straight onto text (:fpsfps) survives t() but is a
+        // trap for whoever translates the line.
+        currentStatus.value = t('[:label] Capturing frame :i/:total (:fps, delay=:delay)...', { label, i: i + 1, total: numFrames, fps: `${animFps}fps`, delay: `${frameDelay}ms` });
 
         if (i > 0) {
             animManager.update(dt);
@@ -389,7 +393,7 @@ async function generateAnimationGif(legsAnim, torsoAnim, label, isLoop = false) 
     camera.lookAt(originalTarget.x, originalTarget.y, originalTarget.z);
     if (controls) { controls.target.copy(originalTarget); controls.update(); }
 
-    currentStatus.value = `Encoding ${label} GIF...`;
+    currentStatus.value = t('Encoding :label GIF...', { label });
     const blob = await finalizeGif(gif);
     tempCanvas.width = 0; tempCanvas.height = 0;
     return blob;
@@ -530,21 +534,21 @@ async function generateAllGifsForModel(model) {
     const isWeapon = model?.category === 'weapon';
 
     // 1. Rotate GIF
-    currentStatus.value = 'Generating rotate GIF...';
+    currentStatus.value = t('Generating rotate GIF...');
     const rotateBlob = await generateRotateGif();
 
     // 2. Idle GIF - for weapons: static front view snapshot as GIF, for players: LEGS_IDLE + TORSO_STAND
     let idleBlob = null;
     if (isWeapon) {
         try {
-            currentStatus.value = 'Generating idle GIF (static snapshot)...';
+            currentStatus.value = t('Generating idle GIF (static snapshot)...');
             idleBlob = await generateWeaponIdleGif();
         } catch (e) {
             console.warn('Weapon idle GIF failed:', e.message);
         }
     } else {
         try {
-            currentStatus.value = 'Generating idle GIF...';
+            currentStatus.value = t('Generating idle GIF...');
             idleBlob = await generateAnimationGif('LEGS_IDLE', 'TORSO_STAND', 'Idle', true);
         } catch (e) {
             console.warn('Idle GIF failed (no animation?):', e.message);
@@ -556,20 +560,20 @@ async function generateAllGifsForModel(model) {
     let headIconBlob = null;
     if (!isWeapon) {
         try {
-            currentStatus.value = 'Generating gesture GIF...';
+            currentStatus.value = t('Generating gesture GIF...');
             gestureBlob = await generateAnimationGif('LEGS_IDLE', 'TORSO_GESTURE', 'Gesture');
         } catch (e) {
             console.warn('Gesture GIF failed (no animation?):', e.message);
         }
 
-        currentStatus.value = 'Generating head icon...';
+        currentStatus.value = t('Generating head icon...');
         headIconBlob = await generateHeadIcon();
     }
 
     // 5. Still thumbnail (PNG from idle pose middle frame)
     let thumbnailBlob = null;
     try {
-        currentStatus.value = 'Generating still thumbnail...';
+        currentStatus.value = t('Generating still thumbnail...');
         thumbnailBlob = await generateStillThumbnail();
     } catch (e) {
         console.warn('Still thumbnail failed:', e.message);
@@ -618,7 +622,7 @@ async function generateWeaponIdleGif() {
 
     const gif = await createGifEncoder(gifWidth, gifHeight);
     for (let i = 0; i < numFrames; i++) {
-        currentStatus.value = `[Weapon Idle] Frame ${i + 1}/${numFrames}`;
+        currentStatus.value = t('[Weapon Idle] Frame :i/:total', { i: i + 1, total: numFrames });
         shaderTime += dt;
         viewer.updateShaderAnimations?.(shaderTime);
         scene.updateMatrixWorld(true);
@@ -633,7 +637,7 @@ async function generateWeaponIdleGif() {
     camera.lookAt(originalTarget.x, originalTarget.y, originalTarget.z);
     if (controls) { controls.target.copy(originalTarget); controls.update(); }
 
-    currentStatus.value = 'Encoding weapon idle GIF...';
+    currentStatus.value = t('Encoding weapon idle GIF...');
     const blob = await finalizeGif(gif);
     tempCanvas.width = 0; tempCanvas.height = 0;
     return blob;
@@ -658,7 +662,7 @@ async function uploadThumbnails(modelId, { rotateBlob, idleBlob, gestureBlob, he
 
     const data = await response.json();
     if (!data.success) {
-        throw new Error(data.message || 'Upload failed');
+        throw new Error(data.message || t('Upload failed'));
     }
     return data;
 }
@@ -684,7 +688,7 @@ function waitForViewerLoaded(expectedGeneration) {
     return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
             clearInterval(interval);
-            reject(new Error('Model load timed out (15s)'));
+            reject(new Error(t('Model load timed out (15s)')));
         }, 15000);
 
         const interval = setInterval(() => {
@@ -692,7 +696,7 @@ function waitForViewerLoaded(expectedGeneration) {
             if (loadGeneration.value !== expectedGeneration) {
                 clearInterval(interval);
                 clearTimeout(timeout);
-                reject(new Error('Load generation mismatch - stale event'));
+                reject(new Error(t('Load generation mismatch - stale event')));
                 return;
             }
             // Detect error immediately instead of waiting for timeout
@@ -701,7 +705,7 @@ function waitForViewerLoaded(expectedGeneration) {
                 clearTimeout(timeout);
                 const err = viewerError.value;
                 viewerError.value = null;
-                reject(new Error(`Model load failed: ${err}`));
+                reject(new Error(t('Model load failed: :error', { error: err })));
                 return;
             }
             if (viewerLoaded.value) {
@@ -749,13 +753,13 @@ async function startBatch(startFrom = 0) {
         // Check if stop was requested
         if (stopRequested.value) {
             clearBatchState();
-            overallProgress.value = `Stopped at ${i}/${ids.length}`;
+            overallProgress.value = t('Stopped at :index/:total', { index: i, total: ids.length });
             break;
         }
 
         // Auto-refresh to reclaim WebGL contexts after N models
         if (processedThisCycle >= MODELS_PER_CYCLE) {
-            currentStatus.value = `Auto-refreshing browser to free memory (processed ${processedThisCycle} this cycle)...`;
+            currentStatus.value = t('Auto-refreshing browser to free memory (processed :count this cycle)...', { count: processedThisCycle });
             saveBatchState(ids, i);
             await new Promise(resolve => setTimeout(resolve, 500));
             window.location.reload();
@@ -766,36 +770,36 @@ async function startBatch(startFrom = 0) {
         const modelData = findModel(modelId);
 
         currentModelIndex.value = i;
-        overallProgress.value = `Processing ${i + 1}/${ids.length}: Model #${modelId}`;
+        overallProgress.value = t('Processing :index/:total: Model #:id', { index: i + 1, total: ids.length, id: modelId });
 
         // Skip already completed models (unless force mode)
         if (!forceMode.value && getCompletedIds().has(modelId)) {
-            results.value.push({ id: modelId, name: findModel(modelId)?.name || `#${modelId}`, status: 'skipped', message: 'Already done' });
+            results.value.push({ id: modelId, name: findModel(modelId)?.name || `#${modelId}`, status: 'skipped', message: t('Already done') });
             continue;
         }
 
         if (!modelData) {
-            markFailed(modelId, `#${modelId}`, 'Model not found');
-            results.value.push({ id: modelId, name: `#${modelId}`, status: 'error', message: 'Model not found' });
+            markFailed(modelId, `#${modelId}`, t('Model not found'));
+            results.value.push({ id: modelId, name: `#${modelId}`, status: 'error', message: t('Model not found') });
             continue;
         }
 
         const modelPath = getModelFilePath(modelData);
         if (!modelPath) {
-            markFailed(modelId, modelData.name, 'No file path');
-            results.value.push({ id: modelId, name: modelData.name, status: 'error', message: 'No file path' });
+            markFailed(modelId, modelData.name, t('No file path'));
+            results.value.push({ id: modelId, name: modelData.name, status: 'error', message: t('No file path') });
             continue;
         }
 
         // Cooldown after consecutive errors to let browser recover
         if (consecutiveErrors.value >= 3) {
-            currentStatus.value = `Cooldown (${consecutiveErrors.value} consecutive errors)... waiting 10s`;
+            currentStatus.value = t('Cooldown (:count consecutive errors)... waiting 10s', { count: consecutiveErrors.value });
             await new Promise(resolve => setTimeout(resolve, 10000));
             consecutiveErrors.value = 0;
         }
 
         // Unmount old viewer, mount new one
-        currentStatus.value = 'Loading model...';
+        currentStatus.value = t('Loading model...');
         viewerLoaded.value = false;
         viewerError.value = null;
         loadGeneration.value++;
@@ -812,11 +816,11 @@ async function startBatch(startFrom = 0) {
             await waitForViewerLoaded(thisGeneration);
 
             // Generate all GIF variants (rotate, idle, gesture) + head icon
-            currentStatus.value = 'Generating GIFs...';
+            currentStatus.value = t('Generating GIFs...');
             const allGifs = await generateAllGifsForModel(modelData);
 
             // Upload all variants
-            currentStatus.value = 'Uploading...';
+            currentStatus.value = t('Uploading...');
             await uploadThumbnails(modelId, allGifs);
 
             // Build status message showing what was generated
@@ -842,8 +846,8 @@ async function startBatch(startFrom = 0) {
             consecutiveErrors.value = 0;
             processedThisCycle++;
             const statusMsg = missing.length > 0
-                ? `Partial: ${parts.join('+')} OK, missing ${missing.join('+')}`
-                : 'Done';
+                ? t('Partial: :parts OK, missing :missing', { parts: parts.join('+'), missing: missing.join('+') })
+                : t('Done');
             const status = missing.length > 0 ? 'partial' : 'success';
             results.value.push({ id: modelId, name: modelData.name, status, message: statusMsg });
         } catch (err) {
@@ -869,14 +873,14 @@ async function startBatch(startFrom = 0) {
     currentModelIndex.value = -1;
     const successCount = results.value.filter(r => r.status === 'success').length;
     const skippedCount = results.value.filter(r => r.status === 'skipped').length;
-    overallProgress.value = `Finished! ${successCount} generated, ${skippedCount} skipped, ${ids.length - successCount - skippedCount} failed`;
+    overallProgress.value = t('Finished! :generated generated, :skipped skipped, :failed failed', { generated: successCount, skipped: skippedCount, failed: ids.length - successCount - skippedCount });
     currentStatus.value = '';
 }
 
 function stopBatch() {
     stopRequested.value = true;
     clearBatchState();
-    currentStatus.value = 'Stopping after current model...';
+    currentStatus.value = t('Stopping after current model...');
 }
 
 async function startBatchForce() {
@@ -965,8 +969,8 @@ async function generateStillThumbnails() {
         if (thumbStopRequested.value) break;
 
         const batch = ids.slice(i, i + thumbBatchSize);
-        thumbProgress.value = `Processing batch ${Math.floor(i / thumbBatchSize) + 1}/${Math.ceil(ids.length / thumbBatchSize)} (${processed}/${ids.length} done)`;
-        thumbStatus.value = `Generating thumbnails for ${batch.length} models...`;
+        thumbProgress.value = t('Processing batch :index/:total (:done/:all done)', { index: Math.floor(i / thumbBatchSize) + 1, total: Math.ceil(ids.length / thumbBatchSize), done: processed, all: ids.length });
+        thumbStatus.value = tChoice('Generating thumbnails for :count model...|Generating thumbnails for :count models...', batch.length);
 
         try {
             const response = await fetch('/models/batch-generate-still-thumbnails', {
@@ -995,12 +999,12 @@ async function generateStillThumbnails() {
                 processed += data.results.length;
             }
         } catch (e) {
-            thumbResults.value.push({ id: 0, name: 'Batch error', status: 'error', message: e.message });
+            thumbResults.value.push({ id: 0, name: t('Batch error'), status: 'error', message: e.message });
         }
     }
 
     const okCount = thumbResults.value.filter(r => r.status === 'ok').length;
-    thumbProgress.value = `Done: ${okCount} generated, ${thumbResults.value.length - okCount} failed`;
+    thumbProgress.value = t('Done: :generated generated, :failed failed', { generated: okCount, failed: thumbResults.value.length - okCount });
     thumbStatus.value = '';
     thumbProcessing.value = false;
     thumbStopRequested.value = false;
@@ -1008,16 +1012,16 @@ async function generateStillThumbnails() {
 
 function stopThumbGeneration() {
     thumbStopRequested.value = true;
-    thumbStatus.value = 'Stopping after current batch...';
+    thumbStatus.value = t('Stopping after current batch...');
 }
 </script>
 
 <template>
-    <Head title="Batch Generate GIF Thumbnails" />
+    <Head :title="$t('Batch Generate GIF Thumbnails')" />
 
     <div class="min-h-screen bg-gray-900 text-white p-8">
         <div class="max-w-4xl mx-auto">
-            <h1 class="text-2xl md:text-3xl font-bold mb-6">Batch Generate GIF Thumbnails</h1>
+            <h1 class="text-2xl md:text-3xl font-bold mb-6">{{ $t('Batch Generate GIF Thumbnails') }}</h1>
 
             <!-- Tabs -->
             <div class="flex gap-2 mb-6">
@@ -1026,14 +1030,14 @@ function stopThumbGeneration() {
                     :class="activeTab === 'gifs' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
                     class="px-4 py-2 rounded font-medium transition-colors"
                 >
-                    GIF Generation
+                    {{ $t('GIF Generation') }}
                 </button>
                 <button
                     @click="activeTab = 'thumbnails'"
                     :class="activeTab === 'thumbnails' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
                     class="px-4 py-2 rounded font-medium transition-colors"
                 >
-                    Missing Still Thumbnails ({{ missingThumbnailModels.length }})
+                    {{ $t('Missing Still Thumbnails (:count)', { count: missingThumbnailModels.length }) }}
                 </button>
             </div>
 
@@ -1043,13 +1047,13 @@ function stopThumbGeneration() {
             <!-- Input -->
             <div class="bg-gray-800 rounded-lg p-6 mb-6">
                 <label class="block text-sm font-medium text-gray-300 mb-2">
-                    Model IDs (comma or space separated)
+                    {{ $t('Model IDs (comma or space separated)') }}
                 </label>
                 <textarea
                     v-model="modelIdsInput"
                     :disabled="isProcessing"
                     class="w-full bg-gray-700 text-white rounded px-4 py-2 h-24 font-mono text-sm"
-                    placeholder="e.g. 3529, 3544, 3550"
+                    :placeholder="$t('e.g. 3529, 3544, 3550')"
                 ></textarea>
 
                 <div class="flex flex-wrap gap-3 mt-3">
@@ -1059,7 +1063,7 @@ function stopThumbGeneration() {
                         :disabled="selectedModelIds.length === 0"
                         class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded font-medium"
                     >
-                        Generate ({{ selectedModelIds.length }} models)
+                        {{ $tc('Generate (:count model)|Generate (:count models)', selectedModelIds.length) }}
                     </button>
                     <button
                         v-if="!isProcessing"
@@ -1067,7 +1071,7 @@ function stopThumbGeneration() {
                         :disabled="selectedModelIds.length === 0"
                         class="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 rounded font-medium"
                     >
-                        Force Regenerate ({{ selectedModelIds.length }})
+                        {{ $t('Force Regenerate (:count)', { count: selectedModelIds.length }) }}
                     </button>
                     <button
                         v-else
@@ -1075,21 +1079,21 @@ function stopThumbGeneration() {
                         :disabled="stopRequested"
                         class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 rounded font-medium"
                     >
-                        {{ stopRequested ? 'Stopping...' : 'Stop Batch' }}
+                        {{ stopRequested ? $t('Stopping...') : $t('Stop Batch') }}
                     </button>
                     <button
                         @click="fillAllWithoutGif"
                         :disabled="isProcessing"
                         class="px-4 py-2 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 rounded text-sm"
                     >
-                        Fill: Missing GIFs ({{ models.filter(m => !m.idle_gif || !m.rotate_gif || (m.category !== 'weapon' && !m.gesture_gif)).length }})
+                        {{ $t('Fill: Missing GIFs (:count)', { count: models.filter(m => !m.idle_gif || !m.rotate_gif || (m.category !== 'weapon' && !m.gesture_gif)).length }) }}
                     </button>
                     <button
                         @click="fillAll"
                         :disabled="isProcessing"
                         class="px-4 py-2 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 rounded text-sm"
                     >
-                        Fill: All ({{ models.length }})
+                        {{ $t('Fill: All (:count)', { count: models.length }) }}
                     </button>
                     <button
                         v-if="failedList.length > 0"
@@ -1097,7 +1101,7 @@ function stopThumbGeneration() {
                         :disabled="isProcessing"
                         class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-700 rounded text-sm font-medium"
                     >
-                        Fill: Failed ({{ failedList.length }})
+                        {{ $t('Fill: Failed (:count)', { count: failedList.length }) }}
                     </button>
                     <button
                         v-if="failedList.length > 0"
@@ -1105,7 +1109,7 @@ function stopThumbGeneration() {
                         :disabled="isProcessing"
                         class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-700 rounded text-sm font-medium"
                     >
-                        Retry Failed ({{ failedList.length }})
+                        {{ $t('Retry Failed (:count)', { count: failedList.length }) }}
                     </button>
                     <button
                         v-if="completedCount > 0 || failedList.length > 0"
@@ -1113,27 +1117,27 @@ function stopThumbGeneration() {
                         :disabled="isProcessing"
                         class="px-4 py-2 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 rounded text-sm"
                     >
-                        Clear progress ({{ completedCount }} done, {{ failedList.length }} failed)
+                        {{ $t('Clear progress (:done done, :failed failed)', { done: completedCount, failed: failedList.length }) }}
                     </button>
                     <button
                         @click="startAlreadyGenerated"
                         :disabled="isProcessing"
                         class="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-700 rounded text-sm font-medium"
                     >
-                        Regenerate existing ({{ models.filter(m => m.idle_gif || m.rotate_gif || m.thumbnail).length }})
+                        {{ $t('Regenerate existing (:count)', { count: models.filter(m => m.idle_gif || m.rotate_gif || m.thumbnail).length }) }}
                     </button>
                     <button
                         @click="startAll"
                         :disabled="isProcessing"
                         class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 rounded text-sm font-medium"
                     >
-                        Regenerate ALL ({{ models.length }})
+                        {{ $t('Regenerate ALL (:count)', { count: models.length }) }}
                     </button>
                 </div>
 
                 <!-- Parsed IDs preview -->
                 <details v-if="selectedModelIds.length > 0" class="mt-3 text-sm text-gray-400">
-                    <summary class="cursor-pointer hover:text-gray-300">Parsed IDs ({{ selectedModelIds.length }})</summary>
+                    <summary class="cursor-pointer hover:text-gray-300">{{ $t('Parsed IDs (:count)', { count: selectedModelIds.length }) }}</summary>
                     <div class="mt-1 max-h-32 overflow-y-auto">{{ selectedModelIds.join(', ') }}</div>
                 </details>
             </div>
@@ -1147,7 +1151,7 @@ function stopThumbGeneration() {
             <!-- Render preview -->
             <div v-if="currentModel" class="mb-6">
                 <div class="text-sm text-gray-400 mb-2">
-                    Rendering: {{ currentModel.name }} (#{{ currentModel.id }})
+                    {{ $t('Rendering: :name (#:id)', { name: currentModel.name, id: currentModel.id }) }}
                 </div>
                 <div style="width: 800px; height: 800px;">
                     <div ref="viewerContainer" style="width: 800px; height: 800px;">
@@ -1175,7 +1179,7 @@ function stopThumbGeneration() {
 
             <!-- Results -->
             <div v-if="results.length > 0" class="bg-gray-800 rounded-lg p-6">
-                <h2 class="text-lg font-medium mb-4">Results</h2>
+                <h2 class="text-lg font-medium mb-4">{{ $t('Results') }}</h2>
                 <div class="space-y-2">
                     <div
                         v-for="result in results"
@@ -1191,7 +1195,7 @@ function stopThumbGeneration() {
                             }"
                             class="font-mono w-14"
                         >
-                            {{ result.status === 'success' ? 'OK' : result.status === 'partial' ? 'PART' : result.status === 'skipped' ? 'SKIP' : 'FAIL' }}
+                            {{ result.status === 'success' ? $t('OK') : result.status === 'partial' ? $t('PART') : result.status === 'skipped' ? $t('SKIP') : $t('FAIL') }}
                         </span>
                         <span class="text-gray-300">#{{ result.id }}</span>
                         <span class="text-white">{{ result.name }}</span>
@@ -1208,7 +1212,7 @@ function stopThumbGeneration() {
 
             <!-- Persistent failed models list -->
             <div v-if="failedList.length > 0 && !isProcessing" class="bg-red-900/20 border border-red-500/30 rounded-lg p-6 mb-6">
-                <h2 class="text-lg font-medium text-red-400 mb-3">Failed models ({{ failedList.length }})</h2>
+                <h2 class="text-lg font-medium text-red-400 mb-3">{{ $t('Failed models (:count)', { count: failedList.length }) }}</h2>
                 <div class="space-y-1 max-h-64 overflow-y-auto">
                     <div v-for="f in failedList" :key="f.id" class="flex items-center gap-3 text-sm">
                         <span class="text-red-400 font-mono w-16">#{{ f.id }}</span>
@@ -1221,18 +1225,18 @@ function stopThumbGeneration() {
             <!-- Model list reference -->
             <details class="mt-6">
                 <summary class="cursor-pointer text-gray-400 hover:text-gray-300 text-sm">
-                    Show all models ({{ models.length }})
+                    {{ $t('Show all models (:count)', { count: models.length }) }}
                 </summary>
                 <div class="mt-2 bg-gray-800 rounded-lg p-4 max-h-96 overflow-y-auto">
                     <table class="w-full text-sm">
                         <thead class="text-gray-400">
                             <tr>
-                                <th class="text-left py-1 px-2">ID</th>
-                                <th class="text-left py-1 px-2">Name</th>
-                                <th class="text-left py-1 px-2">Category</th>
-                                <th class="text-left py-1 px-2">Idle</th>
-                                <th class="text-left py-1 px-2">Rotate</th>
-                                <th class="text-left py-1 px-2">Gesture</th>
+                                <th class="text-left py-1 px-2">{{ $t('ID') }}</th>
+                                <th class="text-left py-1 px-2">{{ $t('Name') }}</th>
+                                <th class="text-left py-1 px-2">{{ $t('Category') }}</th>
+                                <th class="text-left py-1 px-2">{{ $t('Idle') }}</th>
+                                <th class="text-left py-1 px-2">{{ $t('Rotate') }}</th>
+                                <th class="text-left py-1 px-2">{{ $t('Gesture') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1241,16 +1245,16 @@ function stopThumbGeneration() {
                                 <td class="py-1 px-2">{{ m.name }}</td>
                                 <td class="py-1 px-2 text-gray-400">{{ m.category }}</td>
                                 <td class="py-1 px-2">
-                                    <span v-if="m.idle_gif" class="text-green-400">Y</span>
-                                    <span v-else class="text-red-400">N</span>
+                                    <span v-if="m.idle_gif" class="text-green-400">{{ $t('Y') }}</span>
+                                    <span v-else class="text-red-400">{{ $t('N') }}</span>
                                 </td>
                                 <td class="py-1 px-2">
-                                    <span v-if="m.rotate_gif || m.thumbnail" class="text-green-400">Y</span>
-                                    <span v-else class="text-red-400">N</span>
+                                    <span v-if="m.rotate_gif || m.thumbnail" class="text-green-400">{{ $t('Y') }}</span>
+                                    <span v-else class="text-red-400">{{ $t('N') }}</span>
                                 </td>
                                 <td class="py-1 px-2">
-                                    <span v-if="m.gesture_gif" class="text-green-400">Y</span>
-                                    <span v-else class="text-red-400">N</span>
+                                    <span v-if="m.gesture_gif" class="text-green-400">{{ $t('Y') }}</span>
+                                    <span v-else class="text-red-400">{{ $t('N') }}</span>
                                 </td>
                             </tr>
                         </tbody>
@@ -1264,7 +1268,7 @@ function stopThumbGeneration() {
             <div v-show="activeTab === 'thumbnails'">
                 <div class="bg-gray-800 rounded-lg p-6 mb-6">
                     <p class="text-gray-300 mb-4">
-                        Models with idle GIF but no still thumbnail (PNG fallback). Extracts the middle frame from the idle GIF server-side using Imagick.
+                        {{ $t('Models with idle GIF but no still thumbnail (PNG fallback). Extracts the middle frame from the idle GIF server-side using Imagick.') }}
                     </p>
 
                     <div class="flex items-center gap-4 mb-4">
@@ -1274,7 +1278,7 @@ function stopThumbGeneration() {
                             :disabled="missingThumbnailModels.length === 0"
                             class="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 rounded font-medium"
                         >
-                            Generate All ({{ missingThumbnailModels.length }})
+                            {{ $t('Generate All (:count)', { count: missingThumbnailModels.length }) }}
                         </button>
                         <button
                             v-else
@@ -1282,11 +1286,11 @@ function stopThumbGeneration() {
                             :disabled="thumbStopRequested"
                             class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 rounded font-medium"
                         >
-                            {{ thumbStopRequested ? 'Stopping...' : 'Stop' }}
+                            {{ thumbStopRequested ? $t('Stopping...') : $t('Stop') }}
                         </button>
 
                         <span class="text-sm text-gray-400">
-                            Batches of {{ thumbBatchSize }} (server-side, no 3D viewer needed)
+                            {{ $t('Batches of :size (server-side, no 3D viewer needed)', { size: thumbBatchSize }) }}
                         </span>
                     </div>
 
@@ -1307,7 +1311,7 @@ function stopThumbGeneration() {
                                 :class="r.status === 'ok' ? 'text-green-400' : 'text-red-400'"
                                 class="font-mono w-10"
                             >
-                                {{ r.status === 'ok' ? 'OK' : 'FAIL' }}
+                                {{ r.status === 'ok' ? $t('OK') : $t('FAIL') }}
                             </span>
                             <span class="text-gray-400">#{{ r.id }}</span>
                             <span class="text-white">{{ r.name }}</span>
@@ -1319,15 +1323,15 @@ function stopThumbGeneration() {
                 <!-- Missing models list -->
                 <div class="bg-gray-800 rounded-lg p-4 max-h-96 overflow-y-auto">
                     <h3 class="text-sm font-medium text-gray-400 mb-2">
-                        Missing thumbnails ({{ missingThumbnailModels.length }})
+                        {{ $t('Missing thumbnails (:count)', { count: missingThumbnailModels.length }) }}
                     </h3>
                     <table class="w-full text-sm">
                         <thead class="text-gray-400">
                             <tr>
-                                <th class="text-left py-1 px-2">ID</th>
-                                <th class="text-left py-1 px-2">Name</th>
-                                <th class="text-left py-1 px-2">Category</th>
-                                <th class="text-left py-1 px-2">Idle GIF</th>
+                                <th class="text-left py-1 px-2">{{ $t('ID') }}</th>
+                                <th class="text-left py-1 px-2">{{ $t('Name') }}</th>
+                                <th class="text-left py-1 px-2">{{ $t('Category') }}</th>
+                                <th class="text-left py-1 px-2">{{ $t('Idle GIF') }}</th>
                             </tr>
                         </thead>
                         <tbody>

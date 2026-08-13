@@ -224,7 +224,7 @@ onUnmounted(() => {
                             ref="inputRef"
                             v-model="query"
                             type="text"
-                            placeholder="Search wiki pages..."
+                            :placeholder="$t('Search wiki pages...')"
                             class="flex-1 bg-transparent text-gray-200 text-lg placeholder-gray-500 outline-none"
                             @keydown="onKeydown"
                         />
@@ -242,7 +242,7 @@ onUnmounted(() => {
 
                         <!-- No results -->
                         <div v-else-if="query.length >= 1 && results.length === 0" class="px-5 py-8 text-center text-gray-500">
-                            No pages found for "<span class="text-gray-400">{{ query }}</span>"
+                            {{ $t('No pages found for') }} "<span class="text-gray-400">{{ query }}</span>"
                         </div>
 
                         <!-- Result list -->
@@ -273,8 +273,8 @@ onUnmounted(() => {
                                         v-html="highlightMatch(result.title, query)"
                                     ></span>
                                     <!-- Match source badge -->
-                                    <span v-if="result.matchSource === 'keywords'" class="text-[10px] px-1.5 py-0.5 bg-blue-900/40 text-blue-400 rounded">keyword</span>
-                                    <span v-if="result.matchSource === 'content'" class="text-[10px] px-1.5 py-0.5 bg-gray-800 text-gray-500 rounded">content</span>
+                                    <span v-if="result.matchSource === 'keywords'" class="text-[10px] px-1.5 py-0.5 bg-blue-900/40 text-blue-400 rounded">{{ $t('keyword') }}</span>
+                                    <span v-if="result.matchSource === 'content'" class="text-[10px] px-1.5 py-0.5 bg-gray-800 text-gray-500 rounded">{{ $t('content') }}</span>
                                 </div>
                                 <!-- Snippet -->
                                 <p
@@ -287,7 +287,7 @@ onUnmounted(() => {
 
                         <!-- Empty state -->
                         <div v-else class="px-5 py-8 text-center text-gray-600 text-sm">
-                            Type to search wiki pages, sections, and content
+                            {{ $t('Type to search wiki pages, sections, and content') }}
                         </div>
                     </div>
 
@@ -295,15 +295,15 @@ onUnmounted(() => {
                     <div class="flex items-center gap-4 px-5 py-2.5 border-t border-white/10 text-xs text-gray-600">
                         <span class="flex items-center gap-1">
                             <kbd class="px-1.5 py-0.5 bg-gray-800 border border-gray-700 rounded text-gray-500">↑↓</kbd>
-                            navigate
+                            {{ $t('navigate') }}
                         </span>
                         <span class="flex items-center gap-1">
                             <kbd class="px-1.5 py-0.5 bg-gray-800 border border-gray-700 rounded text-gray-500">↵</kbd>
-                            open
+                            {{ $t('open') }}
                         </span>
                         <span class="flex items-center gap-1">
                             <kbd class="px-1.5 py-0.5 bg-gray-800 border border-gray-700 rounded text-gray-500">esc</kbd>
-                            close
+                            {{ $t('close') }}
                         </span>
                     </div>
                 </div>

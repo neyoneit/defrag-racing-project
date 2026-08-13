@@ -135,7 +135,7 @@ class ValidationLogController extends Controller
         return $case->flags
             ->groupBy('flag_type')
             ->map(fn ($group, $type) => [
-                'label' => RecordFlagController::FLAG_TYPES[$type] ?? $type,
+                'label' => RecordFlagController::flagTypes()[$type] ?? $type,
                 'count' => $group->count(),
             ])
             ->values()

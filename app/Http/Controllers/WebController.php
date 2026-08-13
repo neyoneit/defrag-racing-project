@@ -80,6 +80,14 @@ class WebController extends Controller
             return ['latest' => $latest, 'recent' => $recent];
         });
 
+        // Translated after the cache rather than inside it, so one cached copy
+        // serves every language and an English reader pays nothing at all -
+        // translated() returns the record untouched when the locale is en.
+        $announcements = [
+            'latest' => $announcements['latest']?->translated(),
+            'recent' => collect($announcements['recent'])->map->translated(),
+        ];
+
         $maps = Cache::remember('home:latest_maps', 600, function () {
             return Map::query()
                 ->orderBy('date_added', 'DESC')

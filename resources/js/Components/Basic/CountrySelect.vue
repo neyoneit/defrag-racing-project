@@ -1,6 +1,6 @@
 <template>
     <div class="relative" >
-        <input @focus="isOpen = true" @blur="onBlur" class="w-full border-2 border-grayop-700 bg-grayop-900 text-gray-300 focus:border-blue-600 focus:ring-blue-600 rounded-md shadow-sm" v-model="country" @input="filterOptions" placeholder="Select Country" autocomplete="off" />
+        <input @focus="isOpen = true" @blur="onBlur" class="w-full border-2 border-grayop-700 bg-grayop-900 text-gray-300 focus:border-blue-600 focus:ring-blue-600 rounded-md shadow-sm" v-model="country" @input="filterOptions" :placeholder="$t('Select Country')" autocomplete="off" />
         
         <div class="options p-2 m-1 rounded-md" v-show="isOpen">
             <div class="p-2 cursor-pointer option rounded-md mb-2 text-white flex items-center" v-for="(name, code) in filteredOptions" :key="code" @click="selectOption(code)">
@@ -12,11 +12,14 @@
   </template>
   
 <script setup>
-    import { ref, watch, onMounted } from 'vue';
-    import countries from '@/Components/stubs/countries'
+    import { computed, ref, watch, onMounted } from 'vue';
+    import { countryList } from '@/Components/stubs/countries'
 
     const isOpen = ref(false);
-    const filteredOptions = ref(countries);
+    // Sorting 200 names is not free and the filter runs on every keystroke,
+    // so the localised list is built once and re-used.
+    const countries = computed(() => countryList());
+    const filteredOptions = ref(countryList());
     const country = ref("");
     const selectedOption = ref(null);
     let blurTimeout;
@@ -27,20 +30,18 @@
     });
 
     onMounted(() => {
-        if (props.selectedCountry && countries[props.selectedCountry]) {
-            country.value = countries[props.selectedCountry];
+        if (props.selectedCountry && countries.value[props.selectedCountry]) {
+            country.value = countries.value[props.selectedCountry];
             selectedOption.value = props.selectedCountry;
         }
     });
 
     const filterOptions = () => {
-        filteredOptions.value = {};
+        const needle = country.value.toLowerCase();
 
-        Object.keys(countries).forEach((code) => {
-            if (countries[code].toLowerCase().includes(country.value.toLowerCase())) {
-                filteredOptions.value[code] = countries[code];
-            }
-        });
+        filteredOptions.value = Object.fromEntries(
+            Object.entries(countries.value).filter(([, name]) => name.toLowerCase().includes(needle))
+        );
     };
 
     const onBlur = () => {
@@ -52,7 +53,7 @@
     const selectOption = (option) => {
         props.setCountry(option)
         selectedOption.value = option;
-        country.value = countries[option]
+        country.value = countries.value[option]
         isOpen.value = false;
     };
 

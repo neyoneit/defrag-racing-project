@@ -7,7 +7,8 @@ import PrimaryButton from '@/Components/Laravel/PrimaryButton.vue';
 import SecondaryButton from '@/Components/Laravel/SecondaryButton.vue';
 import TextInput from '@/Components/Laravel/TextInput.vue';
 import CountrySelect from '@/Components/Basic/CountrySelect.vue';
-import countries from '@/Components/stubs/countries'
+import { countryName } from '@/Components/stubs/countries'
+import { t } from '@/utils/i18n';
 
 const props = defineProps({
     user: Object,
@@ -53,7 +54,7 @@ const updatePhotoPreview = () => {
     // 1MB size limit for profile photo
     const maxSize = 1 * 1024 * 1024; // 1MB in bytes
     if (photo.size > maxSize) {
-        form.errors.photo = 'The profile photo must be smaller than 1MB.';
+        form.errors.photo = t('The profile photo must be smaller than 1MB.');
         photoInput.value.value = '';
         return;
     }
@@ -99,17 +100,17 @@ const setCountry = (country) => {
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                     </svg>
                 </div>
-                <h2 class="text-sm font-bold text-white">Profile Information</h2>
+                <h2 class="text-sm font-bold text-white">{{ $t('Profile Information') }}</h2>
             </div>
             <div class="flex items-center gap-2">
                 <div v-if="form.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
                     <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
-                    <span class="text-xs font-medium text-green-400">Saved</span>
+                    <span class="text-xs font-medium text-green-400">{{ $t('Saved') }}</span>
                 </div>
                 <PrimaryButton type="button" @click="updateProfileInformation" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                    Save
+                    {{ $t('Save') }}
                 </PrimaryButton>
             </div>
         </div>
@@ -126,9 +127,9 @@ const setCountry = (country) => {
                     @change="updatePhotoPreview"
                 >
 
-                <InputLabel for="photo" value="Photo" />
+                <InputLabel for="photo" :value="$t('Photo')" />
                 <div class="text-xs text-gray-400 mt-1 mb-2">
-                    Max 1MB. GIF supported (no compression).
+                    {{ $t('Max 1MB. GIF supported (no compression).') }}
                 </div>
 
                 <!-- Current Profile Photo -->
@@ -145,7 +146,7 @@ const setCountry = (country) => {
                 </div>
 
                 <SecondaryButton class="mt-2 me-2" type="button" @click.prevent="selectNewPhoto">
-                    Select A New Photo
+                    {{ $t('Select A New Photo') }}
                 </SecondaryButton>
 
                 <SecondaryButton
@@ -154,7 +155,7 @@ const setCountry = (country) => {
                     class="mt-2"
                     @click.prevent="deletePhoto"
                 >
-                    Remove Photo
+                    {{ $t('Remove Photo') }}
                 </SecondaryButton>
 
                 <InputError :message="form.errors.photo" class="mt-1" />
@@ -162,7 +163,7 @@ const setCountry = (country) => {
 
             <!-- Username -->
             <div>
-                <InputLabel for="username" value="Username" />
+                <InputLabel for="username" :value="$t('Username')" />
                 <TextInput
                     id="username"
                     type="text"
@@ -174,7 +175,7 @@ const setCountry = (country) => {
 
             <!-- Name -->
             <div>
-                <InputLabel for="name" v-html="'Name: ' + q3tohtml(form.name)" />
+                <InputLabel for="name" v-html="$t('Name: :name', { name: q3tohtml(form.name) })" />
                 <TextInput
                     id="name"
                     v-model="form.name"
@@ -185,17 +186,17 @@ const setCountry = (country) => {
                 />
                 <InputError :message="form.errors.name" class="mt-1" />
                 <div class="text-xs text-gray-400 mt-1">
-                    You can use Quake3 color codes, such as: ^1Red^2Green
+                    {{ $t('You can use Quake3 color codes, such as:') }} ^1Red^2Green
                 </div>
             </div>
 
             <!-- Country -->
             <div>
                 <div class="flex justify-between items-center mb-1">
-                    <InputLabel for="name" value="Country" />
+                    <InputLabel for="name" :value="$t('Country')" />
 
                     <div class="flex items-center text-xs text-gray-400">
-                        {{ countries[user.country] }}
+                        {{ countryName(user.country) }}
                         <img :src="`/images/flags/${user.country}.png`" class="w-6 ml-3">
                     </div>
                 </div>
@@ -205,7 +206,7 @@ const setCountry = (country) => {
 
             <!-- Email -->
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" :value="$t('Email')" />
                 <TextInput
                     id="email"
                     v-model="form.email"
@@ -218,7 +219,7 @@ const setCountry = (country) => {
 
                 <div v-if="$page.props.jetstream.hasEmailVerification && user.email_verified_at === null">
                     <p class="text-xs mt-1 text-white">
-                        Your email address is unverified.
+                        {{ $t('Your email address is unverified.') }}
 
                         <Link
                             :href="route('verification.send')"
@@ -227,12 +228,12 @@ const setCountry = (country) => {
                             class="underline text-xs text-gray-400 hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800"
                             @click.prevent="sendEmailVerification"
                         >
-                            Click here to re-send the verification email.
+                            {{ $t('Click here to re-send the verification email.') }}
                         </Link>
                     </p>
 
                     <div v-show="verificationLinkSent" class="mt-1 font-medium text-xs text-green-400">
-                        A new verification link has been sent to your email address.
+                        {{ $t('A new verification link has been sent to your email address.') }}
                     </div>
                 </div>
             </div>

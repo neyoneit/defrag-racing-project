@@ -81,7 +81,7 @@
                 <input
                     v-model="search"
                     type="text"
-                    placeholder="Filter by map name..."
+                    :placeholder="$t('Filter by map name...')"
                     class="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-9 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-teal-400/40 transition-colors"
                 />
                 <button
@@ -89,7 +89,7 @@
                     @click="search = ''"
                     type="button"
                     class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
-                    title="Clear"
+                    :title="$t('Clear')"
                 >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -98,8 +98,8 @@
             </div>
 
             <p class="text-xs text-gray-500 sm:ml-auto sm:text-right max-w-md">
-                No time on these - tricks, tutorials, runs that were never finished.
-                <span class="text-gray-400">{{ data.total }} in total.</span>
+                {{ $t('No time on these - tricks, tutorials, runs that were never finished.') }}
+                <span class="text-gray-400">{{ $t(':count in total.', { count: data.total }) }}</span>
             </p>
         </div>
 
@@ -123,13 +123,12 @@
                         :class="column.accent === 'orange' ? 'text-orange-300' : 'text-blue-300'"
                     >{{ column.label }}</span>
                     <span class="text-xs text-gray-400 tabular-nums">
-                        {{ column.block?.total || 0 }} on {{ column.block?.map_total || 0 }}
-                        {{ (column.block?.map_total || 0) === 1 ? 'map' : 'maps' }}
+                        {{ $tc(':total on :count map|:total on :count maps', column.block?.map_total || 0, { total: column.block?.total || 0 }) }}
                     </span>
                 </div>
 
                 <div v-if="!column.block || column.block.map_total === 0" class="px-4 py-10 text-center text-sm text-gray-600">
-                    {{ data.search ? 'No map matches that.' : 'Nothing here.' }}
+                    {{ data.search ? $t('No map matches that.') : $t('Nothing here.') }}
                 </div>
 
                 <div v-else class="flex-1">
@@ -171,7 +170,7 @@
                                     :href="map.demos[0].video_url"
                                     target="_blank" rel="noopener"
                                     class="shrink-0 text-red-400 hover:text-red-300"
-                                    title="Watch the render"
+                                    :title="$t('Watch the render')"
                                     @click.stop
                                 >
                                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
@@ -183,7 +182,7 @@
                                 <a
                                     :href="`/demos/${map.demos[0].id}/download`"
                                     class="shrink-0 text-gray-500 hover:text-teal-300"
-                                    title="Download the demo"
+                                    :title="$t('Download the demo')"
                                     @click.stop
                                 >
                                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -216,7 +215,7 @@
                                     :href="demo.video_url"
                                     target="_blank" rel="noopener"
                                     class="shrink-0 text-red-400 hover:text-red-300"
-                                    title="Watch the render"
+                                    :title="$t('Watch the render')"
                                 >
                                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                                         <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
@@ -227,7 +226,7 @@
                                 <a
                                     :href="`/demos/${demo.id}/download`"
                                     class="shrink-0 text-gray-500 hover:text-teal-300"
-                                    title="Download the demo"
+                                    :title="$t('Download the demo')"
                                 >
                                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
