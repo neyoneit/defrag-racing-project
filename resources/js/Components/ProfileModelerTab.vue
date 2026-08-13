@@ -314,7 +314,7 @@
                         <div class="flex items-center gap-2">
                             <Link :href="route('models.show', getGroupLinkId(group))" class="text-sm font-black text-white uppercase tracking-wider hover:text-blue-400 transition">{{ group.base }}</Link>
                             <span v-if="group.hasCustomBase" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">{{ $t('CUSTOM BASE') }}</span>
-                            <span v-else-if="group.isBuiltOnExisting" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-400">{{ $t('SKIN PACK') }}</span>
+                            <span v-else-if="group.isBuiltOnExisting" class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-400">{{ $t('Skin Pack') }}</span>
                             <span class="text-[10px] text-gray-500">({{ $tc(':count model|:count models', group.models.length) }})</span>
                         </div>
                         <div class="flex items-center gap-3 text-[10px] text-gray-500">

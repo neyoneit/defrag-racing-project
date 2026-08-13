@@ -94,7 +94,7 @@ const categories = computed(() => [
     { value: 'all', label: t('All Models'), icon: '🎨' },
     { value: 'player', label: t('Player Models'), icon: '🏃' },
     { value: 'weapon', label: t('Weapon Models'), icon: '🔫' },
-    { value: 'shadow', label: t('Player Shadows'), icon: '👤' },
+    { value: 'shadow', label: t('Shadow Models'), icon: '👤' },
 ]);
 
 const sortOptions = computed(() => [

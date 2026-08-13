@@ -1690,7 +1690,7 @@ const executeDryRun = async () => {
                                                     >
                                                         {{ savingDesc[getCompareKey(item)] ? $t('Saving...') : $t('Save text to model description') }}
                                                     </button>
-                                                    <span v-if="savedDesc[getCompareKey(item)]" class="ml-2 text-green-400 text-xs">{{ $t('Saved!') }}</span>
+                                                    <span v-if="savedDesc[getCompareKey(item)]" class="ml-2 text-green-400 text-xs">{{ $t('Saved') }}</span>
                                                 </div>
                                                 <!-- Build extras ZIP button -->
                                                 <div v-if="getCompareResult(item).ws_file.contents.some(e => e.is_extra) && getCompareResult(item).all_identical" class="mt-2 pt-2 border-t border-gray-700/50">

@@ -50,7 +50,7 @@
 
         <template #topActions>
             <ActionMessage :on="form.recentlySuccessful" class="me-3">
-                {{ $t('Saved.') }}
+                {{ $t('Saved') }}
             </ActionMessage>
 
             <PrimaryButton type="button" @click="updateProfilePreferences" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
