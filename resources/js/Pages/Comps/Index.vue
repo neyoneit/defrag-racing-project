@@ -30,6 +30,8 @@ export default {
         pointsTable: { type: Array, default: () => [] },
         pointsForFinishing: { type: Number, default: 1 },
         winsPerWildcard: { type: Number, default: 5 },
+        prize: { type: Object, default: null },
+        betaNotice: { type: Boolean, default: false },
     });
 
     const page = usePage();
@@ -163,6 +165,56 @@ export default {
         </div>
 
     <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12 space-y-10" style="margin-top: -22rem;">
+
+        <!-- The first weeks of anything new go wrong somewhere, and a player
+             whose run scored oddly needs to know it is worth telling somebody
+             rather than assuming that is how it works. Switched off in admin
+             once it has run clean. -->
+        <section v-if="betaNotice" class="rounded-xl border border-amber-500/30 bg-amber-500/10 backdrop-blur-sm px-4 py-3">
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 flex-shrink-0 text-amber-400 mt-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm0 6l7.5 13h-15L12 8zm-1 3v4h2v-4h-2zm0 5v2h2v-2h-2z" /></svg>
+                <p class="text-sm text-amber-100/90 leading-snug">
+                    <span class="font-bold">{{ $t('Comps is brand new.') }}</span>
+                    {{ $t('Expect a few rough edges in the first weeks. If something does not look right, tell neyo and it gets sorted.') }}
+                </p>
+            </div>
+        </section>
+
+        <!-- What a week pays and who is paying for it. Sits above everything
+             else because it is the answer to the first question anybody asks
+             about a competition. -->
+        <section v-if="prize?.eur > 0" class="rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm px-4 py-2.5">
+            <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+                <span class="text-[10px] font-black uppercase tracking-widest text-gray-500">{{ $t('Prize pool') }}</span>
+
+                <span class="inline-flex items-center gap-1.5">
+                    <span class="text-sm font-black text-emerald-300 tabular-nums">{{ prize.eur }} EUR</span>
+                    <span class="text-[11px] text-gray-500">{{ $t('per physics, every week') }}</span>
+                </span>
+
+                <span v-if="prize.self_funded" class="text-[11px] text-gray-400">
+                    {{ $t('The first :count weeklies are paid out by neyo.', { count: prize.funded_weeks }) }}
+                </span>
+                <span v-else class="text-[11px] text-gray-400">
+                    {{ $t('Paid out by neyo or by the community.') }}
+                </span>
+
+                <Link :href="route('donations.index')"
+                      class="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/20 transition-colors">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-8-4.9-8-10.4A4.6 4.6 0 0 1 12 7a4.6 4.6 0 0 1 8 3.6C20 16.1 12 21 12 21z" /></svg>
+                    {{ $t('Donate to the pool') }}
+                </Link>
+            </div>
+            <p class="mt-1.5 text-[11px] text-gray-600 leading-snug">
+                {{ $t('Later weeks may be paid out by neyo again or by the community. Write "comps" in the note when you donate and it goes into the prize pool rather than towards the maintenance of the site.') }}
+                <!-- Split off rather than linked mid-sentence: the clause
+                     lands in a different place in every language, and a link
+                     glued into one word order breaks in the other eight. -->
+                <Link :href="route('donations.index')" class="text-gray-500 underline decoration-white/20 hover:text-gray-300">
+                    {{ $t('See everything donations pay for.') }}
+                </Link>
+            </p>
+        </section>
 
         <!-- ============================== YOU ============================== -->
         <!-- One strip rather than four tiles. Holding a wildcard has to be
@@ -360,6 +412,27 @@ export default {
                                 />
                             </div>
                             <div v-else class="text-xs text-gray-600">{{ $t('Nobody yet.') }}</div>
+
+                            <!-- Runs an admin took out. Kept in the list rather
+                                 than deleted from it: dropping them silently
+                                 would make the round read as though they never
+                                 turned up. -->
+                            <div v-if="playing.removed_entrants?.[physics]?.length" class="mt-3">
+                                <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-red-400/70">
+                                    {{ $t('Removed') }} ({{ playing.removed_entrants[physics].length }})
+                                </div>
+                                <div class="flex flex-wrap gap-x-3 gap-y-1.5">
+                                    <CompsPlayer
+                                        v-for="p in playing.removed_entrants[physics]"
+                                        :key="'x' + p.id"
+                                        :player="p"
+                                        size="sm"
+                                        struck
+                                        :title="p.reason || $t('Removed from this round.')"
+                                    />
+                                </div>
+                            </div>
+
                             <p class="mt-2 text-[11px] text-gray-600 leading-snug">
                                 {{ $t('Times stay hidden until the round closes, so nobody can be handed the time to beat.') }}
                             </p>

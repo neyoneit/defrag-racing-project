@@ -24,6 +24,9 @@ class CompSettings
     public const KEY_VOTING_LEAD_HOURS = 'comps_voting_lead_hours';
     public const KEY_POOL_SIZE = 'comps_pool_size';
     public const KEY_ENABLED = 'comps_weekly_enabled';
+    public const KEY_PRIZE_EUR = 'comps_prize_eur';
+    public const KEY_PRIZE_FUNDED_WEEKS = 'comps_prize_funded_weeks';
+    public const KEY_BETA_NOTICE = 'comps_beta_notice';
 
     /** Prague, not UTC. In UTC the hour would drift by one across the year. */
     public function timezone(): CarbonTimeZone
@@ -64,5 +67,39 @@ class CompSettings
     public function weeklyEnabled(): bool
     {
         return SiteSetting::getBool(self::KEY_ENABLED, false);
+    }
+
+    /**
+     * What a weekly pays its winners, in euro, per physics.
+     *
+     * A setting rather than a constant because the number is a promise made to
+     * players and the person making it should be able to change it without a
+     * deploy. Zero hides the prize from the page entirely, which is what an
+     * unfunded week should look like.
+     */
+    public function prizeEur(): int
+    {
+        return (int) SiteSetting::get(self::KEY_PRIZE_EUR, '5');
+    }
+
+    /**
+     * How many weeklies neyo has donated the prize for. After this many the
+     * page stops naming him and says the pool is donated by him or by the
+     * community, so a promise that has run out expires on its own rather than
+     * staying up after the money stops.
+     */
+    public function prizeFundedWeeks(): int
+    {
+        return (int) SiteSetting::get(self::KEY_PRIZE_FUNDED_WEEKS, '5');
+    }
+
+    /**
+     * The first weeks of anything new go wrong somewhere. On by default and
+     * turned off in admin once it has run clean, rather than left up forever
+     * telling people the site is unfinished.
+     */
+    public function betaNotice(): bool
+    {
+        return SiteSetting::getBool(self::KEY_BETA_NOTICE, true);
     }
 }

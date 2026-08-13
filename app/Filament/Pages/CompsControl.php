@@ -46,6 +46,12 @@ class CompsControl extends Page
 
     public int $poolSize = 5;
 
+    public int $prizeEur = 5;
+
+    public int $prizeFundedWeeks = 5;
+
+    public bool $betaNotice = true;
+
     /** Candidate being swapped, and what it is being swapped for. */
     public ?int $swapCandidateId = null;
 
@@ -66,6 +72,9 @@ class CompsControl extends Page
         $this->startTime = $s->startTime();
         $this->votingLeadHours = $s->votingLeadHours();
         $this->poolSize = $s->poolSize();
+        $this->prizeEur = $s->prizeEur();
+        $this->prizeFundedWeeks = $s->prizeFundedWeeks();
+        $this->betaNotice = $s->betaNotice();
     }
 
     public function saveSettings(): void
@@ -76,6 +85,8 @@ class CompsControl extends Page
             'startTime' => ['required', 'date_format:H:i'],
             'votingLeadHours' => ['required', 'integer', 'between:0,168'],
             'poolSize' => ['required', 'integer', 'between:2,20'],
+            'prizeEur' => ['required', 'integer', 'between:0,10000'],
+            'prizeFundedWeeks' => ['required', 'integer', 'between:0,520'],
         ]);
 
         SiteSetting::set(CompSettings::KEY_ENABLED, $this->enabled ? '1' : '0');
@@ -84,6 +95,9 @@ class CompsControl extends Page
         SiteSetting::set(CompSettings::KEY_START_TIME, $this->startTime);
         SiteSetting::set(CompSettings::KEY_VOTING_LEAD_HOURS, (string) $this->votingLeadHours);
         SiteSetting::set(CompSettings::KEY_POOL_SIZE, (string) $this->poolSize);
+        SiteSetting::set(CompSettings::KEY_PRIZE_EUR, (string) $this->prizeEur);
+        SiteSetting::set(CompSettings::KEY_PRIZE_FUNDED_WEEKS, (string) $this->prizeFundedWeeks);
+        SiteSetting::set(CompSettings::KEY_BETA_NOTICE, $this->betaNotice ? '1' : '0');
 
         Notification::make()
             ->title('Saved')
