@@ -30,6 +30,7 @@ class CompRound extends Model
         'starts_at',
         'ends_at',
         'status',
+        'prize_eur',
     ];
 
     protected $casts = [

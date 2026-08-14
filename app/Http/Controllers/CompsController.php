@@ -54,6 +54,7 @@ class CompsController extends Controller
         $voting = $this->roundWithStatus('voting') ?? $this->roundWithStatus('locked');
 
         return Inertia::render('Comps/Index', [
+            'prize' => $this->prize($voting ?? $playing),
             'playing' => $playing ? $this->playingPayload($playing, $request) : null,
             'voting' => $voting ? $this->votingPayload($voting, $request) : null,
             'history' => $this->history(),
@@ -61,7 +62,6 @@ class CompsController extends Controller
             'pointsTable' => ResultsCalculator::POINTS,
             'pointsForFinishing' => ResultsCalculator::POINTS_FOR_FINISHING,
             'winsPerWildcard' => CompWildcard::WEEKLY_WINS_REQUIRED,
-            'prize' => $this->prize(),
             'betaNotice' => app(CompSettings::class)->betaNotice(),
             // Where "tell the admin" goes. Built here rather than in the page
             // so the id is not a literal sitting in a Vue file.
@@ -72,18 +72,22 @@ class CompsController extends Controller
     /**
      * What a weekly pays, and who is paying for it.
      *
-     * The first weeks are paid out by neyo, and after those the pool may be
-     * paid out by him again or by the community. Both numbers are settings,
-     * because a prize is a promise to players and the person making it should
-     * be able to change it without waiting for a deploy - and because a
-     * promise that has run out should stop being displayed on its own rather
-     * than sit there until somebody remembers to take it down.
+     * The amount belongs to the round rather than to the site: somebody
+     * donating towards one particular week has to be able to raise that week
+     * without raising every week after it, and without rewriting what the
+     * weeks before it paid. A round stamps the current default when it is
+     * created and keeps it; only a round created before the column existed
+     * falls back to the setting.
+     *
+     * How many weeks the admin funds stays a setting, because it is a promise
+     * about the future rather than a fact about one week, and it has to be
+     * able to expire on its own rather than sit there after the money stops.
      */
-    private function prize(): array
+    private function prize(?CompRound $round = null): array
     {
         $settings = app(CompSettings::class);
 
-        $eur = $settings->prizeEur();
+        $eur = $round?->prize_eur ?? $settings->prizeEur();
         $fundedWeeks = $settings->prizeFundedWeeks();
 
         // The highest week that exists, which is the one being played or voted
@@ -100,8 +104,13 @@ class CompsController extends Controller
             'funded_weeks' => $fundedWeeks,
             // The whole commitment, which reads very differently from the
             // weekly figure and is the number people actually repeat to each
-            // other. Derived, so changing either setting keeps it honest.
-            'funded_total' => $eur * count(BallotResolver::PHYSICS) * $fundedWeeks,
+            // other.
+            //
+            // Off the default rather than off this round: a donation that
+            // raises one week to 15 says nothing about what the admin promised
+            // to fund, and multiplying the boosted figure would claim a
+            // commitment of 150 EUR that nobody made.
+            'funded_total' => $settings->prizeEur() * count(BallotResolver::PHYSICS) * $fundedWeeks,
             'self_funded' => $eur > 0 && $current <= $fundedWeeks,
         ];
     }
@@ -311,6 +320,10 @@ class CompsController extends Controller
             'weapon' => $round->weapon,
             'closes_at' => $round->voting_closes_at,
             'starts_at' => $round->starts_at,
+            // What the week being voted on will pay. It belongs next to the
+            // ballot, not only in the header block: this is the week you are
+            // choosing a map for, and it may not pay what the current one does.
+            'prize' => $this->prize($round),
             'is_open' => $round->isVoting() && $round->voting_closes_at->isFuture(),
             'decided' => $round->maps->mapWithKeys(fn ($m) => [$m->physics => [
                 'map' => $m->map?->name,

@@ -10,8 +10,10 @@ use App\Services\Comps\CandidateSelector;
 use App\Services\Comps\CompScheduler;
 use App\Services\Comps\CompSettings;
 use App\Services\Comps\MapClassifier;
+use App\Services\Comps\MapEligibilityTagger;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The one screen comps is run from: the schedule, the rules, the ballot that
@@ -102,6 +104,165 @@ class CompsControl extends Page
         Notification::make()
             ->title('Saved')
             ->body('Times change the next round to be created, not one already scheduled.')
+            ->success()
+            ->send();
+    }
+
+    /**
+     * Redraw the whole ballot. Same pool and the same rules, so it cannot
+     * smuggle in a map the draw would have refused - it is for a set that came
+     * out badly, not for choosing the maps by hand.
+     *
+     * Every vote already cast goes with it, because those votes were for maps
+     * that are no longer on offer.
+     */
+    public function rerollBallot(): void
+    {
+        $round = CompRound::with('candidates')->where('status', 'voting')->orderBy('starts_at')->first();
+
+        if (! $round) {
+            Notification::make()->title('No ballot is open')->danger()->send();
+
+            return;
+        }
+
+        // The configured pool size, not however many are on the ballot now.
+        // Rerolling after removing two maps by hand should give a full ballot
+        // back, not permanently shrink it to what was left.
+        $wanted = app(CompSettings::class)->poolSize();
+
+        $draw = app(CandidateSelector::class)->draw($round->category, $round->weapon, $wanted);
+
+        if (empty($draw)) {
+            Notification::make()->title('Nothing left to draw from')->danger()->send();
+
+            return;
+        }
+
+        DB::transaction(function () use ($round, $draw) {
+            $round->votes()->delete();
+            $round->candidates()->delete();
+
+            foreach ($draw as $map) {
+                CompCandidate::create([
+                    'comp_round_id' => $round->id,
+                    'map_id' => $map['id'],
+                    'blocked_physics' => $map['blocked_physics'] ?? null,
+                ]);
+            }
+        });
+
+        Notification::make()
+            ->title('Ballot redrawn')
+            ->body(count($draw) . ' new map(s). Every vote cast on the old set was removed with it.')
+            ->success()
+            ->send();
+    }
+
+    /** Take one map off the ballot without putting another in its place. */
+    public function removeCandidate(int $candidateId): void
+    {
+        $candidate = CompCandidate::with('round')->find($candidateId);
+
+        if (! $candidate || ! $candidate->round?->isVoting()) {
+            Notification::make()->title('That ballot is closed')->danger()->send();
+
+            return;
+        }
+
+        if ($candidate->round->candidates()->count() <= 2) {
+            Notification::make()
+                ->title('A ballot needs at least two maps')
+                ->body('Add another before taking this one off.')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        $name = $candidate->map?->name ?? 'map';
+
+        $candidate->votes()->delete();
+        $candidate->delete();
+
+        Notification::make()->title("Removed {$name}")->success()->send();
+    }
+
+    /**
+     * Put a named map on the ballot by hand.
+     *
+     * Deliberately not held to the category or the never-played rule: this is
+     * the manual override, and an admin typing a map name has a reason the
+     * draw cannot know about. It does refuse a map already on this ballot,
+     * which is a mistake rather than an intention.
+     */
+    public function addCandidate(): void
+    {
+        $round = CompRound::where('status', 'voting')->orderBy('starts_at')->first();
+
+        if (! $round) {
+            Notification::make()->title('No ballot is open')->danger()->send();
+
+            return;
+        }
+
+        $name = trim($this->swapSearch);
+
+        if ($name === '') {
+            Notification::make()->title('Type a map name first')->danger()->send();
+
+            return;
+        }
+
+        // Case-insensitive: maps.name carries capitals on a few hundred maps
+        // where everything downstream is lowercase.
+        $map = Map::whereRaw('LOWER(name) = ?', [mb_strtolower($name)])->first()
+            ?? Map::where('name', 'like', $name . '%')->orderBy('name')->first();
+
+        if (! $map) {
+            Notification::make()->title("No map called \"{$name}\"")->danger()->send();
+
+            return;
+        }
+
+        if ($round->candidates()->where('map_id', $map->id)->exists()) {
+            Notification::make()->title("{$map->name} is already on this ballot")->danger()->send();
+
+            return;
+        }
+
+        CompCandidate::create([
+            'comp_round_id' => $round->id,
+            'map_id' => $map->id,
+            'blocked_physics' => app(MapEligibilityTagger::class)->blockedPhysicsFor($map),
+        ]);
+
+        $this->swapSearch = '';
+
+        Notification::make()->title("Added {$map->name}")->success()->send();
+    }
+
+    /**
+     * Set what one particular round pays, without touching the default.
+     *
+     * This is how a donation earmarked for a single weekly is honoured: raise
+     * that week only, and the weeks before and after keep their own figure.
+     */
+    public function setRoundPrize(int $roundId, int $eur): void
+    {
+        $round = CompRound::find($roundId);
+
+        if (! $round || $round->status === 'finished') {
+            Notification::make()->title('That round is over')->danger()->send();
+
+            return;
+        }
+
+        $round->update(['prize_eur' => max(0, $eur)]);
+
+        Notification::make()
+            ->title("Round now pays {$eur} EUR per physics")
+            ->body('Only this round. The default under Schedule is unchanged.')
             ->success()
             ->send();
     }

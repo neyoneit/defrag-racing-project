@@ -161,6 +161,8 @@
                             </div>
                         @endforeach
                     </div>
+
+                    @include('filament.pages.partials.comps-round-prize', ['round' => $playing])
                 @else
                     <p class="text-sm text-gray-500">Nothing is being played.</p>
                 @endif
@@ -201,12 +203,17 @@
                                     <td class="py-1.5 text-right tabular-nums">{{ $candidate->votes_cpm }}</td>
                                     <td class="py-1.5 text-right tabular-nums">{{ $candidate->votes_vq3 }}</td>
                                     <td class="py-1.5 text-xs text-gray-500 uppercase">{{ $candidate->blocked_physics ?? '-' }}</td>
-                                    <td class="py-1.5 text-right">
+                                    <td class="py-1.5 text-right whitespace-nowrap">
                                         @if($voting->status === 'voting')
                                             <button wire:click="redrawCandidate({{ $candidate->id }})"
                                                     wire:confirm="Swap this map for another from the same pool? Votes cast for it are removed with it."
                                                     class="text-xs text-primary-600 hover:underline">
                                                 redraw
+                                            </button>
+                                            <button wire:click="removeCandidate({{ $candidate->id }})"
+                                                    wire:confirm="Take this map off the ballot without replacing it? Votes cast for it go with it."
+                                                    class="ml-2 text-xs text-danger-600 hover:underline">
+                                                remove
                                             </button>
                                         @endif
                                     </td>
@@ -227,6 +234,33 @@
                             @endforeach
                         </div>
                     @endif
+
+                    @if($voting->status === 'voting')
+                        {{-- Manual overrides. Reroll obeys the draw's rules,
+                             so it cannot smuggle in a map the rules refuse;
+                             adding by name deliberately does not, because an
+                             admin typing a map has a reason the draw cannot
+                             know about. --}}
+                        <div class="mt-3 flex flex-wrap items-end gap-2 border-t border-gray-200 dark:border-white/10 pt-3">
+                            <div class="flex-1 min-w-[12rem]">
+                                <label class="block text-xs text-gray-500 mb-1">Add a map by name</label>
+                                <input type="text" wire:model="swapSearch" placeholder="exact name, or the start of one"
+                                       wire:keydown.enter="addCandidate"
+                                       class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800" />
+                            </div>
+                            <button wire:click="addCandidate"
+                                    class="rounded-lg bg-primary-600 px-3 py-2 text-sm font-bold text-white hover:bg-primary-500">
+                                Add
+                            </button>
+                            <button wire:click="rerollBallot"
+                                    wire:confirm="Redraw every map on this ballot, back to the configured pool size? All votes cast so far are removed with the old set."
+                                    class="rounded-lg border border-danger-500/50 px-3 py-2 text-sm font-bold text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-950">
+                                Reroll whole ballot
+                            </button>
+                        </div>
+                    @endif
+
+                    @include('filament.pages.partials.comps-round-prize', ['round' => $voting])
                 @else
                     <p class="text-sm text-gray-500">No ballot is open.</p>
                 @endif

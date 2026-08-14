@@ -403,6 +403,15 @@ export default {
                         </div>
                     </div>
                 </div>
+                <!-- The pool for the week being voted on, between the heading
+                     and the deadline. It is the week you are picking a map
+                     for, and it need not pay what the current one pays: a
+                     donation aimed at one weekly raises that weekly only. -->
+                <div v-if="voting.prize?.eur > 0" class="flex items-baseline gap-2 px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-400/25">
+                    <span class="text-lg font-black text-emerald-300 tabular-nums leading-none">{{ voting.prize.total }} EUR</span>
+                    <span class="text-[11px] text-emerald-100/60">{{ $t('for this week') }}</span>
+                </div>
+
                 <CompsCountdown v-if="voting.is_open" :until="voting.closes_at" :label="$t('Voting closes in')" emphasis />
             </div>
 

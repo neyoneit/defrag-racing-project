@@ -217,6 +217,11 @@ class CompScheduler
                 'starts_at' => $starts,
                 'ends_at' => $ends,
                 'status' => 'voting',
+                // Stamped now rather than read at display time, so a week
+                // keeps the amount it was created with and an admin raising
+                // the default for a donated week does not silently rewrite
+                // what every earlier week paid.
+                'prize_eur' => $this->settings->prizeEur(),
             ]);
 
             foreach ($draw as $map) {
