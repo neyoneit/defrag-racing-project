@@ -32,6 +32,35 @@ class CandidateSelector
         MapClassifier::STRAFE,
     ];
 
+    /**
+     * How long a ballot is, and what each slot is for.
+     *
+     * Drawn at random the ballot mirrored the pool, and the pool is lopsided:
+     * two maps in five are finished in under ten seconds and one in twenty
+     * takes over forty-five. Half of all ballots came out with nothing longer
+     * than thirty seconds on them and three quarters with nothing over a
+     * minute, so "five random maps" meant, most weeks, five sprints.
+     *
+     * Each slot therefore draws from a band of world record time. Bands rather
+     * than a spread of the map's own length because the record is the only
+     * length we actually know, and the bounds are picked so no band is thin:
+     * 2781, 3036, 4530, 3377 and 1237 maps as of August 2026. The smallest of
+     * those lasts twenty years at one map a week.
+     *
+     * Nothing is barred for being short. A map finished in three seconds is
+     * still somebody's favourite map, and a fifth of everything we have is
+     * under five seconds; what they must not do is take four slots out of five,
+     * which is what random drawing kept giving them.
+     *
+     * @var array<int, array{0: int, 1: int|null, 2: int}>  from, to (null = no ceiling), slots
+     */
+    public const TIME_BANDS = [
+        [0, 10, 1],
+        [10, 20, 2],
+        [20, 45, 1],
+        [45, null, 1],
+    ];
+
     public const POOL_SIZE = 5;
 
     public function __construct(private MapClassifier $classifier)
@@ -84,6 +113,10 @@ class CandidateSelector
                 'id' => $map->id,
                 'name' => $map->name,
                 'weapon' => $verdict['weapon'],
+                // The fastest time anybody has on record, which is the only
+                // measure of a map's length we actually hold. Used to spread
+                // the ballot across TIME_BANDS.
+                'wr_ms' => (int) $map->wr_ms,
                 // Which physics this map cannot be finished in, so it goes on
                 // one ballot and not the other. Null for almost everything.
                 'blocked_physics' => $blocked[$map->id] ?? null,
@@ -94,9 +127,17 @@ class CandidateSelector
     }
 
     /**
-     * The ballot itself. Returns fewer than POOL_SIZE only if the category has
-     * genuinely run dry, which the caller should treat as a fault rather than
-     * quietly accept.
+     * The ballot itself: one map per slot in TIME_BANDS, so a week always has
+     * a sprint and always has something long on it.
+     *
+     * A band that cannot fill its slots does not shrink the ballot. Lightning
+     * has 32 maps in total and will empty a band eventually, and a short ballot
+     * would be a worse answer than a slightly lopsided one - so the shortfall
+     * is made up from whatever is left, nearest bands first. Asking for more
+     * than the bands provide fills the remainder the same way.
+     *
+     * Returns fewer than $count only if the category has genuinely run dry,
+     * which the caller should treat as a fault rather than quietly accept.
      */
     public function draw(string $category, ?string $weapon = null, int $count = self::POOL_SIZE): array
     {
@@ -104,7 +145,46 @@ class CandidateSelector
 
         shuffle($pool);
 
-        return array_slice($pool, 0, $count);
+        $banded = [];
+        $taken = [];
+
+        foreach (self::TIME_BANDS as [$from, $to, $slots]) {
+            $inBand = array_filter($pool, function ($map) use ($from, $to, $taken) {
+                if (isset($taken[$map['id']])) {
+                    return false;
+                }
+
+                $seconds = $map['wr_ms'] / 1000;
+
+                return $seconds >= $from && ($to === null || $seconds < $to);
+            });
+
+            foreach (array_slice($inBand, 0, $slots) as $map) {
+                $banded[] = $map;
+                $taken[$map['id']] = true;
+            }
+        }
+
+        // Short of the asked-for size, either because a band ran dry or
+        // because the caller wanted a longer ballot than the bands describe.
+        if (count($banded) < $count) {
+            foreach ($pool as $map) {
+                if (count($banded) >= $count) {
+                    break;
+                }
+
+                if (! isset($taken[$map['id']])) {
+                    $banded[] = $map;
+                    $taken[$map['id']] = true;
+                }
+            }
+        }
+
+        // Shuffled again so the ballot is not presented shortest-first, which
+        // would tell everybody which slot each map came out of.
+        shuffle($banded);
+
+        return array_slice($banded, 0, $count);
     }
 
     /**
@@ -120,16 +200,26 @@ class CandidateSelector
         return MapClassifier::COUNTED[array_rand(MapClassifier::COUNTED)];
     }
 
-    /** Maps carrying at least one record, keyed by nothing - a lazy cursor. */
+    /**
+     * Maps carrying at least one record, with the fastest of those times.
+     *
+     * A join rather than a whereExists now, because the time is wanted and not
+     * only the existence of one. The comparison stays in SQL either way, which
+     * matters: `maps.name` has capitals on a few hundred maps where
+     * `records.mapname` is lowercase, MySQL's collation ignores that, and the
+     * same match written in PHP silently loses 35 of them.
+     */
     private function mapsWithRecords(): \Generator
     {
+        $best = DB::table('records')
+            ->select('mapname', DB::raw('MIN(time) AS wr_ms'))
+            ->whereNull('deleted_at')
+            ->where('time', '>', 0)
+            ->groupBy('mapname');
+
         $query = DB::table('maps')
-            ->select('maps.id', 'maps.name', 'maps.weapons')
-            ->whereExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('records')
-                    ->whereColumn('records.mapname', 'maps.name');
-            });
+            ->select('maps.id', 'maps.name', 'maps.weapons', 'wr.wr_ms')
+            ->joinSub($best, 'wr', fn ($join) => $join->on('wr.mapname', '=', 'maps.name'));
 
         foreach ($query->cursor() as $row) {
             yield $row;

@@ -159,6 +159,30 @@ class CompsControl extends Page
             ->send();
     }
 
+    /** Which TIME_BANDS slot a record time falls in, as its index. */
+    private function bandOf(int $wrMs): int
+    {
+        $seconds = $wrMs / 1000;
+
+        foreach (CandidateSelector::TIME_BANDS as $i => [$from, $to]) {
+            if ($seconds >= $from && ($to === null || $seconds < $to)) {
+                return $i;
+            }
+        }
+
+        return 0;
+    }
+
+    /** The fastest recorded time on a candidate's map, in milliseconds. */
+    private function wrMsOf(CompCandidate $candidate): int
+    {
+        return (int) DB::table('records')
+            ->where('mapname', $candidate->map?->name)
+            ->whereNull('deleted_at')
+            ->where('time', '>', 0)
+            ->min('time');
+    }
+
     /** Take one map off the ballot without putting another in its place. */
     public function removeCandidate(int $candidateId): void
     {
@@ -307,7 +331,14 @@ class CompsControl extends Page
             return;
         }
 
-        $replacement = $pool->random();
+        // Replace like with like. The ballot is drawn one map per band of
+        // record time so that a week always has a sprint and always has
+        // something long on it; swapping a two minute map for a four second
+        // one would undo that on the first press. Falls back to the whole pool
+        // only if that band has genuinely run out.
+        $sameBand = $pool->filter(fn ($m) => $this->bandOf($m['wr_ms']) === $this->bandOf($this->wrMsOf($candidate)));
+
+        $replacement = $sameBand->isNotEmpty() ? $sameBand->random() : $pool->random();
 
         $candidate->update([
             'map_id' => $replacement['id'],
