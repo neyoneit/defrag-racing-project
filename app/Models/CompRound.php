@@ -45,9 +45,22 @@ class CompRound extends Model
         return $this->belongsTo(Comp::class);
     }
 
+    /**
+     * Ordered by id, which is the order they were drawn in.
+     *
+     * Without it MySQL is free to hand them back differently on each request,
+     * and the ballot visibly reshuffled itself every time the page was
+     * refreshed - which makes it hard to find the map you were looking at and
+     * makes a vote feel like it landed somewhere else.
+     *
+     * Insertion order and not, say, alphabetical or by length: the draw takes
+     * one map per band of record time and shuffles before writing, so this
+     * order is already random with respect to length. Sorting by anything
+     * meaningful would tell everybody which slot each map came out of.
+     */
     public function candidates()
     {
-        return $this->hasMany(CompCandidate::class);
+        return $this->hasMany(CompCandidate::class)->orderBy('id');
     }
 
     /** The winning map, one row per physics. */
