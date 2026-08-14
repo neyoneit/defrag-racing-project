@@ -165,7 +165,15 @@ class CompsRoundReview extends Page
                     default => 'Not entered',
                 },
                 'tone' => $kind === 'unreadable' ? 'danger' : 'warning',
-                'reason' => $kind === 'not_entered' ? null : $guard->noticeText($kind),
+                // The other physics is not a refusal and not a hold - the demo
+                // is public like any other - so it does not get the sentence
+                // the player-facing notices use, which promises a later
+                // appearance. It is here to be seen, not explained.
+                'reason' => match ($kind) {
+                    'not_entered' => null,
+                    'other_physics' => 'A run on this map in the other physics. Public straight away.',
+                    default => $guard->noticeText($kind),
+                },
                 'entered' => false,
                 'auto' => false,
                 'online' => ! $demo->is_offline,

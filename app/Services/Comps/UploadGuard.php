@@ -27,12 +27,15 @@ use Illuminate\Support\Facades\Log;
  * both list only demos the parser has finished with, so a demo is invisible
  * until exactly the moment this gets to look at it.
  *
- * **What gets held is decided by the map alone, not map plus physics.** A VQ3
- * run on the map CPM is playing this week still shows the route, and the route
- * is most of what a competitor would want to see.
+ * **Map and physics both, for holding as well as for entering.** A VQ3 run on
+ * the map being played in CPM cannot enter the round and is not competing with
+ * anybody in it, so it is published like any other demo - neyo's call, 14 Aug
+ * 2026. Only a run of the map in the physics it is being played in waits.
  *
- * **What gets entered is decided by map and physics together**, because that is
- * what the round is scored on.
+ * The one exception is the ballot, where the physics is not decided yet: a
+ * candidate map can win in either physics or in both, so demos of it wait
+ * until the vote says which. See `adoptForRound`, which lets the ones in the
+ * other physics out the moment that is known.
  */
 class UploadGuard
 {
@@ -70,6 +73,13 @@ class UploadGuard
         }
 
         if ($round = $this->playedRoundFor($mapName)) {
+            // The map is being played, but perhaps not in this demo's physics -
+            // and a run in the other physics is not in this round and is not
+            // competing with anybody in it. It goes public straight away.
+            if (! $this->playedInThisPhysics($round, $mapName, $demo)) {
+                return;
+            }
+
             if (! $this->arrivedInsideTheWindow($demo, $round)) {
                 return;
             }
@@ -117,6 +127,15 @@ class UploadGuard
                 ->get();
 
             foreach ($demos as $demo) {
+                // Held while the vote was open, when nobody could know which
+                // physics this map would be played in. Now it is known, and a
+                // run in the other one has nothing to wait for.
+                if (! $this->playedInThisPhysics($round, $roundMap->map->name, $demo)) {
+                    $this->release($demo);
+
+                    continue;
+                }
+
                 $this->holdUntil($demo, $round->ends_at);
 
                 if (! $this->alreadyEntered($demo) && $this->enterIfItBelongs($demo, $round)) {
@@ -460,6 +479,45 @@ class UploadGuard
     }
 
     /**
+     * Is this round playing THIS map in THIS demo's physics?
+     *
+     * What decides whether a demo waits. A VQ3 run on the map being played in
+     * CPM answers no: it cannot enter the round, nobody in the round is racing
+     * it, and holding it back would only punish somebody for playing the other
+     * half of the site.
+     *
+     * The physics comes from the demo when the parser could read it and from
+     * the filename when it could not. Neither available means yes: that is the
+     * demo we know least about, on the map being competed on, and it is also
+     * the rarest.
+     */
+    private function playedInThisPhysics(CompRound $round, string $mapName, UploadedDemo $demo): bool
+    {
+        $physics = $this->physicsOf($demo) ?: $this->physicsFromFilename($demo->original_filename);
+
+        if (! $physics) {
+            return true;
+        }
+
+        $expected = $round->maps->firstWhere('physics', $physics);
+
+        return $expected?->map !== null && $this->sameMap($mapName, $expected->map->name);
+    }
+
+    /** Let a demo out of a hold before its timestamp says so. */
+    private function release(UploadedDemo $demo): void
+    {
+        if ($demo->comps_hidden_until === null) {
+            return;
+        }
+
+        $demo->comps_hidden_until = null;
+
+        // Quietly, for the same reason holdUntil is - see the note there.
+        $demo->saveQuietly();
+    }
+
+    /**
      * The round map this demo is a run of, map and physics both, or null. What
      * decides an entry, as opposed to what decides a hold, which is the map on
      * its own.
@@ -500,6 +558,25 @@ class UploadGuard
         // No bracket means the file does not follow the convention, and the
         // whole filename is not a map name.
         return $map !== '' && $map !== $basename ? $map : null;
+    }
+
+    /**
+     * The physics a filename claims: `map[df.cpm]12.345(nick).dm_68` says cpm.
+     * The bracket carries the gametype first, and a fastcap adds a third part
+     * (`[fc.cpm.3]`) that is not part of the physics.
+     *
+     * Same use as mapFromFilename - a demo the parser could not read - and the
+     * same standing: a claim, not a fact.
+     */
+    private function physicsFromFilename(?string $filename): ?string
+    {
+        if (! $filename || ! preg_match('/\[[^.\]]+\.([^.\]]+)/', $filename, $m)) {
+            return null;
+        }
+
+        $physics = strtolower(trim($m[1]));
+
+        return in_array($physics, BallotResolver::PHYSICS, true) ? $physics : null;
     }
 
     /**
