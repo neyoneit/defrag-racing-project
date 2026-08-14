@@ -63,6 +63,24 @@ class CandidateSelector
 
     public const POOL_SIZE = 5;
 
+    /**
+     * Eligible sets already worked out this request, keyed by category and gun.
+     *
+     * Building one means grouping 800 000 records to find each map's fastest
+     * time, which takes a couple of seconds. The admin page asks for all three
+     * categories to show pool sizes and Livewire rebuilds it on every button
+     * press, so without this the page cost seven seconds on each click.
+     *
+     * Per request only - the container hands out a fresh instance each time -
+     * so a map tagged or played mid-session is picked up on the next load.
+     *
+     * @var array<string, array>
+     */
+    private array $memo = [];
+
+    /** Every map with a record and its fastest time, built at most once. */
+    private ?array $mapRows = null;
+
     public function __construct(private MapClassifier $classifier)
     {
     }
@@ -88,6 +106,12 @@ class CandidateSelector
      */
     public function eligible(string $category, ?string $weapon = null): array
     {
+        $key = $category . '|' . ($weapon ?? '');
+
+        if (isset($this->memo[$key])) {
+            return $this->memo[$key];
+        }
+
         $strafeTagged = $this->strafeTaggedMapIds();
         $played = $this->playedMapIds();
         $blocked = $this->blockedPhysicsMapIds();
@@ -123,7 +147,7 @@ class CandidateSelector
             ];
         }
 
-        return $out;
+        return $this->memo[$key] = $out;
     }
 
     /**
@@ -203,27 +227,34 @@ class CandidateSelector
     /**
      * Maps carrying at least one record, with the fastest of those times.
      *
-     * A join rather than a whereExists now, because the time is wanted and not
-     * only the existence of one. The comparison stays in SQL either way, which
+     * A join rather than a whereExists, because the time is wanted and not only
+     * the existence of one. The comparison stays in SQL either way, which
      * matters: `maps.name` has capitals on a few hundred maps where
      * `records.mapname` is lowercase, MySQL's collation ignores that, and the
      * same match written in PHP silently loses 35 of them.
+     *
+     * Held for the request rather than streamed. It is the expensive part -
+     * grouping 800 000 records - and the three categories would otherwise pay
+     * for it three times over on a page that shows all three pool sizes. The
+     * result is fifteen thousand small rows, which costs nothing to keep.
      */
-    private function mapsWithRecords(): \Generator
+    private function mapsWithRecords(): array
     {
+        if ($this->mapRows !== null) {
+            return $this->mapRows;
+        }
+
         $best = DB::table('records')
             ->select('mapname', DB::raw('MIN(time) AS wr_ms'))
             ->whereNull('deleted_at')
             ->where('time', '>', 0)
             ->groupBy('mapname');
 
-        $query = DB::table('maps')
+        return $this->mapRows = DB::table('maps')
             ->select('maps.id', 'maps.name', 'maps.weapons', 'wr.wr_ms')
-            ->joinSub($best, 'wr', fn ($join) => $join->on('wr.mapname', '=', 'maps.name'));
-
-        foreach ($query->cursor() as $row) {
-            yield $row;
-        }
+            ->joinSub($best, 'wr', fn ($join) => $join->on('wr.mapname', '=', 'maps.name'))
+            ->get()
+            ->all();
     }
 
     private function strafeTaggedMapIds(): array
