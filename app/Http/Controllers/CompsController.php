@@ -82,44 +82,28 @@ class CompsController extends Controller
      * created and keeps it; only a round created before the column existed
      * falls back to the setting.
      *
-     * How many weeks the admin funds stays a setting, because it is a promise
-     * about the future rather than a fact about one week, and it has to be
-     * able to expire on its own rather than sit there after the money stops.
+     * Who is paying is no longer written here as a promise. It used to say the
+     * admin funds the first N weeks, which is a sentence the page has to keep
+     * repeating and which never expires on its own - it sits there after the
+     * money stops until somebody remembers to switch it off. The list of
+     * donors says the same thing as a fact, and when a donation's weeks run out
+     * it simply stops covering later ones.
      */
     private function prize(?CompRound $round = null): array
     {
-        $settings = app(CompSettings::class);
-
         $funding = app(PrizeFunding::class);
 
         // The round's own stamped amount first, because that is what its
         // players were told. Only a week that does not exist yet asks the
         // funding what it would pay.
         $eur = (float) ($round?->prize_eur ?? $funding->perPhysicsFor(((int) Comp::weekly()->max('number')) + 1));
-        $fundedWeeks = $settings->prizeFundedWeeks();
-
-        // The highest week that exists, which is the one being played or voted
-        // on rather than the last one finished - so week 5 of 5 still counts
-        // as funded while it is being run, not only until it starts.
-        $current = (int) Comp::weekly()->max('number');
 
         return [
             'eur' => $this->money($eur),
-            // Both physics are paid, so the week costs twice the setting. The
-            // total is what a reader wants first and the per-physics figure is
-            // what they need to not misread it, so the page shows both.
+            // Both physics are paid, so the week costs twice the per-physics
+            // figure. The total is what a reader wants first and the
+            // per-physics figure is what they need to not misread it.
             'total' => $this->money($eur * count(BallotResolver::PHYSICS)),
-            'funded_weeks' => $fundedWeeks,
-            // The whole commitment, which reads very differently from the
-            // weekly figure and is the number people actually repeat to each
-            // other.
-            //
-            // Off the default rather than off this round: a donation that
-            // raises one week to 15 says nothing about what the admin promised
-            // to fund, and multiplying the boosted figure would claim a
-            // commitment of 150 EUR that nobody made.
-            'funded_total' => $settings->prizeEur() * count(BallotResolver::PHYSICS) * $fundedWeeks,
-            'self_funded' => $eur > 0 && $current <= $fundedWeeks,
         ];
     }
 
@@ -159,6 +143,9 @@ class CompsController extends Controller
         return [
             'donors' => $donors,
             'total' => $this->money($funding->totalDonated()),
+            // The union of everybody's spans, not the sum: two people funding
+            // weeks 3-12 have funded ten weeks between them, not twenty.
+            'weeks' => $funding->fundedWeekCount(),
             'funded_through' => $funding->fundedThroughComp(),
         ];
     }

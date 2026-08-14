@@ -82,20 +82,12 @@ export default {
         t('Expect a few rough edges in the first weeks. If something does not look right, :admin will sort it out.'),
     ));
 
-    const prizeFundedLine = computed(() => aroundAdmin(
-        t('The first :count weeklies are paid out by :admin from own funds: :total EUR in total.', {
-            count: props.prize?.funded_weeks,
-            total: props.prize?.funded_total,
-        }),
-    ));
-
-    const prizeCommunityLine = computed(() => aroundAdmin(
-        t('Paid out by :admin or by the community.'),
-    ));
-
-    const prizeLaterLine = computed(() => aroundAdmin(
-        t('Later weeks may be paid out by :admin again or by the community. Write "comps" in the note when you donate and it goes into the prize pool rather than towards the maintenance of the site.'),
-    ));
+    // Who pays is no longer a sentence. It is the list of donors below the
+    // number, which says the same thing as a fact and stops saying it on its
+    // own when somebody's weeks run out.
+    const donateLine = computed(() =>
+        t('Write "comps" in the note when you donate and it goes into the prize pool rather than towards the maintenance of the site.'),
+    );
 
     // Totals per ballot, so each bar can show a share rather than a bare count.
     const totals = computed(() => {
@@ -289,7 +281,11 @@ export default {
              that has to catch the eye on the way past, and a page where every
              box is the same shade of black says nothing is more important than
              anything else. Kept to a wash and a border, not a bright block. -->
-        <section v-if="prize?.eur > 0"
+        <!-- Shown when there is money anywhere: a week paying nothing while
+             donors have funded later ones is exactly when the pool needs
+             saying, and keying the whole panel to the weekly figure would
+             hide the donors along with it. -->
+        <section v-if="prize?.eur > 0 || funders?.total"
                  class="relative overflow-hidden rounded-2xl border border-emerald-400/25 bg-gradient-to-br from-emerald-500/[0.12] via-black/40 to-black/40 backdrop-blur-sm p-5 md:p-6 shadow-[0_0_40px_-12px_rgba(16,185,129,0.35)]">
             <!-- A soft bloom behind the number, so the corner it sits in is
                  lit rather than outlined. -->
@@ -297,18 +293,24 @@ export default {
 
             <div class="relative flex flex-col md:flex-row md:items-center gap-5 md:gap-8">
 
-                <!-- The number, at the size the number deserves. It is the
-                     first thing anybody asks about a competition. -->
+                <!-- The whole pool, not what one week pays.
+                     A weekly figure answers "what do I win" and nothing else;
+                     the total is what somebody repeats to a friend, and it is
+                     the number the donors below actually handed over. The week
+                     is still here, underneath, because a competitor needs it. -->
                 <div class="flex-shrink-0">
                     <div class="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-emerald-400/90 mb-1.5">
                         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2H6v2H2v3a5 5 0 0 0 4.6 5A5.5 5.5 0 0 0 11 15.9V19H7v3h10v-3h-4v-3.1a5.5 5.5 0 0 0 4.4-3.9A5 5 0 0 0 22 7V4h-4V2zM4 7V6h2v3.9A3 3 0 0 1 4 7zm16 0a3 3 0 0 1-2 2.9V6h2v1z" /></svg>
-                        {{ $t('Prize pool') }}
+                        {{ funders?.total ? $t('Total prize pool') : $t('Prize pool') }}
                     </div>
                     <div class="flex items-baseline gap-2">
-                        <span class="text-4xl md:text-5xl font-black text-emerald-300 tabular-nums leading-none">{{ prize.total }}</span>
+                        <span class="text-4xl md:text-5xl font-black text-emerald-300 tabular-nums leading-none">{{ funders?.total ?? prize.total }}</span>
                         <span class="text-xl md:text-2xl font-black text-emerald-300/70 leading-none">EUR</span>
                     </div>
-                    <div class="mt-1.5 text-sm text-emerald-100/60">
+                    <div v-if="funders?.weeks" class="mt-1.5 text-sm text-emerald-100/60">
+                        {{ $t('distributed over :count weekly comps, funded by the donors below', { count: funders.weeks }) }}
+                    </div>
+                    <div v-else class="mt-1.5 text-sm text-emerald-100/60">
                         {{ $t('every week, :amount EUR per physics', { amount: prize.eur }) }}
                     </div>
                 </div>
@@ -316,12 +318,16 @@ export default {
                 <div class="hidden md:block w-px self-stretch bg-emerald-400/15"></div>
 
                 <div class="min-w-0 flex-1">
-                    <p class="text-sm text-gray-200">
-                        <span v-if="prize.self_funded">{{ prizeFundedLine.before }}<Link :href="adminUrl" class="font-bold underline decoration-emerald-400/40 hover:text-white">{{ $t('the admin') }}</Link>{{ prizeFundedLine.after }}</span>
-                        <span v-else>{{ prizeCommunityLine.before }}<Link :href="adminUrl" class="font-bold underline decoration-emerald-400/40 hover:text-white">{{ $t('the admin') }}</Link>{{ prizeCommunityLine.after }}</span>
+                    <!-- What this week itself pays. Split out of the headline
+                         once that became the whole pool: the two numbers answer
+                         different questions and one of them is the one you play
+                         for. -->
+                    <p v-if="funders?.total" class="text-sm text-gray-200">
+                        <span class="font-bold text-emerald-200">{{ $t('This week: :total EUR', { total: prize.total }) }}</span>
+                        <span class="text-gray-400">{{ ' ' }}{{ $t('(:amount EUR per physics)', { amount: prize.eur }) }}</span>
                     </p>
-                    <p class="mt-1.5 text-sm text-gray-500 leading-snug">
-                        <span>{{ prizeLaterLine.before }}<Link :href="adminUrl" class="underline decoration-white/20 hover:text-gray-300">{{ $t('the admin') }}</Link>{{ prizeLaterLine.after }}</span>
+                    <p class="text-sm text-gray-500 leading-snug" :class="funders?.total ? 'mt-1.5' : ''">
+                        <span>{{ donateLine }}</span>
                         <!-- The space is written out: Vue drops whitespace
                              between elements when it contains a newline, which
                              ran this straight into the sentence above it.
@@ -359,20 +365,28 @@ export default {
                         {{ $t('funded through weekly :number', { number: funders.funded_through }) }}
                     </div>
                 </div>
+                <!-- A donor with something to say grows into a card; one
+                     without stays a chip. Giving every entry the tall shape
+                     would make the ones with nothing written look like they
+                     forgot to say something. -->
                 <ul class="flex flex-wrap gap-2">
                     <li v-for="d in funders.donors" :key="d.id"
-                        class="inline-flex items-baseline gap-2 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.07] px-3 py-1.5">
-                        <component :is="d.user_id ? Link : 'span'"
-                                   :href="d.user_id ? `/profile/${d.user_id}` : undefined"
-                                   class="text-sm font-bold text-emerald-100"
-                                   :class="d.user_id ? 'hover:underline' : ''">{{ d.name }}</component>
-                        <span class="text-sm font-black text-emerald-300 tabular-nums">{{ d.amount }} EUR</span>
-                        <!-- The span, not just the count: "over 10 weeks" and
-                             "weeklies 6 to 15" answer different questions and
-                             people ask the second one. -->
-                        <span class="text-xs text-emerald-100/50">
-                            {{ $t('over :count weeklies (:from-:to)', { count: d.weeks, from: d.from_comp, to: d.to_comp }) }}
-                        </span>
+                        class="rounded-lg border border-emerald-400/20 bg-emerald-500/[0.07] px-3 py-1.5"
+                        :class="d.note ? 'block max-w-sm' : 'inline-flex items-baseline gap-2'">
+                        <div :class="d.note ? 'flex items-baseline gap-2 flex-wrap' : 'contents'">
+                            <component :is="d.user_id ? Link : 'span'"
+                                       :href="d.user_id ? `/profile/${d.user_id}` : undefined"
+                                       class="text-sm font-bold text-emerald-100"
+                                       :class="d.user_id ? 'hover:underline' : ''">{{ d.name }}</component>
+                            <span class="text-sm font-black text-emerald-300 tabular-nums">{{ d.amount }} EUR</span>
+                            <!-- The span, not just the count: "over 10 weeks"
+                                 and "weeklies 6 to 15" answer different
+                                 questions and people ask the second one. -->
+                            <span class="text-xs text-emerald-100/50">
+                                {{ $t('over :count weeklies (:from-:to)', { count: d.weeks, from: d.from_comp, to: d.to_comp }) }}
+                            </span>
+                        </div>
+                        <p v-if="d.note" class="mt-1 text-xs text-emerald-100/70 italic leading-snug">{{ d.note }}</p>
                     </li>
                 </ul>
             </div>

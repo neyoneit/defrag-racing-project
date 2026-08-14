@@ -25,7 +25,6 @@ class CompSettings
     public const KEY_POOL_SIZE = 'comps_pool_size';
     public const KEY_ENABLED = 'comps_weekly_enabled';
     public const KEY_PRIZE_EUR = 'comps_prize_eur';
-    public const KEY_PRIZE_FUNDED_WEEKS = 'comps_prize_funded_weeks';
     public const KEY_BETA_NOTICE = 'comps_beta_notice';
     public const KEY_CONTACT_USER_ID = 'comps_contact_user_id';
 
@@ -81,17 +80,6 @@ class CompSettings
     public function prizeEur(): int
     {
         return (int) SiteSetting::get(self::KEY_PRIZE_EUR, '5');
-    }
-
-    /**
-     * How many weeklies neyo has donated the prize for. After this many the
-     * page stops naming him and says the pool is donated by him or by the
-     * community, so a promise that has run out expires on its own rather than
-     * staying up after the money stops.
-     */
-    public function prizeFundedWeeks(): int
-    {
-        return (int) SiteSetting::get(self::KEY_PRIZE_FUNDED_WEEKS, '5');
     }
 
     /**
