@@ -4148,5 +4148,7 @@
     "📐 Wireframe OFF": "📐 Wireframe WYŁ.",
     "📐 Wireframe ON": "📐 Wireframe WŁ.",
     "🔄 Auto-Rotate OFF": "🔄 Autoobrót WYŁ.",
-    "🔄 Auto-Rotate ON": "🔄 Autoobrót WŁ."
+    "🔄 Auto-Rotate ON": "🔄 Autoobrót WŁ.",
+    "This demo carries a validity note (:flags), so it does not count in comps.": "To demo ma adnotację o poprawności (:flags), więc nie liczy się do comps.",
+    "This demo did not pass the validity check, so it does not count in comps.": "To demo nie przeszło kontroli poprawności, więc nie liczy się do comps."
 }

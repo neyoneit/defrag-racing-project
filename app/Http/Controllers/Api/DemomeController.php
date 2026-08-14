@@ -602,6 +602,24 @@ class DemomeController extends Controller
         return response()->json(['message_id' => (string) $value]);
     }
 
+    /**
+     * A client-supplied file date (unix seconds) as a timestamp, or null.
+     *
+     * Clamped to now: a clock running ahead would write a date in the future,
+     * and a future date passes every "was this made after the ballot opened"
+     * check there is.
+     */
+    private function clientMtime($seconds): ?Carbon
+    {
+        if (! $seconds) {
+            return null;
+        }
+
+        $at = Carbon::createFromTimestamp((int) $seconds);
+
+        return $at->isFuture() ? now() : $at;
+    }
+
     public function uploadDemo(Request $request)
     {
         $request->validate([
@@ -609,6 +627,11 @@ class DemomeController extends Controller
             'discord_author' => 'nullable|string',
             'discord_message_id' => 'nullable|string',
             'discord_channel_id' => 'nullable|string',
+            // Unix seconds, if the caller knows when the file was written. The
+            // bot usually does not - a Discord attachment carries no date - but
+            // the field exists so this path is not the one hole in a rule the
+            // other four upload routes now fill in.
+            'file_mtime' => 'nullable|integer|min:0',
         ]);
 
         $file = $request->file('demo');
@@ -669,12 +692,20 @@ class DemomeController extends Controller
         }
 
         // Create UploadedDemo record
+        // Only a date the caller states outright. Discord's own timestamps are
+        // deliberately not used: they say when the file was posted, not when it
+        // was recorded, and dating a demo by when somebody happened to share it
+        // would refuse runs for the wrong reason. A demo that arrives this way
+        // therefore carries no date and is judged on everything else.
+        $mtime = $this->clientMtime($request->input('file_mtime'));
+
         $demo = UploadedDemo::create([
             'original_filename' => $originalFilename,
             'file_size' => $file->getSize(),
             'file_hash' => $hash,
             'status' => 'uploaded',
             'source' => 'demome',
+            'client_file_mtime' => $mtime,
         ]);
 
         // Store file locally - use Storage::put with file contents (Octane/Swoole compatible)

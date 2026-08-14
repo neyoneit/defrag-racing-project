@@ -4148,5 +4148,7 @@
     "📐 Wireframe OFF": "📐 Drahtmodell AUS",
     "📐 Wireframe ON": "📐 Drahtmodell EIN",
     "🔄 Auto-Rotate OFF": "🔄 Auto-Rotation AUS",
-    "🔄 Auto-Rotate ON": "🔄 Auto-Rotation EIN"
+    "🔄 Auto-Rotate ON": "🔄 Auto-Rotation EIN",
+    "This demo carries a validity note (:flags), so it does not count in comps.": "Dieses Demo trägt einen Gültigkeitshinweis (:flags) und zählt daher nicht für die Comps.",
+    "This demo did not pass the validity check, so it does not count in comps.": "Dieses Demo hat die Gültigkeitsprüfung nicht bestanden und zählt daher nicht für die Comps."
 }

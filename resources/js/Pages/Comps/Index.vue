@@ -153,6 +153,10 @@ export default {
     const uploadForm = useForm({
         demo: null,
         is_highlight: false,
+        // Unix seconds, filled in when the file is picked: a run has to have
+        // been made after this round's ballot opened, and the upload itself
+        // carries no date at all.
+        file_mtime: null,
     });
 
     // Ticking the highlight box is easy to do by accident and impossible to
@@ -160,10 +164,18 @@ export default {
     // somebody notices, the round is over. So it asks, once, before sending.
     const highlightConfirm = ref(false);
 
+    // Keep the file and its date together: the date is read off the File
+    // object at pick time and travels with the upload.
+    const onPickDemo = (event) => {
+        const file = event.target.files[0] ?? null;
+        uploadForm.demo = file;
+        uploadForm.file_mtime = file ? Math.floor((file.lastModified || 0) / 1000) : null;
+    };
+
     const send = () => {
         uploadForm.post(route('comps.submit', props.playing.round_id), {
             preserveScroll: true,
-            onSuccess: () => uploadForm.reset('demo', 'is_highlight'),
+            onSuccess: () => uploadForm.reset('demo', 'is_highlight', 'file_mtime'),
             onFinish: () => (highlightConfirm.value = false),
         });
     };
@@ -701,7 +713,7 @@ export default {
                         <input
                             type="file"
                             accept=".dm_68"
-                            @input="uploadForm.demo = $event.target.files[0]"
+                            @input="onPickDemo($event)"
                             class="text-sm text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-sm file:text-white hover:file:bg-white/20"
                         />
 

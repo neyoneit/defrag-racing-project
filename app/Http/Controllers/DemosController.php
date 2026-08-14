@@ -600,6 +600,24 @@ class DemosController extends Controller
     /**
      * Upload demos with rate limiting and queue processing
      */
+    /**
+     * A client-supplied file date (unix seconds) as a timestamp, or null.
+     *
+     * Clamped to now: a clock running ahead would write a date in the future,
+     * and a future date passes every "was this made after the ballot opened"
+     * check there is.
+     */
+    private function clientMtime($seconds): ?\Illuminate\Support\Carbon
+    {
+        if (! $seconds) {
+            return null;
+        }
+
+        $at = \Illuminate\Support\Carbon::createFromTimestamp((int) $seconds);
+
+        return $at->isFuture() ? now() : $at;
+    }
+
     public function upload(Request $request)
     {
         $currentUser = Auth::user();
@@ -642,6 +660,13 @@ class DemosController extends Controller
             'demos' => 'required|array|min:1|max:100000', // Max 100,000 uploads per request (files or archives)
             // Allow larger files for archives; per-file max 512MB (512000 KB)
             'demos.*' => 'required|file|max:512000',
+            // One unix timestamp per file, same order: the date each file has
+            // on the uploader's own disk. An HTTP upload carries no such thing,
+            // and comps needs it to tell a run made this week from a demo that
+            // has been sitting in a folder for years. Optional - an older
+            // client, or any other caller, simply sends nothing.
+            'demo_mtimes' => 'sometimes|array',
+            'demo_mtimes.*' => 'nullable|integer|min:0',
         ]);
 
         $uploadedDemos = [];
@@ -664,10 +689,14 @@ class DemosController extends Controller
 
         // Phase 1: Separate archives from demo files, compute hashes
         $demoFiles = $request->file('demos');
+        // Aligned with $demoFiles by index - the browser appends both arrays in
+        // the same order. Missing entries are fine and mean "this client did
+        // not tell us", not "the file is new".
+        $demoMtimes = array_values((array) $request->input('demo_mtimes', []));
         $demoCandidate = []; // ['file' => UploadedFile, 'hash' => string, 'name' => string]
         $archiveTempDir = storage_path('app/temp_archives');
 
-        foreach ($demoFiles as $demoFile) {
+        foreach ($demoFiles as $index => $demoFile) {
             try {
                 $extension = strtolower($demoFile->getClientOriginalExtension());
                 $originalName = $demoFile->getClientOriginalName();
@@ -713,6 +742,7 @@ class DemosController extends Controller
                     'file' => $demoFile,
                     'hash' => $fileHash,
                     'name' => $originalName,
+                    'mtime' => $this->clientMtime($demoMtimes[$index] ?? null),
                 ];
             } catch (\Exception $e) {
                 $errors[] = $demoFile->getClientOriginalName() . ': Upload failed - ' . $e->getMessage();
@@ -811,6 +841,7 @@ class DemosController extends Controller
                             'file_hash' => $fileHash,
                             'user_id' => $userId,
                             'status' => 'uploaded',
+                            'client_file_mtime' => $candidate['mtime'] ?? null,
                         ]);
                     } catch (\Illuminate\Database\QueryException $qe) {
                         if (str_contains($qe->getMessage(), 'Duplicate entry')) {

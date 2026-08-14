@@ -4148,5 +4148,7 @@
     "📐 Wireframe OFF": "📐 Wireframe UIT",
     "📐 Wireframe ON": "📐 Wireframe AAN",
     "🔄 Auto-Rotate OFF": "🔄 Auto-Rotatie UIT",
-    "🔄 Auto-Rotate ON": "🔄 Auto-Rotatie AAN"
+    "🔄 Auto-Rotate ON": "🔄 Auto-Rotatie AAN",
+    "This demo carries a validity note (:flags), so it does not count in comps.": "Deze demo heeft een geldigheidsnotitie (:flags) en telt daarom niet mee voor de comps.",
+    "This demo did not pass the validity check, so it does not count in comps.": "Deze demo is niet door de geldigheidscontrole gekomen en telt daarom niet mee voor de comps."
 }

@@ -4148,5 +4148,7 @@
     "📐 Wireframe OFF": "📐 Каркас ВЫКЛ",
     "📐 Wireframe ON": "📐 Каркас ВКЛ",
     "🔄 Auto-Rotate OFF": "🔄 Автовращение ВЫКЛ",
-    "🔄 Auto-Rotate ON": "🔄 Автовращение ВКЛ"
+    "🔄 Auto-Rotate ON": "🔄 Автовращение ВКЛ",
+    "This demo carries a validity note (:flags), so it does not count in comps.": "В этом демо есть пометка о достоверности (:flags), поэтому оно не засчитывается в comps.",
+    "This demo did not pass the validity check, so it does not count in comps.": "Это демо не прошло проверку достоверности, поэтому оно не засчитывается в comps."
 }

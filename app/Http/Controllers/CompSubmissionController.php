@@ -8,6 +8,7 @@ use App\Models\CompRound;
 use App\Models\CompSubmission;
 use App\Services\Comps\SubmissionIntake;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 /**
  * Entering a run, and reporting one.
@@ -32,6 +33,11 @@ class CompSubmissionController extends Controller
         $data = $request->validate([
             'demo' => ['required', 'file', 'max:' . SubmissionIntake::MAX_KB],
             'is_highlight' => ['sometimes', 'boolean'],
+            // Unix seconds from the browser's File object. Not proof of
+            // anything - the client sends it - but a file dated before this
+            // round's ballot opened is an old run, and that is the direction
+            // the check is used in.
+            'file_mtime' => ['nullable', 'integer', 'min:0'],
         ]);
 
         abort_unless($request->user(), 403);
@@ -48,12 +54,19 @@ class CompSubmissionController extends Controller
             return back()->withErrors(['demo' => $reason]);
         }
 
+        $mtime = ! empty($data['file_mtime'])
+            ? Carbon::createFromTimestamp((int) $data['file_mtime'])
+            : null;
+
         $intake->accept(
             $round,
             $request->user(),
             $file,
             $hash,
             (bool) ($data['is_highlight'] ?? false),
+            // A clock running ahead would write a future date, and a future
+            // date passes every "made after the ballot opened" check there is.
+            clientMtime: $mtime?->isFuture() ? now() : $mtime,
         );
 
         return back();

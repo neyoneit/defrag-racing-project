@@ -8,6 +8,7 @@ use App\Models\CompSubmission;
 use App\Models\UploadedDemo;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -93,8 +94,9 @@ class SubmissionIntake
         string $hash,
         bool $isHighlight = false,
         bool $autoEntered = false,
+        ?Carbon $clientMtime = null,
     ): CompSubmission {
-        $submission = DB::transaction(function () use ($round, $user, $file, $hash, $isHighlight, $autoEntered) {
+        $submission = DB::transaction(function () use ($round, $user, $file, $hash, $isHighlight, $autoEntered, $clientMtime) {
             $demo = UploadedDemo::create([
                 'original_filename' => $file->getClientOriginalName(),
                 'file_path' => '',
@@ -105,6 +107,10 @@ class SubmissionIntake
                 // Out of /demos, the map page, profiles and the launcher until
                 // the round is over. The demo is the route.
                 'comps_hidden_until' => $round->ends_at,
+                // When the file was written on the uploader's disk, if their
+                // client told us. A run has to have been made after the ballot
+                // opened, and this is the only date most online demos have.
+                'client_file_mtime' => $clientMtime,
             ]);
 
             $directory = storage_path("app/demos/temp/{$demo->id}");

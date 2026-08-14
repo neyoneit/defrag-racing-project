@@ -4148,5 +4148,7 @@
     "📐 Wireframe OFF": "📐 Drátěný model VYP",
     "📐 Wireframe ON": "📐 Drátěný model ZAP",
     "🔄 Auto-Rotate OFF": "🔄 Automatické otáčení VYP",
-    "🔄 Auto-Rotate ON": "🔄 Automatické otáčení ZAP"
+    "🔄 Auto-Rotate ON": "🔄 Automatické otáčení ZAP",
+    "This demo carries a validity note (:flags), so it does not count in comps.": "Toto demo nese poznámku o platnosti (:flags), takže se do comps nepočítá.",
+    "This demo did not pass the validity check, so it does not count in comps.": "Toto demo neprošlo kontrolou platnosti, takže se do comps nepočítá."
 }

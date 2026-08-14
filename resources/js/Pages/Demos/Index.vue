@@ -712,6 +712,11 @@ const uploadDemos = async () => {
     const sendBatch = async (batchFiles, label) => {
         const formData = new FormData();
         batchFiles.forEach(file => formData.append('demos[]', file));
+        // The date the file has on this machine, one per file, in the same
+        // order. An upload carries bytes and a name and nothing else, and comps
+        // has to be able to tell a run made this week from one that has been on
+        // a hard drive for years. Sent as unix seconds.
+        batchFiles.forEach(file => formData.append('demo_mtimes[]', Math.floor((file.lastModified || 0) / 1000)));
 
         try {
             const response = await axios.post(route('demos.upload'), formData, {
