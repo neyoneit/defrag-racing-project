@@ -73,8 +73,31 @@ class PrizeFunding
                 'per_physics' => $d->compsPerPhysics(),
                 'from_comp' => (int) $d->comps_start_comp,
                 'to_comp' => $d->compsEndComp(),
+                'note' => $d->comps_note,
             ])
             ->all();
+    }
+
+    /**
+     * How many weeklies the pool actually pays for.
+     *
+     * The union, not the sum of everybody's spans: two people funding weeks
+     * 3-12 have funded ten weeks between them, not twenty, and the headline
+     * figure on the page divides the whole pool by this number.
+     */
+    public function fundedWeekCount(): int
+    {
+        $weeks = [];
+
+        foreach ($this->all() as $d) {
+            $end = $d->compsEndComp();
+
+            for ($n = (int) $d->comps_start_comp; $n <= $end; $n++) {
+                $weeks[$n] = true;
+            }
+        }
+
+        return count($weeks);
     }
 
     /** Total put into the pool by everyone, ever. */

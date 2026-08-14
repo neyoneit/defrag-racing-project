@@ -107,6 +107,17 @@ class DonationResource extends Resource
                             ->requiredWith('comps_weeks')
                             ->helperText('Weekly number, not a date. A week that already exists keeps the prize it was created with - raise that one on the comps control page.'),
 
+                        // Shown publicly on the comps page, under the donor's
+                        // name. Separate from the donation's own note, which is
+                        // about the donation as a whole and often carries a
+                        // thank-you or a payment reference - neither belongs
+                        // next to a prize pool.
+                        Forms\Components\TextInput::make('comps_note')
+                            ->label('Public note on the comps page')
+                            ->maxLength(160)
+                            ->columnSpanFull()
+                            ->helperText('Optional, shown under the donor name on /comps. Leave empty and the entry stays a single line.'),
+
                         // The arithmetic, spelled out before saving. Entering
                         // 150 over 10 weeks and finding out later it meant
                         // 7.50 a physics is exactly the kind of surprise this

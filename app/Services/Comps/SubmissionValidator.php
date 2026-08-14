@@ -49,7 +49,7 @@ class SubmissionValidator
     public function settle(CompSubmission $submission, UploadedDemo $demo): void
     {
         if (! in_array($demo->status, self::PARSED, true)) {
-            $this->reject($submission, __('The demo could not be read.'));
+            $this->reject($submission, __('The demo could not be read.'), releasable: true);
 
             return;
         }
@@ -63,7 +63,7 @@ class SubmissionValidator
         $physics = $this->physicsOf($demo);
 
         if (! $physics) {
-            $this->reject($submission, __('The physics could not be read from this demo.'));
+            $this->reject($submission, __('The physics could not be read from this demo.'), releasable: true);
 
             return;
         }
@@ -86,7 +86,7 @@ class SubmissionValidator
                 'physics' => strtoupper($physics),
                 'map' => $demo->map_name ?: '?',
                 'expected' => $expected->map->name,
-            ]));
+            ]), releasable: true);
 
             return;
         }
@@ -127,8 +127,41 @@ class SubmissionValidator
         return in_array($base, BallotResolver::PHYSICS, true) ? $base : null;
     }
 
-    private function reject(CompSubmission $submission, string $reason): void
+    /**
+     * An entry the launcher chose is undone rather than rejected.
+     *
+     * The launcher spots a comps map by reading the demo's filename, which is a
+     * convention and not a promise. When the parse disagrees, the honest thing
+     * is to leave no trace of the guess: drop the entry and release the demo,
+     * so it becomes the ordinary upload it would have been if the launcher had
+     * never routed it here.
+     *
+     * Only the verdicts that mean "we cannot confirm this is a run of this
+     * round's map" qualify. A run on the RIGHT map that simply has no finish
+     * time in it is a real attempt at this round and stays visible as one -
+     * releasing that would publish somebody's failed comps run while everyone
+     * else's is still hidden.
+     *
+     * A person who chose to enter is never treated this way. They picked the
+     * file, and a rejection they can see beats a demo that quietly went public.
+     */
+    private function reject(CompSubmission $submission, string $reason, bool $releasable = false): void
     {
+        if ($releasable && $submission->auto_entered) {
+            // Not through `$submission->demo`: that relation runs into the
+            // global scope which hides exactly the demo we are holding, so it
+            // answers null and the release would silently not happen.
+            UploadedDemo::withUnreleasedComps()
+                ->whereKey($submission->uploaded_demo_id)
+                ->update(['comps_hidden_until' => null]);
+
+            $submission->delete();
+
+            Log::info("[comps] auto entry {$submission->id} withdrawn, demo released: {$reason}");
+
+            return;
+        }
+
         $submission->update([
             'status' => 'invalid',
             'invalid_reason' => $reason,

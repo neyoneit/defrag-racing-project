@@ -35,6 +35,7 @@ class SiteDonation extends Model
         'comps_amount',
         'comps_weeks',
         'comps_start_comp',
+        'comps_note',
     ];
 
     protected $casts = [

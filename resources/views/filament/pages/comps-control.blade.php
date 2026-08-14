@@ -55,13 +55,7 @@
                     <div class="pt-3 border-t border-gray-200 dark:border-white/10">
                         <label class="block text-xs text-gray-500 mb-1">Prize per weekly, per physics (EUR)</label>
                         <input type="number" wire:model="prizeEur" min="0" max="10000" class="w-24 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800" />
-                        <p class="text-xs text-gray-500 mt-1">0 hides the prize from the page, which is what an unfunded week should look like.</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Weeks paid out by neyo</label>
-                        <input type="number" wire:model="prizeFundedWeeks" min="0" max="520" class="w-24 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800" />
-                        <p class="text-xs text-gray-500 mt-1">After this many weeks the page stops promising neyo pays and says the pool is paid out by neyo or by the community. Raise it if you keep paying.</p>
+                        <p class="text-xs text-gray-500 mt-1">Only the fallback for a week nobody has funded. What a funded week pays comes from the donations that cover it - see Donations.</p>
                     </div>
 
                     <label class="flex items-center gap-2 pt-1 cursor-pointer">

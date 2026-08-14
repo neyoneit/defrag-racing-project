@@ -37,11 +37,13 @@ class CompSubmission extends Model
         'removed_by',
         'removed_at',
         'matched_record_id',
+        'auto_entered',
     ];
 
     protected $casts = [
         'is_online' => 'boolean',
         'is_highlight' => 'boolean',
+        'auto_entered' => 'boolean',
         'removed_at' => 'datetime',
     ];
 
