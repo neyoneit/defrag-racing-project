@@ -4170,5 +4170,6 @@
     "You need a Q3DF.org profile linked to your account to enter a run or to vote.": "Чтобы отправить забег или голосовать, нужен профиль Q3DF.org, привязанный к аккаунту.",
     "There is no sign-up. Record a run on the map being played and it enters by itself.": "Никакой записи нет. Проедь забег на играемой карте, и он попадёт в раунд сам.",
     "A demo of the map being played, in the physics it is being played in, stays hidden until the round is over. It appears then, together with everyone else's.": "Демо с играемой карты, в той физике, в которой она играется, остаётся скрытым до конца раунда. Тогда оно появится вместе со всеми остальными.",
-    "A run made before the vote for the round opened does not count in it.": "Забег, сделанный до открытия голосования по раунду, в нём не считается."
+    "A run made before the vote for the round opened does not count in it.": "Забег, сделанный до открытия голосования по раунду, в нём не считается.",
+    "Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.": "К твоему аккаунту не привязан профиль Q3DF.org, поэтому этот забег не в comps. На сайте он появится после окончания раунда."
 }

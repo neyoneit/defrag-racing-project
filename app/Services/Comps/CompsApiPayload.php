@@ -31,6 +31,7 @@ class CompsApiPayload
         private CandidateSelector $selector,
         private PrizeFunding $funding,
         private UploadGuard $guard,
+        private SubmissionIntake $intake,
     ) {
     }
 
@@ -47,6 +48,35 @@ class CompsApiPayload
             // at all, and the launcher still has to be able to say why the
             // person's demo went quiet.
             'my_notices' => $user ? $this->guard->noticesFor($user->id) : [],
+            'entry_gate' => $this->entryGate($user),
+        ];
+    }
+
+    /**
+     * Whether this person may enter a run at all.
+     *
+     * A launcher token is handed to any signed-in account, linked profile or
+     * not, because backing demos up and browsing servers have nothing to do
+     * with comps. Entering does, and without this the launcher would find out
+     * one rejected upload at a time - so it is told up front and can say the
+     * one useful thing instead: link your account, here is where.
+     */
+    private function entryGate(?User $user): array
+    {
+        $reason = $this->intake->userRejectionReason($user);
+
+        return [
+            'may' => $reason === null,
+            'reason' => $reason,
+            'needs' => match (true) {
+                $reason === null => null,
+                ! $user => 'signin',
+                ! $user->hasVerifiedEmail() => 'verify',
+                default => 'mdd',
+            },
+            // Where to go and fix it. The launcher cannot build a site URL and
+            // should not be inventing one.
+            'settings_url' => route('settings.show'),
         ];
     }
 

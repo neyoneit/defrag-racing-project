@@ -4170,5 +4170,6 @@
     "You need a Q3DF.org profile linked to your account to enter a run or to vote.": "Necesitas un perfil de Q3DF.org vinculado a tu cuenta para subir una carrera o votar.",
     "There is no sign-up. Record a run on the map being played and it enters by itself.": "No hay inscripción. Haz una carrera en el mapa que se juega y entra sola.",
     "A demo of the map being played, in the physics it is being played in, stays hidden until the round is over. It appears then, together with everyone else's.": "Una demo del mapa que se juega, en la física en la que se juega, queda oculta hasta que termine la ronda. Entonces aparece, junto con las de todos los demás.",
-    "A run made before the vote for the round opened does not count in it.": "Una carrera hecha antes de que se abriera la votación de la ronda no cuenta en ella."
+    "A run made before the vote for the round opened does not count in it.": "Una carrera hecha antes de que se abriera la votación de la ronda no cuenta en ella.",
+    "Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.": "Tu cuenta no tiene ningún perfil de Q3DF.org vinculado, así que esta carrera no está en comps. Aparecerá en la web cuando termine la ronda."
 }

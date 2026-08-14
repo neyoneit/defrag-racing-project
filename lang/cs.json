@@ -4170,5 +4170,6 @@
     "You need a Q3DF.org profile linked to your account to enter a run or to vote.": "Abys mohl nahrát běh nebo hlasovat, musíš mít k účtu propojený profil Q3DF.org.",
     "There is no sign-up. Record a run on the map being played and it enters by itself.": "Nikam se nepřihlašuješ. Zajedeš běh na hrané mapě a do soutěže se dostane sám.",
     "A demo of the map being played, in the physics it is being played in, stays hidden until the round is over. It appears then, together with everyone else's.": "Demo z hrané mapy, ve fyzice, ve které se hraje, zůstane skryté do konce kola. Objeví se potom, spolu se všemi ostatními.",
-    "A run made before the vote for the round opened does not count in it.": "Běh vytvořený dřív, než se otevřelo hlasování o kole, se do něj nepočítá."
+    "A run made before the vote for the round opened does not count in it.": "Běh vytvořený dřív, než se otevřelo hlasování o kole, se do něj nepočítá.",
+    "Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.": "K účtu nemáš propojený profil Q3DF.org, takže tenhle běh není v comps. Na webu se objeví po skončení kola."
 }

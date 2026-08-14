@@ -45,8 +45,10 @@ class UploadGuard
     /** Parser outcome for a demo it could not read at all. */
     private const UNREADABLE = 'failed';
 
-    public function __construct(private SubmissionValidator $validator)
-    {
+    public function __construct(
+        private SubmissionValidator $validator,
+        private SubmissionIntake $intake,
+    ) {
     }
 
     /**
@@ -275,6 +277,10 @@ class UploadGuard
                 return 'too_old';
             }
 
+            if ($this->intake->userRejectionReason($demo->user)) {
+                return 'not_linked';
+            }
+
             return 'held';
         }
 
@@ -296,6 +302,7 @@ class UploadGuard
             'unreadable' => __('This demo could not be read, so it does not count in comps. Please tell an admin about it.'),
             'too_old' => __('This run is older than the comps round, so it does not count. It appears on the site once the round is over.'),
             'other_physics' => __('This is a run on a map the round is being played on, in the other physics. It appears on the site once the round is over.'),
+            'not_linked' => __('Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.'),
             'ballot' => __('This map is still being voted on. If it wins, this run enters the round when voting closes.'),
             default => __('This demo is on a map comps is using, so it appears on the site once the round is over.'),
         };
@@ -317,6 +324,17 @@ class UploadGuard
         $expected = $this->roundMapFor($demo, $round);
 
         if (! $expected) {
+            return false;
+        }
+
+        // Entering needs a linked Q3DF.org profile, and this route enters
+        // people without asking them - so it has to ask the same question the
+        // upload form does, or the rule would hold on the form and not here,
+        // which is the same as not holding. The demo stays hidden either way:
+        // that is about the route being competed on, not about who uploaded.
+        if ($this->intake->userRejectionReason($demo->user)) {
+            Log::info("[comps] demo {$demo->id} not entered into round {$round->id}: uploader cannot enter");
+
             return false;
         }
 

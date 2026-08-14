@@ -201,6 +201,7 @@ class LauncherController extends Controller
             }
 
             $shared['my_notices'] = $mine['my_notices'];
+            $shared['entry_gate'] = $mine['entry_gate'];
         }
 
         return response()->json($shared);

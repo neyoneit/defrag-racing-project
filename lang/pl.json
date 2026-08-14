@@ -4170,5 +4170,6 @@
     "You need a Q3DF.org profile linked to your account to enter a run or to vote.": "Żeby wysłać przejazd albo zagłosować, musisz mieć do konta podpięty profil Q3DF.org.",
     "There is no sign-up. Record a run on the map being played and it enters by itself.": "Nie ma zapisów. Zrób przejazd na granej mapie, a wejdzie sam.",
     "A demo of the map being played, in the physics it is being played in, stays hidden until the round is over. It appears then, together with everyone else's.": "Demo z granej mapy, w fizyce, w której się ją gra, pozostaje ukryte do końca rundy. Wtedy pojawia się razem z pozostałymi.",
-    "A run made before the vote for the round opened does not count in it.": "Przejazd zrobiony przed otwarciem głosowania nad rundą nie liczy się w niej."
+    "A run made before the vote for the round opened does not count in it.": "Przejazd zrobiony przed otwarciem głosowania nad rundą nie liczy się w niej.",
+    "Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.": "Do twojego konta nie jest podpięty profil Q3DF.org, więc ten przejazd nie jest w comps. Pojawi się na stronie po zakończeniu rundy."
 }
