@@ -398,18 +398,25 @@ export default {
                                  six-point text. It is the single fact that
                                  decides whether somebody cares about this
                                  week at all. -->
-                            <span class="rounded-md bg-white/10 border border-white/15 px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-gray-200">
+                            <span class="rounded-md bg-blue-500/20 border border-blue-400/40 px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-blue-200">
                                 {{ categoryLabel(voting.category) }}<template v-if="voting.weapon"> · {{ voting.weapon }}</template>
                             </span>
+
+                            <!-- The rotation is fixed and known years ahead, so
+                                 there is no reason to keep the following week a
+                                 surprise - and read as a chain, this week to
+                                 next, it says at a glance whether the thing you
+                                 are waiting for is close. -->
+                            <template v-if="voting.next_category">
+                                <span class="text-gray-600">&rarr;</span>
+                                <span class="inline-flex items-baseline gap-1.5 rounded-md border border-white/15 px-2 py-0.5">
+                                    <span class="text-[9px] font-bold uppercase tracking-wider text-gray-500">{{ $t('then') }}</span>
+                                    <span class="text-[11px] font-black uppercase tracking-wider text-gray-300">{{ categoryLabel(voting.next_category) }}</span>
+                                </span>
+                            </template>
                         </div>
                         <div class="text-xs text-blue-100/50">
                             {{ $t('Vote on the next weekly comps map for both physics') }}
-                            <!-- The rotation is fixed and known years ahead, so
-                                 there is no reason to keep the following week
-                                 a surprise. -->
-                            <template v-if="voting.next_category">
-                                &middot; {{ $t('the week after is :category', { category: categoryLabel(voting.next_category) }) }}
-                            </template>
                         </div>
                     </div>
                 </div>

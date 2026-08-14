@@ -172,7 +172,7 @@ class CandidateSelector
         $banded = [];
         $taken = [];
 
-        foreach (self::TIME_BANDS as [$from, $to, $slots]) {
+        foreach ($this->slotsFor($count) as [$from, $to, $slots]) {
             $inBand = array_filter($pool, function ($map) use ($from, $to, $taken) {
                 if (isset($taken[$map['id']])) {
                     return false;
@@ -209,6 +209,56 @@ class CandidateSelector
         shuffle($banded);
 
         return array_slice($banded, 0, $count);
+    }
+
+    /**
+     * TIME_BANDS scaled to a ballot of a given size.
+     *
+     * The bands describe a five map ballot, but the size is a setting and an
+     * admin can ask for ten. Scaling keeps the shape - ten maps come out
+     * 2/4/2/2 rather than the five banded maps plus five drawn at random,
+     * which would let the short end take over again through the back door.
+     *
+     * Largest remainder, so a size the bands do not divide into is still split
+     * as evenly as it can be: seven gives 2/3/1/1 rather than dropping the two
+     * spare maps on whichever band happens to be first.
+     *
+     * @return array<int, array{0: int, 1: int|null, 2: int}>
+     */
+    private function slotsFor(int $count): array
+    {
+        $total = array_sum(array_column(self::TIME_BANDS, 2));
+
+        if ($count === $total) {
+            return self::TIME_BANDS;
+        }
+
+        $exact = [];
+        $out = [];
+        $used = 0;
+
+        foreach (self::TIME_BANDS as $i => [$from, $to, $slots]) {
+            $want = $slots / $total * $count;
+            $whole = (int) floor($want);
+
+            $out[$i] = [$from, $to, $whole];
+            $exact[$i] = $want - $whole;
+            $used += $whole;
+        }
+
+        // Hand the leftovers to the bands that lost the most in rounding.
+        arsort($exact);
+
+        foreach (array_keys($exact) as $i) {
+            if ($used >= $count) {
+                break;
+            }
+
+            $out[$i][2]++;
+            $used++;
+        }
+
+        return $out;
     }
 
     /**
