@@ -34,6 +34,7 @@ class CompScheduler
         private ResultsCalculator $results,
         private WildcardService $wildcards,
         private CompPreviewService $previews,
+        private PrizeFunding $funding,
     ) {
     }
 
@@ -221,7 +222,13 @@ class CompScheduler
                 // keeps the amount it was created with and an admin raising
                 // the default for a donated week does not silently rewrite
                 // what every earlier week paid.
-                'prize_eur' => $this->settings->prizeEur(),
+                //
+                // From whoever is funding this particular week - see
+                // PrizeFunding, which falls back to the flat setting when
+                // nobody is. A donation recorded AFTER the week was created
+                // does not reach it on its own; that is what the per-round
+                // prize field in admin is for.
+                'prize_eur' => $this->funding->perPhysicsFor($number),
             ]);
 
             foreach ($draw as $map) {

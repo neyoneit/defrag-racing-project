@@ -614,11 +614,25 @@ class DemomeController extends Controller
         $file = $request->file('demo');
         $originalFilename = $file->getClientOriginalName();
 
-        // Check duplicate by hash
+        // Check duplicate by hash. withUnreleasedComps() because file_hash is
+        // unique - a comps entry hidden from this query would come back as a
+        // constraint violation on the insert below instead of a clean answer.
         $hash = md5_file($file->getRealPath());
-        $existing = UploadedDemo::where('file_hash', $hash)
+        $existing = UploadedDemo::withUnreleasedComps()
+            ->where('file_hash', $hash)
             ->whereNotIn('status', ['failed', 'failed-validity', 'unsupported-version'])
             ->first();
+
+        // Seeing the row is not the same as being allowed to describe it. This
+        // endpoint answers a render request, and rendering a comps entry would
+        // put a run still being competed on onto YouTube - so a held entry gets
+        // a refusal that says nothing about the map, the player or the time.
+        if ($existing && $existing->isHeldForComps()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'This demo is entered in a comps round that is still running.',
+            ], 409);
+        }
 
         if ($existing) {
             // If this demo already has a completed render on YouTube, surface

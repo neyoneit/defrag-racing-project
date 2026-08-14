@@ -188,10 +188,20 @@ class UploadedDemo extends Model
     /**
      * Include comps entries whose round is still running.
      *
-     * Only three callers should ever want this: an admin reviewing a reported
-     * run, the comps page listing somebody their own entries, and the demo
-     * download when one of those two asks for the file. Everywhere else the
-     * default is the correct answer.
+     * Two kinds of caller want this, and only two.
+     *
+     * The first shows the demo to somebody entitled to see it: an admin
+     * reviewing a reported run, the comps page listing somebody their own
+     * entries, the download when one of those asks for the file.
+     *
+     * The second only needs to know the row EXISTS, and would do damage
+     * without it - every duplicate check before an upload. `file_hash` is
+     * unique, so a dedupe query that cannot see a comps entry does not
+     * politely miss it; it decides the file is new and publishes a run that
+     * is still being competed on, or dies on the constraint. Those callers
+     * must answer "already here" and must not repeat what they saw.
+     *
+     * Everywhere else the default is the correct answer.
      */
     public function scopeWithUnreleasedComps($query)
     {

@@ -41,18 +41,39 @@ class DefragliveRolloverContests extends Command
             return self::SUCCESS;
         }
 
-        // Already covered for now? Nothing to do.
-        $hasCurrent = DefragliveContest::where('status', DefragliveContest::STATUS_ACTIVE)
-            ->where('starts_at', '<=', now())
+        // Is the present already covered, or is a window already lined up to
+        // cover it? An active contest that has not ended yet answers both: it
+        // is either running now or it starts shortly and will.
+        //
+        // This used to ask only whether a window covered *this exact moment*,
+        // which is never true while the newest window is still in the future -
+        // so every hourly run opened another one starting where the previous
+        // ended, and the chain marched off into next year. Production had
+        // eleven of them, one per hour, before anybody noticed. A contest
+        // promises money, so a loop that mints them is not a cosmetic bug.
+        $covered = DefragliveContest::where('status', DefragliveContest::STATUS_ACTIVE)
             ->where('ends_at', '>=', now())
             ->exists();
 
-        if ($hasCurrent) {
+        if ($covered) {
             return self::SUCCESS;
         }
 
-        // Open the next window, continuing seamlessly from the last one.
-        $start = $last->ends_at->isFuture() ? $last->ends_at->copy() : now();
+        // Where the next window starts.
+        //
+        // Continue straight from the last one when it has only just ended, so
+        // the cadence holds and no watch time falls between two contests.
+        //
+        // Start from now in the two cases where continuing would be wrong:
+        // a window that was closed early still has its nominal end in the
+        // future, and chaining from there would leave hours belonging to no
+        // contest; and a cadence dormant for months would otherwise back-fill
+        // one contest per hour until it caught up, each with a prize nobody
+        // promised.
+        $lastEnd = $last->ends_at;
+        $resumable = $lastEnd->isPast() && $lastEnd->greaterThan(now()->subDays(self::PERIOD_DAYS));
+
+        $start = $resumable ? $lastEnd->copy() : now();
         $end = $start->copy()->addDays(self::PERIOD_DAYS);
 
         $contest = DefragliveContest::create([

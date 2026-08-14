@@ -273,7 +273,7 @@ class CompsControl extends Page
      * This is how a donation earmarked for a single weekly is honoured: raise
      * that week only, and the weeks before and after keep their own figure.
      */
-    public function setRoundPrize(int $roundId, int $eur): void
+    public function setRoundPrize(int $roundId, float $eur): void
     {
         $round = CompRound::find($roundId);
 
@@ -283,7 +283,12 @@ class CompsControl extends Page
             return;
         }
 
-        $round->update(['prize_eur' => max(0, $eur)]);
+        // Float, not int: a lump sum spread over a number of weeks that does
+        // not divide it lands on halves, and rounding 7.50 down to 7 here
+        // would quietly pay out less than was donated.
+        $eur = round(max(0, $eur), 2);
+
+        $round->update(['prize_eur' => $eur]);
 
         Notification::make()
             ->title("Round now pays {$eur} EUR per physics")

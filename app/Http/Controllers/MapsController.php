@@ -195,7 +195,7 @@ class MapsController extends Controller
      * The fastcap a demo belongs to, or null for a normal run.
      *
      * uploaded_demos.physics carries the mode in a suffix: "CPM" for a run,
-     * "CPM.TR" for a trick run, "CPM.0" through "CPM.8" for the fastcaps.
+     * "CPM.TR" for a time reset, "CPM.0" through "CPM.8" for the fastcaps.
      */
     private static function fastcapOf(?string $demoPhysics): ?string
     {

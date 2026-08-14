@@ -38,7 +38,14 @@ class LauncherController extends Controller
             'hash' => 'required|string|size:32',
         ]);
 
-        $demo = UploadedDemo::where('file_hash', strtolower($data['hash']))
+        // withUnreleasedComps() so a comps entry answers "yes, this file is
+        // already here". Without it the global scope hides it, the launcher
+        // hears `exists: false`, and its next move is to upload the user's own
+        // comps run through the ordinary endpoint - which publishes it, with
+        // its time, in the middle of the round. Only `exists` and `demo_id`
+        // leave this method, so seeing the row gives nothing else away.
+        $demo = UploadedDemo::withUnreleasedComps()
+            ->where('file_hash', strtolower($data['hash']))
             ->first(['id']);
 
         return response()->json([
@@ -89,7 +96,14 @@ class LauncherController extends Controller
 
         // Short-circuit: if the hash is already in the DB, treat as duplicate.
         // Returning 409 so the launcher can skip + mark local demo as "already backed up".
-        $existing = UploadedDemo::where('file_hash', $hash)->first(['id', 'status']);
+        //
+        // withUnreleasedComps() for the same reason as lookupByHash: file_hash
+        // is unique, so a comps entry the scope hid from us would fail on the
+        // insert below anyway - as a 500 rather than a clean 409, and only
+        // after we had already decided to publish the user's own comps run.
+        $existing = UploadedDemo::withUnreleasedComps()
+            ->where('file_hash', $hash)
+            ->first(['id', 'status']);
         if ($existing) {
             return response()->json([
                 'error' => 'duplicate',
