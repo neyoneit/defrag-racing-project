@@ -149,6 +149,12 @@ Route::delete('/comps/submissions/{submission}', [\App\Http\Controllers\CompSubm
 Route::post('/comps/submissions/{submission}/report', [\App\Http\Controllers\CompSubmissionController::class, 'reportDemo'])
     ->middleware(['auth', 'verified', 'throttle:20,60'])
     ->name('comps.report-demo');
+// Asking about a demo of your own that comps did not take: an unreadable file,
+// a run being held. Bound to the demo rather than to an entry, because those
+// are the cases where there is no entry.
+Route::post('/comps/demos/{demo}/report', [\App\Http\Controllers\CompSubmissionController::class, 'reportOwnDemo'])
+    ->middleware(['auth', 'verified', 'throttle:20,60'])
+    ->name('comps.report-own-demo');
 Route::post('/comps/rounds/{round}/report-map', [\App\Http\Controllers\CompSubmissionController::class, 'reportMap'])
     ->middleware(['auth', 'verified', 'throttle:20,60'])
     ->name('comps.report-map');

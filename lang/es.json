@@ -4150,5 +4150,16 @@
     "🔄 Auto-Rotate OFF": "🔄 Rotación automática DESACTIVADA",
     "🔄 Auto-Rotate ON": "🔄 Rotación automática ACTIVADA",
     "This demo carries a validity note (:flags), so it does not count in comps.": "Esta demo lleva una nota de validez (:flags), por lo que no cuenta para las comps.",
-    "This demo did not pass the validity check, so it does not count in comps.": "Esta demo no pasó la comprobación de validez, por lo que no cuenta para las comps."
+    "This demo did not pass the validity check, so it does not count in comps.": "Esta demo no pasó la comprobación de validez, por lo que no cuenta para las comps.",
+    "This demo could not be read, so it does not count in comps. Please tell an admin about it.": "No se pudo leer esta demo, así que no cuenta en comps. Avisa a un admin, por favor.",
+    "This run is older than the comps round, so it does not count. It appears on the site once the round is over.": "Esta carrera es anterior a la ronda de comps, así que no cuenta. Aparecerá en la web cuando termine la ronda.",
+    "This is a run on a map the round is being played on, in the other physics. It appears on the site once the round is over.": "Es una carrera en un mapa que se juega en esta ronda, pero en la otra física. Aparecerá en la web cuando termine la ronda.",
+    "This map is still being voted on. If it wins, this run enters the round when voting closes.": "Este mapa todavía está en votación. Si gana, esta carrera entrará en la ronda al cerrarse la votación.",
+    "This demo is on a map comps is using, so it appears on the site once the round is over.": "Esta demo es de un mapa que usa comps, así que aparecerá en la web cuando termine la ronda.",
+    "Demos of yours on hold": "Tus demos en espera",
+    "Appears :when": "Aparece :when",
+    "Ask an admin about this demo": "Preguntar a un admin por esta demo",
+    "Sent to an admin": "Enviado a un admin",
+    "Say what you expected to happen. An admin opens the file itself and answers you.": "Cuenta qué esperabas que pasara. Un admin abrirá el archivo y te responderá.",
+    "What happened?": "¿Qué ha pasado?"
 }

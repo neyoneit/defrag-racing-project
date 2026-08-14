@@ -4150,5 +4150,16 @@
     "🔄 Auto-Rotate OFF": "🔄 Automatisk rotation AV",
     "🔄 Auto-Rotate ON": "🔄 Automatisk rotation PÅ",
     "This demo carries a validity note (:flags), so it does not count in comps.": "Den här demon har en giltighetsnotering (:flags) och räknas därför inte i comps.",
-    "This demo did not pass the validity check, so it does not count in comps.": "Den här demon klarade inte giltighetskontrollen och räknas därför inte i comps."
+    "This demo did not pass the validity check, so it does not count in comps.": "Den här demon klarade inte giltighetskontrollen och räknas därför inte i comps.",
+    "This demo could not be read, so it does not count in comps. Please tell an admin about it.": "Den här demon gick inte att läsa, så den räknas inte i comps. Säg till en admin, tack.",
+    "This run is older than the comps round, so it does not count. It appears on the site once the round is over.": "Den här körningen är äldre än comps-omgången och räknas därför inte. Den dyker upp på sajten när omgången är slut.",
+    "This is a run on a map the round is being played on, in the other physics. It appears on the site once the round is over.": "Det här är en körning på en bana som spelas i omgången, fast i den andra fysiken. Den dyker upp på sajten när omgången är slut.",
+    "This map is still being voted on. If it wins, this run enters the round when voting closes.": "Den här banan röstas det fortfarande om. Vinner den går körningen in i omgången när röstningen stänger.",
+    "This demo is on a map comps is using, so it appears on the site once the round is over.": "Den här demon ligger på en bana som comps använder, så den dyker upp på sajten när omgången är slut.",
+    "Demos of yours on hold": "Dina demos som hålls tillbaka",
+    "Appears :when": "Dyker upp :when",
+    "Ask an admin about this demo": "Fråga en admin om den här demon",
+    "Sent to an admin": "Skickat till en admin",
+    "Say what you expected to happen. An admin opens the file itself and answers you.": "Skriv vad du väntade dig. En admin öppnar filen själv och svarar dig.",
+    "What happened?": "Vad hände?"
 }

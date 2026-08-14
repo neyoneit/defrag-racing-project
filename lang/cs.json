@@ -4150,5 +4150,16 @@
     "🔄 Auto-Rotate OFF": "🔄 Automatické otáčení VYP",
     "🔄 Auto-Rotate ON": "🔄 Automatické otáčení ZAP",
     "This demo carries a validity note (:flags), so it does not count in comps.": "Toto demo nese poznámku o platnosti (:flags), takže se do comps nepočítá.",
-    "This demo did not pass the validity check, so it does not count in comps.": "Toto demo neprošlo kontrolou platnosti, takže se do comps nepočítá."
+    "This demo did not pass the validity check, so it does not count in comps.": "Toto demo neprošlo kontrolou platnosti, takže se do comps nepočítá.",
+    "This demo could not be read, so it does not count in comps. Please tell an admin about it.": "Toto demo se nepodařilo přečíst, takže se do comps nepočítá. Dej prosím vědět adminovi.",
+    "This run is older than the comps round, so it does not count. It appears on the site once the round is over.": "Tenhle běh je starší než kolo comps, takže se nepočítá. Na webu se objeví po skončení kola.",
+    "This is a run on a map the round is being played on, in the other physics. It appears on the site once the round is over.": "Tohle je běh na mapě, která se v tomto kole hraje, ale v druhé fyzice. Na webu se objeví po skončení kola.",
+    "This map is still being voted on. If it wins, this run enters the round when voting closes.": "O téhle mapě se ještě hlasuje. Pokud vyhraje, tenhle běh se do kola započítá po uzavření hlasování.",
+    "This demo is on a map comps is using, so it appears on the site once the round is over.": "Tohle demo je na mapě, kterou používá comps, takže se na webu objeví po skončení kola.",
+    "Demos of yours on hold": "Tvoje pozdržená dema",
+    "Appears :when": "Objeví se :when",
+    "Ask an admin about this demo": "Zeptat se admina na tohle demo",
+    "Sent to an admin": "Odesláno adminovi",
+    "Say what you expected to happen. An admin opens the file itself and answers you.": "Napiš, co jsi čekal, že se stane. Admin se podívá přímo na soubor a odpoví ti.",
+    "What happened?": "Co se stalo?"
 }

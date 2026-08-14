@@ -9,6 +9,7 @@ export default {
 <script setup>
     import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
     import { computed, ref } from 'vue';
+    import moment from 'moment';
     import { t } from '@/utils/i18n';
     import { formatTime } from '@/utils/time';
 
@@ -34,6 +35,7 @@ export default {
         funders: { type: Object, default: null },
         betaNotice: { type: Boolean, default: false },
         adminUrl: { type: String, default: '' },
+        myNotices: { type: Array, default: () => [] },
     });
 
     const page = usePage();
@@ -77,6 +79,11 @@ export default {
 
         return { before: line.slice(0, at), after: line.slice(at + ':admin'.length) };
     };
+
+    // When a held demo shows up on the site. The sentence next to it already
+    // says "once the round is over", which is the reason; this is the date,
+    // which is the thing somebody actually wants.
+    const appearsAt = (iso) => moment(iso).format('D MMM, HH:mm');
 
     const betaLine = computed(() => aroundAdmin(
         t('Expect a few rough edges in the first weeks. If something does not look right, :admin will sort it out.'),
@@ -122,6 +129,28 @@ export default {
         }, {
             preserveScroll: true,
             onFinish: () => (wildcardTarget.value = null),
+        });
+    };
+
+    // "My demo did not go through." Raised from a demo comps is holding without
+    // having entered it, and from your own entry the site refused - both of
+    // which leave somebody with a file and no explanation they can act on.
+    //
+    // It points at the demo rather than at the entry, because the commonest
+    // case by far - a file the parser could not read - has no entry at all.
+    const demoReport = ref(null);
+    const demoReportForm = useForm({ reason: '' });
+
+    const askAboutDemo = (demoId, filename) => {
+        demoReportForm.reset();
+        demoReportForm.clearErrors();
+        demoReport.value = { demoId, filename };
+    };
+
+    const sendDemoReport = () => {
+        demoReportForm.post(route('comps.report-own-demo', demoReport.value.demoId), {
+            preserveScroll: true,
+            onSuccess: () => (demoReport.value = null),
         });
     };
 
@@ -780,6 +809,22 @@ export default {
 
                             <span v-if="entry.filename" class="hidden md:block truncate text-[11px] text-gray-600 max-w-[16rem]">{{ entry.filename }}</span>
 
+                            <!-- A refused entry says why in one sentence, and
+                                 the sentence is not always the end of it: a
+                                 validity note is a cvar we saw, not a verdict.
+                                 This is how somebody disagrees with it. -->
+                            <template v-if="entry.status !== 'valid' && entry.status !== 'pending' && entry.demo_id">
+                                <span v-if="entry.reported" class="text-xs text-gray-500">{{ $t('Sent to an admin') }}</span>
+                                <button
+                                    v-else
+                                    type="button"
+                                    @click="askAboutDemo(entry.demo_id, entry.filename)"
+                                    class="text-xs font-bold text-amber-300 underline decoration-amber-400/40 hover:text-amber-100"
+                                >
+                                    {{ $t('Ask an admin about this demo') }}
+                                </button>
+                            </template>
+
                             <button
                                 type="button"
                                 @click="withdraw(entry.id)"
@@ -789,6 +834,45 @@ export default {
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================= DEMOS ON HOLD ======================== -->
+        <!-- Runs of theirs that comps is keeping back without having entered
+             them: unreadable files, runs older than the round, runs in the
+             other physics. Nothing else would ever tell them. The demo simply
+             stops appearing on the site, and somebody who is not told that
+             reads it as the upload having failed. -->
+        <section v-if="myNotices.length">
+            <h2 class="mb-4 text-xl font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ $t('Demos of yours on hold') }}</h2>
+
+            <div class="space-y-1.5">
+                <div
+                    v-for="notice in myNotices"
+                    :key="notice.id"
+                    class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-white/5 bg-black/40 backdrop-blur-sm px-3 py-2"
+                >
+                    <span class="max-w-full truncate text-[11px] text-gray-600 md:max-w-[16rem]">{{ notice.filename }}</span>
+
+                    <span class="text-sm" :class="notice.kind === 'unreadable' ? 'text-red-400' : 'text-gray-300'">{{ notice.note }}</span>
+
+                    <!-- An unreadable demo is the one case where the site
+                         cannot say what went wrong, so it hands over the person
+                         who can look at the file. -->
+                    <span v-if="notice.reported" class="text-xs text-gray-500">{{ $t('Sent to an admin') }}</span>
+                    <button
+                        v-else
+                        type="button"
+                        @click="askAboutDemo(notice.id, notice.filename)"
+                        class="text-xs font-bold text-amber-300 underline decoration-amber-400/40 hover:text-amber-100"
+                    >
+                        {{ $t('Ask an admin about this demo') }}
+                    </button>
+
+                    <span v-if="notice.appears_at" class="ml-auto text-[11px] text-gray-600">
+                        {{ $t('Appears :when', { when: appearsAt(notice.appears_at) }) }}
+                    </span>
                 </div>
             </div>
         </section>
@@ -885,6 +969,43 @@ export default {
                         </button>
                         <button type="button" @click="confirmWildcard" class="rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-black hover:bg-amber-400">
                             {{ $t('Use it') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- "Look at my demo": the one way out of a refusal the site cannot
+             explain any further by itself. -->
+        <Teleport to="body">
+            <div v-if="demoReport" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" @click.self="demoReport = null">
+                <div class="w-full max-w-md rounded-xl border border-white/10 bg-black/70 backdrop-blur-xl p-6">
+                    <h3 class="text-lg font-black text-white">{{ $t('Ask an admin about this demo') }}</h3>
+                    <p class="mt-2 truncate text-[11px] text-gray-600">{{ demoReport.filename }}</p>
+                    <p class="mt-2 text-sm text-gray-400">
+                        {{ $t('Say what you expected to happen. An admin opens the file itself and answers you.') }}
+                    </p>
+
+                    <textarea
+                        v-model="demoReportForm.reason"
+                        rows="4"
+                        class="mt-4 w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-amber-500/50 focus:outline-none"
+                        :placeholder="$t('What happened?')"
+                    ></textarea>
+
+                    <div v-if="demoReportForm.errors.reason" class="mt-2 text-sm text-red-400">{{ demoReportForm.errors.reason }}</div>
+
+                    <div class="mt-5 flex justify-end gap-2">
+                        <button type="button" @click="demoReport = null" class="rounded-lg border border-white/10 px-4 py-2 text-sm text-gray-300 hover:bg-white/5">
+                            {{ $t('Cancel') }}
+                        </button>
+                        <button
+                            type="button"
+                            @click="sendDemoReport"
+                            :disabled="demoReportForm.processing"
+                            class="rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-black hover:bg-amber-400 disabled:opacity-50"
+                        >
+                            {{ $t('Send report') }}
                         </button>
                     </div>
                 </div>

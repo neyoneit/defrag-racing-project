@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Comp;
 use App\Models\CompCandidate;
+use App\Models\CompDemoReport;
 use App\Models\CompResult;
 use App\Models\CompRound;
 use App\Models\CompSubmission;
@@ -15,6 +16,7 @@ use App\Services\Comps\CompPreviewService;
 use App\Services\Comps\CompSettings;
 use App\Services\Comps\PrizeFunding;
 use App\Services\Comps\ResultsCalculator;
+use App\Services\Comps\UploadGuard;
 use App\Services\Comps\WildcardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +45,7 @@ class CompsController extends Controller
         private CompPreviewService $previews,
         private WildcardService $wildcards,
         private ResultsCalculator $results,
+        private UploadGuard $guard,
     ) {
     }
 
@@ -62,6 +65,11 @@ class CompsController extends Controller
             'voting' => $voting ? $this->votingPayload($voting, $request) : null,
             'history' => $this->history(),
             'me' => $request->user() ? $this->myStanding($request->user()->id) : null,
+            // Demos of theirs comps is holding back without having entered
+            // them. Outside `playing` on purpose: a demo can be on hold for a
+            // map that is still being voted on, which is a week when there may
+            // be no round being played at all.
+            'myNotices' => $request->user() ? $this->guard->noticesFor($request->user()->id) : [],
             'pointsTable' => ResultsCalculator::POINTS,
             'pointsForFinishing' => ResultsCalculator::POINTS_FOR_FINISHING,
             'winsPerWildcard' => CompWildcard::WEEKLY_WINS_REQUIRED,
@@ -503,13 +511,22 @@ class CompsController extends Controller
     /** Your own entries, times and all. Yours are never a secret from you. */
     private function myEntries(CompRound $round, int $userId): array
     {
-        return CompSubmission::where('comp_round_id', $round->id)
+        $entries = CompSubmission::where('comp_round_id', $round->id)
             ->where('user_id', $userId)
             ->with(['demo' => fn ($q) => $q->withUnreleasedComps()])
             ->orderByRaw('physics IS NULL')
             ->orderBy('physics')
             ->orderBy('time')
-            ->get()
+            ->get();
+
+        // Refused entries can be asked about, and an entry already asked about
+        // says so rather than offering the same button a second time.
+        $asked = CompDemoReport::whereIn('uploaded_demo_id', $entries->pluck('uploaded_demo_id')->filter())
+            ->where('reported_by', $userId)
+            ->pluck('uploaded_demo_id')
+            ->all();
+
+        return $entries
             ->map(fn (CompSubmission $s) => [
                 'id' => $s->id,
                 'physics' => $s->physics,
@@ -524,6 +541,8 @@ class CompsController extends Controller
                 'status' => $s->status,
                 'reason' => $s->invalid_reason,
                 'filename' => $s->demo?->original_filename,
+                'demo_id' => $s->uploaded_demo_id,
+                'reported' => in_array($s->uploaded_demo_id, $asked, true),
             ])
             ->all();
     }

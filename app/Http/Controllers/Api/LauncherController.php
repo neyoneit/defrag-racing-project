@@ -193,8 +193,14 @@ class LauncherController extends Controller
         // entries differ, so the shared half is what gets cached.
         $shared = Cache::remember('comps:launcher_payload', 60, fn () => $payload->build(null));
 
-        if ($user && $shared['playing']) {
-            $shared['playing']['my_entries'] = $payload->build($user)['playing']['my_entries'] ?? [];
+        if ($user) {
+            $mine = $payload->build($user);
+
+            if ($shared['playing']) {
+                $shared['playing']['my_entries'] = $mine['playing']['my_entries'] ?? [];
+            }
+
+            $shared['my_notices'] = $mine['my_notices'];
         }
 
         return response()->json($shared);

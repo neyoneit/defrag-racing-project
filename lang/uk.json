@@ -4150,5 +4150,16 @@
     "🔄 Auto-Rotate OFF": "🔄 Автообертання ВИМК",
     "🔄 Auto-Rotate ON": "🔄 Автообертання УВІМК",
     "This demo carries a validity note (:flags), so it does not count in comps.": "У цьому демо є позначка про достовірність (:flags), тому воно не зараховується в comps.",
-    "This demo did not pass the validity check, so it does not count in comps.": "Це демо не пройшло перевірку достовірності, тому воно не зараховується в comps."
+    "This demo did not pass the validity check, so it does not count in comps.": "Це демо не пройшло перевірку достовірності, тому воно не зараховується в comps.",
+    "This demo could not be read, so it does not count in comps. Please tell an admin about it.": "Це демо не вдалося прочитати, тож воно не йде в залік comps. Напиши, будь ласка, адміну.",
+    "This run is older than the comps round, so it does not count. It appears on the site once the round is over.": "Цей забіг старший за раунд comps, тож він не зараховується. На сайті він з'явиться після завершення раунду.",
+    "This is a run on a map the round is being played on, in the other physics. It appears on the site once the round is over.": "Це забіг на карті, яка грається в цьому раунді, але в іншій фізиці. На сайті він з'явиться після завершення раунду.",
+    "This map is still being voted on. If it wins, this run enters the round when voting closes.": "За цю карту ще триває голосування. Якщо вона переможе, цей забіг потрапить у раунд після закриття голосування.",
+    "This demo is on a map comps is using, so it appears on the site once the round is over.": "Це демо на карті, яку використовує comps, тож на сайті воно з'явиться після завершення раунду.",
+    "Demos of yours on hold": "Твої притримані демо",
+    "Appears :when": "З'явиться :when",
+    "Ask an admin about this demo": "Запитати адміна про це демо",
+    "Sent to an admin": "Надіслано адміну",
+    "Say what you expected to happen. An admin opens the file itself and answers you.": "Напиши, чого ти очікував. Адмін сам відкриє файл і відповість тобі.",
+    "What happened?": "Що сталося?"
 }

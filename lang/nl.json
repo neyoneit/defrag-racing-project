@@ -4150,5 +4150,16 @@
     "🔄 Auto-Rotate OFF": "🔄 Auto-Rotatie UIT",
     "🔄 Auto-Rotate ON": "🔄 Auto-Rotatie AAN",
     "This demo carries a validity note (:flags), so it does not count in comps.": "Deze demo heeft een geldigheidsnotitie (:flags) en telt daarom niet mee voor de comps.",
-    "This demo did not pass the validity check, so it does not count in comps.": "Deze demo is niet door de geldigheidscontrole gekomen en telt daarom niet mee voor de comps."
+    "This demo did not pass the validity check, so it does not count in comps.": "Deze demo is niet door de geldigheidscontrole gekomen en telt daarom niet mee voor de comps.",
+    "This demo could not be read, so it does not count in comps. Please tell an admin about it.": "Deze demo kon niet gelezen worden, dus telt hij niet mee voor comps. Laat het even aan een admin weten.",
+    "This run is older than the comps round, so it does not count. It appears on the site once the round is over.": "Deze run is ouder dan de comps-ronde en telt dus niet mee. Hij verschijnt op de site zodra de ronde voorbij is.",
+    "This is a run on a map the round is being played on, in the other physics. It appears on the site once the round is over.": "Dit is een run op een map die in deze ronde gespeeld wordt, maar in de andere physics. Hij verschijnt op de site zodra de ronde voorbij is.",
+    "This map is still being voted on. If it wins, this run enters the round when voting closes.": "Over deze map wordt nog gestemd. Wint hij, dan gaat deze run mee de ronde in zodra de stemming sluit.",
+    "This demo is on a map comps is using, so it appears on the site once the round is over.": "Deze demo staat op een map die comps gebruikt, dus hij verschijnt pas op de site als de ronde voorbij is.",
+    "Demos of yours on hold": "Jouw demo's in de wacht",
+    "Appears :when": "Verschijnt :when",
+    "Ask an admin about this demo": "Vraag een admin naar deze demo",
+    "Sent to an admin": "Naar een admin gestuurd",
+    "Say what you expected to happen. An admin opens the file itself and answers you.": "Vertel wat je verwachtte. Een admin bekijkt het bestand zelf en antwoordt je.",
+    "What happened?": "Wat is er gebeurd?"
 }

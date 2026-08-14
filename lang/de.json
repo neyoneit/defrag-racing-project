@@ -4150,5 +4150,16 @@
     "🔄 Auto-Rotate OFF": "🔄 Auto-Rotation AUS",
     "🔄 Auto-Rotate ON": "🔄 Auto-Rotation EIN",
     "This demo carries a validity note (:flags), so it does not count in comps.": "Dieses Demo trägt einen Gültigkeitshinweis (:flags) und zählt daher nicht für die Comps.",
-    "This demo did not pass the validity check, so it does not count in comps.": "Dieses Demo hat die Gültigkeitsprüfung nicht bestanden und zählt daher nicht für die Comps."
+    "This demo did not pass the validity check, so it does not count in comps.": "Dieses Demo hat die Gültigkeitsprüfung nicht bestanden und zählt daher nicht für die Comps.",
+    "This demo could not be read, so it does not count in comps. Please tell an admin about it.": "Dieses Demo konnte nicht gelesen werden, daher zählt es nicht für Comps. Bitte sag einem Admin Bescheid.",
+    "This run is older than the comps round, so it does not count. It appears on the site once the round is over.": "Dieser Lauf ist älter als die Comps-Runde und zählt daher nicht. Er erscheint auf der Seite, sobald die Runde vorbei ist.",
+    "This is a run on a map the round is being played on, in the other physics. It appears on the site once the round is over.": "Das ist ein Lauf auf einer Map, die in dieser Runde gespielt wird, aber in der anderen Physik. Er erscheint auf der Seite, sobald die Runde vorbei ist.",
+    "This map is still being voted on. If it wins, this run enters the round when voting closes.": "Über diese Map wird noch abgestimmt. Gewinnt sie, kommt dieser Lauf mit dem Ende der Abstimmung in die Runde.",
+    "This demo is on a map comps is using, so it appears on the site once the round is over.": "Dieses Demo liegt auf einer Map, die Comps gerade nutzt, daher erscheint es auf der Seite erst nach dem Ende der Runde.",
+    "Demos of yours on hold": "Deine zurückgehaltenen Demos",
+    "Appears :when": "Erscheint :when",
+    "Ask an admin about this demo": "Einen Admin zu diesem Demo fragen",
+    "Sent to an admin": "An einen Admin geschickt",
+    "Say what you expected to happen. An admin opens the file itself and answers you.": "Schreib, was du erwartet hast. Ein Admin sieht sich die Datei selbst an und antwortet dir.",
+    "What happened?": "Was ist passiert?"
 }

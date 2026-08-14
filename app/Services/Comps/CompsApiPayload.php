@@ -30,6 +30,7 @@ class CompsApiPayload
     public function __construct(
         private CandidateSelector $selector,
         private PrizeFunding $funding,
+        private UploadGuard $guard,
     ) {
     }
 
@@ -41,6 +42,11 @@ class CompsApiPayload
         return [
             'playing' => $playing ? $this->playing($playing, $user) : null,
             'voting' => $voting ? $this->voting($voting) : null,
+            // Outside `playing`, because a demo can be held for a map that is
+            // still being voted on - a week when there is nothing being played
+            // at all, and the launcher still has to be able to say why the
+            // person's demo went quiet.
+            'my_notices' => $user ? $this->guard->noticesFor($user->id) : [],
         ];
     }
 

@@ -4150,5 +4150,16 @@
     "🔄 Auto-Rotate OFF": "🔄 Auto-rotation DÉSACTIVÉE",
     "🔄 Auto-Rotate ON": "🔄 Auto-rotation ACTIVÉE",
     "This demo carries a validity note (:flags), so it does not count in comps.": "Cette démo porte une note de validité (:flags), elle ne compte donc pas pour les comps.",
-    "This demo did not pass the validity check, so it does not count in comps.": "Cette démo n'a pas passé le contrôle de validité, elle ne compte donc pas pour les comps."
+    "This demo did not pass the validity check, so it does not count in comps.": "Cette démo n'a pas passé le contrôle de validité, elle ne compte donc pas pour les comps.",
+    "This demo could not be read, so it does not count in comps. Please tell an admin about it.": "Cette démo n'a pas pu être lue, elle ne compte donc pas dans les comps. Préviens un admin, s'il te plaît.",
+    "This run is older than the comps round, so it does not count. It appears on the site once the round is over.": "Ce run est plus ancien que la manche de comps, il ne compte donc pas. Il apparaîtra sur le site à la fin de la manche.",
+    "This is a run on a map the round is being played on, in the other physics. It appears on the site once the round is over.": "C'est un run sur une carte jouée dans cette manche, mais dans l'autre physique. Il apparaîtra sur le site à la fin de la manche.",
+    "This map is still being voted on. If it wins, this run enters the round when voting closes.": "Cette carte est encore en vote. Si elle gagne, ce run entrera dans la manche à la clôture du vote.",
+    "This demo is on a map comps is using, so it appears on the site once the round is over.": "Cette démo est sur une carte utilisée par les comps, elle apparaîtra donc sur le site à la fin de la manche.",
+    "Demos of yours on hold": "Tes démos en attente",
+    "Appears :when": "Apparaît :when",
+    "Ask an admin about this demo": "Demander à un admin au sujet de cette démo",
+    "Sent to an admin": "Envoyé à un admin",
+    "Say what you expected to happen. An admin opens the file itself and answers you.": "Explique ce que tu attendais. Un admin ouvrira le fichier lui-même et te répondra.",
+    "What happened?": "Que s'est-il passé ?"
 }

@@ -3,7 +3,9 @@
 namespace App\Services\Comps;
 
 use App\Models\Comp;
+use App\Models\CompDemoReport;
 use App\Models\CompRound;
+use App\Models\CompRoundMap;
 use App\Models\CompSubmission;
 use App\Models\UploadedDemo;
 use Illuminate\Support\Carbon;
@@ -37,6 +39,9 @@ class UploadGuard
     /** Parser outcome for a demo it read, but which carries a cvar note. */
     private const FLAGGED = 'failed-validity';
 
+    /** Parser outcome for a demo it could not read at all. */
+    private const UNREADABLE = 'failed';
+
     public function __construct(private SubmissionValidator $validator)
     {
     }
@@ -52,11 +57,19 @@ class UploadGuard
             return;
         }
 
-        if (! $demo->map_name) {
+        // A demo the parser could not read has no map, no physics and no time,
+        // so it can never be entered - but it can still be a run on the map
+        // being played, and unreadable demos are listed publicly like any
+        // other. The filename is then the only thing left to go on. A weak
+        // criterion, and better than publishing the one demo we know nothing
+        // about.
+        $mapName = $demo->map_name ?: $this->mapFromFilename($demo->original_filename);
+
+        if (! $mapName) {
             return;
         }
 
-        if ($round = $this->playedRoundFor($demo->map_name)) {
+        if ($round = $this->playedRoundFor($mapName)) {
             if (! $this->arrivedInsideTheWindow($demo, $round)) {
                 return;
             }
@@ -72,7 +85,7 @@ class UploadGuard
         // own deadline: a map that loses releases its demos by that timestamp
         // simply passing, with nothing to clean up. A map that wins gets the
         // hold extended by `adoptForRound` when the ballot closes.
-        if ($round = $this->ballotRoundFor($demo->map_name)) {
+        if ($round = $this->ballotRoundFor($mapName)) {
             if (! $this->arrivedInsideTheWindow($demo, $round)) {
                 return;
             }
@@ -161,22 +174,134 @@ class UploadGuard
     }
 
     /**
+     * The demos of this person's that comps is holding without having entered
+     * them, each with a sentence saying why.
+     *
+     * Without this the site simply swallows them. A run the parser could not
+     * read, a run made before the ballot opened, a run in the other physics:
+     * each one vanishes from the public list and none of them produce an entry,
+     * so the person is left watching for something that is never going to
+     * appear, with nothing to read and nobody to ask. Every one of them gets a
+     * reason and a date instead.
+     *
+     * Only the caller's own demos, which is what makes it safe to be this
+     * talkative: it says a map is being held, and the person already knows,
+     * because it is their file.
+     */
+    public function noticesFor(int $userId, int $limit = 20): array
+    {
+        $demos = UploadedDemo::withUnreleasedComps()
+            ->where('user_id', $userId)
+            ->whereNotNull('comps_hidden_until')
+            ->where('comps_hidden_until', '>', now())
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get();
+
+        if ($demos->isEmpty()) {
+            return [];
+        }
+
+        $entered = CompSubmission::whereIn('uploaded_demo_id', $demos->pluck('id'))
+            ->pluck('uploaded_demo_id')
+            ->all();
+
+        // Whether they have already asked about it, so the page can say so
+        // instead of offering the same button again.
+        $asked = CompDemoReport::whereIn('uploaded_demo_id', $demos->pluck('id'))
+            ->where('reported_by', $userId)
+            ->pluck('uploaded_demo_id')
+            ->all();
+
+        return $demos
+            ->reject(fn (UploadedDemo $demo) => in_array($demo->id, $entered, true))
+            ->map(function (UploadedDemo $demo) use ($asked) {
+                $kind = $this->noticeKind($demo);
+
+                return [
+                    'id' => $demo->id,
+                    'filename' => $demo->original_filename,
+                    'kind' => $kind,
+                    'note' => $this->noticeText($kind),
+                    'appears_at' => $demo->comps_hidden_until?->toIso8601String(),
+                    'reported' => in_array($demo->id, $asked, true),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Why a held demo did not become an entry.
+     *
+     * Read from the demo and the rounds as they stand right now rather than
+     * stored when the guard ran, because the answer moves: a map on the ballot
+     * that wins turns "waiting for the vote" into an entry, and a stored note
+     * would still be saying the old thing.
+     */
+    public function noticeKind(UploadedDemo $demo): string
+    {
+        if ($demo->status === self::UNREADABLE) {
+            return 'unreadable';
+        }
+
+        $mapName = $demo->map_name ?: $this->mapFromFilename($demo->original_filename);
+
+        if ($mapName && $round = $this->playedRoundFor($mapName)) {
+            if (! $this->roundMapFor($demo, $round)) {
+                return 'other_physics';
+            }
+
+            if (! $this->madeInsideTheWindow($demo, $round)) {
+                return 'too_old';
+            }
+
+            return 'held';
+        }
+
+        if ($mapName && $this->ballotRoundFor($mapName)) {
+            return 'ballot';
+        }
+
+        return 'held';
+    }
+
+    /**
+     * The sentence the person reads. Finished and translated here, the same way
+     * `invalid_reason` is, so the launcher can print it without knowing a
+     * single comps rule.
+     */
+    public function noticeText(string $kind): string
+    {
+        return match ($kind) {
+            'unreadable' => __('This demo could not be read, so it does not count in comps. Please tell an admin about it.'),
+            'too_old' => __('This run is older than the comps round, so it does not count. It appears on the site once the round is over.'),
+            'other_physics' => __('This is a run on a map the round is being played on, in the other physics. It appears on the site once the round is over.'),
+            'ballot' => __('This map is still being voted on. If it wins, this run enters the round when voting closes.'),
+            default => __('This demo is on a map comps is using, so it appears on the site once the round is over.'),
+        };
+    }
+
+    /**
      * Enter the demo if it is a run of this round's map in its own physics, and
      * if it was made after the ballot opened. Returns whether an entry was made.
      */
     private function enterIfItBelongs(UploadedDemo $demo, CompRound $round): bool
     {
-        $physics = $this->physicsOf($demo);
-
-        if (! $physics) {
+        // Asked again here, not only at the top of apply(). One demo is one
+        // entry, and the cheapest way to keep that true is to ask immediately
+        // before writing rather than trusting a check made further up.
+        if ($this->alreadyEntered($demo)) {
             return false;
         }
 
-        $expected = $round->maps->firstWhere('physics', $physics);
+        $expected = $this->roundMapFor($demo, $round);
 
-        if (! $expected?->map || ! $this->sameMap($demo->map_name, $expected->map->name)) {
+        if (! $expected) {
             return false;
         }
+
+        $physics = $expected->physics;
 
         // A demo carrying a validity note does not score, but it does get an
         // entry: refusing quietly would leave somebody staring at a run that
@@ -290,9 +415,18 @@ class UploadGuard
             return;
         }
 
-        // Updating the model itself, not through a query builder, so the global
-        // scope that hides comps demos cannot exclude the row we are updating.
-        $demo->update(['comps_hidden_until' => $until]);
+        // The model itself, not a query builder, so the global scope that hides
+        // comps demos cannot exclude the row being updated.
+        //
+        // **Quietly**, and this is load-bearing. An ordinary save fires the
+        // updated event, and the observer that lands back here decides whether
+        // to act by asking `wasChanged('status')`. During the outer event the
+        // original attributes have not been synced yet, so that inner save
+        // reports the OUTER save's changes - status among them - and the guard
+        // runs a second time, in the middle of its own first pass. It entered
+        // the same demo twice before the first pass reached its own check.
+        $demo->comps_hidden_until = $until;
+        $demo->saveQuietly();
     }
 
     private function alreadyEntered(UploadedDemo $demo): bool
@@ -323,6 +457,49 @@ class UploadGuard
             ->whereHas('candidates.map', fn ($q) => $q->whereRaw('LOWER(name) = ?', [mb_strtolower(trim($mapName))]))
             ->latest('starts_at')
             ->first();
+    }
+
+    /**
+     * The round map this demo is a run of, map and physics both, or null. What
+     * decides an entry, as opposed to what decides a hold, which is the map on
+     * its own.
+     */
+    private function roundMapFor(UploadedDemo $demo, CompRound $round): ?CompRoundMap
+    {
+        $physics = $this->physicsOf($demo);
+
+        if (! $physics) {
+            return null;
+        }
+
+        $expected = $round->maps->firstWhere('physics', $physics);
+
+        return $expected?->map && $this->sameMap($demo->map_name, $expected->map->name)
+            ? $expected
+            : null;
+    }
+
+    /**
+     * The map a filename claims, by the convention every defrag demo follows:
+     * `mapname[physics]time(player).dm_68`.
+     *
+     * Only ever used for a demo the parser could not read. Everywhere else the
+     * map comes out of the file itself, which is the whole point of deciding
+     * here rather than in the launcher - a filename is a claim, and renaming a
+     * file is not hard.
+     */
+    private function mapFromFilename(?string $filename): ?string
+    {
+        if (! $filename) {
+            return null;
+        }
+
+        $basename = pathinfo($filename, PATHINFO_BASENAME);
+        $map = trim(strtok($basename, '['));
+
+        // No bracket means the file does not follow the convention, and the
+        // whole filename is not a map name.
+        return $map !== '' && $map !== $basename ? $map : null;
     }
 
     /**

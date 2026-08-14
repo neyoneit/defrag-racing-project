@@ -6,6 +6,7 @@ use App\Models\CompDemoReport;
 use App\Models\CompMapReport;
 use App\Models\CompRound;
 use App\Models\CompSubmission;
+use App\Models\UploadedDemo;
 use App\Services\Comps\SubmissionIntake;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -103,6 +104,44 @@ class CompSubmissionController extends Controller
             [
                 'comp_submission_id' => $submission->id,
                 'reported_by' => $request->user()->id,
+            ],
+            [
+                'kind' => CompDemoReport::ENTRY,
+                'uploaded_demo_id' => $submission->uploaded_demo_id,
+                'reason' => $data['reason'],
+                'status' => 'open',
+            ]
+        );
+
+        return back();
+    }
+
+    /**
+     * "My own demo went in and nothing happened to it."
+     *
+     * The other half of reporting, and the one that comes up far more often.
+     * A demo the parser could not read has no entry to hang a report on, and
+     * neither does a run being held for a map that is still being voted on -
+     * which is exactly when somebody needs to ask. So this points at the demo.
+     *
+     * Only your own: this is asking for help with a file of yours, not an
+     * accusation about somebody else's, and the demos it is raised from are
+     * ones nobody else can even see.
+     */
+    public function reportOwnDemo(Request $request, UploadedDemo $demo)
+    {
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'min:10', 'max:2000'],
+        ]);
+
+        abort_unless($request->user(), 403);
+        abort_unless($request->user()->id === $demo->user_id, 403);
+
+        CompDemoReport::updateOrCreate(
+            [
+                'uploaded_demo_id' => $demo->id,
+                'reported_by' => $request->user()->id,
+                'kind' => CompDemoReport::HELP,
             ],
             [
                 'reason' => $data['reason'],

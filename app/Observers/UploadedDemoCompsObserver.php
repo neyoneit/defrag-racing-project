@@ -30,9 +30,12 @@ class UploadedDemoCompsObserver
     public function updated(UploadedDemo $demo): void
     {
         // Only when the parse outcome itself moved. Every other edit - an
-        // assignment, a download counter, the hold the guard writes below -
-        // leaves entries alone. This is also what stops the guard's own update
-        // from re-entering here.
+        // assignment, a download counter - leaves entries alone.
+        //
+        // It does NOT stop the guard's own write from landing back here: during
+        // this event the model has not synced its original attributes yet, so a
+        // save made from inside it reports these same changes, status included.
+        // The guard writes its hold with saveQuietly() for exactly that reason.
         if (! $demo->wasChanged('status')) {
             return;
         }
