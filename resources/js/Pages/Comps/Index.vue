@@ -394,12 +394,22 @@ export default {
                     <div class="min-w-0">
                         <div class="flex items-baseline gap-2 flex-wrap">
                             <span class="font-bold text-white">{{ $t('Vote on the next map') }}</span>
-                            <span class="text-xs text-gray-500">
-                                {{ categoryLabel(voting.category) }}<template v-if="voting.weapon"> ({{ voting.weapon }})</template>
+                            <!-- The category, said out loud rather than in grey
+                                 six-point text. It is the single fact that
+                                 decides whether somebody cares about this
+                                 week at all. -->
+                            <span class="rounded-md bg-white/10 border border-white/15 px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-gray-200">
+                                {{ categoryLabel(voting.category) }}<template v-if="voting.weapon"> · {{ voting.weapon }}</template>
                             </span>
                         </div>
                         <div class="text-xs text-blue-100/50">
                             {{ $t('Vote on the next weekly comps map for both physics') }}
+                            <!-- The rotation is fixed and known years ahead, so
+                                 there is no reason to keep the following week
+                                 a surprise. -->
+                            <template v-if="voting.next_category">
+                                &middot; {{ $t('the week after is :category', { category: categoryLabel(voting.next_category) }) }}
+                            </template>
                         </div>
                     </div>
                 </div>
