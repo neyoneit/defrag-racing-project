@@ -3220,7 +3220,6 @@
     "Show your profile in the Creator Directory": "Показывать твой профиль в Каталоге авторов",
     "Showing what this edit changed.": "Показывает, что изменилось в этой правке.",
     "Sign In": "Войти",
-    "Sign in to enter.": "Войди, чтобы участвовать.",
     "Sign in to pick any rival and see the easiest maps where you can grab time on them.": "Войди, чтобы выбрать любого соперника и увидеть самые легкие карты, где можно обойти его по времени.",
     "Sign in to see who's in this player's league and who they regularly beat (or get beaten by).": "Войди, чтобы увидеть, кто в лиге этого игрока и кого он регулярно побеждает (или кому проигрывает).",
     "Sign in to use": "Войди, чтобы использовать",
@@ -4161,5 +4160,15 @@
     "Ask an admin about this demo": "Спросить админа про это демо",
     "Sent to an admin": "Отправлено админу",
     "Say what you expected to happen. An admin opens the file itself and answers you.": "Напиши, чего ты ожидал. Админ сам откроет файл и ответит тебе.",
-    "What happened?": "Что случилось?"
+    "What happened?": "Что случилось?",
+    "Sign in to enter a run.": "Войди, чтобы отправить забег.",
+    "Confirm your email address before entering a run.": "Подтверди свой адрес почты, прежде чем отправлять забег.",
+    "Link your Q3DF.org account to enter a run.": "Привяжи аккаунт Q3DF.org, чтобы отправить забег.",
+    "Open settings": "Открыть настройки",
+    "Confirm your email": "Подтвердить почту",
+    "How comps works": "Как устроен comps",
+    "You need a Q3DF.org profile linked to your account to enter a run or to vote.": "Чтобы отправить забег или голосовать, нужен профиль Q3DF.org, привязанный к аккаунту.",
+    "There is no sign-up. Record a run on the map being played and it enters by itself.": "Никакой записи нет. Проедь забег на играемой карте, и он попадёт в раунд сам.",
+    "A demo of the map being played, in the physics it is being played in, stays hidden until the round is over. It appears then, together with everyone else's.": "Демо с играемой карты, в той физике, в которой она играется, остаётся скрытым до конца раунда. Тогда оно появится вместе со всеми остальными.",
+    "A run made before the vote for the round opened does not count in it.": "Забег, сделанный до открытия голосования по раунду, в нём не считается."
 }

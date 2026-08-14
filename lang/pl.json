@@ -3220,7 +3220,6 @@
     "Show your profile in the Creator Directory": "Pokazuj twój profil w katalogu twórców",
     "Showing what this edit changed.": "Pokazuje, co zmieniła ta edycja.",
     "Sign In": "Zaloguj się",
-    "Sign in to enter.": "Zaloguj się, aby się zgłosić.",
     "Sign in to pick any rival and see the easiest maps where you can grab time on them.": "Zaloguj się, aby wybrać dowolnego rywala i zobaczyć najłatwiejsze mapy, na których możesz mu urwać czas.",
     "Sign in to see who's in this player's league and who they regularly beat (or get beaten by).": "Zaloguj się, aby zobaczyć, kto jest w lidze tego gracza i kogo regularnie pokonuje (albo kto pokonuje jego).",
     "Sign in to use": "Zaloguj się, aby użyć",
@@ -4161,5 +4160,15 @@
     "Ask an admin about this demo": "Zapytaj admina o to demo",
     "Sent to an admin": "Wysłane do admina",
     "Say what you expected to happen. An admin opens the file itself and answers you.": "Napisz, czego się spodziewałeś. Admin sam otworzy plik i ci odpowie.",
-    "What happened?": "Co się stało?"
+    "What happened?": "Co się stało?",
+    "Sign in to enter a run.": "Zaloguj się, żeby wysłać przejazd.",
+    "Confirm your email address before entering a run.": "Potwierdź swój adres e-mail, zanim wyślesz przejazd.",
+    "Link your Q3DF.org account to enter a run.": "Połącz konto Q3DF.org, żeby wysłać przejazd.",
+    "Open settings": "Otwórz ustawienia",
+    "Confirm your email": "Potwierdź e-mail",
+    "How comps works": "Jak działa comps",
+    "You need a Q3DF.org profile linked to your account to enter a run or to vote.": "Żeby wysłać przejazd albo zagłosować, musisz mieć do konta podpięty profil Q3DF.org.",
+    "There is no sign-up. Record a run on the map being played and it enters by itself.": "Nie ma zapisów. Zrób przejazd na granej mapie, a wejdzie sam.",
+    "A demo of the map being played, in the physics it is being played in, stays hidden until the round is over. It appears then, together with everyone else's.": "Demo z granej mapy, w fizyce, w której się ją gra, pozostaje ukryte do końca rundy. Wtedy pojawia się razem z pozostałymi.",
+    "A run made before the vote for the round opened does not count in it.": "Przejazd zrobiony przed otwarciem głosowania nad rundą nie liczy się w niej."
 }

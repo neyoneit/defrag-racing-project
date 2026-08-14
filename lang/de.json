@@ -3220,7 +3220,6 @@
     "Show your profile in the Creator Directory": "Dein Profil im Creator-Verzeichnis anzeigen",
     "Showing what this edit changed.": "Zeigt, was durch diese Bearbeitung geändert wurde.",
     "Sign In": "Anmelden",
-    "Sign in to enter.": "Melde dich an, um teilzunehmen.",
     "Sign in to pick any rival and see the easiest maps where you can grab time on them.": "Melde dich an, um einen Rivalen auszuwählen und die einfachsten Maps zu sehen, auf denen du Zeit aufholen kannst.",
     "Sign in to see who's in this player's league and who they regularly beat (or get beaten by).": "Melde dich an, um zu sehen, wer in der Liga dieses Spielers ist und wen er regelmäßig schlägt (oder von wem er geschlagen wird).",
     "Sign in to use": "Anmelden zur Nutzung",
@@ -4161,5 +4160,15 @@
     "Ask an admin about this demo": "Einen Admin zu diesem Demo fragen",
     "Sent to an admin": "An einen Admin geschickt",
     "Say what you expected to happen. An admin opens the file itself and answers you.": "Schreib, was du erwartet hast. Ein Admin sieht sich die Datei selbst an und antwortet dir.",
-    "What happened?": "Was ist passiert?"
+    "What happened?": "Was ist passiert?",
+    "Sign in to enter a run.": "Melde dich an, um einen Lauf einzureichen.",
+    "Confirm your email address before entering a run.": "Bestätige deine E-Mail-Adresse, bevor du einen Lauf einreichst.",
+    "Link your Q3DF.org account to enter a run.": "Verknüpfe dein Q3DF.org-Konto, um einen Lauf einzureichen.",
+    "Open settings": "Einstellungen öffnen",
+    "Confirm your email": "E-Mail bestätigen",
+    "How comps works": "So läuft Comps",
+    "You need a Q3DF.org profile linked to your account to enter a run or to vote.": "Um einen Lauf einzureichen oder abzustimmen, brauchst du ein mit deinem Konto verknüpftes Q3DF.org-Profil.",
+    "There is no sign-up. Record a run on the map being played and it enters by itself.": "Es gibt keine Anmeldung. Fahr einen Lauf auf der gespielten Map, und er kommt von selbst rein.",
+    "A demo of the map being played, in the physics it is being played in, stays hidden until the round is over. It appears then, together with everyone else's.": "Ein Demo der gespielten Map, in der Physik, in der sie gespielt wird, bleibt bis zum Ende der Runde verborgen. Dann erscheint es, zusammen mit allen anderen.",
+    "A run made before the vote for the round opened does not count in it.": "Ein Lauf, der vor der Eröffnung der Abstimmung entstanden ist, zählt in dieser Runde nicht."
 }

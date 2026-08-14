@@ -3220,7 +3220,6 @@
     "Show your profile in the Creator Directory": "Toon je profiel in de Creator Directory",
     "Showing what this edit changed.": "Toont wat deze bewerking heeft veranderd.",
     "Sign In": "Inloggen",
-    "Sign in to enter.": "Log in om mee te doen.",
     "Sign in to pick any rival and see the easiest maps where you can grab time on them.": "Log in om een rivaal te kiezen en te zien op welke makkelijkste maps je tijd op ze kunt winnen.",
     "Sign in to see who's in this player's league and who they regularly beat (or get beaten by).": "Log in om te zien wie er in de divisie van deze speler zit en van wie ze regelmatig winnen (of verliezen).",
     "Sign in to use": "Log in om te gebruiken",
@@ -4161,5 +4160,15 @@
     "Ask an admin about this demo": "Vraag een admin naar deze demo",
     "Sent to an admin": "Naar een admin gestuurd",
     "Say what you expected to happen. An admin opens the file itself and answers you.": "Vertel wat je verwachtte. Een admin bekijkt het bestand zelf en antwoordt je.",
-    "What happened?": "Wat is er gebeurd?"
+    "What happened?": "Wat is er gebeurd?",
+    "Sign in to enter a run.": "Log in om een run in te sturen.",
+    "Confirm your email address before entering a run.": "Bevestig je e-mailadres voordat je een run instuurt.",
+    "Link your Q3DF.org account to enter a run.": "Koppel je Q3DF.org-account om een run in te sturen.",
+    "Open settings": "Instellingen openen",
+    "Confirm your email": "E-mail bevestigen",
+    "How comps works": "Hoe comps werkt",
+    "You need a Q3DF.org profile linked to your account to enter a run or to vote.": "Je hebt een aan je account gekoppeld Q3DF.org-profiel nodig om een run in te sturen of te stemmen.",
+    "There is no sign-up. Record a run on the map being played and it enters by itself.": "Er is geen inschrijving. Rij een run op de gespeelde map en hij doet vanzelf mee.",
+    "A demo of the map being played, in the physics it is being played in, stays hidden until the round is over. It appears then, together with everyone else's.": "Een demo van de gespeelde map, in de physics waarin hij gespeeld wordt, blijft verborgen tot de ronde voorbij is. Dan verschijnt hij, samen met die van iedereen.",
+    "A run made before the vote for the round opened does not count in it.": "Een run van voor het openen van de stemming telt niet mee in die ronde."
 }

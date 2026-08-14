@@ -3220,7 +3220,6 @@
     "Show your profile in the Creator Directory": "Visa din profil i skaparkatalogen",
     "Showing what this edit changed.": "Visar vad denna redigering ändrade.",
     "Sign In": "Logga in",
-    "Sign in to enter.": "Logga in för att delta.",
     "Sign in to pick any rival and see the easiest maps where you can grab time on them.": "Logga in för att välja en rival och se de enklaste kartorna där du kan ta tid från dem.",
     "Sign in to see who's in this player's league and who they regularly beat (or get beaten by).": "Logga in för att se vilka som är i denna spelares liga och vilka de regelbundet slår (eller blir slagna av).",
     "Sign in to use": "Logga in för att använda",
@@ -4161,5 +4160,15 @@
     "Ask an admin about this demo": "Fråga en admin om den här demon",
     "Sent to an admin": "Skickat till en admin",
     "Say what you expected to happen. An admin opens the file itself and answers you.": "Skriv vad du väntade dig. En admin öppnar filen själv och svarar dig.",
-    "What happened?": "Vad hände?"
+    "What happened?": "Vad hände?",
+    "Sign in to enter a run.": "Logga in för att skicka in en körning.",
+    "Confirm your email address before entering a run.": "Bekräfta din e-postadress innan du skickar in en körning.",
+    "Link your Q3DF.org account to enter a run.": "Koppla ditt Q3DF.org-konto för att skicka in en körning.",
+    "Open settings": "Öppna inställningar",
+    "Confirm your email": "Bekräfta e-posten",
+    "How comps works": "Så funkar comps",
+    "You need a Q3DF.org profile linked to your account to enter a run or to vote.": "Du behöver en Q3DF.org-profil kopplad till kontot för att skicka in en körning eller rösta.",
+    "There is no sign-up. Record a run on the map being played and it enters by itself.": "Ingen anmälan. Kör en körning på banan som spelas, så går den in av sig själv.",
+    "A demo of the map being played, in the physics it is being played in, stays hidden until the round is over. It appears then, together with everyone else's.": "En demo från banan som spelas, i den fysik den spelas i, ligger dold tills omgången är slut. Då dyker den upp, tillsammans med allas andra.",
+    "A run made before the vote for the round opened does not count in it.": "En körning gjord innan omröstningen för omgången öppnade räknas inte i den."
 }

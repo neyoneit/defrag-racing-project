@@ -234,6 +234,12 @@ class LauncherController extends Controller
             ], 403);
         }
 
+        // Entering needs a linked Q3DF.org profile, the same as on the site. A
+        // rule enforced on one route only is not a rule, it is a detour.
+        if ($reason = $intake->userRejectionReason($user)) {
+            return response()->json(['error' => $reason], 422);
+        }
+
         $data = $request->validate([
             'demo' => ['required', 'file', 'max:' . SubmissionIntake::MAX_KB],
             'round_id' => ['required', 'integer'],

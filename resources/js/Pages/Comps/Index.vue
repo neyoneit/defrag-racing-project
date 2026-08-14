@@ -508,6 +508,38 @@ export default {
 
         </div>
 
+        <!-- =========================== THE RULES =========================== -->
+        <!-- Four sentences, above both halves of the week rather than beside
+             the upload box. Three of them are things somebody finds out by
+             being surprised: that entering needs a linked profile, that a run
+             on the map enters by itself whether or not you meant it to, and
+             that your demo goes quiet until the round ends. A rule nobody is
+             told is not a rule, it is a trap. -->
+        <section class="rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm px-4 py-3">
+            <h2 class="mb-2 text-[10px] font-black uppercase tracking-wider text-gray-500">{{ $t('How comps works') }}</h2>
+            <ul class="space-y-1.5 text-sm text-gray-400">
+                <li class="flex gap-2">
+                    <span class="text-gray-600">1.</span>
+                    <span>
+                        {{ $t('You need a Q3DF.org profile linked to your account to enter a run or to vote.') }}
+                        <Link v-if="user" :href="route('settings.show')" class="font-bold text-amber-300 underline decoration-amber-400/40 hover:text-amber-100">{{ $t('Open settings') }}</Link>
+                    </span>
+                </li>
+                <li class="flex gap-2">
+                    <span class="text-gray-600">2.</span>
+                    <span>{{ $t('There is no sign-up. Record a run on the map being played and it enters by itself.') }}</span>
+                </li>
+                <li class="flex gap-2">
+                    <span class="text-gray-600">3.</span>
+                    <span>{{ $t('A demo of the map being played, in the physics it is being played in, stays hidden until the round is over. It appears then, together with everyone else\'s.') }}</span>
+                </li>
+                <li class="flex gap-2">
+                    <span class="text-gray-600">4.</span>
+                    <span>{{ $t('A run made before the vote for the round opened does not count in it.') }}</span>
+                </li>
+            </ul>
+        </section>
+
         <!-- ============================ VOTING ============================= -->
         <!-- Same panel as Playing now on purpose: the two halves of this page
              are the two halves of the same week, and giving one a box and the
@@ -733,8 +765,25 @@ export default {
                     {{ $t('Your demos stay private until the round ends. Once it does they appear normally in Demos, on the map page and on your profile.') }}
                 </p>
 
-                <div v-if="!user" class="rounded-lg border border-white/10 bg-black/40 backdrop-blur-sm px-4 py-3 text-sm text-gray-400">
-                    {{ $t('Sign in to enter.') }}
+                <!-- Who may enter, decided by the server and printed here. The
+                     sentence says what is missing; the link says where to fix
+                     it, which is the half a person cannot guess. -->
+                <div v-if="!playing.entry_gate?.may" class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                    {{ playing.entry_gate?.reason }}
+                    <Link
+                        v-if="playing.entry_gate?.needs === 'mdd'"
+                        :href="route('settings.show')"
+                        class="ml-1 font-bold underline decoration-amber-400/40 hover:text-amber-50"
+                    >
+                        {{ $t('Open settings') }}
+                    </Link>
+                    <Link
+                        v-else-if="playing.entry_gate?.needs === 'verify'"
+                        :href="route('verification.notice')"
+                        class="ml-1 font-bold underline decoration-amber-400/40 hover:text-amber-50"
+                    >
+                        {{ $t('Confirm your email') }}
+                    </Link>
                 </div>
 
                 <form v-else @submit.prevent="submitEntry" class="space-y-3">

@@ -16,6 +16,7 @@ use App\Services\Comps\CompPreviewService;
 use App\Services\Comps\CompSettings;
 use App\Services\Comps\PrizeFunding;
 use App\Services\Comps\ResultsCalculator;
+use App\Services\Comps\SubmissionIntake;
 use App\Services\Comps\UploadGuard;
 use App\Services\Comps\WildcardService;
 use Illuminate\Http\Request;
@@ -419,6 +420,33 @@ class CompsController extends Controller
             'entrants' => $this->entrants($round),
             'removed_entrants' => $this->removedEntrants($round),
             'my_entries' => $user ? $this->myEntries($round, $user->id) : [],
+            'entry_gate' => $this->entryGate($request),
+        ];
+    }
+
+    /**
+     * Whether the person looking may enter a run at all, and what to say if
+     * not.
+     *
+     * A code as well as a sentence, because two of the three refusals have
+     * somewhere to go - sign in, or link the profile in settings - and the
+     * page has to know which link to put next to which sentence. The rule
+     * itself lives in SubmissionIntake, where both upload routes read it.
+     */
+    private function entryGate(Request $request): array
+    {
+        $user = $request->user();
+        $reason = app(SubmissionIntake::class)->userRejectionReason($user);
+
+        return [
+            'may' => $reason === null,
+            'reason' => $reason,
+            'needs' => match (true) {
+                $reason === null => null,
+                ! $user => 'signin',
+                ! $user->hasVerifiedEmail() => 'verify',
+                default => 'mdd',
+            },
         ];
     }
 

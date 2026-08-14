@@ -43,6 +43,13 @@ class CompSubmissionController extends Controller
 
         abort_unless($request->user(), 403);
 
+        // Who may enter at all - a linked Q3DF.org profile, same as voting.
+        // The page hides the form when this would fail; the check is here
+        // because a hidden form is not a rule.
+        if ($reason = $intake->userRejectionReason($request->user())) {
+            return back()->withErrors(['demo' => $reason]);
+        }
+
         $file = $request->file('demo');
         $hash = $intake->hash($file);
 

@@ -3220,7 +3220,6 @@
     "Show your profile in the Creator Directory": "Afficher ton profil dans l'Annuaire des créateurs",
     "Showing what this edit changed.": "Affichage des modifications apportées par cette édition.",
     "Sign In": "S'identifier",
-    "Sign in to enter.": "Connecte-toi pour participer.",
     "Sign in to pick any rival and see the easiest maps where you can grab time on them.": "Connecte-toi pour choisir un rival et voir les maps les plus faciles où lui prendre du temps.",
     "Sign in to see who's in this player's league and who they regularly beat (or get beaten by).": "Connecte-toi pour voir qui est dans la ligue de ce joueur et qui il bat régulièrement (ou par qui il se fait battre).",
     "Sign in to use": "Connecte-toi pour utiliser",
@@ -4161,5 +4160,15 @@
     "Ask an admin about this demo": "Demander à un admin au sujet de cette démo",
     "Sent to an admin": "Envoyé à un admin",
     "Say what you expected to happen. An admin opens the file itself and answers you.": "Explique ce que tu attendais. Un admin ouvrira le fichier lui-même et te répondra.",
-    "What happened?": "Que s'est-il passé ?"
+    "What happened?": "Que s'est-il passé ?",
+    "Sign in to enter a run.": "Connecte-toi pour envoyer un run.",
+    "Confirm your email address before entering a run.": "Confirme ton adresse e-mail avant d'envoyer un run.",
+    "Link your Q3DF.org account to enter a run.": "Associe ton compte Q3DF.org pour envoyer un run.",
+    "Open settings": "Ouvrir les réglages",
+    "Confirm your email": "Confirmer l'e-mail",
+    "How comps works": "Comment marchent les comps",
+    "You need a Q3DF.org profile linked to your account to enter a run or to vote.": "Il te faut un profil Q3DF.org associé à ton compte pour envoyer un run ou pour voter.",
+    "There is no sign-up. Record a run on the map being played and it enters by itself.": "Aucune inscription. Fais un run sur la carte jouée et il entre tout seul.",
+    "A demo of the map being played, in the physics it is being played in, stays hidden until the round is over. It appears then, together with everyone else's.": "Une démo de la carte jouée, dans la physique où elle est jouée, reste cachée jusqu'à la fin de la manche. Elle apparaît alors, avec celles de tout le monde.",
+    "A run made before the vote for the round opened does not count in it.": "Un run réalisé avant l'ouverture du vote de la manche n'y compte pas."
 }

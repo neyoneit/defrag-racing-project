@@ -3220,7 +3220,6 @@
     "Show your profile in the Creator Directory": "Показувати свій профіль у каталозі авторів",
     "Showing what this edit changed.": "Показуємо, що змінило це редагування.",
     "Sign In": "Увійти",
-    "Sign in to enter.": "Увійди, щоб узяти участь.",
     "Sign in to pick any rival and see the easiest maps where you can grab time on them.": "Увійди, щоб обрати будь-якого суперника та побачити найлегші карти, де можна забрати у нього час.",
     "Sign in to see who's in this player's league and who they regularly beat (or get beaten by).": "Увійди, щоб побачити, хто перебуває у лізі цього гравця та кого він регулярно перемагає (або кому програє).",
     "Sign in to use": "Увійди, щоб використовувати",
@@ -4161,5 +4160,15 @@
     "Ask an admin about this demo": "Запитати адміна про це демо",
     "Sent to an admin": "Надіслано адміну",
     "Say what you expected to happen. An admin opens the file itself and answers you.": "Напиши, чого ти очікував. Адмін сам відкриє файл і відповість тобі.",
-    "What happened?": "Що сталося?"
+    "What happened?": "Що сталося?",
+    "Sign in to enter a run.": "Увійди, щоб надіслати забіг.",
+    "Confirm your email address before entering a run.": "Підтверди свою електронну адресу, перш ніж надсилати забіг.",
+    "Link your Q3DF.org account to enter a run.": "Прив'яжи акаунт Q3DF.org, щоб надіслати забіг.",
+    "Open settings": "Відкрити налаштування",
+    "Confirm your email": "Підтвердити пошту",
+    "How comps works": "Як влаштований comps",
+    "You need a Q3DF.org profile linked to your account to enter a run or to vote.": "Щоб надіслати забіг або голосувати, потрібен профіль Q3DF.org, прив'язаний до акаунта.",
+    "There is no sign-up. Record a run on the map being played and it enters by itself.": "Жодного запису немає. Проїдь забіг на карті, яка грається, і він потрапить у раунд сам.",
+    "A demo of the map being played, in the physics it is being played in, stays hidden until the round is over. It appears then, together with everyone else's.": "Демо з карти, яка грається, у тій фізиці, у якій вона грається, лишається схованим до кінця раунду. Тоді воно з'явиться разом з усіма іншими.",
+    "A run made before the vote for the round opened does not count in it.": "Забіг, зроблений до відкриття голосування за раунд, у ньому не рахується."
 }

@@ -3220,7 +3220,6 @@
     "Show your profile in the Creator Directory": "Zobrazit tvůj profil v adresáři tvůrců",
     "Showing what this edit changed.": "Ukazuje se, co tahle úprava změnila.",
     "Sign In": "Přihlásit se",
-    "Sign in to enter.": "Pro přihlášení běhu se přihlas.",
     "Sign in to pick any rival and see the easiest maps where you can grab time on them.": "Přihlas se, vyber si soupeře a uvidíš nejlehčí mapy, kde na něm můžeš urvat čas.",
     "Sign in to see who's in this player's league and who they regularly beat (or get beaten by).": "Přihlas se a uvidíš, kdo je ve stejné lize jako tento hráč a koho pravidelně poráží (nebo kdo poráží jeho).",
     "Sign in to use": "Přihlas se",
@@ -4161,5 +4160,15 @@
     "Ask an admin about this demo": "Zeptat se admina na tohle demo",
     "Sent to an admin": "Odesláno adminovi",
     "Say what you expected to happen. An admin opens the file itself and answers you.": "Napiš, co jsi čekal, že se stane. Admin se podívá přímo na soubor a odpoví ti.",
-    "What happened?": "Co se stalo?"
+    "What happened?": "Co se stalo?",
+    "Sign in to enter a run.": "Přihlas se, ať můžeš nahrát běh.",
+    "Confirm your email address before entering a run.": "Než nahraješ běh, potvrď svou e-mailovou adresu.",
+    "Link your Q3DF.org account to enter a run.": "Propoj si účet Q3DF.org, ať můžeš nahrát běh.",
+    "Open settings": "Otevřít nastavení",
+    "Confirm your email": "Potvrdit e-mail",
+    "How comps works": "Jak comps funguje",
+    "You need a Q3DF.org profile linked to your account to enter a run or to vote.": "Abys mohl nahrát běh nebo hlasovat, musíš mít k účtu propojený profil Q3DF.org.",
+    "There is no sign-up. Record a run on the map being played and it enters by itself.": "Nikam se nepřihlašuješ. Zajedeš běh na hrané mapě a do soutěže se dostane sám.",
+    "A demo of the map being played, in the physics it is being played in, stays hidden until the round is over. It appears then, together with everyone else's.": "Demo z hrané mapy, ve fyzice, ve které se hraje, zůstane skryté do konce kola. Objeví se potom, spolu se všemi ostatními.",
+    "A run made before the vote for the round opened does not count in it.": "Běh vytvořený dřív, než se otevřelo hlasování o kole, se do něj nepočítá."
 }

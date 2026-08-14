@@ -33,6 +33,33 @@ class SubmissionIntake
     private const FAILED_STATUSES = ['failed', 'failed-validity', 'unsupported-version'];
 
     /**
+     * Why this person cannot enter a run, or null when they can.
+     *
+     * Comps pays a prize and hands out wildcards, and both are settled against
+     * a Q3DF.org profile. An account without one is a sign-up form and nothing
+     * more, which would make voting and winning as cheap as making another
+     * address - so entering asks for the same linked profile voting already
+     * does. Here rather than on one route, because the page and the launcher
+     * must not be able to disagree about who may enter.
+     */
+    public function userRejectionReason(?User $user): ?string
+    {
+        if (! $user) {
+            return __('Sign in to enter a run.');
+        }
+
+        if (! $user->hasVerifiedEmail()) {
+            return __('Confirm your email address before entering a run.');
+        }
+
+        if (! $user->mdd_id) {
+            return __('Link your Q3DF.org account to enter a run.');
+        }
+
+        return null;
+    }
+
+    /**
      * Why this file cannot be entered, or null when it can.
      *
      * Returns a finished sentence rather than a code: both callers show it to a
