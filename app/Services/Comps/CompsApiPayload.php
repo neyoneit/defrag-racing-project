@@ -170,6 +170,11 @@ class CompsApiPayload
             'category' => $round->category,
             'closes_at' => $round->voting_closes_at?->toIso8601String(),
             'is_open' => $round->isVoting() && $round->voting_closes_at?->isFuture(),
+            // What next week pays, next to the maps it might be played on.
+            // The reason to go and vote is usually that the week is worth
+            // something, and the launcher is where somebody is standing when
+            // they decide whether to bother.
+            'prize_eur' => (float) ($round->prize_eur ?? $this->funding->perPhysicsFor((int) $round->comp->number)),
             'candidates' => $round->candidates()->with('map:id,name')->get()
                 ->map(fn ($c) => $c->map?->name)
                 ->filter()
