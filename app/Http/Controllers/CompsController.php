@@ -13,6 +13,7 @@ use App\Services\Comps\BallotResolver;
 use App\Services\Comps\CandidateSelector;
 use App\Services\Comps\CompPreviewService;
 use App\Services\Comps\CompSettings;
+use App\Services\Comps\PrizeFunding;
 use App\Services\Comps\ResultsCalculator;
 use App\Services\Comps\WildcardService;
 use Illuminate\Http\Request;
@@ -56,6 +57,7 @@ class CompsController extends Controller
 
         return Inertia::render('Comps/Index', [
             'prize' => $this->prize($voting ?? $playing),
+            'funders' => $this->funders(),
             'playing' => $playing ? $this->playingPayload($playing, $request) : null,
             'voting' => $voting ? $this->votingPayload($voting, $request) : null,
             'history' => $this->history(),
@@ -88,7 +90,12 @@ class CompsController extends Controller
     {
         $settings = app(CompSettings::class);
 
-        $eur = $round?->prize_eur ?? $settings->prizeEur();
+        $funding = app(PrizeFunding::class);
+
+        // The round's own stamped amount first, because that is what its
+        // players were told. Only a week that does not exist yet asks the
+        // funding what it would pay.
+        $eur = (float) ($round?->prize_eur ?? $funding->perPhysicsFor(((int) Comp::weekly()->max('number')) + 1));
         $fundedWeeks = $settings->prizeFundedWeeks();
 
         // The highest week that exists, which is the one being played or voted
@@ -97,11 +104,11 @@ class CompsController extends Controller
         $current = (int) Comp::weekly()->max('number');
 
         return [
-            'eur' => $eur,
+            'eur' => $this->money($eur),
             // Both physics are paid, so the week costs twice the setting. The
             // total is what a reader wants first and the per-physics figure is
             // what they need to not misread it, so the page shows both.
-            'total' => $eur * count(BallotResolver::PHYSICS),
+            'total' => $this->money($eur * count(BallotResolver::PHYSICS)),
             'funded_weeks' => $fundedWeeks,
             // The whole commitment, which reads very differently from the
             // weekly figure and is the number people actually repeat to each
@@ -113,6 +120,46 @@ class CompsController extends Controller
             // commitment of 150 EUR that nobody made.
             'funded_total' => $settings->prizeEur() * count(BallotResolver::PHYSICS) * $fundedWeeks,
             'self_funded' => $eur > 0 && $current <= $fundedWeeks,
+        ];
+    }
+
+    /**
+     * A money figure the page can print as-is.
+     *
+     * Spreading a lump sum over a number of weeks that does not divide it
+     * gives halves - 150 over ten weeks is 7.50 a physics - so the amounts are
+     * no longer whole. But most of them still are, and shipping `5.0` to a
+     * page that used to say `5` would put a decimal point on every ordinary
+     * week to accommodate the rare one.
+     */
+    private function money(float $value): int|float
+    {
+        $rounded = round($value, 2);
+
+        return $rounded == (int) $rounded ? (int) $rounded : $rounded;
+    }
+
+    /**
+     * Who has put money into the pool, for the panel that names them.
+     *
+     * People give to this in public and the least it can do is say so. It also
+     * answers the question the prize figure raises on its own - a week paying
+     * 30 EUR instead of 10 looks arbitrary until you can see who paid for it
+     * and for how long.
+     */
+    private function funders(): ?array
+    {
+        $funding = app(PrizeFunding::class);
+        $donors = $funding->donors();
+
+        if (! $donors) {
+            return null;
+        }
+
+        return [
+            'donors' => $donors,
+            'total' => $this->money($funding->totalDonated()),
+            'funded_through' => $funding->fundedThroughComp(),
         ];
     }
 

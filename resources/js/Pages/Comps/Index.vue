@@ -31,6 +31,7 @@ export default {
         pointsForFinishing: { type: Number, default: 1 },
         winsPerWildcard: { type: Number, default: 5 },
         prize: { type: Object, default: null },
+        funders: { type: Object, default: null },
         betaNotice: { type: Boolean, default: false },
         adminUrl: { type: String, default: '' },
     });
@@ -212,6 +213,42 @@ export default {
                         <p class="text-gray-400 mt-2 max-w-3xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                             {{ $t('Every week the site draws five maps, everyone votes, and the map winners for both physics are played for a week. Nobody organises it and nobody can forget to.') }}
                         </p>
+
+                        <!-- Comps invents no ruleset of its own, and the two
+                             things people keep asking about are answered by
+                             name. "No special rules" is not an answer to
+                             "is an overbounce allowed" - it just sends them to
+                             read nine sections and guess. -->
+                        <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 max-w-3xl">
+                            <Link :href="route('rules')"
+                                  class="inline-flex items-center gap-1.5 flex-shrink-0 rounded-lg border border-amber-400/40 bg-amber-500/15 hover:bg-amber-500/25 hover:border-amber-300/60 px-2.5 py-1 text-sm font-bold text-amber-200 transition-colors">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 0 1-2.031.352 5.988 5.988 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971Zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 0 1-2.031.352 5.989 5.989 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971Z" />
+                                </svg>
+                                {{ $t('Rules') }}
+                            </Link>
+                            <span class="text-sm text-gray-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                                {{ $t('The same rules as on the servers apply.') }}
+                            </span>
+
+                            <!-- Green and separate, because this is the half
+                                 people are actually looking for. "Same rules as
+                                 the servers" is the boring half; whether an
+                                 overbounce costs you the run is the question
+                                 that gets asked in Discord every week, and the
+                                 answer should be findable without reading a
+                                 sentence to the end.
+
+                                 The two abbreviations carry the markup: they
+                                 are what somebody scanning the page is looking
+                                 for, and they are the same two letters in every
+                                 language, so the emphasis survives translation
+                                 wherever the clause lands in the sentence. -->
+                            <span class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/35 bg-emerald-500/15 px-2.5 py-1 text-sm text-emerald-100">
+                                <svg class="w-4 h-4 flex-shrink-0 text-emerald-400" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" /></svg>
+                                <span v-html="$t('Overbounces (<strong>OB</strong>) and time resets (<strong>TR</strong>) are allowed.')"></span>
+                            </span>
+                        </div>
                     </div>
 
                     <!-- Opposite the intro rather than below it. The first
@@ -303,6 +340,41 @@ export default {
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-8-4.9-8-10.4A4.6 4.6 0 0 1 12 7a4.6 4.6 0 0 1 8 3.6C20 16.1 12 21 12 21z" /></svg>
                     {{ $t('Donate to the pool') }}
                 </Link>
+            </div>
+
+            <!-- Who actually paid for this.
+                 A prize figure on its own reads as if the site produced it.
+                 It did not - somebody handed money over, for a stretch of weeks
+                 they agreed to, and the least this page can do is say who and
+                 for how long. It also answers the question the number raises by
+                 itself: a week paying 30 instead of 10 looks arbitrary until
+                 you can see who is funding it and until when. -->
+            <div v-if="funders?.donors?.length"
+                 class="relative mt-5 pt-4 border-t border-emerald-400/15">
+                <div class="flex items-baseline justify-between gap-3 mb-2.5">
+                    <div class="text-[11px] font-black uppercase tracking-widest text-emerald-400/90">
+                        {{ $t('Paid for by') }}
+                    </div>
+                    <div v-if="funders.funded_through" class="text-xs text-emerald-100/50">
+                        {{ $t('funded through weekly :number', { number: funders.funded_through }) }}
+                    </div>
+                </div>
+                <ul class="flex flex-wrap gap-2">
+                    <li v-for="d in funders.donors" :key="d.id"
+                        class="inline-flex items-baseline gap-2 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.07] px-3 py-1.5">
+                        <component :is="d.user_id ? Link : 'span'"
+                                   :href="d.user_id ? `/profile/${d.user_id}` : undefined"
+                                   class="text-sm font-bold text-emerald-100"
+                                   :class="d.user_id ? 'hover:underline' : ''">{{ d.name }}</component>
+                        <span class="text-sm font-black text-emerald-300 tabular-nums">{{ d.amount }} EUR</span>
+                        <!-- The span, not just the count: "over 10 weeks" and
+                             "weeklies 6 to 15" answer different questions and
+                             people ask the second one. -->
+                        <span class="text-xs text-emerald-100/50">
+                            {{ $t('over :count weeklies (:from-:to)', { count: d.weeks, from: d.from_comp, to: d.to_comp }) }}
+                        </span>
+                    </li>
+                </ul>
             </div>
         </section>
 

@@ -309,12 +309,32 @@ const convertCurrency = (amount, fromCurrency) => {
         : amountInEUR * props.exchangeRates[selectedCurrency.value];
 };
 
+// Part of a donation that was earmarked for the comps prize pool, in the
+// currency the page is showing. Stored in EUR whatever the donation was made
+// in, because a prize pool is promised in EUR.
+const compsPart = (donation) => convertCurrency(Number(donation.comps_amount || 0), 'EUR');
+
+// What a donation contributed towards running the site: everything it was not
+// promised to somebody as prize money.
+//
+// The goal on this page is a hosting and upkeep bill. Counting a prize pool
+// towards it would show the year as covered while the bills are still short by
+// exactly the amount already promised to a winner - so the split happens here,
+// once, and every total below is built from it.
+const maintenancePart = (donation) =>
+    Math.max(0, convertCurrency(donation.amount, donation.currency) - compsPart(donation));
+
+// Everything given to comps prizes, all time, in the selected currency.
+const compsTotal = computed(() =>
+    props.donations.reduce((sum, donation) => sum + compsPart(donation), 0),
+);
+
 // Calculate total in selected currency
 const totalRaised = computed(() => {
     let total = 0;
 
     props.donations.forEach(donation => {
-        total += convertCurrency(donation.amount, donation.currency);
+        total += maintenancePart(donation);
     });
 
     props.selfRaisedMoney.forEach(money => {
@@ -329,7 +349,7 @@ const allTimeDonationsTotal = computed(() => {
     let total = 0;
 
     props.donations.forEach(donation => {
-        total += convertCurrency(donation.amount, donation.currency);
+        total += maintenancePart(donation);
     });
 
     return total;
@@ -353,7 +373,7 @@ const currentYearTotal = computed(() => {
     props.donations.forEach(donation => {
         const year = new Date(donation.donation_date).getFullYear();
         if (year === props.currentYear) {
-            total += convertCurrency(donation.amount, donation.currency);
+            total += maintenancePart(donation);
         }
     });
 
@@ -374,7 +394,7 @@ const currentYearDonationsTotal = computed(() => {
     props.donations.forEach(donation => {
         const year = new Date(donation.donation_date).getFullYear();
         if (year === props.currentYear) {
-            total += convertCurrency(donation.amount, donation.currency);
+            total += maintenancePart(donation);
         }
     });
 
@@ -418,9 +438,13 @@ const groupedByYear = computed(() => {
         const year = new Date(donation.donation_date).getFullYear();
         if (!groups[year]) groups[year] = { donations: [], selfRaised: [], total: 0, donationsTotal: 0, selfRaisedTotal: 0 };
         groups[year].donations.push(donation);
-        const amount = convertCurrency(donation.amount, donation.currency);
+        // The per-year totals feed that year's goal bar, so they carry the
+        // maintenance part only - the card below still shows what the person
+        // actually gave.
+        const amount = maintenancePart(donation);
         groups[year].donationsTotal += amount;
         groups[year].total += amount;
+        groups[year].compsTotal = (groups[year].compsTotal || 0) + compsPart(donation);
     });
 
     props.selfRaisedMoney.forEach(money => {
@@ -673,6 +697,18 @@ const getYearProgress = (year, yearTotal) => {
                             <div class="text-sm text-gray-400 mt-1">{{ $t('Monthly Goal') }}</div>
                         </div>
                     </div>
+
+                    <!-- Money promised to comps winners is not progress towards
+                         the hosting bill, so it is not in the bar. Saying so is
+                         not optional: without this line the totals simply come
+                         out lower than the donations listed below add up to,
+                         and the page looks like it is losing money. -->
+                    <div v-if="compsTotal > 0"
+                         class="mt-5 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3 text-sm">
+                        <span class="font-bold text-emerald-300">{{ currencySymbol }}{{ compsTotal.toFixed(2) }}</span>
+                        <span class="text-emerald-100/80">{{ $t('of the donations above went to the comps prize pool and is not counted towards the goal.') }}</span>
+                        <Link :href="route('comps.index')" class="font-semibold text-emerald-300 underline decoration-emerald-400/40 hover:text-emerald-200">{{ $t('See comps') }}</Link>
+                    </div>
                 </div>
             </div>
 
@@ -833,6 +869,15 @@ const getYearProgress = (year, yearTotal) => {
                                             <Link v-if="isContestDonation(donation.note)" href="/defraglive/contest"
                                                 class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/15 border border-purple-400/30 text-[11px] font-semibold text-purple-300 hover:bg-purple-500/25 transition-colors">
                                                 🎁 {{ $t('DefragLive prize') }}
+                                            </Link>
+                                            <!-- The amount on the right is what
+                                                 was given; this says where part
+                                                 of it went, so the card and the
+                                                 goal total below stop looking
+                                                 like they disagree. -->
+                                            <Link v-if="compsPart(donation) > 0" :href="route('comps.index')"
+                                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-500/25 transition-colors">
+                                                🏆 {{ $t(':amount to the comps prize pool', { amount: currencySymbol + compsPart(donation).toFixed(2) }) }}
                                             </Link>
                                         </div>
                                         <div class="text-xs text-gray-500 mt-0.5">{{ formatDate(donation.donation_date) }}</div>

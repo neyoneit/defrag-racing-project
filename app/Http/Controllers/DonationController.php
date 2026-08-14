@@ -73,9 +73,19 @@ class DonationController extends Controller
         // Calculate total in EUR
         $donationsEUR = 0;
         $selfRaisedEUR = 0;
+        $compsEUR = 0;
 
+        // Money earmarked for comps prizes is NOT progress towards running the
+        // site. The bar promises to cover hosting and upkeep; counting a prize
+        // pool towards it would show a month as funded while the actual bills
+        // are still short by exactly the amount that has already been promised
+        // to somebody else. Tracked separately so the page can say where it
+        // went instead of quietly leaving it out.
         foreach ($donations as $donation) {
-            $donationsEUR += $this->convertToEUR($donation->amount, $donation->currency, $rates);
+            $eur = $this->convertToEUR($donation->amount, $donation->currency, $rates);
+            $comps = min((float) $donation->comps_amount, $eur);
+            $compsEUR += $comps;
+            $donationsEUR += $eur - $comps;
         }
 
         foreach ($selfRaisedMoney as $money) {
@@ -97,9 +107,14 @@ class DonationController extends Controller
 
             $yearlyDonationsEUR = 0;
             $yearlySelfRaisedEUR = 0;
+            $yearlyCompsEUR = 0;
 
+            // Same split as the monthly path above.
             foreach ($yearlyDonations as $donation) {
-                $yearlyDonationsEUR += $this->convertToEUR($donation->amount, $donation->currency, $rates);
+                $eur = $this->convertToEUR($donation->amount, $donation->currency, $rates);
+                $comps = min((float) $donation->comps_amount, $eur);
+                $yearlyCompsEUR += $comps;
+                $yearlyDonationsEUR += $eur - $comps;
             }
             foreach ($yearlySelfRaised as $money) {
                 $yearlySelfRaisedEUR += $this->convertToEUR($money->amount, $money->currency, $rates);
@@ -112,6 +127,9 @@ class DonationController extends Controller
                 'total' => round($yearlyTotalEUR, 2),
                 'donations' => round($yearlyDonationsEUR, 2),
                 'selfRaised' => round($yearlySelfRaisedEUR, 2),
+                // Deliberately outside `total`: it was donated, it is just not
+                // paying for the thing this bar is measuring.
+                'comps' => round($yearlyCompsEUR, 2),
                 'goal' => $yearlyGoal,
                 'percentage' => round($yearlyPercentage, 1),
                 'currency' => 'EUR',
@@ -123,6 +141,7 @@ class DonationController extends Controller
             'total' => round($totalEUR, 2),
             'donations' => round($donationsEUR, 2),
             'selfRaised' => round($selfRaisedEUR, 2),
+            'comps' => round($compsEUR, 2),
             'goal' => $monthlyGoal,
             'percentage' => round(min($monthlyPercentage, 100), 1),
             'currency' => 'EUR',

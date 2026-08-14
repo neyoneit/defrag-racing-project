@@ -104,3 +104,6 @@ __pycache__/
 # Throwaway helpers for the translation pass, same reason.
 /.i18n-tools/
 /COMPS_SPEC.md
+
+# Plán webové části pro launcher. Pracovní poznámka, ne součást aplikace.
+/LAUNCHER_COMPS_API_PLAN.md

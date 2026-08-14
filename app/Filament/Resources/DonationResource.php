@@ -72,6 +72,72 @@ class DonationResource extends Resource
                     ])
                     ->default('pending')
                     ->required(),
+
+                // How much of this money buys comps prizes, and for how long.
+                //
+                // None of it can be worked out from the amount: 150 EUR is ten
+                // weeks at 15 or thirty at 5, and only whoever took the money
+                // knows which was agreed. Three fields, all optional - a
+                // donation that has nothing to do with comps just leaves them
+                // empty and pays for running the site as before.
+                Forms\Components\Section::make('Comps prize pool')
+                    ->description('Leave empty unless some of this donation is earmarked for comps. Both physics are paid, so the per-week total is split in two.')
+                    ->schema([
+                        Forms\Components\TextInput::make('comps_amount')
+                            ->label('Amount going to comps')
+                            ->numeric()
+                            ->minValue(0)
+                            ->default(0)
+                            ->prefix('€')
+                            ->live(onBlur: true)
+                            ->helperText('Can be the whole donation or part of it. The rest pays for running the site.'),
+                        Forms\Components\TextInput::make('comps_weeks')
+                            ->label('Spread over how many weeklies')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(520)
+                            ->live(onBlur: true)
+                            ->requiredWith('comps_start_comp'),
+                        Forms\Components\TextInput::make('comps_start_comp')
+                            ->label('First weekly it applies to')
+                            ->numeric()
+                            ->minValue(1)
+                            ->live(onBlur: true)
+                            ->default(fn () => ((int) \App\Models\Comp::weekly()->max('number')) + 1)
+                            ->requiredWith('comps_weeks')
+                            ->helperText('Weekly number, not a date. A week that already exists keeps the prize it was created with - raise that one on the comps control page.'),
+
+                        // The arithmetic, spelled out before saving. Entering
+                        // 150 over 10 weeks and finding out later it meant
+                        // 7.50 a physics is exactly the kind of surprise this
+                        // panel exists to prevent.
+                        Forms\Components\Placeholder::make('comps_breakdown')
+                            ->label('What this pays')
+                            ->columnSpanFull()
+                            ->content(function (Forms\Get $get): string {
+                                $amount = (float) $get('comps_amount');
+                                $weeks = (int) $get('comps_weeks');
+                                $start = (int) $get('comps_start_comp');
+
+                                if ($amount <= 0 || $weeks < 1 || $start < 1) {
+                                    return 'Fill in all three fields to see the split.';
+                                }
+
+                                $perWeek = round($amount / $weeks, 2);
+                                $perPhysics = round($perWeek / 2, 2);
+                                $end = $start + $weeks - 1;
+
+                                return sprintf(
+                                    '€%s per week (€%s per physics), weeklies %d to %d.',
+                                    rtrim(rtrim(number_format($perWeek, 2, '.', ''), '0'), '.'),
+                                    rtrim(rtrim(number_format($perPhysics, 2, '.', ''), '0'), '.'),
+                                    $start,
+                                    $end
+                                );
+                            }),
+                    ])
+                    ->columns(3)
+                    ->collapsed(fn (?SiteDonation $record) => ! $record || $record->comps_amount <= 0),
             ]);
     }
 
@@ -102,6 +168,18 @@ class DonationResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('currency')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('comps_amount')
+                    ->label('To comps')
+                    // Null rather than 0.00 for the ordinary donation, so the
+                    // column reads as "these ones fund comps" at a glance
+                    // instead of a wall of zeroes.
+                    ->getStateUsing(fn (SiteDonation $r) => $r->comps_amount > 0 ? $r->comps_amount : null)
+                    ->money('EUR')
+                    ->description(fn (SiteDonation $r): ?string => $r->comps_weeks
+                        ? sprintf('weeklies %d-%d', $r->comps_start_comp, $r->compsEndComp())
+                        : null)
+                    ->placeholder('--')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('donation_date')
                     ->label('Date')
                     ->date()
