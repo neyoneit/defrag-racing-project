@@ -85,8 +85,13 @@ export default {
     // Who pays is no longer a sentence. It is the list of donors below the
     // number, which says the same thing as a fact and stops saying it on its
     // own when somebody's weeks run out.
+    // Both options, and what to write for the second one. Telling somebody
+    // their money can go to the prize pool without telling them the pool is
+    // paid out over a stretch of weeks leaves the admin guessing how long a
+    // donation was meant to last - which is the one thing that cannot be
+    // worked out from the amount.
     const donateLine = computed(() =>
-        t('Write "comps" in the note when you donate and it goes into the prize pool rather than towards the maintenance of the site.'),
+        t('Donations keep the site running. Write "comps" in the note to put all or part of yours into the prize pool instead - say how much, and over how many weeklies it should be spread.'),
     );
 
     // Totals per ballot, so each bar can show a share rather than a bare count.
@@ -520,7 +525,11 @@ export default {
                      donation aimed at one weekly raises that weekly only. -->
                 <div v-if="voting.prize?.eur > 0" class="flex items-baseline gap-2 px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-400/25">
                     <span class="text-lg font-black text-emerald-300 tabular-nums leading-none">{{ voting.prize.total }} EUR</span>
-                    <span class="text-[11px] text-emerald-100/60">{{ $t('for this week') }}</span>
+                    <!-- Not "this week": the ballot decides the week AFTER the
+                         one being played, and next to a figure that can differ
+                         from the current week's, "this" pointed at the wrong
+                         one of the two. -->
+                    <span class="text-[11px] text-emerald-100/60">{{ $t('for next week') }}</span>
                 </div>
 
                 <CompsCountdown v-if="voting.is_open" :until="voting.closes_at" :label="$t('Voting closes in')" emphasis />
