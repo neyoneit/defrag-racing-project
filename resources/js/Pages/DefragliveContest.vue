@@ -212,7 +212,11 @@ const statusColor = (s) => ({
                         <svg class="w-5 h-5 shrink-0 mt-px text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span>{{ $t('This prize comes') }} <strong class="text-white">{{ $t('straight out of my own pocket') }}</strong> {{ $t('- it is') }} <strong class="text-white">{{ $t('not') }}</strong> {{ $t('funded by the donations you send to support the site. 100% a personal gift to the community.') }}</span>
+                        <!-- One sentence, not five fragments. Split like that
+                             it could not be translated: word order moves the
+                             emphasised part somewhere else in most languages
+                             and the pieces no longer line up. -->
+                        <span v-html="$t('This prize is <strong>paid out from the admin\'s own funds</strong>. It is <strong>not</strong> taken from the donations you send to support the site: it is a personal gift to the community.')"></span>
                     </div>
 
                     <!-- Heading stays in this column so it follows the prize
@@ -301,7 +305,12 @@ const statusColor = (s) => ({
 
             <div class="mt-3 flex flex-col lg:flex-row lg:items-center gap-3">
                 <p class="flex-1 text-sm text-amber-200 bg-amber-500/10 border border-amber-400/30 rounded-lg px-4 py-2.5">
-                    {{ $t('Being first on the list below does') }} <strong class="text-white">{{ $t('not') }}</strong> {{ $t('mean you win. It means the draw is most likely to go your way. Weight it any harder and whoever is watched most would take every period, leaving nobody else a reason to play.') }}
+                    <!-- One sentence, not three fragments. Split around the
+                         word "not" it could not survive translation: the
+                         negation attaches to the verb in most languages, so
+                         the pieces produced "niže ne neznamena" in Czech and
+                         "no no significa" in Spanish. -->
+                    <span v-html="$t('Being first on the list below does <strong>not</strong> mean you win. It means the draw is most likely to go your way. Weight it any harder and whoever is watched most would take every period, leaving nobody else a reason to play.')"></span>
                 </p>
 
                 <!-- "It is random" is exactly the claim somebody who has just

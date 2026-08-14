@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\HidesUnreleasedCompsDemos;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -13,6 +14,12 @@ class UploadedDemo extends Model
     protected static function boot()
     {
         parent::boot();
+
+        // A comps entry is an ordinary demo that must not be public while its
+        // round is being played - the demo IS the route. Hidden by default so
+        // every reader of this table is safe without knowing comps exists;
+        // see HidesUnreleasedCompsDemos and withUnreleasedComps() below.
+        static::addGlobalScope(new HidesUnreleasedCompsDemos());
 
         $clearCache = function ($demo) {
             Cache::forget('demo_counts_browse');
@@ -47,6 +54,7 @@ class UploadedDemo extends Model
         'record_date',
         'validity',
         'status',
+        'comps_hidden_until',
         'source',
         'processing_output',
         'name_confidence',
@@ -68,6 +76,7 @@ class UploadedDemo extends Model
         'name_confidence' => 'integer',
         'manually_assigned' => 'boolean',
         'download_count' => 'integer',
+        'comps_hidden_until' => 'datetime',
     ];
 
     /**
@@ -174,5 +183,38 @@ class UploadedDemo extends Model
     public function incrementDownloads()
     {
         $this->increment('download_count');
+    }
+
+    /**
+     * Include comps entries whose round is still running.
+     *
+     * Only three callers should ever want this: an admin reviewing a reported
+     * run, the comps page listing somebody their own entries, and the demo
+     * download when one of those two asks for the file. Everywhere else the
+     * default is the correct answer.
+     */
+    public function scopeWithUnreleasedComps($query)
+    {
+        return $query->withoutGlobalScope(HidesUnreleasedCompsDemos::class);
+    }
+
+    /** True while this demo is a comps entry in a round still being played. */
+    public function isHeldForComps(): bool
+    {
+        return $this->comps_hidden_until !== null
+            && $this->comps_hidden_until->isFuture();
+    }
+
+    /**
+     * Route binding resolves held comps entries too, so the controller can tell
+     * "this does not exist" apart from "this is not yours yet" and answer 403
+     * rather than 404. Every route bound to this model is either admin-only or
+     * checks isHeldForComps() itself - see DemosController::download.
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        return static::withUnreleasedComps()
+            ->where($field ?? $this->getRouteKeyName(), $value)
+            ->first();
     }
 }

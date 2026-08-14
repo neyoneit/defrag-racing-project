@@ -94,6 +94,12 @@ class Kernel extends ConsoleKernel
         // windows, open the next). No-ops until the admin seeds the first one.
         $schedule->command('defraglive:rollover-contests')->withoutOverlapping()->hourly();
 
+        // Comps: close ballots, start and finish rounds, open the next week's
+        // vote. Every minute because the boundaries are exact times (Sunday
+        // 20:00 Prague) and a round should not sit open past its own deadline.
+        // No-ops entirely until comps_weekly_enabled is turned on in admin.
+        $schedule->command('comps:tick')->withoutOverlapping()->everyMinute();
+
         // Auto-fill lat/lon from IP for any server missing it (drives the
         // visitor ping estimate). Daily is plenty - new servers are rare and a
         // ping badge appearing within a day is fine. No-op once all servers are

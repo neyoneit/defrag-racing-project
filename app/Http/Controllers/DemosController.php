@@ -861,6 +861,15 @@ class DemosController extends Controller
         $currentUser = Auth::user();
         $isAdmin = ($currentUser && ((isset($currentUser->is_admin) && $currentUser->is_admin) || (isset($currentUser->admin) && $currentUser->admin)));
 
+        // A comps entry stays unavailable while its round is being played: the
+        // demo is the route, and handing it over mid-round hands the route to
+        // everyone still to run. Its own uploader and an admin reviewing a
+        // report are the exceptions - neither learns anything they did not
+        // already have.
+        if ($demo->isHeldForComps() && ! $isAdmin && $demo->user_id !== optional($currentUser)->id) {
+            abort(403, __('This demo is a comps entry and stays private until the round is over.'));
+        }
+
         // Rate limiting for downloads (skip for admins and demo owners)
         if (!$isAdmin && $demo->user_id !== optional($currentUser)->id) {
             // Use both user ID (if logged in) and IP address for rate limiting

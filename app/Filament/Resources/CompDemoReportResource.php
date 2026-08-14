@@ -1,0 +1,176 @@
+<?php
+
+namespace App\Filament\Resources;
+
+use App\Filament\Resources\CompDemoReportResource\Pages;
+use App\Models\CompDemoReport;
+use App\Services\Comps\ResultsCalculator;
+use Filament\Notifications\Notification;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+
+/**
+ * Reports against a comps entry.
+ *
+ * Upholding one drops the entry out of comps and rebuilds the standings
+ * without it. The demo itself stays in the demo database - being wrong for a
+ * competition is not a reason to erase somebody's file, and the demo is often
+ * the only evidence of what happened.
+ */
+class CompDemoReportResource extends Resource
+{
+    protected static ?string $model = CompDemoReport::class;
+
+    protected static ?string $navigationIcon = 'heroicon-o-flag';
+
+    protected static ?string $navigationLabel = 'Comps: reported runs';
+
+    protected static ?string $navigationGroup = 'Comps';
+
+    protected static ?int $navigationSort = 3;
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $open = static::getModel()::where('status', 'open')->count();
+
+        return $open > 0 ? (string) $open : null;
+    }
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->defaultSort('created_at', 'desc')
+            ->columns([
+                Tables\Columns\TextColumn::make('submission.user.name')
+                    ->label('Run by')
+                    ->searchable()
+                    ->weight('bold'),
+
+                Tables\Columns\TextColumn::make('submission.time')
+                    ->label('Time')
+                    ->formatStateUsing(fn ($state) => $state ? gmdate('i:s', intdiv($state, 1000)) . '.' . str_pad($state % 1000, 3, '0', STR_PAD_LEFT) : '-'),
+
+                Tables\Columns\TextColumn::make('submission.physics')
+                    ->label('Physics')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => strtoupper((string) $state)),
+
+                Tables\Columns\TextColumn::make('submission.status')
+                    ->label('Entry')
+                    ->badge()
+                    ->color(fn ($state) => $state === 'valid' ? 'success' : 'danger'),
+
+                Tables\Columns\TextColumn::make('reporter.name')
+                    ->label('Reported by')
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('reason')
+                    ->limit(60)
+                    ->wrap()
+                    ->tooltip(fn (CompDemoReport $r) => $r->reason),
+
+                Tables\Columns\TextColumn::make('status')
+                    ->badge()
+                    ->color(fn (string $state) => match ($state) {
+                        'open' => 'warning',
+                        'upheld' => 'danger',
+                        default => 'gray',
+                    }),
+
+                Tables\Columns\TextColumn::make('created_at')
+                    ->dateTime('d.m.Y H:i')
+                    ->sortable(),
+            ])
+            ->filters([
+                Tables\Filters\SelectFilter::make('status')
+                    ->options([
+                        'open' => 'Open',
+                        'upheld' => 'Upheld',
+                        'dismissed' => 'Dismissed',
+                    ])
+                    ->default('open'),
+            ])
+            ->actions([
+                Tables\Actions\Action::make('download')
+                    ->label('Demo')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('gray')
+                    ->visible(fn (CompDemoReport $r) => (bool) $r->submission?->demo)
+                    ->url(fn (CompDemoReport $r) => route('demos.download', $r->submission->uploaded_demo_id), true),
+
+                Tables\Actions\Action::make('uphold')
+                    ->label('Uphold')
+                    ->icon('heroicon-o-check')
+                    ->color('danger')
+                    ->visible(fn (CompDemoReport $r) => $r->status === 'open')
+                    ->requiresConfirmation()
+                    ->modalDescription('Drops the entry from comps and rebuilds the standings without it. The demo stays in the demo database.')
+                    ->action(function (CompDemoReport $r) {
+                        $submission = $r->submission;
+
+                        $submission?->update([
+                            'status' => 'invalid',
+                            'invalid_reason' => 'Removed after a report.',
+                            // Stamped so the round page can tell this apart
+                            // from a run the validator never accepted, and
+                            // keep the player visible as removed.
+                            'removed_by' => auth()->id(),
+                            'removed_at' => now(),
+                        ]);
+
+                        $r->update([
+                            'status' => 'upheld',
+                            'resolved_by' => auth()->id(),
+                            'resolved_at' => now(),
+                        ]);
+
+                        // Only a finished round has standings to rebuild; a
+                        // running one is scored when it closes anyway.
+                        $round = $submission?->round;
+
+                        if ($round && $round->status === 'finished') {
+                            app(ResultsCalculator::class)->freeze($round);
+                        }
+
+                        Notification::make()->title('Entry removed, standings rebuilt')->success()->send();
+                    }),
+
+                Tables\Actions\Action::make('dismiss')
+                    ->label('Dismiss')
+                    ->icon('heroicon-o-x-mark')
+                    ->color('gray')
+                    ->visible(fn (CompDemoReport $r) => $r->status === 'open')
+                    ->requiresConfirmation()
+                    ->action(function (CompDemoReport $r) {
+                        $r->update([
+                            'status' => 'dismissed',
+                            'resolved_by' => auth()->id(),
+                            'resolved_at' => now(),
+                        ]);
+
+                        Notification::make()->title('Dismissed')->success()->send();
+                    }),
+            ])
+            ->emptyStateHeading('No reports')
+            ->emptyStateDescription('Nobody has reported a comps run.');
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['submission.user', 'submission.round', 'reporter']);
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListCompDemoReports::route('/'),
+        ];
+    }
+}

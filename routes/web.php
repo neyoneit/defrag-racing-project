@@ -126,6 +126,33 @@ Route::post('/wishlist/{wish}/request-removal', [\App\Http\Controllers\WishlistC
     ->middleware(['auth', 'verified', 'throttle:20,60'])
     ->name('wishlist.request-removal');
 
+// Comps. The hub is public - the point is that people can see what is being
+// played without an account - and everything that changes something needs one,
+// plus a linked MDD profile, because the prize for winning is a wildcard and
+// throwaway accounts would otherwise decide the map.
+Route::get('/comps', [\App\Http\Controllers\CompsController::class, 'index'])->name('comps.index');
+Route::get('/comps/{comp}', [\App\Http\Controllers\CompsController::class, 'show'])->name('comps.show');
+
+Route::post('/comps/rounds/{round}/vote', [\App\Http\Controllers\CompsController::class, 'vote'])
+    ->middleware(['auth', 'verified', 'throttle:120,60'])
+    ->name('comps.vote');
+Route::post('/comps/rounds/{round}/wildcard', [\App\Http\Controllers\CompsController::class, 'useWildcard'])
+    ->middleware(['auth', 'verified', 'throttle:20,60'])
+    ->name('comps.wildcard');
+
+Route::post('/comps/rounds/{round}/submit', [\App\Http\Controllers\CompSubmissionController::class, 'store'])
+    ->middleware(['auth', 'verified', 'throttle:60,60'])
+    ->name('comps.submit');
+Route::delete('/comps/submissions/{submission}', [\App\Http\Controllers\CompSubmissionController::class, 'destroy'])
+    ->middleware(['auth', 'verified'])
+    ->name('comps.submission.destroy');
+Route::post('/comps/submissions/{submission}/report', [\App\Http\Controllers\CompSubmissionController::class, 'reportDemo'])
+    ->middleware(['auth', 'verified', 'throttle:20,60'])
+    ->name('comps.report-demo');
+Route::post('/comps/rounds/{round}/report-map', [\App\Http\Controllers\CompSubmissionController::class, 'reportMap'])
+    ->middleware(['auth', 'verified', 'throttle:20,60'])
+    ->name('comps.report-map');
+
 Route::get('/ranking', [RankingController::class, 'index'])->name('ranking');
 Route::get('/ranking/how-it-works', [RankingController::class, 'howItWorks'])->name('ranking.how-it-works');
 

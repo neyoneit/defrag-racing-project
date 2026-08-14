@@ -103,3 +103,4 @@ __pycache__/
 
 # Throwaway helpers for the translation pass, same reason.
 /.i18n-tools/
+/COMPS_SPEC.md
