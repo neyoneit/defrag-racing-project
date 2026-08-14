@@ -4171,5 +4171,7 @@
     "There is no sign-up. Record a run on the map being played and it enters by itself.": "Aucune inscription. Fais un run sur la carte jouée et il entre tout seul.",
     "A demo of the map being played, in the physics it is being played in, stays hidden until the round is over. It appears then, together with everyone else's.": "Une démo de la carte jouée, dans la physique où elle est jouée, reste cachée jusqu'à la fin de la manche. Elle apparaît alors, avec celles de tout le monde.",
     "A run made before the vote for the round opened does not count in it.": "Un run réalisé avant l'ouverture du vote de la manche n'y compte pas.",
-    "Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.": "Aucun profil Q3DF.org n'est associé à ton compte, ce run n'est donc pas dans les comps. Il apparaîtra sur le site à la fin de la manche."
+    "Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.": "Aucun profil Q3DF.org n'est associé à ton compte, ce run n'est donc pas dans les comps. Il apparaîtra sur le site à la fin de la manche.",
+    "Held by comps": "Retenu par les comps",
+    "Open comps": "Ouvrir les comps"
 }

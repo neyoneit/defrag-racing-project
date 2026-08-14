@@ -152,7 +152,15 @@ class CompScheduler
             ->get();
 
         foreach ($rounds as $round) {
-            $round->update(['status' => 'active']);
+            // Stamp what the pool pays at the moment play begins. Until now the
+            // round quoted the pool live, because a donation made this week has
+            // to be able to raise next week; from here on it is fixed, because
+            // what a week pays is what its players were told when they started
+            // grinding it.
+            $round->update([
+                'status' => 'active',
+                'prize_eur' => $this->funding->perPhysicsFor((int) $round->comp?->number),
+            ]);
             $round->comp()->update(['status' => 'active']);
             $done[] = "round {$round->id}: now playing";
         }

@@ -49,6 +49,26 @@ class CompsApiPayload
             // person's demo went quiet.
             'my_notices' => $user ? $this->guard->noticesFor($user->id) : [],
             'entry_gate' => $this->entryGate($user),
+            'pool' => $this->pool(),
+        ];
+    }
+
+    /**
+     * What is in the prize pool and where to add to it.
+     *
+     * Not a per-round figure - each round already carries its own - but the
+     * thing behind them: comps pays out because people put money in, and a
+     * competition that never says so quietly reads as something the site owes
+     * everybody. Who donated stays on the website; the launcher gets the
+     * total, how far it reaches, and a way to open the donations page.
+     */
+    private function pool(): array
+    {
+        return [
+            'total_eur' => $this->funding->totalDonated(),
+            'weeks' => $this->funding->fundedWeekCount(),
+            'through_comp' => $this->funding->fundedThroughComp(),
+            'donate_url' => route('donations.index'),
         ];
     }
 
@@ -106,7 +126,7 @@ class CompsApiPayload
             'category' => $round->category,
             'weapon' => $round->weapon,
             'ends_at' => $round->ends_at?->toIso8601String(),
-            'prize_eur' => (float) ($round->prize_eur ?? $this->funding->perPhysicsFor((int) $round->comp->number)),
+            'prize_eur' => $this->funding->forRound($round),
             'maps' => $round->maps->mapWithKeys(fn ($m) => [$m->physics => $m->map?->name])->all(),
             // A count, never a list, and never a time. It answers "is anyone
             // else in this" without answering "what do I have to beat".
@@ -174,7 +194,7 @@ class CompsApiPayload
             // The reason to go and vote is usually that the week is worth
             // something, and the launcher is where somebody is standing when
             // they decide whether to bother.
-            'prize_eur' => (float) ($round->prize_eur ?? $this->funding->perPhysicsFor((int) $round->comp->number)),
+            'prize_eur' => $this->funding->forRound($round),
             'candidates' => $round->candidates()->with('map:id,name')->get()
                 ->map(fn ($c) => $c->map?->name)
                 ->filter()

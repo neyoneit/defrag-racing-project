@@ -129,6 +129,13 @@ const activelyProcessingDemos = computed(() => (processingDemos.value || []).fil
 const queuedDemoCount = computed(() => (queueStats.value?.total_queued || 0));
 const reprocessingFailed = ref(false);
 const recentlyProcessed = ref([]);
+
+// Demos of theirs that comps is holding. They are deliberately missing from
+// every list on this page - a run on a map being played is hidden site-wide -
+// so a demo uploaded here leaves the processing panel and arrives nowhere,
+// which reads as an upload that failed. This is the only place that says
+// otherwise.
+const compsNotices = ref([]);
 const reprocessMessage = ref('');
 const actionStartedAt = ref(null);
 const showReprocessConfirm = ref(false);
@@ -1123,6 +1130,7 @@ const pollOnce = async () => {
         }
         processingDemos.value = response.data.processing_demos;
         queueStats.value = response.data.queue_stats;
+        compsNotices.value = response.data.comps_notices || [];
 
         // Backend returns recently completed demos (last 5 min + tracked IDs)
         const completed = response.data.completed_demos || [];
@@ -1787,6 +1795,25 @@ watch(selectedPhysics, () => {
                                     <span v-if="demo.record_id" class="text-purple-300 text-[10px] ml-1">{{ $t('auto-assigned') }}</span>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Held by comps. Above the results panel, because a demo in
+                     here is one that will never appear in it: the run is on a
+                     map being played and the whole site hides it until the
+                     round ends. Without this the upload simply goes quiet. -->
+                <div v-if="compsNotices.length" class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4">
+                    <div class="flex items-center justify-between gap-3 mb-2">
+                        <div class="text-sm font-bold text-amber-200">{{ $t('Held by comps') }}</div>
+                        <Link :href="route('comps.index')" class="text-xs font-bold text-amber-300 underline decoration-amber-400/40 hover:text-amber-100">
+                            {{ $t('Open comps') }}
+                        </Link>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div v-for="notice in compsNotices" :key="notice.id" class="text-sm text-amber-100/80">
+                            <span class="text-[11px] text-amber-200/50 mr-2">{{ notice.filename }}</span>
+                            {{ notice.note }}
                         </div>
                     </div>
                 </div>

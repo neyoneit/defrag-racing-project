@@ -2,6 +2,7 @@
 
 namespace App\Services\Comps;
 
+use App\Models\CompRound;
 use App\Models\SiteDonation;
 use Illuminate\Support\Collection;
 
@@ -43,6 +44,31 @@ class PrizeFunding
             ->sum(fn (SiteDonation $d) => $d->compsPerPhysics());
 
         return $funded > 0 ? round($funded, 2) : (float) $this->settings->prizeEur();
+    }
+
+    /**
+     * What one physics wins in this round, in euro.
+     *
+     * A round stamps the amount when it is created and keeps it, so that a
+     * week pays what its players were told it would. That is right for a week
+     * being played and wrong for one that has not started: money donated
+     * today has to be able to raise next week, and a round created before the
+     * donation existed would otherwise sit there advertising the old flat rate
+     * while the page above it says the pool is fifty euro over ten weeks.
+     *
+     * So a round that has not started yet is quoted from the pool as it stands
+     * right now, and one that has started keeps its stamp. The stamp is
+     * refreshed at the moment a round starts - see CompScheduler.
+     */
+    public function forRound(CompRound $round): float
+    {
+        $number = (int) ($round->comp?->number ?? 0);
+
+        if ($round->starts_at?->isFuture()) {
+            return $this->perPhysicsFor($number);
+        }
+
+        return (float) ($round->prize_eur ?? $this->perPhysicsFor($number));
     }
 
     /** Every donation currently paying for the given weekly. */

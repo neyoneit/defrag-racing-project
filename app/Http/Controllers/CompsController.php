@@ -102,10 +102,14 @@ class CompsController extends Controller
     {
         $funding = app(PrizeFunding::class);
 
-        // The round's own stamped amount first, because that is what its
-        // players were told. Only a week that does not exist yet asks the
-        // funding what it would pay.
-        $eur = (float) ($round?->prize_eur ?? $funding->perPhysicsFor(((int) Comp::weekly()->max('number')) + 1));
+        // A round being played is quoted from its own stamp, because that is
+        // what its players were told. A round that has not started yet is
+        // quoted from the pool as it stands, so money donated today raises
+        // next week instead of leaving it advertising the flat rate it
+        // happened to be created with. See PrizeFunding::forRound.
+        $eur = $round
+            ? $funding->forRound($round)
+            : $funding->perPhysicsFor(((int) Comp::weekly()->max('number')) + 1);
 
         return [
             'eur' => $this->money($eur),

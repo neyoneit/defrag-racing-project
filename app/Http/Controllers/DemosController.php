@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use App\Models\UploadedDemo;
 use App\Models\RenderedVideo;
+use App\Services\Comps\UploadGuard;
 use App\Services\DemoProcessorService;
 use App\Jobs\ProcessDemoJob;
 
@@ -1315,6 +1316,12 @@ class DemosController extends Controller
             'processing_demos' => $processingDemos,
             'completed_demos' => $completedDemos,
             'queue_stats' => $queueStats,
+            // Demos of theirs comps is holding. They are missing from
+            // everything above by design - the global scope hides a run on a
+            // map being played - so without this somebody uploading this
+            // week's map watches their demo leave the processing list and
+            // never arrive anywhere. It reads as an upload that failed.
+            'comps_notices' => app(UploadGuard::class)->noticesFor($userId, 20),
             'timestamp' => now()->toISOString(),
         ]);
     }

@@ -4171,5 +4171,7 @@
     "There is no sign-up. Record a run on the map being played and it enters by itself.": "Жодного запису немає. Проїдь забіг на карті, яка грається, і він потрапить у раунд сам.",
     "A demo of the map being played, in the physics it is being played in, stays hidden until the round is over. It appears then, together with everyone else's.": "Демо з карти, яка грається, у тій фізиці, у якій вона грається, лишається схованим до кінця раунду. Тоді воно з'явиться разом з усіма іншими.",
     "A run made before the vote for the round opened does not count in it.": "Забіг, зроблений до відкриття голосування за раунд, у ньому не рахується.",
-    "Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.": "До твого акаунта не прив'язаний профіль Q3DF.org, тож цей забіг не в comps. На сайті він з'явиться після завершення раунду."
+    "Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.": "До твого акаунта не прив'язаний профіль Q3DF.org, тож цей забіг не в comps. На сайті він з'явиться після завершення раунду.",
+    "Held by comps": "Притримано через comps",
+    "Open comps": "Відкрити comps"
 }
