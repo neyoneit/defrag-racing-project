@@ -57,15 +57,22 @@ class ExtractAndQueueArchiveJob implements ShouldQueue
             foreach ($extractedDemos as $demoFile) {
                 $fileHash = md5_file($demoFile['path']);
 
-                // Check for duplicates
-                $existingDemo = UploadedDemo::where('file_hash', $fileHash)->first();
+                // Check for duplicates. withUnreleasedComps() because file_hash
+                // is unique: a comps entry hidden from this query would only
+                // resurface as a constraint violation on the insert below, and
+                // by then a run still being competed on would have been queued
+                // for publication.
+                $existingDemo = UploadedDemo::withUnreleasedComps()
+                    ->where('file_hash', $fileHash)
+                    ->first();
                 if ($existingDemo) {
                     @unlink($demoFile['path']);
                     continue;
                 }
 
                 // Check for user filename duplicates
-                $existingByFilename = UploadedDemo::where('user_id', $this->userId)
+                $existingByFilename = UploadedDemo::withUnreleasedComps()
+                    ->where('user_id', $this->userId)
                     ->where('original_filename', $demoFile['name'])
                     ->first();
 

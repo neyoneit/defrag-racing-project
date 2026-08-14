@@ -724,14 +724,24 @@ class DemosController extends Controller
             $allHashes = array_column($demoCandidate, 'hash');
             $allNames = array_column($demoCandidate, 'name');
 
-            // Batch query: existing demos by hash
-            $existingByHash = UploadedDemo::whereIn('file_hash', $allHashes)
+            // Batch query: existing demos by hash.
+            //
+            // withUnreleasedComps() because a duplicate check that cannot see
+            // comps entries is worse than no check at all: file_hash is unique,
+            // so the insert below would hit the constraint anyway - but before
+            // it did, somebody re-uploading their own comps run would have
+            // published it here, mid-round, with its time.
+            $existingByHash = UploadedDemo::withUnreleasedComps()
+                ->whereIn('file_hash', $allHashes)
                 ->get()
                 ->keyBy('file_hash');
 
-            // Batch query: existing demos by filename for this user (skip for guests)
+            // Batch query: existing demos by filename for this user (skip for guests).
+            // Scoped to the user, so surfacing their own held comps entry tells
+            // them nothing they did not already know.
             $existingByName = $userId
-                ? UploadedDemo::where('user_id', $userId)
+                ? UploadedDemo::withUnreleasedComps()
+                    ->where('user_id', $userId)
                     ->whereIn('original_filename', $allNames)
                     ->get()
                     ->keyBy('original_filename')
@@ -750,6 +760,15 @@ class DemosController extends Controller
                     $replacedThisDemo = false;
                     if ($existingByHash->has($fileHash)) {
                         $existing = $existingByHash->get($fileHash);
+                        if ($existing->isHeldForComps()) {
+                            // A comps entry in a round still being played is
+                            // neither replaceable nor nameable here. Replacing
+                            // it would delete somebody's entry without saying so
+                            // (comp_submissions cascades off this row), and
+                            // naming it would say what a hidden demo is called.
+                            $errors[] = $originalName . ': Duplicate file content (this demo is entered in a comps round that is still running)';
+                            continue;
+                        }
                         if (in_array($existing->status, $reuploadableStatuses)) {
                             $this->cleanupFailedDemo($existing);
                             $existingByHash->forget($fileHash);
@@ -764,6 +783,13 @@ class DemosController extends Controller
                     // Check filename duplicate
                     if ($existingByName->has($originalName)) {
                         $existing = $existingByName->get($originalName);
+                        if ($existing->isHeldForComps()) {
+                            // Same reason as the hash branch above: this row is
+                            // carrying a live comps entry, so it does not get
+                            // cleaned up and replaced.
+                            $errors[] = $originalName . ': Filename already used by your comps entry in a round that is still running';
+                            continue;
+                        }
                         if (in_array($existing->status, $reuploadableStatuses)) {
                             $this->cleanupFailedDemo($existing);
                             $existingByName->forget($originalName);

@@ -58,7 +58,15 @@ class CompSubmissionController extends Controller
         // a round and upload again, which is the point - but the same file
         // twice is a slip, not an improvement, and ten copies of one run in
         // somebody's entry list helps nobody.
-        $hash = hash_file('sha256', $file->getRealPath());
+        //
+        // md5, because `uploaded_demos.file_hash` is what every other upload
+        // path writes an md5 into and the column is varchar(32) with a unique
+        // index on it. A sha256 here was silently truncated to its first 32
+        // characters, which is the hash of nothing: no other path could ever
+        // compute that value, so the same demo re-uploaded through /demos or
+        // the launcher deduped against nothing and became a second, public row
+        // in the middle of a round.
+        $hash = md5_file($file->getRealPath());
 
         $duplicate = UploadedDemo::withUnreleasedComps()
             ->where('file_hash', $hash)
