@@ -53,6 +53,11 @@ Route::prefix('launcher')
     ->group(function () {
         Route::middleware(['abilities:launcher:upload', 'throttle:launcher-upload'])->group(function () {
             Route::post('/upload-demo', [\App\Http\Controllers\Api\LauncherController::class, 'uploadDemo']);
+
+            // Entering a run. Same bucket as the ordinary upload: it is the
+            // same multipart body and the same ProcessDemoJob behind it, and
+            // nobody enters a competition faster than they back demos up.
+            Route::post('/comps/upload', [\App\Http\Controllers\Api\LauncherController::class, 'compsUpload']);
         });
 
         // lookup-by-hash is a write-ability route (it's POST and lives
@@ -72,6 +77,11 @@ Route::prefix('launcher')
             Route::get('/records', [\App\Http\Controllers\Api\LauncherController::class, 'records']);
             Route::get('/maps', [\App\Http\Controllers\Api\LauncherController::class, 'maps']);
             Route::get('/render-status', [\App\Http\Controllers\Api\LauncherController::class, 'renderStatus']);
+
+            // What comps is playing. The launcher polls this every few minutes
+            // and uses the map names to keep a run on this week's map out of
+            // the ordinary upload path, so it is read-shaped but load-bearing.
+            Route::get('/comps', [\App\Http\Controllers\Api\LauncherController::class, 'comps']);
             Route::get('/rendered-index', [\App\Http\Controllers\Api\LauncherController::class, 'renderedIndex']);
 
             // Mark-as-read / mark-as-unread for the launcher Notifications

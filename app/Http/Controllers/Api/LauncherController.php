@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessDemoJob;
+use App\Models\CompRound;
 use App\Models\Map;
 use App\Models\Notification;
 use App\Models\Record;
 use App\Models\RecordNotification;
 use App\Models\RenderedVideo;
 use App\Models\UploadedDemo;
+use App\Services\Comps\CompsApiPayload;
+use App\Services\Comps\SubmissionIntake;
 use App\Services\ServerListService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -140,6 +143,106 @@ class LauncherController extends Controller
         return response()->json([
             'demo_id' => $demo->id,
             'status' => 'uploaded',
+        ]);
+    }
+
+    /**
+     * What comps is doing, for the launcher's Comps tab.
+     *
+     * The launcher needs the map being played in each physics for more than
+     * display: it is how it recognises a run on this week's map and keeps that
+     * demo out of the ordinary, immediately-public upload path. So this is
+     * cached briefly rather than not at all - a thousand launchers polling every
+     * five minutes should not be a thousand queries - but not longer, because a
+     * stale map is a demo published by mistake.
+     *
+     * Response 200: { playing: {...}|null, voting: {...}|null }
+     */
+    public function comps(Request $request, CompsApiPayload $payload)
+    {
+        $user = $request->user();
+
+        // The round itself is the same for everybody; only the caller's own
+        // entries differ, so the shared half is what gets cached.
+        $shared = Cache::remember('comps:launcher_payload', 60, fn () => $payload->build(null));
+
+        if ($user && $shared['playing']) {
+            $shared['playing']['my_entries'] = $payload->build($user)['playing']['my_entries'] ?? [];
+        }
+
+        return response()->json($shared);
+    }
+
+    /**
+     * Enter a demo into the round being played.
+     *
+     * Same rules as the upload form on the comps page, because both go through
+     * SubmissionIntake - a rule enforced on only one of the two routes would
+     * not surface as an error, it would surface as a run that counted one way
+     * and not the other.
+     *
+     * `auto` marks an entry the launcher decided on by reading the demo's
+     * filename. That is a convention, not a promise, so the server checks again
+     * once the file is parsed and an auto entry that turns out not to be a run
+     * of this map is withdrawn silently, leaving an ordinary upload behind.
+     * See SubmissionValidator::reject.
+     *
+     * Response 200: { demo_id, submission_id, status: "pending" }
+     * Response 409: { error: "duplicate" }  - already uploaded
+     * Response 422: { error: <sentence> }   - round closed, wrong file type
+     */
+    public function compsUpload(Request $request, SubmissionIntake $intake)
+    {
+        $user = $request->user();
+
+        if (! $user->canUploadDemos()) {
+            return response()->json([
+                'error' => 'Your account has been restricted from uploading demos.',
+            ], 403);
+        }
+
+        $data = $request->validate([
+            'demo' => ['required', 'file', 'max:' . SubmissionIntake::MAX_KB],
+            'round_id' => ['required', 'integer'],
+            'auto' => ['sometimes', 'boolean'],
+        ]);
+
+        $round = CompRound::find($data['round_id']);
+
+        if (! $round) {
+            return response()->json(['error' => 'No such round.'], 404);
+        }
+
+        $file = $request->file('demo');
+        $hash = $intake->hash($file);
+
+        if ($reason = $intake->rejectionReason($round, $file, $hash)) {
+            // A duplicate is the one case the launcher can act on by itself -
+            // it means the file is already on the server, so the local copy is
+            // backed up and needs no retry. Everything else is for the user.
+            $duplicate = UploadedDemo::withUnreleasedComps()
+                ->where('file_hash', $hash)
+                ->exists();
+
+            return response()->json(
+                $duplicate ? ['error' => 'duplicate'] : ['error' => $reason],
+                $duplicate ? 409 : 422
+            );
+        }
+
+        $submission = $intake->accept(
+            $round,
+            $user,
+            $file,
+            $hash,
+            isHighlight: false,
+            autoEntered: (bool) ($data['auto'] ?? false),
+        );
+
+        return response()->json([
+            'demo_id' => $submission->uploaded_demo_id,
+            'submission_id' => $submission->id,
+            'status' => 'pending',
         ]);
     }
 
