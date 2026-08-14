@@ -4173,5 +4173,16 @@
     "A run made before the vote for the round opened does not count in it.": "En körning gjord innan omröstningen för omgången öppnade räknas inte i den.",
     "Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.": "Ingen Q3DF.org-profil är kopplad till ditt konto, så den här körningen är inte med i comps. Den dyker upp på sajten när omgången är slut.",
     "Held by comps": "Hålls tillbaka av comps",
-    "Open comps": "Öppna comps"
+    "Open comps": "Öppna comps",
+    "You took this run out of comps yourself. The demo appears on the site once the round is over.": "Du tog själv ut den här körningen ur comps. Demon dyker upp på sajten när omgången är slut.",
+    "Withdraw this run?": "Dra tillbaka den här körningen?",
+    "It leaves the round and stops counting, and the same file cannot be entered again. The demo itself stays on the site and appears once the round is over.": "Den lämnar omgången och räknas inte längre, och samma fil kan inte anmälas igen. Själva demon ligger kvar på sajten och dyker upp när omgången är slut.",
+    "The archive could not be opened: :message": "Arkivet gick inte att öppna: :message",
+    "That is not a Quake 3 demo file.": "Det här är inte en Quake 3-demofil.",
+    "The upload failed: :message": "Uppladdningen misslyckades: :message",
+    "You have already uploaded this demo - it is entered in a comps round that is still being played.": "Den här demon har du redan laddat upp - den är anmäld i en comps-omgång som fortfarande spelas.",
+    "This demo is already on the site as :name.": "Den här demon finns redan på sajten som :name.",
+    "You already have a demo with this filename, entered in a comps round that is still being played.": "Du har redan en demo med det filnamnet, anmäld i en comps-omgång som fortfarande spelas.",
+    "You have already uploaded a demo with this filename.": "Du har redan laddat upp en demo med det filnamnet.",
+    "The same file is in this upload twice.": "Samma fil ligger två gånger i den här uppladdningen."
 }

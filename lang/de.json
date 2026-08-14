@@ -4173,5 +4173,16 @@
     "A run made before the vote for the round opened does not count in it.": "Ein Lauf, der vor der Eröffnung der Abstimmung entstanden ist, zählt in dieser Runde nicht.",
     "Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.": "Mit deinem Konto ist kein Q3DF.org-Profil verknüpft, dieser Lauf ist also nicht in Comps. Er erscheint auf der Seite, sobald die Runde vorbei ist.",
     "Held by comps": "Von Comps zurückgehalten",
-    "Open comps": "Comps öffnen"
+    "Open comps": "Comps öffnen",
+    "You took this run out of comps yourself. The demo appears on the site once the round is over.": "Du hast diesen Lauf selbst aus Comps genommen. Das Demo erscheint auf der Seite, sobald die Runde vorbei ist.",
+    "Withdraw this run?": "Diesen Lauf zurückziehen?",
+    "It leaves the round and stops counting, and the same file cannot be entered again. The demo itself stays on the site and appears once the round is over.": "Er fliegt aus der Runde und zählt nicht mehr, und dieselbe Datei kann nicht noch einmal eingereicht werden. Das Demo selbst bleibt auf der Seite und erscheint nach dem Ende der Runde.",
+    "The archive could not be opened: :message": "Das Archiv konnte nicht geöffnet werden: :message",
+    "That is not a Quake 3 demo file.": "Das ist keine Quake-3-Demodatei.",
+    "The upload failed: :message": "Der Upload ist fehlgeschlagen: :message",
+    "You have already uploaded this demo - it is entered in a comps round that is still being played.": "Dieses Demo hast du bereits hochgeladen - es ist in einer Comps-Runde eingereicht, die noch läuft.",
+    "This demo is already on the site as :name.": "Dieses Demo ist als :name bereits auf der Seite.",
+    "You already have a demo with this filename, entered in a comps round that is still being played.": "Ein Demo mit diesem Dateinamen hast du schon, eingereicht in einer Comps-Runde, die noch läuft.",
+    "You have already uploaded a demo with this filename.": "Ein Demo mit diesem Dateinamen hast du bereits hochgeladen.",
+    "The same file is in this upload twice.": "Dieselbe Datei ist zweimal in diesem Upload."
 }

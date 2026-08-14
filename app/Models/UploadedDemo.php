@@ -56,6 +56,7 @@ class UploadedDemo extends Model
         'validity',
         'status',
         'comps_hidden_until',
+        'comps_withdrawn_at',
         'source',
         'processing_output',
         'name_confidence',
@@ -79,6 +80,7 @@ class UploadedDemo extends Model
         'manually_assigned' => 'boolean',
         'download_count' => 'integer',
         'comps_hidden_until' => 'datetime',
+        'comps_withdrawn_at' => 'datetime',
     ];
 
     /**

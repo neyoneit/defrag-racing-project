@@ -4173,5 +4173,16 @@
     "A run made before the vote for the round opened does not count in it.": "Przejazd zrobiony przed otwarciem głosowania nad rundą nie liczy się w niej.",
     "Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.": "Do twojego konta nie jest podpięty profil Q3DF.org, więc ten przejazd nie jest w comps. Pojawi się na stronie po zakończeniu rundy.",
     "Held by comps": "Wstrzymane przez comps",
-    "Open comps": "Otwórz comps"
+    "Open comps": "Otwórz comps",
+    "You took this run out of comps yourself. The demo appears on the site once the round is over.": "Sam wycofałeś ten przejazd z comps. Demo pojawi się na stronie po zakończeniu rundy.",
+    "Withdraw this run?": "Wycofać ten przejazd?",
+    "It leaves the round and stops counting, and the same file cannot be entered again. The demo itself stays on the site and appears once the round is over.": "Wypada z rundy i przestaje się liczyć, a tego samego pliku nie da się zgłosić ponownie. Demo zostaje na stronie i pojawi się po zakończeniu rundy.",
+    "The archive could not be opened: :message": "Nie udało się otworzyć archiwum: :message",
+    "That is not a Quake 3 demo file.": "To nie jest plik dema z Quake 3.",
+    "The upload failed: :message": "Wysyłanie nie powiodło się: :message",
+    "You have already uploaded this demo - it is entered in a comps round that is still being played.": "To demo już wysłałeś - jest zgłoszone w rundzie comps, która wciąż trwa.",
+    "This demo is already on the site as :name.": "To demo jest już na stronie jako :name.",
+    "You already have a demo with this filename, entered in a comps round that is still being played.": "Masz już demo o tej nazwie, zgłoszone w rundzie comps, która wciąż trwa.",
+    "You have already uploaded a demo with this filename.": "Demo o tej nazwie pliku już wysłałeś.",
+    "The same file is in this upload twice.": "Ten sam plik jest w tym wysyłaniu dwa razy."
 }

@@ -4173,5 +4173,16 @@
     "A run made before the vote for the round opened does not count in it.": "Забіг, зроблений до відкриття голосування за раунд, у ньому не рахується.",
     "Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.": "До твого акаунта не прив'язаний профіль Q3DF.org, тож цей забіг не в comps. На сайті він з'явиться після завершення раунду.",
     "Held by comps": "Притримано через comps",
-    "Open comps": "Відкрити comps"
+    "Open comps": "Відкрити comps",
+    "You took this run out of comps yourself. The demo appears on the site once the round is over.": "Ти сам забрав цей забіг із comps. На сайті демо з'явиться після завершення раунду.",
+    "Withdraw this run?": "Забрати цей забіг?",
+    "It leaves the round and stops counting, and the same file cannot be entered again. The demo itself stays on the site and appears once the round is over.": "Він вийде з раунду і перестане рахуватися, а той самий файл заявити ще раз не вийде. Саме демо лишається на сайті і з'явиться після завершення раунду.",
+    "The archive could not be opened: :message": "Не вдалося відкрити архів: :message",
+    "That is not a Quake 3 demo file.": "Це не файл демо з Quake 3.",
+    "The upload failed: :message": "Завантаження не вдалося: :message",
+    "You have already uploaded this demo - it is entered in a comps round that is still being played.": "Це демо ти вже завантажував - воно заявлене в раунді comps, який ще триває.",
+    "This demo is already on the site as :name.": "Це демо вже є на сайті як :name.",
+    "You already have a demo with this filename, entered in a comps round that is still being played.": "Демо з такою назвою в тебе вже є, воно заявлене в раунді comps, який ще триває.",
+    "You have already uploaded a demo with this filename.": "Демо з такою назвою файлу ти вже завантажував.",
+    "The same file is in this upload twice.": "Той самий файл у цьому завантаженні двічі."
 }

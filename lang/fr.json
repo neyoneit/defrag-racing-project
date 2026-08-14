@@ -4173,5 +4173,16 @@
     "A run made before the vote for the round opened does not count in it.": "Un run réalisé avant l'ouverture du vote de la manche n'y compte pas.",
     "Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.": "Aucun profil Q3DF.org n'est associé à ton compte, ce run n'est donc pas dans les comps. Il apparaîtra sur le site à la fin de la manche.",
     "Held by comps": "Retenu par les comps",
-    "Open comps": "Ouvrir les comps"
+    "Open comps": "Ouvrir les comps",
+    "You took this run out of comps yourself. The demo appears on the site once the round is over.": "Tu as retiré ce run des comps toi-même. La démo apparaîtra sur le site à la fin de la manche.",
+    "Withdraw this run?": "Retirer ce run ?",
+    "It leaves the round and stops counting, and the same file cannot be entered again. The demo itself stays on the site and appears once the round is over.": "Il quitte la manche et ne compte plus, et le même fichier ne peut pas être réinscrit. La démo reste sur le site et apparaîtra à la fin de la manche.",
+    "The archive could not be opened: :message": "L'archive n'a pas pu être ouverte : :message",
+    "That is not a Quake 3 demo file.": "Ce n'est pas un fichier de démo Quake 3.",
+    "The upload failed: :message": "L'envoi a échoué : :message",
+    "You have already uploaded this demo - it is entered in a comps round that is still being played.": "Tu as déjà envoyé cette démo - elle est inscrite dans une manche de comps encore en cours.",
+    "This demo is already on the site as :name.": "Cette démo est déjà sur le site sous le nom :name.",
+    "You already have a demo with this filename, entered in a comps round that is still being played.": "Tu as déjà une démo portant ce nom, inscrite dans une manche de comps encore en cours.",
+    "You have already uploaded a demo with this filename.": "Tu as déjà envoyé une démo portant ce nom de fichier.",
+    "The same file is in this upload twice.": "Le même fichier est deux fois dans cet envoi."
 }

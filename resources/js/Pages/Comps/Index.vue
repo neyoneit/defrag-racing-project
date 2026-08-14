@@ -226,8 +226,15 @@ export default {
         return valid.length ? Math.min(...valid.map((e) => e.time)) : null;
     };
 
-    const withdraw = (id) => {
-        router.delete(route('comps.submission.destroy', id), { preserveScroll: true });
+    // Withdrawing is not undoable: the entry goes, and the same file cannot be
+    // uploaded again because the site already holds its hash. So it asks.
+    const withdrawTarget = ref(null);
+
+    const confirmWithdraw = () => {
+        const id = withdrawTarget.value?.id;
+        withdrawTarget.value = null;
+
+        if (id) router.delete(route('comps.submission.destroy', id), { preserveScroll: true });
     };
 
     const errors = computed(() => page.props.errors ?? {});
@@ -876,7 +883,7 @@ export default {
 
                             <button
                                 type="button"
-                                @click="withdraw(entry.id)"
+                                @click="withdrawTarget = entry"
                                 class="ml-auto text-xs text-gray-600 hover:text-red-400 transition-colors"
                             >
                                 {{ $t('Withdraw') }}
@@ -884,44 +891,44 @@ export default {
                         </div>
                     </div>
                 </div>
-            </div>
-        </section>
 
-        <!-- ========================= DEMOS ON HOLD ======================== -->
-        <!-- Runs of theirs that comps is keeping back without having entered
-             them: unreadable files, runs older than the round, runs in the
-             other physics. Nothing else would ever tell them. The demo simply
-             stops appearing on the site, and somebody who is not told that
-             reads it as the upload having failed. -->
-        <section v-if="myNotices.length">
-            <h2 class="mb-4 text-xl font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ $t('Demos of yours on hold') }}</h2>
+                <!-- Runs of theirs comps is keeping back without having entered
+                     them: a file that could not be read, a run older than the
+                     round, one they withdrew themselves. Inside the entry
+                     panel and directly under the entries, because it answers
+                     the same question they do - what happened to my demo -
+                     and a separate section further down the page read as a
+                     different subject. -->
+                <div v-if="myNotices.length" class="mt-5">
+                    <div class="mb-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">{{ $t('Demos of yours on hold') }}</div>
+                    <div class="space-y-1.5">
+                        <div
+                            v-for="notice in myNotices"
+                            :key="notice.id"
+                            class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-white/5 bg-black/40 backdrop-blur-sm px-3 py-2"
+                        >
+                            <span class="max-w-full truncate text-[11px] text-gray-600 md:max-w-[16rem]">{{ notice.filename }}</span>
 
-            <div class="space-y-1.5">
-                <div
-                    v-for="notice in myNotices"
-                    :key="notice.id"
-                    class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-white/5 bg-black/40 backdrop-blur-sm px-3 py-2"
-                >
-                    <span class="max-w-full truncate text-[11px] text-gray-600 md:max-w-[16rem]">{{ notice.filename }}</span>
+                            <span class="text-sm" :class="notice.kind === 'unreadable' ? 'text-red-400' : 'text-gray-300'">{{ notice.note }}</span>
 
-                    <span class="text-sm" :class="notice.kind === 'unreadable' ? 'text-red-400' : 'text-gray-300'">{{ notice.note }}</span>
+                            <!-- An unreadable demo is the one case where the site
+                                 cannot say what went wrong, so it hands over the person
+                                 who can look at the file. -->
+                            <span v-if="notice.reported" class="text-xs text-gray-500">{{ $t('Sent to an admin') }}</span>
+                            <button
+                                v-else
+                                type="button"
+                                @click="askAboutDemo(notice.id, notice.filename)"
+                                class="text-xs font-bold text-amber-300 underline decoration-amber-400/40 hover:text-amber-100"
+                            >
+                                {{ $t('Ask an admin about this demo') }}
+                            </button>
 
-                    <!-- An unreadable demo is the one case where the site
-                         cannot say what went wrong, so it hands over the person
-                         who can look at the file. -->
-                    <span v-if="notice.reported" class="text-xs text-gray-500">{{ $t('Sent to an admin') }}</span>
-                    <button
-                        v-else
-                        type="button"
-                        @click="askAboutDemo(notice.id, notice.filename)"
-                        class="text-xs font-bold text-amber-300 underline decoration-amber-400/40 hover:text-amber-100"
-                    >
-                        {{ $t('Ask an admin about this demo') }}
-                    </button>
-
-                    <span v-if="notice.appears_at" class="ml-auto text-[11px] text-gray-600">
-                        {{ $t('Appears :when', { when: appearsAt(notice.appears_at) }) }}
-                    </span>
+                            <span v-if="notice.appears_at" class="ml-auto text-[11px] text-gray-600">
+                                {{ $t('Appears :when', { when: appearsAt(notice.appears_at) }) }}
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -1018,6 +1025,28 @@ export default {
                         </button>
                         <button type="button" @click="confirmWildcard" class="rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-black hover:bg-amber-400">
                             {{ $t('Use it') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- Withdrawing is final, so it says so before doing it. -->
+        <Teleport to="body">
+            <div v-if="withdrawTarget" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" @click.self="withdrawTarget = null">
+                <div class="w-full max-w-md rounded-xl border border-white/10 bg-black/70 backdrop-blur-xl p-6">
+                    <h3 class="text-lg font-black text-white">{{ $t('Withdraw this run?') }}</h3>
+                    <p class="mt-2 truncate text-[11px] text-gray-600">{{ withdrawTarget.filename }}</p>
+                    <p class="mt-3 text-sm text-gray-400">
+                        {{ $t('It leaves the round and stops counting, and the same file cannot be entered again. The demo itself stays on the site and appears once the round is over.') }}
+                    </p>
+
+                    <div class="mt-5 flex justify-end gap-2">
+                        <button type="button" @click="withdrawTarget = null" class="rounded-lg border border-white/10 px-4 py-2 text-sm text-gray-300 hover:bg-white/5">
+                            {{ $t('Cancel') }}
+                        </button>
+                        <button type="button" @click="confirmWithdraw" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500">
+                            {{ $t('Withdraw') }}
                         </button>
                     </div>
                 </div>

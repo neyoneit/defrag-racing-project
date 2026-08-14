@@ -727,13 +727,13 @@ class DemosController extends Controller
                         \App\Jobs\ExtractAndQueueArchiveJob::dispatch($archivePath, $userId, $originalName);
                         $filesProcessed++;
                     } catch (\Exception $e) {
-                        $errors[] = $originalName . ': Failed to queue archive - ' . $e->getMessage();
+                        $errors[] = $this->uploadError($originalName, 'archive', __('The archive could not be opened: :message', ['message' => $e->getMessage()]));
                     }
                     continue;
                 }
 
                 if (!preg_match('/^dm_\d+$/', $extension)) {
-                    $errors[] = $originalName . ': Invalid demo file format';
+                    $errors[] = $this->uploadError($originalName, 'format', __('That is not a Quake 3 demo file.'));
                     continue;
                 }
 
@@ -746,7 +746,7 @@ class DemosController extends Controller
                     'mtime' => $this->clientMtime($demoMtimes[$index] ?? null),
                 ];
             } catch (\Exception $e) {
-                $errors[] = $demoFile->getClientOriginalName() . ': Upload failed - ' . $e->getMessage();
+                $errors[] = $this->uploadError($demoFile->getClientOriginalName(), 'failed', __('The upload failed: :message', ['message' => $e->getMessage()]));
             }
         }
 
@@ -797,7 +797,7 @@ class DemosController extends Controller
                             // it would delete somebody's entry without saying so
                             // (comp_submissions cascades off this row), and
                             // naming it would say what a hidden demo is called.
-                            $errors[] = $originalName . ': Duplicate file content (this demo is entered in a comps round that is still running)';
+                            $errors[] = $this->uploadError($originalName, 'duplicate', __('You have already uploaded this demo - it is entered in a comps round that is still being played.'));
                             continue;
                         }
                         if (in_array($existing->status, $reuploadableStatuses)) {
@@ -806,7 +806,7 @@ class DemosController extends Controller
                             $replacedThisDemo = true;
                         } else {
                             $demoName = $existing->processed_filename ?: $existing->original_filename;
-                            $errors[] = $originalName . ': Duplicate file content (already uploaded as: ' . $demoName . ')';
+                            $errors[] = $this->uploadError($originalName, 'duplicate', __('This demo is already on the site as :name.', ['name' => $demoName]));
                             continue;
                         }
                     }
@@ -818,7 +818,7 @@ class DemosController extends Controller
                             // Same reason as the hash branch above: this row is
                             // carrying a live comps entry, so it does not get
                             // cleaned up and replaced.
-                            $errors[] = $originalName . ': Filename already used by your comps entry in a round that is still running';
+                            $errors[] = $this->uploadError($originalName, 'duplicate_name', __('You already have a demo with this filename, entered in a comps round that is still being played.'));
                             continue;
                         }
                         if (in_array($existing->status, $reuploadableStatuses)) {
@@ -826,7 +826,7 @@ class DemosController extends Controller
                             $existingByName->forget($originalName);
                             $replacedThisDemo = true;
                         } else {
-                            $errors[] = $originalName . ': Filename already uploaded by you';
+                            $errors[] = $this->uploadError($originalName, 'duplicate_name', __('You have already uploaded a demo with this filename.'));
                             continue;
                         }
                     }
@@ -846,7 +846,7 @@ class DemosController extends Controller
                         ]);
                     } catch (\Illuminate\Database\QueryException $qe) {
                         if (str_contains($qe->getMessage(), 'Duplicate entry')) {
-                            $errors[] = $originalName . ': Duplicate file content (same hash in this batch)';
+                            $errors[] = $this->uploadError($originalName, 'duplicate', __('The same file is in this upload twice.'));
                             continue;
                         }
                         throw $qe;
@@ -862,7 +862,7 @@ class DemosController extends Controller
                     $queuedDemos[] = $demo;
                     $filesProcessed++;
                 } catch (\Exception $e) {
-                    $errors[] = $candidate['name'] . ': Upload failed - ' . $e->getMessage();
+                    $errors[] = $this->uploadError($candidate['name'], 'failed', __('The upload failed: :message', ['message' => $e->getMessage()]));
                 }
             }
         }
@@ -874,7 +874,10 @@ class DemosController extends Controller
         Cache::put($rateLimitKey, $currentUploads + $filesProcessed, now()->addSeconds($rateLimitTtl));
 
         // Count error types for summary
-        $duplicateCount = count(array_filter($errors, fn($e) => str_contains($e, 'Duplicate') || str_contains($e, 'already uploaded')));
+        $duplicateCount = count(array_filter(
+            $errors,
+            fn ($e) => in_array($e['code'], ['duplicate', 'duplicate_name'], true)
+        ));
         $otherErrorCount = count($errors) - $duplicateCount;
 
         Log::info("Demo upload batch completed", [
@@ -1244,6 +1247,20 @@ class DemosController extends Controller
     /**
      * Get processing status for user's demos (polling endpoint)
      */
+    /**
+     * One failed file, as the uploader is told about it.
+     *
+     * Three separate things rather than one sentence: the filename, a code,
+     * and a translated message. The code is what the counting and the grouping
+     * use - they matched on English substrings before, so the day these
+     * sentences were translated was the day "Duplicates" stopped counting
+     * anything and every error landed under "Other".
+     */
+    private function uploadError(string $file, string $code, string $message): array
+    {
+        return ['file' => $file, 'code' => $code, 'message' => $message];
+    }
+
     public function status(Request $request)
     {
         $demoIds = $request->get('demo_ids');

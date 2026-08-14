@@ -4173,5 +4173,16 @@
     "A run made before the vote for the round opened does not count in it.": "Una carrera hecha antes de que se abriera la votación de la ronda no cuenta en ella.",
     "Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.": "Tu cuenta no tiene ningún perfil de Q3DF.org vinculado, así que esta carrera no está en comps. Aparecerá en la web cuando termine la ronda.",
     "Held by comps": "Retenido por comps",
-    "Open comps": "Abrir comps"
+    "Open comps": "Abrir comps",
+    "You took this run out of comps yourself. The demo appears on the site once the round is over.": "Has sacado esta carrera de comps tú mismo. La demo aparecerá en la web cuando termine la ronda.",
+    "Withdraw this run?": "¿Retirar esta carrera?",
+    "It leaves the round and stops counting, and the same file cannot be entered again. The demo itself stays on the site and appears once the round is over.": "Sale de la ronda y deja de contar, y el mismo archivo no se puede volver a inscribir. La demo se queda en la web y aparecerá cuando termine la ronda.",
+    "The archive could not be opened: :message": "No se pudo abrir el archivo comprimido: :message",
+    "That is not a Quake 3 demo file.": "Esto no es un archivo de demo de Quake 3.",
+    "The upload failed: :message": "La subida ha fallado: :message",
+    "You have already uploaded this demo - it is entered in a comps round that is still being played.": "Ya has subido esta demo - está inscrita en una ronda de comps que sigue en juego.",
+    "This demo is already on the site as :name.": "Esta demo ya está en la web como :name.",
+    "You already have a demo with this filename, entered in a comps round that is still being played.": "Ya tienes una demo con este nombre, inscrita en una ronda de comps que sigue en juego.",
+    "You have already uploaded a demo with this filename.": "Ya has subido una demo con este nombre de archivo.",
+    "The same file is in this upload twice.": "El mismo archivo está dos veces en esta subida."
 }

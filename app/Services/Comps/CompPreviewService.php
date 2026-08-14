@@ -59,7 +59,7 @@ class CompPreviewService
             $forMap = $videos->get($map->name, new Collection());
 
             foreach (BallotResolver::PHYSICS as $physics) {
-                $best = $this->pick($forMap, $physics);
+                $best = $this->pick($forMap, $physics, $this->recordTime($map->name, $physics));
 
                 $out[$candidate->map_id][$physics] = [
                     'status' => $best?->status ?? 'none',
@@ -99,62 +99,121 @@ class CompPreviewService
                     continue;
                 }
 
-                if ($this->hasOrIsGetting($map->name, $physics)) {
+                $videos = $this->videosFor($map->name, $physics);
+
+                // Something is already on its way. One render per map and
+                // physics at a time, or a ballot could queue five of them
+                // while the first is still going.
+                if ($videos->whereIn('status', ['pending', 'processing'])->isNotEmpty()) {
                     continue;
                 }
 
-                if ($this->queueOne($map->name, $physics)) {
-                    $queued++;
+                $record = $this->recordTime($map->name, $physics);
+
+                // A finished preview that is not the record is exactly what we
+                // want, and there is nothing to do.
+                $usable = $videos->first(
+                    fn (RenderedVideo $v) => $v->status === 'completed'
+                        && ($record === null || (int) $v->time_ms !== $record)
+                );
+
+                if ($usable) {
+                    continue;
                 }
+
+                $demo = $this->pickDemo($map->name, $physics);
+
+                // Either no demo at all, or the only run we hold is the one
+                // already rendered - a second render of the same run would
+                // produce the same video.
+                if (! $demo || $videos->contains(fn (RenderedVideo $v) => (int) $v->demo_id === $demo->id
+                    || (int) $v->time_ms === (int) $demo->time_ms)) {
+                    continue;
+                }
+
+                $this->queueFor($demo, $map->name, $physics);
+                $queued++;
             }
         }
 
         return $queued;
     }
 
-    private function pick(Collection $forMap, string $physics): ?RenderedVideo
+    /**
+     * Which video to show for one map and physics.
+     *
+     * Case-insensitively, and this is the whole reason a finished preview
+     * could sit on YouTube and on the map page while the ballot showed
+     * nothing. The render pipeline writes `CPM`; comps asks for `cpm`; a
+     * collection filter compares strings exactly, so every video the site
+     * already had was invisible here. The mode suffix goes too - a `CPM.TR`
+     * render is still a CPM run of the map.
+     *
+     * A video that is NOT the record wins over one that is. An old render of
+     * the world record is better than a black rectangle, so it is shown while
+     * a middle-of-the-field one is being made - but the moment that arrives it
+     * takes over. See queueMissing for why the record is the wrong preview.
+     */
+    private function pick(Collection $forMap, string $physics, ?int $recordTime): ?RenderedVideo
     {
-        // Case-insensitively, and this is the whole reason a finished preview
-        // could sit on YouTube and on the map page while the ballot showed
-        // nothing. The render pipeline writes `CPM`; comps asks for `cpm`; a
-        // collection filter compares strings exactly, so every video the site
-        // already had was invisible here. The mode suffix goes too - a `CPM.TR`
-        // render is still a CPM run of the map.
         $ofPhysics = $forMap->filter(
             fn (RenderedVideo $v) => strtolower(strtok((string) $v->physics, '.')) === $physics
         );
 
-        // A finished video beats one still rendering, and the fastest run of
-        // those is the one worth showing.
-        return $ofPhysics->where('status', 'completed')->sortBy('time_ms')->first()
+        $completed = $ofPhysics->where('status', 'completed')->sortBy('time_ms');
+
+        $notTheRecord = $recordTime === null
+            ? $completed
+            : $completed->filter(fn (RenderedVideo $v) => (int) $v->time_ms !== $recordTime);
+
+        return $notTheRecord->first()
+            ?? $completed->first()
             ?? $ofPhysics->sortBy('time_ms')->first();
     }
 
-    private function hasOrIsGetting(string $mapName, string $physics): bool
+    /**
+     * The fastest run we hold for this map and physics, in milliseconds.
+     *
+     * Read off the demos rather than the records table on purpose: a preview
+     * can only ever be a demo we have, so "the record" here means the best of
+     * what could be rendered. A faster time nobody uploaded a demo of cannot
+     * become a preview and is not what we are trying to avoid showing.
+     */
+    private function recordTime(string $mapName, string $physics): ?int
+    {
+        $best = UploadedDemo::where('map_name', $mapName)
+            ->where('physics', $physics)
+            ->whereNotNull('time_ms')
+            ->min('time_ms');
+
+        return $best === null ? null : (int) $best;
+    }
+
+    /** Every render we hold for this map and physics, whatever its case. */
+    private function videosFor(string $mapName, string $physics): Collection
     {
         return RenderedVideo::where('map_name', $mapName)
-            ->where('physics', $physics)
             ->whereIn('status', ['completed', 'pending', 'processing'])
-            ->exists();
+            ->get()
+            ->filter(fn (RenderedVideo $v) => strtolower(strtok((string) $v->physics, '.')) === $physics)
+            ->values();
     }
 
     /**
-     * Queue a demo for this map and physics. Returns false when there is no
-     * demo to render, which is not an error - plenty of maps have never had
-     * one uploaded.
+     * The demo to render as a preview: the middle of the field.
      *
      * **Never the world record.** A preview is there to show somebody what a
-     * map is, not to hand them the route that wins it: the WR is the run the
-     * ballot's voters are about to compete against, and publishing it as the
-     * illustration would set the week's answer before the week starts. It also
+     * map is, not to hand them the route that wins it: the record is the run
+     * the ballot's voters are about to compete against, and publishing it as
+     * the illustration sets the week's answer before the week starts. It also
      * flatters the map badly - a record run is a specialist's line, not what
      * the map plays like.
      *
-     * So the middle of the field: the median time we hold. Fast enough to be a
-     * clean run of the route, slow enough to be somebody's ordinary attempt.
-     * With two demos it takes the slower; with one there is nothing to choose.
+     * So the median time we hold. Fast enough to be a clean run of the route,
+     * slow enough to be somebody's ordinary attempt. With two demos it takes
+     * the slower; with one there is nothing to choose.
      */
-    private function queueOne(string $mapName, string $physics): bool
+    private function pickDemo(string $mapName, string $physics): ?UploadedDemo
     {
         $demos = UploadedDemo::where('map_name', $mapName)
             ->where('physics', $physics)
@@ -164,13 +223,14 @@ class CompPreviewService
             ->get(['id', 'time_ms', 'player_name', 'gametype']);
 
         if ($demos->isEmpty()) {
-            return false;
+            return null;
         }
 
-        $demo = $demos->count() > 1
-            ? $demos[intdiv($demos->count(), 2)]
-            : $demos[0];
+        return $demos->count() > 1 ? $demos[intdiv($demos->count(), 2)] : $demos[0];
+    }
 
+    private function queueFor(UploadedDemo $demo, string $mapName, string $physics): void
+    {
         RenderedVideo::create([
             'map_name' => $mapName,
             'player_name' => $demo->player_name,
@@ -185,7 +245,5 @@ class CompPreviewService
             'status' => 'pending',
             'priority' => self::PRIORITY,
         ]);
-
-        return true;
     }
 }

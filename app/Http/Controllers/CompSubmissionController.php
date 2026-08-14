@@ -89,6 +89,16 @@ class CompSubmissionController extends Controller
         abort_unless($request->user()?->id === $submission->user_id, 403);
         abort_unless($submission->round?->acceptsUploads(), 403, __('This round is closed.'));
 
+        // Mark the demo before the entry goes, so the demo does not end up
+        // looking like one the guard never entered. It stays hidden - the run
+        // is still on the map being played and publishing it mid-round would
+        // hand out the route - and it is never entered again, not even by a
+        // re-parse.
+        if ($demo = UploadedDemo::withUnreleasedComps()->find($submission->uploaded_demo_id)) {
+            $demo->comps_withdrawn_at = now();
+            $demo->saveQuietly();
+        }
+
         $submission->delete();
 
         return back();

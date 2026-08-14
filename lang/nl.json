@@ -4173,5 +4173,16 @@
     "A run made before the vote for the round opened does not count in it.": "Een run van voor het openen van de stemming telt niet mee in die ronde.",
     "Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.": "Aan je account is geen Q3DF.org-profiel gekoppeld, dus deze run doet niet mee in comps. Hij verschijnt op de site zodra de ronde voorbij is.",
     "Held by comps": "Vastgehouden door comps",
-    "Open comps": "Comps openen"
+    "Open comps": "Comps openen",
+    "You took this run out of comps yourself. The demo appears on the site once the round is over.": "Je hebt deze run zelf uit comps gehaald. De demo verschijnt op de site zodra de ronde voorbij is.",
+    "Withdraw this run?": "Deze run terugtrekken?",
+    "It leaves the round and stops counting, and the same file cannot be entered again. The demo itself stays on the site and appears once the round is over.": "Hij gaat uit de ronde en telt niet meer mee, en hetzelfde bestand kan niet opnieuw meedoen. De demo zelf blijft op de site en verschijnt na afloop van de ronde.",
+    "The archive could not be opened: :message": "Het archief kon niet geopend worden: :message",
+    "That is not a Quake 3 demo file.": "Dit is geen Quake 3-demobestand.",
+    "The upload failed: :message": "De upload is mislukt: :message",
+    "You have already uploaded this demo - it is entered in a comps round that is still being played.": "Deze demo heb je al geüpload - hij doet mee in een comps-ronde die nog loopt.",
+    "This demo is already on the site as :name.": "Deze demo staat al op de site als :name.",
+    "You already have a demo with this filename, entered in a comps round that is still being played.": "Je hebt al een demo met deze bestandsnaam, meedoend in een comps-ronde die nog loopt.",
+    "You have already uploaded a demo with this filename.": "Je hebt al een demo met deze bestandsnaam geüpload.",
+    "The same file is in this upload twice.": "Hetzelfde bestand zit twee keer in deze upload."
 }

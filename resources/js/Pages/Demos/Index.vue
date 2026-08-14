@@ -47,14 +47,22 @@ const uploadSummary = ref(null); // { total_sent, total_received, queued, duplic
 const errorsExpanded = ref(false);
 const successExpanded = ref(false);
 
+// Grouped by the code the server sends, not by reading its English. The
+// substrings this used to match on are translated now, and a translated
+// sentence never contains the word "Duplicate" - every error would have
+// landed under "Other" the moment somebody switched the site to Czech.
+const ERROR_CATEGORIES = {
+    duplicate: () => t('Duplicates'),
+    duplicate_name: () => t('Duplicate Filename'),
+    format: () => t('Invalid Format'),
+    archive: () => t('Upload Failed'),
+    failed: () => t('Upload Failed'),
+};
+
 const categorizedErrors = computed(() => {
     const cats = {};
     uploadErrors.value.forEach(err => {
-        let category = t('Other');
-        if (err.includes('Duplicate file content')) category = t('Duplicates');
-        else if (err.includes('Invalid demo file format')) category = t('Invalid Format');
-        else if (err.includes('Filename already uploaded')) category = t('Duplicate Filename');
-        else if (err.includes('Upload failed') || err.includes('Failed to queue')) category = t('Upload Failed');
+        const category = (ERROR_CATEGORIES[err.code] ?? (() => t('Other')))();
         if (!cats[category]) cats[category] = [];
         cats[category].push(err);
     });
@@ -779,7 +787,7 @@ const uploadDemos = async () => {
             // Single file failed - mark as failed
             totalFailedBatchFiles += batchFiles.length;
             batchFiles.forEach(f => failedFileNames.push(f.name));
-            allErrors.push(`${label}: ${batchFiles[0].name} failed to upload`);
+            allErrors.push({ file: batchFiles[0].name, code: 'failed', message: label });
             console.error(`[Upload] ${label} FAILED: ${batchFiles[0].name}`);
             return;
         }
@@ -858,7 +866,11 @@ const uploadDemos = async () => {
         // Results stay visible until user dismisses them
     } catch (error) {
         console.error('Upload error:', error);
-        uploadErrors.value = [...allErrors, t('Upload failed: :message', { message: error.response?.data?.message || error.message })];
+        uploadErrors.value = [...allErrors, {
+            file: '',
+            code: 'failed',
+            message: t('Upload failed: :message', { message: error.response?.data?.message || error.message }),
+        }];
     } finally {
         uploading.value = false;
         setTimeout(() => {
@@ -1765,11 +1777,14 @@ watch(selectedPhysics, () => {
                                     <span class="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[10px] rounded-full">{{ errors.length }}</span>
                                 </summary>
                                 <div class="ml-5 mt-1 space-y-1">
-                                    <div v-for="error in errors" :key="error" class="flex items-start space-x-1.5">
+                                    <div v-for="(error, i) in errors" :key="i" class="flex items-start space-x-1.5">
                                         <svg class="w-3 h-3 text-red-400/60 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                         </svg>
-                                        <span class="text-red-200/70 text-xs">{{ error }}</span>
+                                        <span class="text-red-200/70 text-xs">
+                                            <span v-if="error.file" class="text-red-300/60">{{ error.file }}:</span>
+                                            {{ error.message }}
+                                        </span>
                                     </div>
                                 </div>
                             </details>

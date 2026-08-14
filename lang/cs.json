@@ -4173,5 +4173,16 @@
     "A run made before the vote for the round opened does not count in it.": "Běh vytvořený dřív, než se otevřelo hlasování o kole, se do něj nepočítá.",
     "Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.": "K účtu nemáš propojený profil Q3DF.org, takže tenhle běh není v comps. Na webu se objeví po skončení kola.",
     "Held by comps": "Pozdrženo kvůli comps",
-    "Open comps": "Otevřít comps"
+    "Open comps": "Otevřít comps",
+    "You took this run out of comps yourself. The demo appears on the site once the round is over.": "Tenhle běh sis z comps vzal sám. Demo se na webu objeví po skončení kola.",
+    "Withdraw this run?": "Vzít tenhle běh zpátky?",
+    "It leaves the round and stops counting, and the same file cannot be entered again. The demo itself stays on the site and appears once the round is over.": "Vypadne z kola a přestane se počítat, a stejný soubor už znovu přihlásit nejde. Demo samotné na webu zůstává a objeví se po skončení kola.",
+    "The archive could not be opened: :message": "Archiv se nepodařilo otevřít: :message",
+    "That is not a Quake 3 demo file.": "Tohle není demo ze hry Quake 3.",
+    "The upload failed: :message": "Nahrání se nepodařilo: :message",
+    "You have already uploaded this demo - it is entered in a comps round that is still being played.": "Tohle demo už jsi nahrál - je přihlášené v kole comps, které se ještě hraje.",
+    "This demo is already on the site as :name.": "Tohle demo už na webu je jako :name.",
+    "You already have a demo with this filename, entered in a comps round that is still being played.": "Demo s tímhle názvem už máš, je přihlášené v kole comps, které se ještě hraje.",
+    "You have already uploaded a demo with this filename.": "Demo s tímhle názvem už jsi nahrál.",
+    "The same file is in this upload twice.": "Stejný soubor je v tomhle nahrání dvakrát."
 }

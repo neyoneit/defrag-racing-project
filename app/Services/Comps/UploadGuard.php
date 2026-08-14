@@ -268,6 +268,10 @@ class UploadGuard
 
         $mapName = $demo->map_name ?: $this->mapFromFilename($demo->original_filename);
 
+        if ($demo->comps_withdrawn_at) {
+            return 'withdrawn';
+        }
+
         if ($mapName && $round = $this->playedRoundFor($mapName)) {
             if (! $this->roundMapFor($demo, $round)) {
                 return 'other_physics';
@@ -302,6 +306,7 @@ class UploadGuard
             'unreadable' => __('This demo could not be read, so it does not count in comps. Please tell an admin about it.'),
             'too_old' => __('This run is older than the comps round, so it does not count. It appears on the site once the round is over.'),
             'other_physics' => __('This is a run on a map the round is being played on, in the other physics. It appears on the site once the round is over.'),
+            'withdrawn' => __('You took this run out of comps yourself. The demo appears on the site once the round is over.'),
             'not_linked' => __('Your account has no Q3DF.org profile linked, so this run is not in comps. It appears on the site once the round is over.'),
             'ballot' => __('This map is still being voted on. If it wins, this run enters the round when voting closes.'),
             default => __('This demo is on a map comps is using, so it appears on the site once the round is over.'),
@@ -324,6 +329,12 @@ class UploadGuard
         $expected = $this->roundMapFor($demo, $round);
 
         if (! $expected) {
+            return false;
+        }
+
+        // Somebody took this run out themselves. Putting it back is not the
+        // guard's call - and a re-parse would do exactly that, silently.
+        if ($demo->comps_withdrawn_at) {
             return false;
         }
 
