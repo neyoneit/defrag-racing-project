@@ -398,8 +398,16 @@ export default {
                                  six-point text. It is the single fact that
                                  decides whether somebody cares about this
                                  week at all. -->
-                            <span class="rounded-md bg-blue-500/20 border border-blue-400/40 px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-blue-200">
-                                {{ categoryLabel(voting.category) }}<template v-if="voting.weapon"> · {{ voting.weapon }}</template>
+                            <!-- Both weeks are labelled. The ballot is for the
+                                 week after the one being played, so the
+                                 category being voted on IS next week's - and
+                                 an unlabelled second chip left people reading
+                                 the wrong one as the week they were choosing. -->
+                            <span class="inline-flex items-baseline gap-1.5 rounded-md bg-blue-500/20 border border-blue-400/40 px-2 py-0.5">
+                                <span class="text-[9px] font-bold uppercase tracking-wider text-blue-300/70">{{ $t('next week') }}</span>
+                                <span class="text-[11px] font-black uppercase tracking-wider text-blue-200">
+                                    {{ categoryLabel(voting.category) }}<template v-if="voting.weapon"> · {{ voting.weapon }}</template>
+                                </span>
                             </span>
 
                             <!-- The rotation is fixed and known years ahead, so
@@ -410,7 +418,7 @@ export default {
                             <template v-if="voting.next_category">
                                 <span class="text-gray-600">&rarr;</span>
                                 <span class="inline-flex items-baseline gap-1.5 rounded-md border border-white/15 px-2 py-0.5">
-                                    <span class="text-[9px] font-bold uppercase tracking-wider text-gray-500">{{ $t('then') }}</span>
+                                    <span class="text-[9px] font-bold uppercase tracking-wider text-gray-500">{{ $t('after that') }}</span>
                                     <span class="text-[11px] font-black uppercase tracking-wider text-gray-300">{{ categoryLabel(voting.next_category) }}</span>
                                 </span>
                             </template>
