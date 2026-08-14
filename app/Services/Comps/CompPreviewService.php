@@ -114,7 +114,15 @@ class CompPreviewService
 
     private function pick(Collection $forMap, string $physics): ?RenderedVideo
     {
-        $ofPhysics = $forMap->where('physics', $physics);
+        // Case-insensitively, and this is the whole reason a finished preview
+        // could sit on YouTube and on the map page while the ballot showed
+        // nothing. The render pipeline writes `CPM`; comps asks for `cpm`; a
+        // collection filter compares strings exactly, so every video the site
+        // already had was invisible here. The mode suffix goes too - a `CPM.TR`
+        // render is still a CPM run of the map.
+        $ofPhysics = $forMap->filter(
+            fn (RenderedVideo $v) => strtolower(strtok((string) $v->physics, '.')) === $physics
+        );
 
         // A finished video beats one still rendering, and the fastest run of
         // those is the one worth showing.
@@ -131,26 +139,45 @@ class CompPreviewService
     }
 
     /**
-     * Queue the fastest demo we hold for this map and physics. Returns false
-     * when there is no demo to render, which is not an error - plenty of maps
-     * have never had one uploaded.
+     * Queue a demo for this map and physics. Returns false when there is no
+     * demo to render, which is not an error - plenty of maps have never had
+     * one uploaded.
+     *
+     * **Never the world record.** A preview is there to show somebody what a
+     * map is, not to hand them the route that wins it: the WR is the run the
+     * ballot's voters are about to compete against, and publishing it as the
+     * illustration would set the week's answer before the week starts. It also
+     * flatters the map badly - a record run is a specialist's line, not what
+     * the map plays like.
+     *
+     * So the middle of the field: the median time we hold. Fast enough to be a
+     * clean run of the route, slow enough to be somebody's ordinary attempt.
+     * With two demos it takes the slower; with one there is nothing to choose.
      */
     private function queueOne(string $mapName, string $physics): bool
     {
-        $demo = UploadedDemo::where('map_name', $mapName)
+        $demos = UploadedDemo::where('map_name', $mapName)
             ->where('physics', $physics)
             ->whereNotNull('time_ms')
             ->orderBy('time_ms')
-            ->first();
+            ->limit(200)
+            ->get(['id', 'time_ms', 'player_name', 'gametype']);
 
-        if (! $demo) {
+        if ($demos->isEmpty()) {
             return false;
         }
+
+        $demo = $demos->count() > 1
+            ? $demos[intdiv($demos->count(), 2)]
+            : $demos[0];
 
         RenderedVideo::create([
             'map_name' => $mapName,
             'player_name' => $demo->player_name,
-            'physics' => $physics,
+            // Upper case, the way the render pipeline writes every other row.
+            // Comps used to store its own requests lower case, which left them
+            // invisible to anything filtering the table the usual way.
+            'physics' => strtoupper($physics),
             'time_ms' => $demo->time_ms,
             'gametype' => $demo->gametype,
             'demo_id' => $demo->id,

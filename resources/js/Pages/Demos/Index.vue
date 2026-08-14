@@ -1196,6 +1196,10 @@ const checkForProcessingDemos = async () => {
             const response = await axios.get(route('demos.status'));
             processingDemos.value = response.data.processing_demos;
             queueStats.value = response.data.queue_stats;
+            // On load, not only while polling. A hold lasts until the round
+            // ends, which is days after the upload panel has gone - so the
+            // one moment this must not depend on is the upload itself.
+            compsNotices.value = response.data.comps_notices || [];
 
             const hasWork = response.data.processing_demos.length > 0
                 || (response.data.queue_stats.total_queued || 0) > 0
