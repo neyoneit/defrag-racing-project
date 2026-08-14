@@ -10,6 +10,7 @@ use App\Models\CompSubmission;
 use App\Models\CompVote;
 use App\Models\CompWildcard;
 use App\Services\Comps\BallotResolver;
+use App\Services\Comps\CandidateSelector;
 use App\Services\Comps\CompPreviewService;
 use App\Services\Comps\CompSettings;
 use App\Services\Comps\ResultsCalculator;
@@ -324,6 +325,16 @@ class CompsController extends Controller
             // ballot, not only in the header block: this is the week you are
             // choosing a map for, and it may not pay what the current one does.
             'prize' => $this->prize($round),
+            // The category the week after this one will run. The rotation is
+            // fixed and known years ahead, so there is no reason to make
+            // people wait a week to find out - and a combo week coming is
+            // worth knowing about while you are still picking a strafe map.
+            //
+            // Only the category, never the gun: a weapon week draws its gun
+            // when the round is created, so naming one now would be inventing
+            // it.
+            'next_category' => app(CandidateSelector::class)
+                ->categoryForWeekly((int) $round->comp->number + 1),
             'is_open' => $round->isVoting() && $round->voting_closes_at->isFuture(),
             'decided' => $round->maps->mapWithKeys(fn ($m) => [$m->physics => [
                 'map' => $m->map?->name,

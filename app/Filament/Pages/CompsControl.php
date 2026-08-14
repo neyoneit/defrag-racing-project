@@ -13,6 +13,7 @@ use App\Services\Comps\MapClassifier;
 use App\Services\Comps\MapEligibilityTagger;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -389,18 +390,30 @@ class CompsControl extends Page
         return $out;
     }
 
-    /** Pool sizes, so an empty category is visible before it bites. */
+    /**
+     * Pool sizes, so an empty category is visible before it bites.
+     *
+     * Cached, because working one out means grouping 800 000 records to find
+     * every map's fastest time. Livewire re-renders this page on every button
+     * press and each render was paying for all three, which is what made the
+     * page take the better part of ten seconds to answer anything.
+     *
+     * Ten minutes is far shorter than anything that moves these numbers: a
+     * pool only shrinks when a map is played, once a week.
+     */
     public function poolSizes(): array
     {
-        $selector = app(CandidateSelector::class);
+        return Cache::remember('comps:pool_sizes', 600, function () {
+            $selector = app(CandidateSelector::class);
 
-        $out = [];
+            $out = [];
 
-        foreach ([MapClassifier::STRAFE, MapClassifier::WEAPON, MapClassifier::COMBO] as $category) {
-            $out[$category] = count($selector->eligible($category));
-        }
+            foreach ([MapClassifier::STRAFE, MapClassifier::WEAPON, MapClassifier::COMBO] as $category) {
+                $out[$category] = count($selector->eligible($category));
+            }
 
-        return $out;
+            return $out;
+        });
     }
 
     public function weekdays(): array
