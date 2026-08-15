@@ -4189,5 +4189,15 @@
     "The demo stays hidden until the round ends, then appears like any other.": "Demo pozostaje ukryte do końca rundy, potem pojawia się jak każde inne.",
     "If you do not want to be in it, do not upload a demo of that map until the round is over.": "Jeśli nie chcesz brać udziału, nie wysyłaj dema z tej mapy do końca rundy.",
     "Entering, and voting, need a Q3DF.org profile linked to your account.": "Do zgłoszenia przejazdu i do głosowania potrzebujesz profilu Q3DF.org podpiętego do konta.",
-    "A wildcard picks next week's map outright and overrules the vote. You earn one for every :count weekly wins in a physics, and it can be spent on either ballot. Whoever spends one first decides that round - everyone else keeps theirs.": "Wildcard wybiera mapę na przyszły tydzień wprost i unieważnia głosowanie. Dostajesz go za każde :count tygodniowe wygrane w jednej fizyce i możesz go użyć w dowolnym głosowaniu. Kto użyje pierwszy, decyduje o rundzie - reszcie ich zostają."
+    "A wildcard picks next week's map outright and overrules the vote. You earn one for every :count weekly wins in a physics, and it can be spent on either ballot. Whoever spends one first decides that round - everyone else keeps theirs.": "Wildcard wybiera mapę na przyszły tydzień wprost i unieważnia głosowanie. Dostajesz go za każde :count tygodniowe wygrane w jednej fizyce i możesz go użyć w dowolnym głosowaniu. Kto użyje pierwszy, decyduje o rundzie - reszcie ich zostają.",
+    "distributed over :count weekly comps": "rozłożone na :count weekly comps",
+    ":time your time": ":time u ciebie",
+    "Upload your demo, online or offline. The physics is read from the file, and the demo stays private until the round ends.": "Wgraj demo, online albo offline. Fizykę odczytamy z pliku, a demo zostaje prywatne do końca rundy.",
+    "If something does not look right, :admin will sort it out.": "Jeśli coś nie wygląda dobrze, :admin to naprawi.",
+    "Participated": "Udziałów",
+    "Best rank": "Najlepsze",
+    "to the winner of each physics": "dla zwycięzcy każdej fizyki",
+    "Voted from": "Głosowano z",
+    "votes": "głosów",
+    "Choose a demo": "Wybierz demo"
 }

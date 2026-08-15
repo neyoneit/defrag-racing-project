@@ -4189,5 +4189,15 @@
     "The demo stays hidden until the round ends, then appears like any other.": "La demo queda oculta hasta que termina la ronda y después aparece como cualquier otra.",
     "If you do not want to be in it, do not upload a demo of that map until the round is over.": "Si no quieres participar, no subas una demo de ese mapa hasta que la ronda termine.",
     "Entering, and voting, need a Q3DF.org profile linked to your account.": "Tanto para participar como para votar necesitas un perfil de Q3DF.org vinculado a tu cuenta.",
-    "A wildcard picks next week's map outright and overrules the vote. You earn one for every :count weekly wins in a physics, and it can be spent on either ballot. Whoever spends one first decides that round - everyone else keeps theirs.": "Un comodín elige el mapa de la próxima semana directamente y anula la votación. Consigues uno por cada :count victorias semanales en una física, y puedes gastarlo en cualquiera de las dos votaciones. Quien lo gaste primero decide esa ronda; los demás conservan el suyo."
+    "A wildcard picks next week's map outright and overrules the vote. You earn one for every :count weekly wins in a physics, and it can be spent on either ballot. Whoever spends one first decides that round - everyone else keeps theirs.": "Un comodín elige el mapa de la próxima semana directamente y anula la votación. Consigues uno por cada :count victorias semanales en una física, y puedes gastarlo en cualquiera de las dos votaciones. Quien lo gaste primero decide esa ronda; los demás conservan el suyo.",
+    "distributed over :count weekly comps": "repartido en :count weekly comps",
+    ":time your time": ":time en tu hora",
+    "Upload your demo, online or offline. The physics is read from the file, and the demo stays private until the round ends.": "Sube tu demo, online u offline. La física se lee del archivo y el demo queda privado hasta que acabe la ronda.",
+    "If something does not look right, :admin will sort it out.": "Si algo no cuadra, :admin lo arregla.",
+    "Participated": "Participaciones",
+    "Best rank": "Mejor puesto",
+    "to the winner of each physics": "al ganador de cada física",
+    "Voted from": "Se votó entre",
+    "votes": "votos",
+    "Choose a demo": "Elegir demo"
 }

@@ -168,7 +168,7 @@ class CompsController extends Controller
     {
         abort_unless($comp->status === 'finished', 404);
 
-        $comp->load(['rounds.maps.map', 'rounds.results.user']);
+        $comp->load(['rounds.maps.map', 'rounds.results.user', 'rounds.candidates.map']);
 
         return Inertia::render('Comps/Show', [
             'comp' => [
@@ -188,6 +188,20 @@ class CompsController extends Controller
                         'name' => $m->map?->name,
                         'decided_by' => $m->decided_by,
                     ]]),
+                    // What the week paid, per physics. A finished round that
+                    // does not say what was at stake reads like a scoreboard
+                    // from a friendly.
+                    'prize_eur' => $r->prize_eur,
+                    // The ballot as it finished: every map that was on it and
+                    // what it got. The winner alone says nothing about whether
+                    // it was a landslide or one vote.
+                    'ballot' => $r->candidates->map(fn (CompCandidate $c) => [
+                        'map' => $c->map?->name,
+                        'blocked_physics' => $c->blocked_physics,
+                        'votes' => ['cpm' => $c->votes_cpm, 'vq3' => $c->votes_vq3],
+                    ])->values(),
+                    // Who overruled the vote, if anybody did.
+                    'wildcards' => $this->wildcardsSpentOn($r),
                     'results' => $this->resultsPayload($r),
                 ]),
             ],
@@ -578,6 +592,33 @@ class CompsController extends Controller
                 'demo_id' => $s->uploaded_demo_id,
                 'reported' => in_array($s->uploaded_demo_id, $asked, true),
             ])
+            ->all();
+    }
+
+    /**
+     * Wildcards spent on a round, keyed by the physics they decided.
+     *
+     * A round whose map was named rather than voted for says so in one line of
+     * grey text, which is a strange way to report the one thing that can
+     * overrule everybody. Naming who spent it also makes the right feel like
+     * something people hold rather than a rule in the abstract.
+     */
+    private function wildcardsSpentOn(CompRound $round): array
+    {
+        return CompWildcard::where('used_on_round_id', $round->id)
+            ->whereNotNull('used_at')
+            ->with('user:id,name,country,profile_photo_path,name_effect,color')
+            ->get()
+            ->mapWithKeys(fn (CompWildcard $w) => [$w->used_physics ?? $w->physics => [
+                'user' => $w->user ? [
+                    'id' => $w->user->id,
+                    'name' => $w->user->name,
+                    'country' => $w->user->country,
+                    'photo' => $w->user->profile_photo_path,
+                    'name_effect' => $w->user->name_effect,
+                    'color' => $w->user->color,
+                ] : null,
+            ]])
             ->all();
     }
 

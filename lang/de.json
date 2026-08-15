@@ -4189,5 +4189,15 @@
     "The demo stays hidden until the round ends, then appears like any other.": "Das Demo bleibt bis zum Ende der Runde verborgen und erscheint danach wie jedes andere.",
     "If you do not want to be in it, do not upload a demo of that map until the round is over.": "Wenn du nicht dabei sein willst, lade bis zum Ende der Runde kein Demo dieser Map hoch.",
     "Entering, and voting, need a Q3DF.org profile linked to your account.": "Für das Einreichen und für das Abstimmen brauchst du ein mit deinem Konto verknüpftes Q3DF.org-Profil.",
-    "A wildcard picks next week's map outright and overrules the vote. You earn one for every :count weekly wins in a physics, and it can be spent on either ballot. Whoever spends one first decides that round - everyone else keeps theirs.": "Eine Wildcard bestimmt die Karte der nächsten Woche direkt und übergeht die Abstimmung. Du bekommst eine für je :count Wochensiege in einer Physik, und einsetzen kannst du sie auf beiden Abstimmungen. Wer sie zuerst einsetzt, entscheidet die Runde - alle anderen behalten ihre."
+    "A wildcard picks next week's map outright and overrules the vote. You earn one for every :count weekly wins in a physics, and it can be spent on either ballot. Whoever spends one first decides that round - everyone else keeps theirs.": "Eine Wildcard bestimmt die Karte der nächsten Woche direkt und übergeht die Abstimmung. Du bekommst eine für je :count Wochensiege in einer Physik, und einsetzen kannst du sie auf beiden Abstimmungen. Wer sie zuerst einsetzt, entscheidet die Runde - alle anderen behalten ihre.",
+    "distributed over :count weekly comps": "verteilt auf :count Weekly Comps",
+    ":time your time": ":time bei dir",
+    "Upload your demo, online or offline. The physics is read from the file, and the demo stays private until the round ends.": "Lade dein Demo hoch, online oder offline. Die Physik lesen wir aus der Datei, und das Demo bleibt bis zum Rundenende privat.",
+    "If something does not look right, :admin will sort it out.": "Wenn etwas nicht stimmt, kümmert sich :admin darum.",
+    "Participated": "Teilnahmen",
+    "Best rank": "Bester Rang",
+    "to the winner of each physics": "an den Sieger jeder Physik",
+    "Voted from": "Zur Wahl standen",
+    "votes": "Stimmen",
+    "Choose a demo": "Demo wählen"
 }

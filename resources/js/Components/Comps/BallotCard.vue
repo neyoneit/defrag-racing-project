@@ -55,20 +55,24 @@
 </script>
 
 <template>
-    <div class="rounded-xl border bg-black/40 backdrop-blur-sm overflow-hidden flex flex-col transition-colors"
+    <div class="h-full rounded-xl border bg-black/40 backdrop-blur-sm overflow-hidden flex flex-col transition-colors"
          :class="mayVote && isOpen ? 'border-white/15 hover:border-white/25' : 'border-white/10'">
-        <!-- Thumbnail, doubling as the preview trigger -->
+        <!-- Thumbnail, doubling as the preview trigger.
+             One fixed 16:9 box, centre-cropped, and a stand-in picture when a
+             map has no levelshot: five cards on a ballot are compared side by
+             side, and a grey "no image" panel among four screenshots reads as a
+             broken card rather than a map nobody has photographed. Nothing is
+             drawn over the picture either - the map name, the author and the
+             note about the preview all live below it, so every card is the
+             same shape whatever it happens to know. -->
         <div class="relative aspect-video bg-black/40">
             <img
-                v-if="candidate.thumbnail"
-                :src="`/storage/${candidate.thumbnail}`"
+                :src="candidate.thumbnail ? `/storage/${candidate.thumbnail}` : '/images/unknown.jpg'"
+                onerror="this.src='/images/unknown.jpg'"
                 :alt="candidate.map"
-                class="w-full h-full object-cover"
+                class="w-full h-full object-cover object-center"
                 loading="lazy"
             />
-            <div v-else class="w-full h-full flex items-center justify-center text-gray-600 text-xs">
-                {{ $t('No image') }}
-            </div>
 
             <button
                 v-if="anyVideo"
@@ -81,15 +85,6 @@
                     <svg class="w-6 h-6 text-white ml-1" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
                 </span>
             </button>
-
-            <!-- Says why there is nothing to watch, rather than leaving a dead
-                 thumbnail and letting people wonder. -->
-            <div
-                v-else
-                class="absolute bottom-0 inset-x-0 bg-black/70 px-2 py-1 text-[10px] text-gray-400 text-center"
-            >
-                {{ rendering ? $t('Preview is rendering') : $t('No preview available') }}
-            </div>
         </div>
 
         <div class="p-3 flex-1 flex flex-col gap-3">
@@ -176,6 +171,12 @@
                         </button>
                     </div>
                 </div>
+            </div>
+
+            <!-- Says why there is nothing to watch, rather than leaving the
+                 play button missing and letting people wonder. -->
+            <div v-if="!anyVideo" class="text-[10px] text-gray-500">
+                {{ rendering ? $t('Preview is rendering') : $t('No preview available') }}
             </div>
 
             <button
