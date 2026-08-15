@@ -4184,5 +4184,9 @@
     "This demo is already on the site as :name.": "Це демо вже є на сайті як :name.",
     "You already have a demo with this filename, entered in a comps round that is still being played.": "Демо з такою назвою в тебе вже є, воно заявлене в раунді comps, який ще триває.",
     "You have already uploaded a demo with this filename.": "Демо з такою назвою файлу ти вже завантажував.",
-    "The same file is in this upload twice.": "Той самий файл у цьому завантаженні двічі."
+    "The same file is in this upload twice.": "Той самий файл у цьому завантаженні двічі.",
+    "Any run you record on a map comps is playing that week is entered automatically when you upload the demo - there is no sign-up.": "Будь-який забіг на карті, яку comps грає того тижня, потрапляє в раунд сам, щойно ти завантажиш демо - жодного запису немає.",
+    "The demo stays hidden until the round ends, then appears like any other.": "Демо лишається схованим до кінця раунду, потім з'являється як будь-яке інше.",
+    "If you do not want to be in it, do not upload a demo of that map until the round is over.": "Якщо не хочеш брати участь, не завантажуй демо з тієї карти до кінця раунду.",
+    "Entering, and voting, need a Q3DF.org profile linked to your account.": "І для участі, і для голосування потрібен профіль Q3DF.org, прив'язаний до акаунта."
 }

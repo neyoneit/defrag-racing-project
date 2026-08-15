@@ -4184,5 +4184,9 @@
     "This demo is already on the site as :name.": "Deze demo staat al op de site als :name.",
     "You already have a demo with this filename, entered in a comps round that is still being played.": "Je hebt al een demo met deze bestandsnaam, meedoend in een comps-ronde die nog loopt.",
     "You have already uploaded a demo with this filename.": "Je hebt al een demo met deze bestandsnaam geüpload.",
-    "The same file is in this upload twice.": "Hetzelfde bestand zit twee keer in deze upload."
+    "The same file is in this upload twice.": "Hetzelfde bestand zit twee keer in deze upload.",
+    "Any run you record on a map comps is playing that week is entered automatically when you upload the demo - there is no sign-up.": "Elke run die je rijdt op een map die comps die week speelt, doet automatisch mee zodra je de demo uploadt - inschrijven hoeft niet.",
+    "The demo stays hidden until the round ends, then appears like any other.": "De demo blijft verborgen tot de ronde voorbij is en verschijnt daarna zoals elke andere.",
+    "If you do not want to be in it, do not upload a demo of that map until the round is over.": "Wil je niet meedoen, upload dan geen demo van die map tot de ronde voorbij is.",
+    "Entering, and voting, need a Q3DF.org profile linked to your account.": "Meedoen en stemmen vragen allebei een aan je account gekoppeld Q3DF.org-profiel."
 }

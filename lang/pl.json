@@ -4184,5 +4184,9 @@
     "This demo is already on the site as :name.": "To demo jest już na stronie jako :name.",
     "You already have a demo with this filename, entered in a comps round that is still being played.": "Masz już demo o tej nazwie, zgłoszone w rundzie comps, która wciąż trwa.",
     "You have already uploaded a demo with this filename.": "Demo o tej nazwie pliku już wysłałeś.",
-    "The same file is in this upload twice.": "Ten sam plik jest w tym wysyłaniu dwa razy."
+    "The same file is in this upload twice.": "Ten sam plik jest w tym wysyłaniu dwa razy.",
+    "Any run you record on a map comps is playing that week is entered automatically when you upload the demo - there is no sign-up.": "Każdy przejazd na mapie granej w danym tygodniu w comps wchodzi do rundy automatycznie po wysłaniu dema - nie ma żadnych zapisów.",
+    "The demo stays hidden until the round ends, then appears like any other.": "Demo pozostaje ukryte do końca rundy, potem pojawia się jak każde inne.",
+    "If you do not want to be in it, do not upload a demo of that map until the round is over.": "Jeśli nie chcesz brać udziału, nie wysyłaj dema z tej mapy do końca rundy.",
+    "Entering, and voting, need a Q3DF.org profile linked to your account.": "Do zgłoszenia przejazdu i do głosowania potrzebujesz profilu Q3DF.org podpiętego do konta."
 }

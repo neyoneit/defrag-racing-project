@@ -4184,5 +4184,9 @@
     "This demo is already on the site as :name.": "Tohle demo už na webu je jako :name.",
     "You already have a demo with this filename, entered in a comps round that is still being played.": "Demo s tímhle názvem už máš, je přihlášené v kole comps, které se ještě hraje.",
     "You have already uploaded a demo with this filename.": "Demo s tímhle názvem už jsi nahrál.",
-    "The same file is in this upload twice.": "Stejný soubor je v tomhle nahrání dvakrát."
+    "The same file is in this upload twice.": "Stejný soubor je v tomhle nahrání dvakrát.",
+    "Any run you record on a map comps is playing that week is entered automatically when you upload the demo - there is no sign-up.": "Jakýkoliv běh, který zajedeš na mapě hrané ten týden v comps, se nahráním dema přihlásí do soutěže sám - nikam se nepřihlašuješ.",
+    "The demo stays hidden until the round ends, then appears like any other.": "Demo zůstane skryté do konce kola, pak se objeví jako každé jiné.",
+    "If you do not want to be in it, do not upload a demo of that map until the round is over.": "Pokud v soutěži být nechceš, nenahrávej demo z té mapy, dokud kolo neskončí.",
+    "Entering, and voting, need a Q3DF.org profile linked to your account.": "Na přihlášení běhu i na hlasování potřebuješ k účtu propojený profil Q3DF.org."
 }

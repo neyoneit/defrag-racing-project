@@ -4184,5 +4184,9 @@
     "This demo is already on the site as :name.": "Den här demon finns redan på sajten som :name.",
     "You already have a demo with this filename, entered in a comps round that is still being played.": "Du har redan en demo med det filnamnet, anmäld i en comps-omgång som fortfarande spelas.",
     "You have already uploaded a demo with this filename.": "Du har redan laddat upp en demo med det filnamnet.",
-    "The same file is in this upload twice.": "Samma fil ligger två gånger i den här uppladdningen."
+    "The same file is in this upload twice.": "Samma fil ligger två gånger i den här uppladdningen.",
+    "Any run you record on a map comps is playing that week is entered automatically when you upload the demo - there is no sign-up.": "Varje körning du gör på en bana som comps spelar den veckan går in i omgången automatiskt när du laddar upp demon - det finns ingen anmälan.",
+    "The demo stays hidden until the round ends, then appears like any other.": "Demon ligger dold tills omgången är slut och dyker sedan upp som vilken annan som helst.",
+    "If you do not want to be in it, do not upload a demo of that map until the round is over.": "Vill du inte vara med, låt bli att ladda upp en demo från den banan tills omgången är slut.",
+    "Entering, and voting, need a Q3DF.org profile linked to your account.": "Både att delta och att rösta kräver en Q3DF.org-profil kopplad till kontot."
 }

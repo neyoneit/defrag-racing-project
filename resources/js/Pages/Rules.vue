@@ -74,6 +74,20 @@ const sections = computed(() => [
         ],
     },
     {
+        // Comps enters people by itself, from a demo they uploaded for any
+        // reason at all. Nobody signs up, so nobody is ever shown terms - which
+        // makes this the only place somebody can find out before it happens
+        // rather than after.
+        title: t('Comps'),
+        accent: 'blue',
+        rules: [
+            t('Any run you record on a map comps is playing that week is entered automatically when you upload the demo - there is no sign-up.'),
+            t('The demo stays hidden until the round ends, then appears like any other.'),
+            t('If you do not want to be in it, do not upload a demo of that map until the round is over.'),
+            t('Entering, and voting, need a Q3DF.org profile linked to your account.'),
+        ],
+    },
+    {
         title: t('Reporting'),
         accent: 'blue',
         rules: [

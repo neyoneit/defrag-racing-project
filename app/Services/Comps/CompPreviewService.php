@@ -59,7 +59,7 @@ class CompPreviewService
             $forMap = $videos->get($map->name, new Collection());
 
             foreach (BallotResolver::PHYSICS as $physics) {
-                $best = $this->pick($forMap, $physics, $this->recordTime($map->name, $physics));
+                $best = $this->pick($forMap, $physics, $this->timesFor($map->name, $physics));
 
                 $out[$candidate->map_id][$physics] = [
                     'status' => $best?->status ?? 'none',
@@ -108,7 +108,8 @@ class CompPreviewService
                     continue;
                 }
 
-                $record = $this->recordTime($map->name, $physics);
+                $times = $this->timesFor($map->name, $physics);
+                $record = $times['best'];
 
                 // A finished preview that is not the record is exactly what we
                 // want, and there is nothing to do.
@@ -149,44 +150,69 @@ class CompPreviewService
      * already had was invisible here. The mode suffix goes too - a `CPM.TR`
      * render is still a CPM run of the map.
      *
-     * A video that is NOT the record wins over one that is. An old render of
-     * the world record is better than a black rectangle, so it is shown while
-     * a middle-of-the-field one is being made - but the moment that arrives it
-     * takes over. See queueMissing for why the record is the wrong preview.
+     * A video that is NOT the record wins, and when there is no such video the
+     * ballot shows the render in progress rather than the record. **Not even
+     * temporarily**, as long as a slower run exists to be rendered instead:
+     * a preview is up for the whole week of voting, so "just until the good
+     * one arrives" is most of the time somebody spends looking at it, and it
+     * would hand out the winning route for exactly as long as that lasted.
+     *
+     * The one case the record is shown is the one where it is all there will
+     * ever be: the only run of that map we hold IS the record, so no other
+     * render can be made and the choice is that video or nothing.
      */
-    private function pick(Collection $forMap, string $physics, ?int $recordTime): ?RenderedVideo
+    private function pick(Collection $forMap, string $physics, array $times): ?RenderedVideo
     {
         $ofPhysics = $forMap->filter(
             fn (RenderedVideo $v) => strtolower(strtok((string) $v->physics, '.')) === $physics
         );
 
+        $record = $times['best'];
+
         $completed = $ofPhysics->where('status', 'completed')->sortBy('time_ms');
 
-        $notTheRecord = $recordTime === null
+        $notTheRecord = $record === null
             ? $completed
-            : $completed->filter(fn (RenderedVideo $v) => (int) $v->time_ms !== $recordTime);
+            : $completed->filter(fn (RenderedVideo $v) => (int) $v->time_ms !== $record);
 
-        return $notTheRecord->first()
-            ?? $completed->first()
-            ?? $ofPhysics->sortBy('time_ms')->first();
+        if ($first = $notTheRecord->first()) {
+            return $first;
+        }
+
+        // A slower run exists, so a better preview is coming: say "rendering"
+        // rather than show the record in the meantime.
+        if ($times['has_slower']) {
+            return $ofPhysics->whereIn('status', ['pending', 'processing'])->sortBy('time_ms')->first();
+        }
+
+        return $completed->first() ?? $ofPhysics->sortBy('time_ms')->first();
     }
 
     /**
-     * The fastest run we hold for this map and physics, in milliseconds.
+     * The times we hold for this map and physics: the fastest, and whether
+     * there is anything slower than it.
      *
      * Read off the demos rather than the records table on purpose: a preview
      * can only ever be a demo we have, so "the record" here means the best of
      * what could be rendered. A faster time nobody uploaded a demo of cannot
      * become a preview and is not what we are trying to avoid showing.
+     *
+     * @return array{best:?int, has_slower:bool}
      */
-    private function recordTime(string $mapName, string $physics): ?int
+    private function timesFor(string $mapName, string $physics): array
     {
-        $best = UploadedDemo::where('map_name', $mapName)
+        $row = UploadedDemo::where('map_name', $mapName)
             ->where('physics', $physics)
             ->whereNotNull('time_ms')
-            ->min('time_ms');
+            ->selectRaw('MIN(time_ms) AS best, MAX(time_ms) AS worst')
+            ->first();
 
-        return $best === null ? null : (int) $best;
+        $best = $row?->best === null ? null : (int) $row->best;
+
+        return [
+            'best' => $best,
+            'has_slower' => $best !== null && (int) $row->worst > $best,
+        ];
     }
 
     /** Every render we hold for this map and physics, whatever its case. */
