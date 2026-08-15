@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\DefragliveContestResource\Pages;
 use App\Models\DefragliveContest;
+use App\Services\Comps\PrizeFunding;
 use App\Services\DefragliveWatchService;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -168,7 +169,67 @@ class DefragliveContestResource extends Resource
                             ->label('Create a site donation record in the winner\'s name')
                             ->helperText('Shows up immediately in the site donations progress as approved.')
                             ->default(true)
+                            ->live()
                             ->visible(fn (Forms\Get $get) => $get('resolution') === DefragliveContest::STATUS_DONATED),
+
+                        // A winner who gives the prize back does not always
+                        // mean "put it towards the hosting bill" - most of them
+                        // say comps. That used to mean creating the donation
+                        // here and then opening it in the donations resource to
+                        // fill in three more columns by hand, which is exactly
+                        // the kind of second step that gets forgotten.
+                        Forms\Components\Radio::make('donation_target')
+                            ->label('Where does it go?')
+                            ->options([
+                                'site' => 'Site upkeep',
+                                'comps' => 'Comps prize pool',
+                            ])
+                            ->descriptions([
+                                'comps' => 'Earmarked for comps, so it funds a weekly prize instead of counting towards the hosting goal.',
+                            ])
+                            ->default('site')
+                            ->required()
+                            ->live()
+                            ->visible(fn (Forms\Get $get) => $get('resolution') === DefragliveContest::STATUS_DONATED
+                                && $get('create_donation')),
+
+                        Forms\Components\TextInput::make('comps_start_comp')
+                            ->label('Funds weekly number')
+                            ->numeric()
+                            ->minValue(1)
+                            ->required()
+                            // The first weekly nothing else pays for. Pointing
+                            // it at a week that is already funded would stack
+                            // on top of that week rather than extend the pool.
+                            ->default(fn () => app(PrizeFunding::class)->nextFundableComp())
+                            ->helperText(fn () => 'The pool is currently paid up through weekly '
+                                . (app(PrizeFunding::class)->fundedThroughComp() ?? 'nothing') . '.')
+                            ->visible(fn (Forms\Get $get) => $get('resolution') === DefragliveContest::STATUS_DONATED
+                                && $get('create_donation')
+                                && $get('donation_target') === 'comps'),
+
+                        Forms\Components\TextInput::make('comps_weeks')
+                            ->label('Spread over how many weeklies')
+                            ->numeric()
+                            ->minValue(1)
+                            ->default(1)
+                            ->required()
+                            ->visible(fn (Forms\Get $get) => $get('resolution') === DefragliveContest::STATUS_DONATED
+                                && $get('create_donation')
+                                && $get('donation_target') === 'comps'),
+
+                        // The comps pool has no currency logic at all: it sums
+                        // the earmarked column as euro. Worth saying out loud
+                        // rather than converting behind the admin's back.
+                        Forms\Components\Placeholder::make('currency_warning')
+                            ->hiddenLabel()
+                            ->content(fn (DefragliveContest $record) => 'The comps pool is counted in EUR, but this prize is in '
+                                . $record->prize_currency . '. It will be added to the pool as '
+                                . $record->prize_amount . ' EUR.')
+                            ->visible(fn (Forms\Get $get, DefragliveContest $record) => $record->prize_currency !== 'EUR'
+                                && $get('resolution') === DefragliveContest::STATUS_DONATED
+                                && $get('create_donation')
+                                && $get('donation_target') === 'comps'),
                     ])
                     ->visible(fn (DefragliveContest $r) => $r->winner_name !== null
                         && ! in_array($r->status, DefragliveContest::RESOLVED_STATUSES, true))
@@ -184,6 +245,9 @@ class DefragliveContestResource extends Resource
 
                                 return;
                             }
+                            $toComps = ($data['donation_target'] ?? 'site') === 'comps';
+                            $contestUrl = url('/defraglive/contest');
+
                             // Credit the prize back as a real site donation so it
                             // shows up in the donations progress right away.
                             // donor_email matters: isDonor()/getDonationTotal()
@@ -198,11 +262,32 @@ class DefragliveContestResource extends Resource
                                 'currency' => $record->prize_currency,
                                 'donation_date' => now()->toDateString(),
                                 'note' => "DefragLive contest prize donated back ({$record->title}) - "
-                                    . url('/defraglive/contest'),
+                                    . $contestUrl,
                                 'status' => 'approved',
+                                // The earmark. Left null for an ordinary
+                                // donation, because PrizeFunding only counts
+                                // rows where all three are filled in - a
+                                // half-filled one would sit in neither pot.
+                                'comps_amount' => $toComps ? $record->prize_amount : null,
+                                'comps_weeks' => $toComps ? (int) $data['comps_weeks'] : null,
+                                'comps_start_comp' => $toComps ? (int) $data['comps_start_comp'] : null,
+                                // Public, printed under the donor's name on the
+                                // comps page. The URL is written into the
+                                // sentence rather than stored beside it; the
+                                // page pulls it back out and makes the note
+                                // itself the link.
+                                'comps_note' => $toComps
+                                    ? 'Donated winnings from the DefragLive contest - ' . $contestUrl
+                                    : null,
                             ]);
+
+                            $where = $toComps
+                                ? "the comps prize pool, funding weekly {$data['comps_start_comp']}"
+                                    . ((int) $data['comps_weeks'] > 1 ? " for {$data['comps_weeks']} weeklies" : '')
+                                : 'the site upkeep';
+
                             Notification::make()->title('Marked as donated')
-                                ->body("Site donation of {$record->prize_amount} {$record->prize_currency} recorded for {$plainWinner}.")
+                                ->body("Site donation of {$record->prize_amount} {$record->prize_currency} recorded for {$plainWinner}, towards {$where}.")
                                 ->success()->send();
 
                             return;
