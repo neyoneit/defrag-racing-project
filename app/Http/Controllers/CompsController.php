@@ -429,6 +429,10 @@ class CompsController extends Controller
             'category' => $round->category,
             'weapon' => $round->weapon,
             'ends_at' => $round->ends_at,
+            // What this round is being played for. The page used to print a
+            // prize on the ballot and none on the round being run, which read
+            // as the money belonging to the voting rather than to the race.
+            'prize' => $this->prize($round),
             'maps' => $round->maps->mapWithKeys(fn ($m) => [$m->physics => [
                 'name' => $m->map?->name,
                 'thumbnail' => $m->map?->thumbnail,

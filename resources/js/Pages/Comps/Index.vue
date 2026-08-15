@@ -54,43 +54,25 @@ export default {
 
     const categoryLabel = (category) => (CATEGORY_LABELS[category] ?? (() => category))();
 
-    // Several sentences link the word "admin", and it sits in a different
-    // place in each language - mid-sentence in English, at the end in some of
-    // the others - so it goes in as a placeholder the translator can move
-    // rather than as two fragments glued around one fixed word order.
-    //
-    // t() leaves a placeholder it was not given, so the translated line is
-    // split around what remains. That keeps the link an Inertia Link rather
-    // than raw HTML: v-html would work but would navigate the whole page and
-    // put markup into the language files.
-    //
-    // It takes the translated line, not the key, on purpose: lang:sync only
-    // sees literals sitting directly inside t(), so a key passed through a
-    // helper is a key that never reaches the language files.
-    //
-    // Every sentence below is phrased so the linked word is the subject. One
-    // link text has to serve all of them, and an inflected language gives a
-    // subject and an object different endings - "vyplacI admin" against
-    // "napis adminovi" - so a sentence that needs the other case would read as
-    // broken grammar in half the languages we ship.
-    const aroundAdmin = (line) => {
-        const at = line.indexOf(':admin');
-
-        if (at === -1) {
-            return { before: line, after: '' };
-        }
-
-        return { before: line.slice(0, at), after: line.slice(at + ':admin'.length) };
-    };
-
     // When a held demo shows up on the site. The sentence next to it already
     // says "once the round is over", which is the reason; this is the date,
     // which is the thing somebody actually wants.
     const appearsAt = (iso) => moment(iso).format('D MMM, HH:mm');
 
-    const betaLine = computed(() => aroundAdmin(
-        t('If something does not look right, :admin will sort it out.'),
-    ));
+    // The link lives INSIDE the key, with only the URL passed in.
+    //
+    // It used to be split around a `:admin` placeholder so the link could stay
+    // an Inertia Link, and that worked while the linked word was the sentence's
+    // subject in every language. "Please contact admin" makes it the object,
+    // and an inflected language spells those differently - Czech wants
+    // "admina" here and "admin" in the old phrasing - so one shared link text
+    // cannot serve both. Whole-sentence markup lets each language inflect the
+    // word and put it where its grammar wants it; the cost is a full page load
+    // on click instead of an Inertia visit, which for a profile link nobody
+    // follows twice is not worth a broken sentence in eight languages.
+    const betaLine = computed(() =>
+        t('If something does not look right, please contact <a href=:url>admin</a>.', { url: props.adminUrl }),
+    );
 
     // Who pays is no longer a sentence. It is the list of donors below the
     // number, which says the same thing as a fact and stops saying it on its
@@ -175,11 +157,6 @@ export default {
 
     const totalSpent = computed(() =>
         PHYSICS.reduce((n, p) => n + (props.me?.spent?.[p] ?? 0), 0));
-
-    const heldBreakdown = computed(() =>
-        PHYSICS.filter((p) => (props.me?.held?.[p] ?? 0) > 0)
-            .map((p) => `${p.toUpperCase()} ${props.me.held[p]}`)
-            .join(' · '));
 
     // Uploading an entry. No physics field: the demo says which it is.
     const uploadForm = useForm({
@@ -296,7 +273,8 @@ export default {
                                              contains a newline, which ran this
                                              straight into the sentence before it. -->
                                         <span class="font-bold text-gray-300">{{ $t('Comps is brand new.') }}</span>{{ ' ' }}
-                                        <span>{{ betaLine.before }}<Link :href="adminUrl" class="font-bold text-gray-300 underline decoration-white/25 hover:text-white">{{ $t('the admin') }}</Link>{{ betaLine.after }}</span>
+                                        <span class="[&_a]:font-bold [&_a]:text-gray-300 [&_a]:underline [&_a]:decoration-white/25 [&_a:hover]:text-white"
+                                              v-html="betaLine"></span>
                                     </p>
                                 </div>
                             </section>
@@ -416,7 +394,15 @@ export default {
                                         <span class="text-lg font-black tabular-nums leading-none" :class="totalHeld > 0 ? 'text-amber-300' : 'text-gray-300'">{{ totalHeld }}</span>
                                     </div>
                                     <div class="mt-0.5 text-[10px] uppercase tracking-wider text-gray-400 decoration-dotted underline decoration-white/25 underline-offset-2">
-                                        {{ totalHeld > 0 ? heldBreakdown : $t('Wildcards') }}
+                                        <!-- Never split by physics any more.
+                                             The label used to read "CPM 1",
+                                             which was true when a wildcard
+                                             could only be spent where it was
+                                             won; now that it goes on either
+                                             ballot, naming the physics states
+                                             a restriction that no longer
+                                             exists. -->
+                                        {{ $t('Wildcards') }}
                                     </div>
                                 </div>
                                 <template #content>
@@ -518,45 +504,63 @@ export default {
                  lit rather than outlined. -->
             <div class="pointer-events-none absolute -top-24 -left-16 w-72 h-72 rounded-full bg-emerald-400/10 blur-3xl"></div>
 
-            <div class="relative flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+            <div class="relative flex flex-col md:flex-row md:flex-wrap md:items-center gap-4 md:gap-6">
 
                 <!-- The whole pool, not what one week pays.
                      A weekly figure answers "what do I win" and nothing else;
                      the total is what somebody repeats to a friend, and it is
                      the number the donors actually handed over. The week is
-                     still here, underneath, because a competitor needs it. -->
-                <div class="flex-shrink-0">
+                     still here, beside it, because a competitor needs it. -->
+                <!-- Every figure on one side of the divider, all the prose on
+                     the other. The two small lines sit BESIDE the big number
+                     rather than under it: a 4xl numeral is already two lines
+                     tall, so the space next to it is free and stacking them
+                     underneath cost the panel a row for nothing.
+
+                     A floor under its width, but only where there is width to
+                     spare: it is the part of the panel people look at, and a
+                     divider sitting tight against the longest figure gave the
+                     money the narrow half of a very wide box. Below xl the
+                     floor comes off entirely - held at every breakpoint it left
+                     the prose about forty pixels wide on a laptop and printed
+                     it one word per line. -->
+                <div class="flex-shrink-0 xl:min-w-[33rem]">
                     <div class="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-emerald-400/90 mb-1">
                         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2H6v2H2v3a5 5 0 0 0 4.6 5A5.5 5.5 0 0 0 11 15.9V19H7v3h10v-3h-4v-3.1a5.5 5.5 0 0 0 4.4-3.9A5 5 0 0 0 22 7V4h-4V2zM4 7V6h2v3.9A3 3 0 0 1 4 7zm16 0a3 3 0 0 1-2 2.9V6h2v1z" /></svg>
                         {{ funders?.total ? $t('Total prize pool') : $t('Prize pool') }}
                     </div>
-                    <div class="flex items-baseline gap-2">
-                        <span class="text-3xl md:text-4xl font-black text-emerald-300 tabular-nums leading-none">{{ funders?.total ?? prize.total }}</span>
-                        <span class="text-lg md:text-xl font-black text-emerald-300/70 leading-none">EUR</span>
-                    </div>
-                    <!-- Says nothing about where the donors are printed: they
-                         are below on a narrow screen and out in the right
-                         margin on a wide one. -->
-                    <div v-if="funders?.weeks" class="mt-1 text-sm text-emerald-100/60">
-                        {{ $t('distributed over :count weekly comps', { count: funders.weeks }) }}
-                    </div>
-                    <div v-else class="mt-1 text-sm text-emerald-100/60">
-                        {{ $t('every week, :amount EUR per physics', { amount: prize.eur }) }}
+
+                    <div class="flex items-center gap-6">
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-4xl md:text-5xl font-black text-emerald-300 tabular-nums leading-none">{{ funders?.total ?? prize.total }}</span>
+                            <span class="text-xl md:text-2xl font-black text-emerald-300/70 leading-none">EUR</span>
+                        </div>
+
+                        <div class="min-w-0 leading-snug">
+                            <!-- Says nothing about where the donors are
+                                 printed: they are below on a narrow screen and
+                                 out in the right margin on a wide one. -->
+                            <div class="text-base text-emerald-100/60 whitespace-nowrap">
+                                <template v-if="funders?.weeks">{{ $t('distributed over :count weekly comps', { count: funders.weeks }) }}</template>
+                                <template v-else>{{ $t('every week, :amount EUR per physics', { amount: prize.eur }) }}</template>
+                            </div>
+
+                            <!-- What this week itself pays. Split out of the
+                                 headline once that became the whole pool: the
+                                 two numbers answer different questions and one
+                                 of them is the one you play for. -->
+                            <div v-if="funders?.total" class="text-base whitespace-nowrap">
+                                <span class="font-bold text-emerald-200">{{ $t('This week: :total EUR', { total: prize.total }) }}</span>
+                                <span class="text-gray-400">{{ ' ' }}{{ $t('(:amount EUR per physics)', { amount: prize.eur }) }}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="hidden md:block w-px self-stretch bg-emerald-400/15"></div>
 
-                <div class="min-w-0 flex-1">
-                    <!-- What this week itself pays. Split out of the headline
-                         once that became the whole pool: the two numbers answer
-                         different questions and one of them is the one you play
-                         for. -->
-                    <p v-if="funders?.total" class="text-sm text-gray-200">
-                        <span class="font-bold text-emerald-200">{{ $t('This week: :total EUR', { total: prize.total }) }}</span>
-                        <span class="text-gray-400">{{ ' ' }}{{ $t('(:amount EUR per physics)', { amount: prize.eur }) }}</span>
-                    </p>
-                    <p class="text-sm text-gray-500 leading-snug" :class="funders?.total ? 'mt-1.5' : ''">
+                <div class="min-w-0 flex-1 md:min-w-[20rem]">
+                    <p class="text-sm text-gray-500 leading-snug">
                         <span>{{ donateLine }}</span>
                         <!-- The space is written out: Vue drops whitespace
                              between elements when it contains a newline, which
@@ -599,70 +603,66 @@ export default {
              loud than the money. -->
         <section v-if="voting"
                  class="rounded-2xl border border-blue-400/25 bg-black/40 backdrop-blur-sm overflow-hidden shadow-[0_0_35px_-16px_rgba(96,165,250,0.4)]">
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-blue-400/20 bg-gradient-to-r from-blue-500/[0.12] to-white/5 backdrop-blur-sm px-5 py-3.5">
-                <div class="flex items-center gap-3 min-w-0">
-                    <span class="rounded-full bg-blue-500/20 border border-blue-500/40 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-300">
-                        {{ voting.is_open ? $t('Voting') : $t('Decided') }}
-                    </span>
-                    <div class="min-w-0">
-                        <div class="flex items-baseline gap-2 flex-wrap">
-                            <span class="font-bold text-white">{{ $t('Vote on the next map') }}</span>
-                            <!-- The category, said out loud rather than in grey
-                                 six-point text. It is the single fact that
-                                 decides whether somebody cares about this
-                                 week at all. -->
-                            <!-- Both weeks are labelled. The ballot is for the
-                                 week after the one being played, so the
-                                 category being voted on IS next week's - and
-                                 an unlabelled second chip left people reading
-                                 the wrong one as the week they were choosing. -->
-                            <span class="inline-flex items-baseline gap-1.5 rounded-md bg-blue-500/20 border border-blue-400/40 px-2 py-0.5">
-                                <span class="text-[9px] font-bold uppercase tracking-wider text-blue-300/70">{{ $t('next week') }}</span>
-                                <span class="text-[11px] font-black uppercase tracking-wider text-blue-200">
-                                    {{ categoryLabel(voting.category) }}<template v-if="voting.weapon"> · {{ voting.weapon }}</template>
-                                </span>
-                            </span>
+            <!-- Everything the ballot is about, on one line: what you are
+                 doing, what it is a ballot of, what it pays, when it shuts.
+                 Then the one sentence explaining how voting works underneath
+                 it, inside the same header.
 
-                            <!-- The rotation is fixed and known years ahead, so
-                                 there is no reason to keep the following week a
-                                 surprise - and read as a chain, this week to
-                                 next, it says at a glance whether the thing you
-                                 are waiting for is close. -->
-                            <template v-if="voting.next_category">
-                                <span class="text-gray-600">&rarr;</span>
-                                <span class="inline-flex items-baseline gap-1.5 rounded-md border border-white/15 px-2 py-0.5">
-                                    <span class="text-[9px] font-bold uppercase tracking-wider text-gray-500">{{ $t('after that') }}</span>
-                                    <span class="text-[11px] font-black uppercase tracking-wider text-gray-300">{{ categoryLabel(voting.next_category) }}</span>
-                                </span>
-                            </template>
-                        </div>
-                        <div class="text-xs text-blue-100/50">
-                            {{ $t('Vote on the next weekly comps map for both physics') }}
-                        </div>
+                 It was a pill, a heading, two bordered chips, a money box and
+                 a stacked countdown across two rows, with the explanation
+                 floating loose above the cards - six shapes at five heights to
+                 carry four facts. Nothing here is boxed now: the category is
+                 simply painted in the panel's own colour and the week after it
+                 is a grey aside, so the row reads left to right as a sentence
+                 rather than as a strip of badges. -->
+            <div class="border-b border-blue-400/20 bg-gradient-to-r from-blue-500/[0.12] to-white/5 backdrop-blur-sm px-5 py-3">
+                <div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1.5">
+                    <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0">
+                        <span class="text-lg font-black text-white">
+                            {{ voting.is_open ? $t('Vote on the next map') : $t("Next week's maps are decided") }}
+                        </span>
+                        <span class="text-sm font-black uppercase tracking-wider text-blue-300">
+                            {{ categoryLabel(voting.category) }}<template v-if="voting.weapon"> · {{ voting.weapon }}</template>
+                        </span>
+                        <!-- The rotation is fixed years ahead, so there is no
+                             reason to keep the week after it a surprise. Said
+                             as a sentence rather than as "then STRAFE": the
+                             two words next to a category being voted on right
+                             now do not make it obvious which ballot they mean. -->
+                        <span v-if="voting.next_category" class="text-[11px] text-gray-500">
+                            {{ $t("Next week's vote will be :category", { category: categoryLabel(voting.next_category) }) }}
+                        </span>
+                    </div>
+
+                    <!-- Labelled the same as the round being played, and no
+                         longer "for next week". This panel already says it is
+                         about the next map, so dating the figure only invited
+                         the reading that the money was for the voting itself.
+                         The per-physics split is a title rather than a third
+                         number on the row - the pool panel above prints it. -->
+                    <div class="flex flex-wrap items-baseline gap-x-5 gap-y-1">
+                        <span v-if="voting.prize?.eur > 0" class="inline-flex items-baseline gap-2">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-300/60">{{ $t('Playing for') }}</span>
+                            <span class="text-base font-black tabular-nums text-emerald-300">{{ voting.prize.total }} EUR</span>
+                            <!-- Printed, not a tooltip. The total covers both physics, so a
+                                 winner takes half of it, and a number nobody can act on
+                                 until they hover is a number most people read wrong. -->
+                            <span class="text-[11px] tabular-nums text-emerald-100/50">{{ $t('(:amount EUR per physics)', { amount: voting.prize.eur }) }}</span>
+                        </span>
+
+                        <CompsCountdown v-if="voting.is_open" :until="voting.closes_at" :label="$t('Voting closes in')" emphasis inline />
                     </div>
                 </div>
-                <!-- The pool for the week being voted on, between the heading
-                     and the deadline. It is the week you are picking a map
-                     for, and it need not pay what the current one pays: a
-                     donation aimed at one weekly raises that weekly only. -->
-                <div v-if="voting.prize?.eur > 0" class="flex items-baseline gap-2 px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-400/25">
-                    <span class="text-lg font-black text-emerald-300 tabular-nums leading-none">{{ voting.prize.total }} EUR</span>
-                    <!-- Not "this week": the ballot decides the week AFTER the
-                         one being played, and next to a figure that can differ
-                         from the current week's, "this" pointed at the wrong
-                         one of the two. -->
-                    <span class="text-[11px] text-emerald-100/60">{{ $t('for next week') }}</span>
-                </div>
 
-                <CompsCountdown v-if="voting.is_open" :until="voting.closes_at" :label="$t('Voting closes in')" emphasis />
+                <!-- Belongs to the header, not to the cards. It explains the
+                     panel as a whole, and sitting above the grid it read as a
+                     caption on the first row of maps. -->
+                <p class="mt-1.5 text-sm text-gray-400">
+                    {{ $t('CPM and VQ3 vote separately, so each physics gets the map its own players picked. You have one vote in each and can move it until the deadline.') }}
+                </p>
             </div>
 
-            <div class="px-5 pt-3 pb-5">
-            <!-- One line, and no more air around it than a caption needs. It is
-                 read once and then skipped every week after. -->
-            <p class="mb-3 text-sm text-gray-400">
-                {{ $t('CPM and VQ3 vote separately, so each physics gets the map its own players picked. You have one vote in each and can move it until the deadline.') }}
-            </p>
+            <div class="px-5 pt-4 pb-5">
 
             <div v-if="user && !voting.may_vote" class="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
                 {{ $t('Link your MDD profile to vote in comps.') }}
@@ -713,17 +713,33 @@ export default {
 
         <!-- ============================ PLAYING ============================ -->
         <section v-if="playing" class="rounded-2xl border border-green-400/25 bg-gradient-to-br from-green-500/[0.10] via-black/40 to-black/40 backdrop-blur-sm overflow-hidden shadow-[0_0_40px_-14px_rgba(34,197,94,0.4)]">
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-green-400/20 bg-green-500/[0.08] backdrop-blur-sm px-5 py-3">
-                <div class="flex items-center gap-3">
+            <!-- The same row as the ballot's, in green: what it is, what it
+                 pays, when it stops. The countdown used to stack its wall
+                 clock under itself and push this header to two lines for the
+                 sake of one date. -->
+            <div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1.5 border-b border-green-400/20 bg-green-500/[0.08] backdrop-blur-sm px-5 py-3">
+                <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0">
                     <span class="rounded-full bg-green-500/20 border border-green-500/40 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-green-300">
                         {{ $t('Playing now') }}
                     </span>
                     <span class="text-lg font-black text-white">{{ playing.comp_title }}</span>
-                    <span class="text-xs text-gray-500">
-                        {{ categoryLabel(playing.category) }}<template v-if="playing.weapon"> ({{ playing.weapon }})</template>
+                    <span class="text-sm font-black uppercase tracking-wider text-green-300/80">
+                        {{ categoryLabel(playing.category) }}<template v-if="playing.weapon"> · {{ playing.weapon }}</template>
                     </span>
                 </div>
-                <CompsCountdown :until="playing.ends_at" :label="$t('Ends in')" />
+
+                <div class="flex flex-wrap items-baseline gap-x-5 gap-y-1">
+                    <span v-if="playing.prize?.eur > 0" class="inline-flex items-baseline gap-2">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-300/60">{{ $t('Playing for') }}</span>
+                        <span class="text-base font-black tabular-nums text-emerald-300">{{ playing.prize.total }} EUR</span>
+                        <!-- Printed, not a tooltip. The total covers both physics, so a
+                             winner takes half of it, and a number nobody can act on
+                             until they hover is a number most people read wrong. -->
+                        <span class="text-[11px] tabular-nums text-emerald-100/50">{{ $t('(:amount EUR per physics)', { amount: playing.prize.eur }) }}</span>
+                    </span>
+
+                    <CompsCountdown :until="playing.ends_at" :label="$t('Ends in')" inline />
+                </div>
             </div>
 
             <div class="grid gap-5 p-5 md:grid-cols-2">

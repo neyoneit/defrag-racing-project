@@ -61,11 +61,14 @@
              One fixed 16:9 box, centre-cropped, and a stand-in picture when a
              map has no levelshot: five cards on a ballot are compared side by
              side, and a grey "no image" panel among four screenshots reads as a
-             broken card rather than a map nobody has photographed. Nothing is
-             drawn over the picture either - the map name, the author and the
-             note about the preview all live below it, so every card is the
-             same shape whatever it happens to know. -->
-        <div class="relative aspect-video bg-black/40">
+             broken card rather than a map nobody has photographed. Levelshots
+             come in whatever shape their author saved them in - 4:3 mostly,
+             some square - so they are zoomed to fill and cropped from the
+             centre rather than letterboxed: five pictures at five heights is
+             what made the rows under them fail to line up.
+             `flex-shrink-0` because this is a flex column and a tall card in
+             the same grid row must not be able to squeeze the picture. -->
+        <div class="relative aspect-video flex-shrink-0 bg-black/40">
             <img
                 :src="candidate.thumbnail ? `/storage/${candidate.thumbnail}` : '/images/unknown.jpg'"
                 onerror="this.src='/images/unknown.jpg'"
@@ -73,6 +76,16 @@
                 class="w-full h-full object-cover object-center"
                 loading="lazy"
             />
+
+            <!-- Says why there is nothing to watch, rather than leaving the
+                 play button missing and letting people wonder. It sits on the
+                 picture because it is about the picture, and because a note
+                 that only some cards carry costs those cards a row and knocks
+                 every vote bar on the ballot out of line. -->
+            <div v-if="!anyVideo"
+                 class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/60 to-transparent px-2.5 pt-6 pb-1.5 text-[10px] font-medium text-gray-300">
+                {{ rendering ? $t('Preview is rendering') : $t('No preview available') }}
+            </div>
 
             <button
                 v-if="anyVideo"
@@ -95,7 +108,11 @@
                 >
                     {{ candidate.map }}
                 </Link>
-                <div v-if="candidate.author" class="text-xs text-gray-500 truncate">{{ candidate.author }}</div>
+                <!-- Always a row, even with nobody to name. A card that skips
+                     it is a card whose vote bars sit higher than its
+                     neighbours', which is the whole reason the ballot looked
+                     ragged. -->
+                <div class="h-4 leading-4 text-xs text-gray-500 truncate">{{ candidate.author }}</div>
             </div>
 
             <div class="space-y-2 mt-auto">
@@ -171,12 +188,6 @@
                         </button>
                     </div>
                 </div>
-            </div>
-
-            <!-- Says why there is nothing to watch, rather than leaving the
-                 play button missing and letting people wonder. -->
-            <div v-if="!anyVideo" class="text-[10px] text-gray-500">
-                {{ rendering ? $t('Preview is rendering') : $t('No preview available') }}
             </div>
 
             <button
