@@ -4204,5 +4204,9 @@
     "Next week's maps are decided": "Карты на следующую неделю определены",
     "Next week's vote will be :category": "На следующей неделе голосование будет за :category",
     "your timezone": "твой часовой пояс",
-    "Playing for": "Разыгрывается"
+    "Playing for": "Разыгрывается",
+    "Starts in": "Начнётся через",
+    "Voting is over. These are the maps for next week, and the round starts when the countdown runs out.": "Голосование завершено. Это карты на следующую неделю, и раунд начнётся, когда истечёт обратный отсчёт.",
+    "Playing next week": "На следующей неделе играем",
+    "Final votes": "Итоги голосования"
 }

@@ -650,7 +650,18 @@ export default {
                             <span class="text-[11px] tabular-nums text-emerald-100/50">{{ $t('(:amount EUR per physics)', { amount: voting.prize.eur }) }}</span>
                         </span>
 
-                        <CompsCountdown v-if="voting.is_open" :until="voting.closes_at" :label="$t('Voting closes in')" emphasis inline />
+                        <!-- Two different clocks, because this panel lives
+                             through two states and the gap between them is a
+                             whole day. While the ballot is open the deadline
+                             is what matters; once it has closed the only
+                             question left is when the thing actually starts,
+                             and a panel that answered neither was the most
+                             confusing screen on the site: voting visibly over,
+                             nothing saying so, and no date anywhere. -->
+                        <CompsCountdown v-if="voting.is_open"
+                                        :until="voting.closes_at" :label="$t('Voting closes in')" emphasis inline />
+                        <CompsCountdown v-else
+                                        :until="voting.starts_at" :label="$t('Starts in')" emphasis inline />
                     </div>
                 </div>
 
@@ -658,7 +669,8 @@ export default {
                      panel as a whole, and sitting above the grid it read as a
                      caption on the first row of maps. -->
                 <p class="mt-1.5 text-sm text-gray-400">
-                    {{ $t('CPM and VQ3 vote separately, so each physics gets the map its own players picked. You have one vote in each and can move it until the deadline.') }}
+                    <template v-if="voting.is_open">{{ $t('CPM and VQ3 vote separately, so each physics gets the map its own players picked. You have one vote in each and can move it until the deadline.') }}</template>
+                    <template v-else>{{ $t('Voting is over. These are the maps for next week, and the round starts when the countdown runs out.') }}</template>
                 </p>
             </div>
 
@@ -675,8 +687,13 @@ export default {
                 {{ errors.wildcard }}
             </div>
 
-            <!-- Once decided, say so and by what -->
-            <div v-if="!voting.is_open" class="mb-4 grid gap-3 sm:grid-cols-2">
+            <!-- Once decided, say so and by what. Given its own heading:
+                 with the ballot closed these two boxes are the answer people
+                 came for, and unlabelled they read as another pair of cards. -->
+            <div v-if="!voting.is_open" class="mb-1.5 text-[11px] font-black uppercase tracking-widest text-blue-300/70">
+                {{ $t('Playing next week') }}
+            </div>
+            <div v-if="!voting.is_open" class="mb-5 grid gap-3 sm:grid-cols-2">
                 <div
                     v-for="physics in PHYSICS"
                     :key="physics"
@@ -691,6 +708,13 @@ export default {
                         <template v-else>{{ $t('Chosen by vote') }}</template>
                     </div>
                 </div>
+            </div>
+
+            <!-- The ballot below is history once it has closed, so it says
+                 so rather than sitting there looking like it still takes
+                 clicks. -->
+            <div v-if="!voting.is_open" class="mb-1.5 text-[11px] font-black uppercase tracking-widest text-gray-500">
+                {{ $t('Final votes') }}
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
