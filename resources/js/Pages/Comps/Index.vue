@@ -698,9 +698,14 @@ export default {
 
             <!-- Once decided, say so and by what. Given its own heading:
                  with the ballot closed these two boxes are the answer people
-                 came for, and unlabelled they read as another pair of cards. -->
+                 came for, and unlabelled they read as another pair of cards.
+                 It labels, it does not date - the countdown above already says
+                 when, and "next week" reads as a contradiction next to a clock
+                 counting down to tomorrow evening. The pairing with "final
+                 votes" below is the point: two maps that get played, five that
+                 were on the ballot. -->
             <div v-if="!voting.is_open" class="mb-1.5 text-[11px] font-black uppercase tracking-widest text-blue-300/70">
-                {{ $t('Playing next week') }}
+                {{ $t('What gets played') }}
             </div>
             <div v-if="!voting.is_open" class="mb-5 grid gap-3 sm:grid-cols-2">
                 <div
