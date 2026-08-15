@@ -110,3 +110,6 @@ __pycache__/
 
 # Plán serverové pojistky comps (viz COMPS_SPEC.md)
 /COMPS_GUARD_PLAN.md
+
+# Announcement translations in progress (not repo material)
+/.announcement-translations/
