@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ServerOwnerApplication;
 use App\Models\SftpCredential;
 use App\Services\StorageVpsProvisioner;
+use App\Support\HostIdentity;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -162,6 +163,27 @@ class ServerHostingController extends Controller
             ]);
         }
 
+        // Approving this application seeds ONE credential with every server
+        // listed here, and one SFTP account is one machine - so the list has
+        // to be one machine too. Somebody with two boxes applies for the
+        // first and requests a second credential once approved.
+        $hosts = collect($request->input('servers'))->pluck('ip')->map(fn ($h) => (string) $h);
+        $first = trim((string) $hosts->first());
+
+        if (HostIdentity::isUnresolvable($first)) {
+            return back()->withErrors([
+                'servers.0.ip' => "Could not resolve {$first}. Check the spelling, or enter the server's IP address instead.",
+            ]);
+        }
+
+        foreach ($hosts as $index => $host) {
+            if (! HostIdentity::sameMachine($first, trim($host))) {
+                return back()->withErrors([
+                    "servers.{$index}.ip" => "Every server in one application has to be on the same machine as the first one ({$first}). Apply for that box now - once you are approved you can request a credential for each further machine.",
+                ]);
+            }
+        }
+
         ServerOwnerApplication::create([
             'user_id'           => $user->id,
             'message'           => $request->input('message'),
@@ -204,20 +226,62 @@ class ServerHostingController extends Controller
         }
         RateLimiter::hit($rateKey, 3600);
 
-        $ip   = trim($request->input('ip'));
+        // Normalised, so a host pasted as "box.example.com:27960" or as a
+        // URL is stored the way every other row stores it - the port lives
+        // in its own column and a duplicate has to be recognisable.
+        $ip   = HostIdentity::normalize((string) $request->input('ip'));
         $port = (int) $request->input('port');
+
+        // A name nobody can resolve cannot be checked against anything, and
+        // it is a typo far more often than it is a real box.
+        if (HostIdentity::isUnresolvable($ip)) {
+            return back()->withErrors([
+                'ip' => "Could not resolve {$ip}. Check the spelling, or enter the server's IP address instead.",
+            ]);
+        }
 
         // A server can only ship demos through one credential — dedupe
         // across ALL of the user's active credentials, not just this one.
         $siblings = SftpCredential::where('user_id', $user->id)->active()->get();
         foreach ($siblings as $sibling) {
             foreach ($sibling->servers ?? [] as $existing) {
-                if (($existing['ip'] ?? null) === $ip && (int) ($existing['port'] ?? 0) === $port) {
+                $existingIp = (string) ($existing['ip'] ?? '');
+
+                if ($existingIp === $ip && (int) ($existing['port'] ?? 0) === $port) {
                     return back()->withErrors([
                         'ip' => "You already have a server registered at {$ip}:{$port}.",
                     ]);
                 }
+
+                // One box keeps one SFTP account, so a machine already
+                // declared under another credential cannot be declared
+                // again here - otherwise the same box ships demos through
+                // two accounts and neither one accounts for it.
+                if ($sibling->id !== $credential->id && HostIdentity::sameMachine($existingIp, $ip)) {
+                    $name = $sibling->label ?: $sibling->sftp_username;
+
+                    return back()->withErrors([
+                        'ip' => "That machine is already registered under \"{$name}\". Add the server there - one machine keeps one SFTP account.",
+                    ]);
+                }
             }
+        }
+
+        // One SFTP account is one machine. Somebody declared a domain and
+        // then a different server's address under the same account, which
+        // is how a box nobody approved starts shipping demos through
+        // somebody else's credential. The comparison resolves names, so a
+        // domain and the address it points at count as the same machine
+        // and a second server on the same box is still fine.
+        $declared = collect($credential->servers ?? [])
+            ->pluck('ip')
+            ->filter()
+            ->values();
+
+        if ($declared->isNotEmpty() && ! $declared->contains(fn ($host) => HostIdentity::sameMachine((string) $host, $ip))) {
+            return back()->withErrors([
+                'ip' => "This SFTP account is for {$declared->first()}. A server on a different machine needs its own credential - request one from this page and add it there.",
+            ]);
         }
 
         $servers   = $credential->servers ?? [];
