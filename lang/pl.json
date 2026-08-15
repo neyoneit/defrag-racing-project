@@ -4201,12 +4201,12 @@
     "votes": "głosów",
     "Choose a demo": "Wybierz demo",
     "If something does not look right, please contact <a href=:url>admin</a>.": "Jeśli coś nie wygląda dobrze, napisz do <a href=:url>admina</a>.",
-    "Next week's maps are decided": "Mapy na przyszły tydzień są wybrane",
     "Next week's vote will be :category": "W przyszłym tygodniu głosowanie będzie o kategorii :category",
     "your timezone": "twoja strefa czasowa",
     "Playing for": "Gra się o",
     "Starts in": "Zaczyna się za",
-    "Voting is over. These are the maps for next week, and the round starts when the countdown runs out.": "Głosowanie się skończyło. To są mapy na przyszły tydzień, a runda zacznie się, gdy odliczanie dobiegnie końca.",
     "Playing next week": "W przyszłym tygodniu gramy",
-    "Final votes": "Ostateczne głosy"
+    "Final votes": "Ostateczne głosy",
+    "Up next: :comp": "Następnie: :comp",
+    "Voting is over. These are the maps, and the round starts when the countdown runs out.": "Głosowanie się skończyło. To są mapy, a runda zacznie się, gdy odliczanie dobiegnie końca."
 }

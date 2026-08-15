@@ -4201,12 +4201,12 @@
     "votes": "röster",
     "Choose a demo": "Välj demo",
     "If something does not look right, please contact <a href=:url>admin</a>.": "Om något inte ser rätt ut, kontakta <a href=:url>adminen</a>.",
-    "Next week's maps are decided": "Nästa veckas banor är bestämda",
     "Next week's vote will be :category": "Nästa vecka röstas det om :category",
     "your timezone": "din tidszon",
     "Playing for": "Spelas om",
     "Starts in": "Startar om",
-    "Voting is over. These are the maps for next week, and the round starts when the countdown runs out.": "Omröstningen är över. Det här är banorna för nästa vecka, och rundan startar när nedräkningen tar slut.",
     "Playing next week": "Spelas nästa vecka",
-    "Final votes": "Slutgiltiga röster"
+    "Final votes": "Slutgiltiga röster",
+    "Up next: :comp": "Härnäst: :comp",
+    "Voting is over. These are the maps, and the round starts when the countdown runs out.": "Omröstningen är över. Det här är banorna, och rundan startar när nedräkningen tar slut."
 }
