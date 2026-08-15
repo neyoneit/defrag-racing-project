@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use App\Models\UploadedDemo;
@@ -833,17 +834,28 @@ class DemosController extends Controller
 
                     if ($replacedThisDemo) $replacedCount++;
 
-                    // Create DB record (catch unique constraint for same-hash files within one batch)
+                    // The row and the file are one write. Separately, a failure
+                    // in between (a full disk, a killed process) leaves a hash
+                    // in the table with no file behind it - and because
+                    // file_hash is unique and 'uploaded' is not a status this
+                    // page will replace, that demo can never be uploaded again.
+                    // (catch unique constraint for same-hash files within one batch)
                     try {
-                        $demo = UploadedDemo::create([
-                            'original_filename' => $originalName,
-                            'file_path' => '',
-                            'file_size' => $demoFile->getSize(),
-                            'file_hash' => $fileHash,
-                            'user_id' => $userId,
-                            'status' => 'uploaded',
-                            'client_file_mtime' => $candidate['mtime'] ?? null,
-                        ]);
+                        $demo = DB::transaction(function () use ($originalName, $demoFile, $fileHash, $userId, $candidate) {
+                            $demo = UploadedDemo::create([
+                                'original_filename' => $originalName,
+                                'file_path' => '',
+                                'file_size' => $demoFile->getSize(),
+                                'file_hash' => $fileHash,
+                                'user_id' => $userId,
+                                'status' => 'uploaded',
+                                'client_file_mtime' => $candidate['mtime'] ?? null,
+                            ]);
+
+                            $demo->update(['file_path' => $this->storeUploadedDemoLocally($demoFile, $demo->id)]);
+
+                            return $demo;
+                        });
                     } catch (\Illuminate\Database\QueryException $qe) {
                         if (str_contains($qe->getMessage(), 'Duplicate entry')) {
                             $errors[] = $this->uploadError($originalName, 'duplicate', __('The same file is in this upload twice.'));
@@ -852,11 +864,8 @@ class DemosController extends Controller
                         throw $qe;
                     }
 
-                    // Store file and update path
-                    $path = $this->storeUploadedDemoLocally($demoFile, $demo->id);
-                    $demo->update(['file_path' => $path]);
-
-                    // Dispatch for processing
+                    // Dispatch for processing, after the commit: a worker that
+                    // picked the job up mid-transaction would find no row.
                     ProcessDemoJob::dispatch($demo);
 
                     $queuedDemos[] = $demo;
