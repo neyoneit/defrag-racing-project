@@ -17,6 +17,10 @@
         // by missing, so it gets to be read from across the room. The round's
         // own end is information; this is a deadline.
         emphasis: { type: Boolean, default: false },
+        /** Right-align, for a countdown sitting at the end of a header row. */
+        end: { type: Boolean, default: false },
+        /** Label, time and wall clock on one baseline instead of stacked. */
+        inline: { type: Boolean, default: false },
     });
 
     // Comps runs on central European time, so that is the authority and it is
@@ -49,10 +53,18 @@
         const m = Math.floor((s % 3600) / 60);
         const sec = s % 60;
 
-        // Seconds only matter once it is close enough to matter.
-        if (d > 0) return `${d}d ${h}h`;
-        if (h > 0) return `${h}h ${m}m`;
-        return `${m}m ${sec}s`;
+        // Seconds all the way up. A ticking last field is what tells somebody
+        // the page is live rather than a screenshot of a deadline, and two
+        // weeks out is exactly when that reassurance is worth the extra field.
+        //
+        // Padded below the leading unit so the string keeps its width while it
+        // runs: "1d 09h" turning into "1d 9h" shifts everything after it.
+        const pad = (n) => String(n).padStart(2, '0');
+
+        if (d > 0) return `${d}d ${pad(h)}h ${pad(m)}m ${pad(sec)}s`;
+        if (h > 0) return `${h}h ${pad(m)}m ${pad(sec)}s`;
+        if (m > 0) return `${m}m ${pad(sec)}s`;
+        return `${sec}s`;
     });
 
     /** A zone's offset from UTC at a given moment, in minutes. */
@@ -93,10 +105,12 @@
 
         const site = `${timeIn(at, SITE_TZ)} ${siteZoneName(at)}`;
 
-        // Nothing to add for somebody already on central European time, and a
-        // bracket repeating the line before it would just be noise.
+        // Somebody already on central European time gets told so rather than
+        // getting the same clock printed twice. Without it a reader has to
+        // work out whether CEST is their zone before they can trust the time,
+        // which is the whole job this line exists to do for them.
         if (offsetMinutes(at, localZone) === offsetMinutes(at, SITE_TZ)) {
-            return { site, local: null };
+            return { site, local: null, mine: true };
         }
 
         return {
@@ -111,19 +125,22 @@
 </script>
 
 <template>
-    <span class="inline-flex flex-col items-start">
+    <span class="inline-flex"
+          :class="inline
+              ? 'flex-wrap items-baseline gap-x-2 gap-y-0.5'
+              : (end ? 'flex-col items-end text-right' : 'flex-col items-start')">
         <span class="inline-flex items-baseline gap-2">
             <span class="uppercase tracking-wider"
-                  :class="emphasis ? 'text-[11px] font-bold text-blue-300/80' : 'text-xs text-gray-500'"
+                  :class="emphasis ? 'text-[10px] font-bold text-blue-300/70' : 'text-xs text-gray-500'"
                   v-if="label">{{ label }}</span>
-            <span v-if="done" class="font-bold text-gray-400" :class="emphasis ? 'text-lg' : 'text-sm'">{{ $t('Closed') }}</span>
+            <span v-if="done" class="font-bold text-gray-400" :class="emphasis ? 'text-base' : 'text-sm'">{{ $t('Closed') }}</span>
             <span v-else
                   class="tabular-nums"
-                  :class="emphasis ? 'text-xl md:text-2xl font-black text-blue-200' : 'text-sm font-bold text-white'">{{ parts }}</span>
+                  :class="emphasis ? 'text-base font-black leading-tight text-blue-200' : 'text-sm font-bold text-white'">{{ parts }}</span>
         </span>
 
         <span v-if="clock && !done" class="text-[11px] text-gray-500 tabular-nums">
-            {{ clock.site }}<template v-if="clock.local"> ({{ $t(':time your time', { time: clock.local }) }})</template>
+            {{ clock.site }}<template v-if="clock.local"> ({{ $t(':time your time', { time: clock.local }) }})</template><template v-else-if="clock.mine"> ({{ $t('your timezone') }})</template>
         </span>
     </span>
 </template>
