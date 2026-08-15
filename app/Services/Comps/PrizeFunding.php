@@ -2,6 +2,7 @@
 
 namespace App\Services\Comps;
 
+use App\Models\Comp;
 use App\Models\CompRound;
 use App\Models\SiteDonation;
 use Illuminate\Support\Collection;
@@ -99,7 +100,8 @@ class PrizeFunding
                 'per_physics' => $d->compsPerPhysics(),
                 'from_comp' => (int) $d->comps_start_comp,
                 'to_comp' => $d->compsEndComp(),
-                'note' => $d->comps_note,
+                'note' => $this->noteText($d->comps_note),
+                'note_url' => $this->noteUrl($d->comps_note),
             ])
             ->all();
     }
@@ -141,6 +143,61 @@ class PrizeFunding
         $ends = $this->all()->map(fn (SiteDonation $d) => $d->compsEndComp())->filter();
 
         return $ends->isEmpty() ? null : (int) $ends->max();
+    }
+
+    /**
+     * The earliest weekly a donation made right now could still pay for.
+     *
+     * Normally that is simply the week after the pool runs out: funding is
+     * paid up through weekly 15, so the next euro goes on 16. Two things stop
+     * that being the whole answer. Funding that lapsed years ago would send
+     * the money to a week already played, so it never goes earlier than the
+     * first round that has not started - a round that has started keeps the
+     * figure its players were told. And with nothing funded at all there is no
+     * "after", so it falls through to the first weekly still to be created.
+     */
+    public function nextFundableComp(): int
+    {
+        $firstOpen = CompRound::query()
+            ->whereHas('comp', fn ($q) => $q->weekly())
+            ->where('starts_at', '>', now())
+            ->with('comp:id,number')
+            ->orderBy('starts_at')
+            ->first()?->comp?->number;
+
+        $earliest = (int) ($firstOpen ?? ((int) Comp::weekly()->max('number') + 1));
+
+        return max($earliest, (int) $this->fundedThroughComp() + 1);
+    }
+
+    /**
+     * A link written into a comps note, so the page can make the note itself
+     * clickable.
+     *
+     * Notes are free text and there is no column for a URL, which is fine:
+     * somebody explaining where money came from writes the link into the
+     * sentence anyway. Only http(s) is picked up - a note is admin-entered but
+     * it is rendered into an anchor on a public page.
+     */
+    private function noteUrl(?string $note): ?string
+    {
+        if (! $note || ! preg_match('~https?://\S+~i', $note, $m)) {
+            return null;
+        }
+
+        return rtrim($m[0], '.,;)');
+    }
+
+    /** The same note with the URL taken back out, and no dangling separator. */
+    private function noteText(?string $note): ?string
+    {
+        if (! $note) {
+            return null;
+        }
+
+        $text = trim((string) preg_replace('~https?://\S+~i', '', $note));
+
+        return trim((string) preg_replace('/\s*[-:]\s*$/', '', $text)) ?: null;
     }
 
     /**

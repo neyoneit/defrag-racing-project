@@ -52,7 +52,16 @@
                         {{ $t('over :count weeklies (:from-:to)', { count: d.weeks, from: d.from_comp, to: d.to_comp }) }}
                     </span>
                 </div>
-                <p v-if="d.note" class="mt-1 text-xs text-emerald-100/70 italic leading-snug">{{ d.note }}</p>
+                <!-- A note with a link in it becomes the link. Money that came
+                     from somewhere else - a contest prize handed back, say -
+                     is worth being able to click through to, and there is no
+                     column for a URL: it is written into the sentence and the
+                     server pulls it back out. -->
+                <p v-if="d.note" class="mt-1 text-xs text-emerald-100/70 italic leading-snug">
+                    <a v-if="d.note_url" :href="d.note_url"
+                       class="underline decoration-emerald-100/30 hover:text-emerald-100">{{ d.note }}</a>
+                    <template v-else>{{ d.note }}</template>
+                </p>
             </li>
         </ul>
 
