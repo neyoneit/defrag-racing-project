@@ -4188,5 +4188,6 @@
     "Any run you record on a map comps is playing that week is entered automatically when you upload the demo - there is no sign-up.": "Elke run die je rijdt op een map die comps die week speelt, doet automatisch mee zodra je de demo uploadt - inschrijven hoeft niet.",
     "The demo stays hidden until the round ends, then appears like any other.": "De demo blijft verborgen tot de ronde voorbij is en verschijnt daarna zoals elke andere.",
     "If you do not want to be in it, do not upload a demo of that map until the round is over.": "Wil je niet meedoen, upload dan geen demo van die map tot de ronde voorbij is.",
-    "Entering, and voting, need a Q3DF.org profile linked to your account.": "Meedoen en stemmen vragen allebei een aan je account gekoppeld Q3DF.org-profiel."
+    "Entering, and voting, need a Q3DF.org profile linked to your account.": "Meedoen en stemmen vragen allebei een aan je account gekoppeld Q3DF.org-profiel.",
+    "A wildcard picks next week's map outright and overrules the vote. You earn one for every :count weekly wins in a physics, and it can be spent on either ballot. Whoever spends one first decides that round - everyone else keeps theirs.": "Een wildcard kiest de map van volgende week rechtstreeks en overrulet de stemming. Je verdient er een voor elke :count weekoverwinningen in een physics, en je mag hem op beide stemmingen inzetten. Wie hem als eerste inzet beslist die ronde - de rest houdt de zijne."
 }

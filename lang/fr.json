@@ -4188,5 +4188,6 @@
     "Any run you record on a map comps is playing that week is entered automatically when you upload the demo - there is no sign-up.": "Tout run réalisé sur une carte jouée cette semaine en comps entre automatiquement dans la manche dès que tu envoies la démo - il n'y a pas d'inscription.",
     "The demo stays hidden until the round ends, then appears like any other.": "La démo reste cachée jusqu'à la fin de la manche, puis apparaît comme n'importe quelle autre.",
     "If you do not want to be in it, do not upload a demo of that map until the round is over.": "Si tu ne veux pas y participer, n'envoie pas de démo de cette carte avant la fin de la manche.",
-    "Entering, and voting, need a Q3DF.org profile linked to your account.": "Participer et voter demandent un profil Q3DF.org associé à ton compte."
+    "Entering, and voting, need a Q3DF.org profile linked to your account.": "Participer et voter demandent un profil Q3DF.org associé à ton compte.",
+    "A wildcard picks next week's map outright and overrules the vote. You earn one for every :count weekly wins in a physics, and it can be spent on either ballot. Whoever spends one first decides that round - everyone else keeps theirs.": "Un joker choisit la carte de la semaine suivante et annule le vote. Tu en gagnes un tous les :count succès hebdomadaires dans une physique, et tu peux le dépenser sur l'un ou l'autre des votes. Le premier à le dépenser décide de la manche - les autres gardent le leur."
 }

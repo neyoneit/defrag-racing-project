@@ -4188,5 +4188,6 @@
     "Any run you record on a map comps is playing that week is entered automatically when you upload the demo - there is no sign-up.": "Будь-який забіг на карті, яку comps грає того тижня, потрапляє в раунд сам, щойно ти завантажиш демо - жодного запису немає.",
     "The demo stays hidden until the round ends, then appears like any other.": "Демо лишається схованим до кінця раунду, потім з'являється як будь-яке інше.",
     "If you do not want to be in it, do not upload a demo of that map until the round is over.": "Якщо не хочеш брати участь, не завантажуй демо з тієї карти до кінця раунду.",
-    "Entering, and voting, need a Q3DF.org profile linked to your account.": "І для участі, і для голосування потрібен профіль Q3DF.org, прив'язаний до акаунта."
+    "Entering, and voting, need a Q3DF.org profile linked to your account.": "І для участі, і для голосування потрібен профіль Q3DF.org, прив'язаний до акаунта.",
+    "A wildcard picks next week's map outright and overrules the vote. You earn one for every :count weekly wins in a physics, and it can be spent on either ballot. Whoever spends one first decides that round - everyone else keeps theirs.": "Вайлдкард обирає мапу наступного тижня напряму й скасовує голосування. Один дається за кожні :count тижневих перемог в одній фізиці, і витратити його можна на будь-якому голосуванні. Хто витратить першим, той вирішує раунд - в інших свої лишаються."
 }

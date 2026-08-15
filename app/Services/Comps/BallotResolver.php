@@ -43,7 +43,7 @@ class BallotResolver
                 }
 
                 $spent = CompWildcard::where('used_on_round_id', $round->id)
-                    ->where('physics', $physics)
+                    ->where('used_physics', $physics)
                     ->whereNotNull('used_at')
                     ->whereNotNull('used_map_id')
                     ->orderBy('used_at')

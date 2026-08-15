@@ -4188,5 +4188,6 @@
     "Any run you record on a map comps is playing that week is entered automatically when you upload the demo - there is no sign-up.": "Cualquier carrera que hagas en un mapa que comps esté jugando esa semana entra automáticamente al subir la demo - no hay inscripción.",
     "The demo stays hidden until the round ends, then appears like any other.": "La demo queda oculta hasta que termina la ronda y después aparece como cualquier otra.",
     "If you do not want to be in it, do not upload a demo of that map until the round is over.": "Si no quieres participar, no subas una demo de ese mapa hasta que la ronda termine.",
-    "Entering, and voting, need a Q3DF.org profile linked to your account.": "Tanto para participar como para votar necesitas un perfil de Q3DF.org vinculado a tu cuenta."
+    "Entering, and voting, need a Q3DF.org profile linked to your account.": "Tanto para participar como para votar necesitas un perfil de Q3DF.org vinculado a tu cuenta.",
+    "A wildcard picks next week's map outright and overrules the vote. You earn one for every :count weekly wins in a physics, and it can be spent on either ballot. Whoever spends one first decides that round - everyone else keeps theirs.": "Un comodín elige el mapa de la próxima semana directamente y anula la votación. Consigues uno por cada :count victorias semanales en una física, y puedes gastarlo en cualquiera de las dos votaciones. Quien lo gaste primero decide esa ronda; los demás conservan el suyo."
 }

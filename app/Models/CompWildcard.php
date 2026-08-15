@@ -12,8 +12,11 @@ use Illuminate\Database\Eloquent\Model;
  * another round - nothing is taken from them, and no votes are thrown away
  * either. The votes stay on record, they just stop deciding anything.
  *
- * Winners come in pairs, one per physics, so the right carries a physics and
- * is spent on the ballot of its own.
+ * Winners come in pairs, one per physics, so a right is EARNED in one of them -
+ * that is `physics` - but it may be spent on either ballot, and `used_physics`
+ * records which one it actually decided. Tying it to its own physics punished
+ * people for being good at one thing: it made a right you had won useless on
+ * the ballot you cared about.
  */
 class CompWildcard extends Model
 {
@@ -23,7 +26,7 @@ class CompWildcard extends Model
     public const FROM_WEEKLIES = 'five_weekly_wins';
 
     /** How many weekly wins earn one. They need not be consecutive. */
-    public const WEEKLY_WINS_REQUIRED = 5;
+    public const WEEKLY_WINS_REQUIRED = 3;
 
     protected $fillable = [
         'user_id',
@@ -31,6 +34,7 @@ class CompWildcard extends Model
         'source',
         'source_comp_id',
         'used_at',
+        'used_physics',
         'used_on_round_id',
         'used_map_id',
     ];

@@ -258,15 +258,15 @@ class CompsController extends Controller
 
         $this->assertMayVote($request);
 
-        $wildcard = $this->wildcards->heldBy($request->user()->id, $data['physics']);
+        $wildcard = $this->wildcards->heldBy($request->user()->id);
 
-        abort_unless($wildcard, 403, __('You do not hold a wildcard for this physics.'));
+        abort_unless($wildcard, 403, __('You do not hold a wildcard.'));
 
         $candidate = CompCandidate::where('comp_round_id', $round->id)
             ->findOrFail($data['candidate_id']);
 
         try {
-            $this->wildcards->spend($wildcard, $round, $candidate);
+            $this->wildcards->spend($wildcard, $round, $candidate, $data['physics']);
         } catch (\RuntimeException $e) {
             return back()->withErrors(['wildcard' => $e->getMessage()]);
         }
@@ -354,11 +354,13 @@ class CompsController extends Controller
                 ->pluck('comp_candidate_id', 'physics')
             : collect();
 
+        // One boolean, not one per physics: a wildcard is spendable on
+        // either ballot now, so holding one lights up both.
+        $holdsWildcard = $user ? (bool) $this->wildcards->heldBy($user->id) : false;
+
         $wildcardsHeld = [];
         foreach (BallotResolver::PHYSICS as $physics) {
-            $wildcardsHeld[$physics] = $user
-                ? (bool) $this->wildcards->heldBy($user->id, $physics)
-                : false;
+            $wildcardsHeld[$physics] = $holdsWildcard;
         }
 
         return [

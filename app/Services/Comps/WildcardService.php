@@ -147,12 +147,17 @@ class WildcardService
         return true;
     }
 
-    /** An unspent right this user holds for this physics, if any. */
-    public function heldBy(int $userId, string $physics): ?CompWildcard
+    /**
+     * An unspent right this user holds, if any.
+     *
+     * Not filtered by physics: one is spendable on either ballot whatever it
+     * was earned in. Oldest first, which matters to nobody today and will the
+     * day somebody holds two.
+     */
+    public function heldBy(int $userId): ?CompWildcard
     {
         return CompWildcard::unused()
             ->where('user_id', $userId)
-            ->where('physics', $physics)
             ->orderBy('created_at')
             ->first();
     }
@@ -164,7 +169,7 @@ class WildcardService
      * @throws RuntimeException when the round is not open, the map is not on
      *                          the ballot, or somebody got there first.
      */
-    public function spend(CompWildcard $wildcard, CompRound $round, CompCandidate $candidate): void
+    public function spend(CompWildcard $wildcard, CompRound $round, CompCandidate $candidate, string $physics): void
     {
         if ($wildcard->isSpent()) {
             throw new RuntimeException('This wildcard has already been used.');
@@ -178,14 +183,17 @@ class WildcardService
             throw new RuntimeException('That map is not on this ballot.');
         }
 
-        if (! $candidate->votableIn($wildcard->physics)) {
+        if (! $candidate->votableIn($physics)) {
             throw new RuntimeException('That map cannot be finished in this physics.');
         }
 
-        DB::transaction(function () use ($wildcard, $round, $candidate) {
+        DB::transaction(function () use ($wildcard, $round, $candidate, $physics) {
             // Lock so two holders clicking together cannot both win the round.
+            // Keyed on what a wildcard DECIDED rather than what earned it: the
+            // two ballots are still settled separately, so one spent on CPM
+            // leaves VQ3 open to the next holder.
             $taken = CompWildcard::where('used_on_round_id', $round->id)
-                ->where('physics', $wildcard->physics)
+                ->where('used_physics', $physics)
                 ->whereNotNull('used_at')
                 ->lockForUpdate()
                 ->exists();
@@ -196,6 +204,7 @@ class WildcardService
 
             $wildcard->update([
                 'used_at' => now(),
+                'used_physics' => $physics,
                 'used_on_round_id' => $round->id,
                 'used_map_id' => $candidate->map_id,
             ]);
