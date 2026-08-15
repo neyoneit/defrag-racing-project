@@ -4204,5 +4204,9 @@
     "Next week's maps are decided": "Mapy na příští týden jsou rozhodnuté",
     "Next week's vote will be :category": "Příští týden se bude hlasovat o kategorii :category",
     "your timezone": "tvoje časové pásmo",
-    "Playing for": "Hraje se o"
+    "Playing for": "Hraje se o",
+    "Starts in": "Začíná za",
+    "Voting is over. These are the maps for next week, and the round starts when the countdown runs out.": "Hlasování skončilo. Tohle jsou mapy na příští týden a kolo začne, až doběhne odpočet.",
+    "Playing next week": "Příští týden se hraje",
+    "Final votes": "Konečné hlasy"
 }

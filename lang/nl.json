@@ -4204,5 +4204,9 @@
     "Next week's maps are decided": "De maps voor volgende week liggen vast",
     "Next week's vote will be :category": "Volgende week wordt er gestemd over :category",
     "your timezone": "jouw tijdzone",
-    "Playing for": "Gespeeld om"
+    "Playing for": "Gespeeld om",
+    "Starts in": "Begint over",
+    "Voting is over. These are the maps for next week, and the round starts when the countdown runs out.": "De stemming is voorbij. Dit zijn de maps voor volgende week, en de ronde begint als de aftelklok afloopt.",
+    "Playing next week": "Volgende week gespeeld",
+    "Final votes": "Eindstand van de stemming"
 }

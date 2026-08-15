@@ -4204,5 +4204,9 @@
     "Next week's maps are decided": "Los mapas de la próxima semana están decididos",
     "Next week's vote will be :category": "La próxima semana se votará :category",
     "your timezone": "tu zona horaria",
-    "Playing for": "Se juega por"
+    "Playing for": "Se juega por",
+    "Starts in": "Empieza en",
+    "Voting is over. These are the maps for next week, and the round starts when the countdown runs out.": "La votación ha terminado. Estos son los mapas de la próxima semana, y la ronda empieza cuando acabe la cuenta atrás.",
+    "Playing next week": "Se juega la próxima semana",
+    "Final votes": "Votos finales"
 }
