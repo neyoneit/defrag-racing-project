@@ -4188,5 +4188,22 @@
     "Any run you record on a map comps is playing that week is entered automatically when you upload the demo - there is no sign-up.": "Varje körning du gör på en bana som comps spelar den veckan går in i omgången automatiskt när du laddar upp demon - det finns ingen anmälan.",
     "The demo stays hidden until the round ends, then appears like any other.": "Demon ligger dold tills omgången är slut och dyker sedan upp som vilken annan som helst.",
     "If you do not want to be in it, do not upload a demo of that map until the round is over.": "Vill du inte vara med, låt bli att ladda upp en demo från den banan tills omgången är slut.",
-    "Entering, and voting, need a Q3DF.org profile linked to your account.": "Både att delta och att rösta kräver en Q3DF.org-profil kopplad till kontot."
+    "Entering, and voting, need a Q3DF.org profile linked to your account.": "Både att delta och att rösta kräver en Q3DF.org-profil kopplad till kontot.",
+    "distributed over :count weekly comps": "fördelat över :count weekly comps",
+    "Want it to go to the comps prize pool?": "Vill du att den ska gå till comps-potten?",
+    "You decide what your donation pays for. Write \"comps\" in the PayPal note to send all or part of it to the weekly prize pool, and say how much and over how many weeklies it should be spread.": "Du bestämmer vad din donation går till. Skriv \"comps\" i PayPal-meddelandet för att skicka hela eller delar av den till veckopotten, och säg hur mycket och över hur många weekly comps den ska fördelas.",
+    "Not sure, or forgot to write it? Message <a href=/profile/8>the admin</a> on <a href=https://discordapp.com/users/248530770754625536 target=_blank>Discord</a> and it gets sorted.": "Osäker, eller glömde du skriva det? Skriv till <a href=/profile/8>adminen</a> på <a href=https://discordapp.com/users/248530770754625536 target=_blank>Discord</a> så löser det sig.",
+    ":time your time": ":time hos dig",
+    "Upload your demo, online or offline. The physics is read from the file, and the demo stays private until the round ends.": "Ladda upp din demo, online eller offline. Fysiken läser vi ur filen, och demon är privat tills rundan är slut.",
+    "If something does not look right, :admin will sort it out.": "Om något inte ser rätt ut fixar :admin det.",
+    "Participated": "Deltagit",
+    "Best rank": "Bästa placering",
+    "What admin covers out-of-pocket": "Vad adminen betalar ur egen ficka",
+    "Want your donation linked to your profile? Send <a href=/profile/8>admin</a> a message on <a href=https://discordapp.com/users/248530770754625536 target=_blank>Discord</a> after donating and it gets linked to your account - you get a Supporter badge on your profile!": "Vill du att din donation kopplas till profilen? Skriv till <a href=/profile/8>adminen</a> på <a href=https://discordapp.com/users/248530770754625536 target=_blank>Discord</a> efter donationen, så kopplas den till kontot - du får ett Supporter-märke.",
+    "A wildcard picks next week's map outright and overrules the vote. You earn one for every :count weekly wins in a physics, and it can be spent on either ballot. Whoever spends one first decides that round - everyone else keeps theirs.": "Ett wildcard väljer nästa veckas bana rakt av och kör över omröstningen. Du får ett för varje :count veckosegrar i en fysik, och det går att använda på båda omröstningarna. Den som använder ett först avgör rundan - övriga behåller sina.",
+    "Mind you, I never had any prior knowledge with coding, but I made it work and I am learning everyday as I go, bringing you a fully functional <a href=https://twitch.tv/defraglive target=_blank>DefragLive</a> with extension, the <a href=/bundles/7/defrag-launcher>Defrag Launcher</a>, improved defrag.racing, and more updates coming soon - <a href=:roadmap>Roadmap</a>.": "Tänk på att jag aldrig hade någon tidigare kunskap om kodning, men jag fick det att fungera och jag lär mig varje dag under resans gång, vilket ger dig en fullt fungerande <a href=https://twitch.tv/defraglive target=_blank>DefragLive</a> med tillägg, <a href=/bundles/7/defrag-launcher>Defrag Launcher</a>, förbättrad defrag.racing och fler uppdateringar inom kort - <a href=:roadmap>Färdplan</a>.",
+    "to the winner of each physics": "till vinnaren i varje fysik",
+    "Voted from": "Röstades fram ur",
+    "votes": "röster",
+    "Choose a demo": "Välj demo"
 }

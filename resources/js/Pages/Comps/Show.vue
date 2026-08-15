@@ -35,6 +35,22 @@ export default {
         carried: () => t('Nobody voted in this physics, so it took the other one\'s map'),
         random: () => t('Nobody voted at all, so it was drawn at random'),
     }[by] ?? (() => t('Chosen by vote')))();
+
+    // The ballot as it finished, sorted by what each map got in this physics.
+    // A map that could not be finished in it was never on that ballot and is
+    // left out rather than shown with a zero it never had a chance to beat.
+    const ballotFor = (round, physics) => (round.ballot ?? [])
+        .filter((c) => c.blocked_physics !== physics)
+        .slice()
+        .sort((a, b) => b.votes[physics] - a.votes[physics]);
+
+    const votesTotal = (round, physics) =>
+        ballotFor(round, physics).reduce((n, c) => n + c.votes[physics], 0);
+
+    const share = (round, physics, candidate) => {
+        const total = votesTotal(round, physics);
+        return total ? Math.round((candidate.votes[physics] / total) * 100) : 0;
+    };
 </script>
 
 <template>
@@ -61,6 +77,14 @@ export default {
                 <span class="text-xs text-gray-500">
                     {{ categoryLabel(round.category) }}<template v-if="round.weapon"> ({{ round.weapon }})</template>
                 </span>
+
+                <!-- What the week paid. Without it a finished round reads like
+                     a scoreboard from a friendly. -->
+                <span v-if="round.prize_eur > 0"
+                      class="ml-auto inline-flex items-baseline gap-1.5 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-0.5">
+                    <span class="text-sm font-black tabular-nums text-emerald-300">{{ round.prize_eur }} EUR</span>
+                    <span class="text-[10px] uppercase tracking-wider text-emerald-100/60">{{ $t('to the winner of each physics') }}</span>
+                </span>
             </div>
 
             <div class="grid gap-5 p-5 md:grid-cols-2">
@@ -75,7 +99,16 @@ export default {
                             {{ round.maps[physics].name }}
                         </Link>
                         <span v-else class="text-gray-600">-</span>
-                        <div v-if="round.maps?.[physics]" class="text-[11px] text-gray-600">
+                        <!-- Overruling the vote is the loudest thing that can
+                             happen to a round, and it used to be a line of grey
+                             text the same size as everything else. -->
+                        <div v-if="round.wildcards?.[physics]"
+                             class="mt-1 inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-200">
+                            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4-6.2-4.6-6.2 4.6 2.4-7.4L2 9.4h7.6z" /></svg>
+                            {{ $t('Chosen with a wildcard') }}
+                            <CompsPlayer v-if="round.wildcards[physics].user" :player="round.wildcards[physics].user" size="sm" />
+                        </div>
+                        <div v-else-if="round.maps?.[physics]" class="text-[11px] text-gray-600">
                             {{ decidedLabel(round.maps[physics].decided_by) }}
                         </div>
                     </div>
@@ -96,11 +129,43 @@ export default {
                                 </td>
                                 <td class="py-1.5"><CompsPlayer :player="row.user" size="sm" /></td>
                                 <td class="py-1.5 text-right font-bold tabular-nums text-white">{{ formatTime(row.time) }}</td>
+                                <td class="py-1.5 text-right tabular-nums w-16">
+                                    <span v-if="row.rank === 1 && round.prize_eur > 0" class="font-black text-emerald-300">{{ round.prize_eur }} EUR</span>
+                                </td>
                                 <td v-if="comp.type === 'season'" class="py-1.5 text-right tabular-nums text-gray-400">{{ row.points }}</td>
                             </tr>
                         </tbody>
                     </table>
                     <p v-else class="text-sm text-gray-600">{{ $t('Nobody entered.') }}</p>
+
+                    <!-- What people chose from, and by how much. The winning map
+                         on its own does not say whether it was a landslide or
+                         one vote, and the pool it came out of is half the story
+                         of a week. -->
+                    <div v-if="ballotFor(round, physics).length" class="mt-4 pt-3 border-t border-white/10">
+                        <div class="mb-2 text-[10px] font-black uppercase tracking-wider text-gray-500">
+                            {{ $t('Voted from') }} ({{ votesTotal(round, physics) }} {{ $t('votes') }})
+                        </div>
+                        <ul class="space-y-1">
+                            <li v-for="c in ballotFor(round, physics)" :key="c.map"
+                                class="flex items-center gap-2 text-xs">
+                                <Link :href="route('maps.map', c.map)"
+                                      class="w-40 truncate transition-colors"
+                                      :class="c.map === round.maps?.[physics]?.name ? 'font-bold text-white hover:text-blue-300' : 'text-gray-400 hover:text-gray-200'">
+                                    {{ c.map }}
+                                </Link>
+                                <span class="flex-1 h-1.5 rounded-full bg-black/50 overflow-hidden">
+                                    <span class="block h-full rounded-full"
+                                          :class="c.map === round.maps?.[physics]?.name ? 'bg-blue-400' : 'bg-gray-600'"
+                                          :style="{ width: share(round, physics, c) + '%' }"></span>
+                                </span>
+                                <span class="w-6 text-right tabular-nums"
+                                      :class="c.map === round.maps?.[physics]?.name ? 'font-bold text-white' : 'text-gray-500'">
+                                    {{ c.votes[physics] }}
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </section>

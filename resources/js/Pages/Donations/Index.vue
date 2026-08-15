@@ -329,6 +329,15 @@ const compsTotal = computed(() =>
     props.donations.reduce((sum, donation) => sum + compsPart(donation), 0),
 );
 
+// The same figure in EUR, which is the only currency comps is denominated in:
+// a donation earmarked for the pool is recorded in EUR, the pool is quoted in
+// EUR and the winners are paid in EUR. Converting it into whatever the reader
+// picked from the dropdown produced "$116.00" next to a comps page saying 100
+// EUR - the same money, two numbers, and no way to tell they were the same.
+const compsTotalEur = computed(() =>
+    props.donations.reduce((sum, donation) => sum + Number(donation.comps_amount || 0), 0),
+);
+
 // Calculate total in selected currency
 const totalRaised = computed(() => {
     let total = 0;
@@ -554,30 +563,114 @@ const getYearProgress = (year, yearTotal) => {
             </div>
         </div>
 
-        <div class="relative z-10 max-w-7xl mx-auto px-4 pb-12" style="margin-top: -22rem;">
+        <!-- Same container as the header above it and as every other page:
+             max-w-8xl with the site's padding. It used to be max-w-7xl with a
+             flat px-4, so the content sat in a column narrower than its own
+             heading and stepped in at the edges. -->
+        <div class="relative z-10 max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12" style="margin-top: -22rem;">
+
+            <!-- The donate box and the year's progress share a row from lg.
+                 Each on its own was a small centred thing in a box the width of
+                 the page, which is what made this read as spread out rather
+                 than as full. -->
+            <!-- Stretched, not top-aligned: the donate box holds a button and two
+                 notes, the panel beside it holds an essay, and left to their own
+                 heights the short one sat in the top corner of an empty field. -->
+            <div class="grid gap-5 lg:grid-cols-2 mb-5">
 
             <!-- Make a Donation -->
-            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto text-center">
-                <h2 class="text-2xl font-bold text-white mb-4">{{ $t('Make a Donation') }}</h2>
-                <p class="text-gray-400 mb-6">{{ $t('Your support helps cover defrag.racing projects and continue improving!') }}</p>
+            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5 mx-auto w-full h-full flex flex-col justify-center text-center">
+                <h2 class="text-3xl font-bold text-white mb-3">{{ $t('Make a Donation') }}</h2>
+                <p class="text-lg text-gray-300 mb-8">{{ $t('Your support helps cover defrag.racing projects and continue improving!') }}</p>
 
                 <!-- PayPal Donation Button -->
-                <div class="max-w-md mx-auto">
+                <div class="max-w-xl mx-auto w-full">
                     <form action="https://www.paypal.com/donate" method="post" target="_top">
                         <input type="hidden" name="hosted_button_id" value="WH6GY4PDGU8FA" />
-                        <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" :title="$t('PayPal - The safer, easier way to pay online!')" :alt="$t('Donate with PayPal button')" class="mx-auto transform scale-150 hover:scale-[1.55] transition-transform" />
+                        <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" :title="$t('PayPal - The safer, easier way to pay online!')" :alt="$t('Donate with PayPal button')" class="mx-auto transform scale-[1.75] hover:scale-[1.8] transition-transform" />
                         <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
                     </form>
-                    <p class="text-sm text-gray-500 mt-6">{{ $t('Secure payment through PayPal') }}</p>
-                    <div class="mt-6 p-4 rounded-lg bg-pink-950/30 border border-pink-500/20 max-w-md mx-auto">
-                        <div class="flex items-center gap-2 mb-1">
-                            <img src="/images/svg/badge-donor.svg" class="w-5 h-5" :alt="$t('Supporter')">
-                            <span class="text-sm font-bold text-pink-300">{{ $t('Supporter Badge') }}</span>
+                    <p class="text-base text-gray-500 mt-8">{{ $t('Secure payment through PayPal') }}</p>
+
+                    <!-- Where the money goes is the donor's call, and until now
+                         the page never said so. A donation can pay for the site
+                         or for the comps prize pool, or be split between them -
+                         but the pool is paid out one week at a time, so a lump
+                         sum is meaningless without the two facts only the donor
+                         knows: how much of it is for comps, and over how many
+                         weeks it should last. Asked for here rather than worked
+                         out later by whoever received it. -->
+                    <div class="mt-6 p-4 rounded-lg bg-emerald-950/30 border border-emerald-500/20 w-full text-left">
+                        <div class="flex items-center gap-1.5 mb-1">
+                            <svg class="w-6 h-6 flex-shrink-0 text-emerald-400" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2H6v2H2v3a5 5 0 0 0 4.6 5A5.5 5.5 0 0 0 11 15.9V19H7v3h10v-3h-4v-3.1a5.5 5.5 0 0 0 4.4-3.9A5 5 0 0 0 22 7V4h-4V2zM4 7V6h2v3.9A3 3 0 0 1 4 7zm16 0a3 3 0 0 1-2 2.9V6h2v1z" /></svg>
+                            <Link :href="route('comps.index')" class="text-base font-bold text-emerald-300 hover:text-emerald-200">{{ $t('Want it to go to the comps prize pool?') }}</Link>
                         </div>
-                        <p class="text-xs text-gray-400 [&_a]:font-bold [&_a:first-of-type]:text-blue-400 [&_a:first-of-type:hover]:text-blue-300 [&_a:last-of-type]:text-indigo-400 [&_a:last-of-type:hover]:text-indigo-300"
-                            v-html="$t('Want your donation linked to your profile? Send <a href=/profile/8>me</a> a message on <a href=https://discordapp.com/users/248530770754625536 target=_blank>Discord</a> after donating and I\'ll link it to your account - you\'ll get a Supporter badge on your profile!')"></p>
+                        <p class="text-sm leading-relaxed text-gray-300">
+                            {{ $t('You decide what your donation pays for. Write "comps" in the PayPal note to send all or part of it to the weekly prize pool, and say how much and over how many weeklies it should be spread.') }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-400 mt-2 [&_a]:font-bold [&_a]:text-emerald-300 [&_a:hover]:text-emerald-200"
+                           v-html="$t('Not sure, or forgot to write it? Message <a href=/profile/8>the admin</a> on <a href=https://discordapp.com/users/248530770754625536 target=_blank>Discord</a> and it gets sorted.')"></p>
+                    </div>
+
+                    <div class="mt-4 p-4 rounded-lg bg-pink-950/30 border border-pink-500/20 w-full text-left">
+                        <div class="flex items-center gap-2 mb-1">
+                            <img src="/images/svg/badge-donor.svg" class="w-6 h-6" :alt="$t('Supporter')">
+                            <span class="text-base font-bold text-pink-300">{{ $t('Supporter Badge') }}</span>
+                        </div>
+                        <p class="text-sm leading-relaxed text-gray-300 [&_a]:font-bold [&_a:first-of-type]:text-blue-400 [&_a:first-of-type:hover]:text-blue-300 [&_a:last-of-type]:text-indigo-400 [&_a:last-of-type:hover]:text-indigo-300"
+                            v-html="$t('Want your donation linked to your profile? Send <a href=/profile/8>admin</a> a message on <a href=https://discordapp.com/users/248530770754625536 target=_blank>Discord</a> after donating and it gets linked to your account - you get a Supporter badge on your profile!')"></p>
                     </div>
                 </div>
+            </div>
+
+            <!-- Where Donations Go -->
+            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5 mx-auto w-full">
+                <h2 class="text-2xl font-bold text-white mb-4 text-center">{{ $t('Where Your Support Goes') }}</h2>
+                <div class="space-y-5 text-gray-300">
+                    <div id="operational-costs">
+                        <h3 class="text-lg font-semibold text-white mb-2">{{ $t('Operational Costs (~€1,200/year)') }}</h3>
+                        <p class="text-sm leading-relaxed mb-3">
+                            {{ $t('Donations help cover: servers, hosting, vps\'s, backblaze, domains, DemoMe, DefragLive, isp, electricity.') }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-400">
+                            {{ $t('Any future excess donations would go towards tournament prizepools, new servers in underserved locations, and other community-driven initiatives.') }}
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold text-white mb-2">{{ $t('A Brief History') }}</h3>
+                        <p class="text-sm leading-relaxed">
+                            {{ $t('All developers who worked on these projects since 2021 were fairly compensated. In early 2024, the last paid developer unexpectedly departed without response, leaving everything as-is. At that point, I decided to stop paying for development as it felt like progress had stalled.') }}
+                            <span class="[&_a]:underline [&_a]:text-blue-400 [&_a:hover]:text-blue-300"
+                                v-html="$t('With Batawi\'s help, I made defrag-racing and related repositories <a href=https://github.com/Defrag-racing/ target=_blank>open-source</a>, inviting the community to contribute.')"></span>
+                            {{ $t('Development has been in limbo since, as no one had the availability or free time to contribute. Around August 2025, I\'ve taken it upon myself with AI assistance to continue development independently.') }}
+                            <span class="[&_a]:underline [&_a]:text-blue-400 [&_a:hover]:text-blue-300"
+                                v-html="$t('Mind you, I never had any prior knowledge with coding, but I made it work and I am learning everyday as I go, bringing you a fully functional <a href=https://twitch.tv/defraglive target=_blank>DefragLive</a> with extension, the <a href=/bundles/7/defrag-launcher>Defrag Launcher</a>, improved defrag.racing, and more updates coming soon - <a href=:roadmap>Roadmap</a>.', { roadmap: route('roadmap') })"></span>
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold text-white mb-2">{{ $t('What admin covers out-of-pocket') }}</h3>
+                        <p class="text-sm leading-relaxed [&_a]:underline [&_a]:cursor-pointer [&_a]:text-blue-400 [&_a:hover]:text-blue-300"
+                            @click="onOperationalCostsLink"
+                            v-html="$t('Hardware costs (dedicated PC for DemoMe+DefragLive, EU server PC) and other expenses remain out-of-pocket. Your donations help offset <a href=#operational-costs>operational costs</a>.')"></p>
+                    </div>
+
+                    <div class="border-t border-white/10 pt-4">
+                        <h3 class="text-lg font-semibold text-blue-300 mb-3">{{ $t('How You Can Help Without Donating Money') }}</h3>
+                        <ul class="space-y-2 text-sm">
+                            <li class="flex gap-2">
+                                <span class="text-blue-400">•</span>
+                                <span v-html="$t('<strong>Allow DefragLive to spectate you</strong> - The more viewers it gets, the less I have to pay from my own pocket')"></span>
+                            </li>
+                            <li class="flex gap-2">
+                                <span class="text-blue-400">•</span>
+                                <span v-html="$t('<strong>Spread the word about DefragLegends YouTube channel</strong> - We\'re missing 1,600 yearly watch hours to get it monetized. Playing it in the background could help!')"></span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
             </div>
 
             <!-- Current Year Progress -->
@@ -661,7 +754,9 @@ const getYearProgress = (year, yearTotal) => {
 
                 <p class="text-xs text-gray-500 text-center mb-4 italic">{{ $t('Manually updated sporadically, not in real-time') }}</p>
 
-                <div class="max-w-3xl mx-auto">
+                <!-- Full width of the panel: a bar is a picture of a number, and it
+                     reads better long than it does narrow. -->
+                <div>
                     <!-- Progress Bar -->
                     <div class="relative h-12 bg-black/30 rounded-full overflow-hidden mb-4 border border-white/10">
                         <!-- Crowd-raised portion (green) -->
@@ -705,58 +800,9 @@ const getYearProgress = (year, yearTotal) => {
                          and the page looks like it is losing money. -->
                     <div v-if="compsTotal > 0"
                          class="mt-5 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3 text-sm">
-                        <span class="font-bold text-emerald-300">{{ currencySymbol }}{{ compsTotal.toFixed(2) }}</span>
+                        <span class="font-bold text-emerald-300">{{ compsTotalEur.toFixed(2) }} EUR</span>
                         <span class="text-emerald-100/80">{{ $t('of the donations above went to the comps prize pool and is not counted towards the goal.') }}</span>
                         <Link :href="route('comps.index')" class="font-semibold text-emerald-300 underline decoration-emerald-400/40 hover:text-emerald-200">{{ $t('See comps') }}</Link>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Where Donations Go -->
-            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto">
-                <h2 class="text-2xl font-bold text-white mb-4 text-center">{{ $t('Where Your Support Goes') }}</h2>
-                <div class="max-w-3xl mx-auto space-y-4 text-gray-300">
-                    <div id="operational-costs">
-                        <h3 class="text-lg font-semibold text-white mb-2">{{ $t('Operational Costs (~€1,200/year)') }}</h3>
-                        <p class="text-sm leading-relaxed mb-3">
-                            {{ $t('Donations help cover: servers, hosting, vps\'s, backblaze, domains, DemoMe, DefragLive, isp, electricity.') }}
-                        </p>
-                        <p class="text-sm leading-relaxed text-gray-400">
-                            {{ $t('Any future excess donations would go towards tournament prizepools, new servers in underserved locations, and other community-driven initiatives.') }}
-                        </p>
-                    </div>
-
-                    <div>
-                        <h3 class="text-lg font-semibold text-white mb-2">{{ $t('A Brief History') }}</h3>
-                        <p class="text-sm leading-relaxed">
-                            {{ $t('All developers who worked on these projects since 2021 were fairly compensated. In early 2024, the last paid developer unexpectedly departed without response, leaving everything as-is. At that point, I decided to stop paying for development as it felt like progress had stalled.') }}
-                            <span class="[&_a]:underline [&_a]:text-blue-400 [&_a:hover]:text-blue-300"
-                                v-html="$t('With Batawi\'s help, I made defrag-racing and related repositories <a href=https://github.com/Defrag-racing/ target=_blank>open-source</a>, inviting the community to contribute.')"></span>
-                            {{ $t('Development has been in limbo since, as no one had the availability or free time to contribute. Around August 2025, I\'ve taken it upon myself with AI assistance to continue development independently.') }}
-                            <span class="[&_a]:underline [&_a:first-of-type]:text-purple-400 [&_a:first-of-type:hover]:text-purple-300 [&_a:last-of-type]:text-blue-400 [&_a:last-of-type:hover]:text-blue-300"
-                                v-html="$t('Mind you, I never had any prior knowledge with coding, but I made it work and I am learning everyday as I go, bringing you a fully functional <a href=https://twitch.tv/defraglive target=_blank>DefragLive</a> with extension, improved defrag.racing, and more updates coming soon - <a href=:roadmap>Roadmap</a>.', { roadmap: route('roadmap') })"></span>
-                        </p>
-                    </div>
-
-                    <div>
-                        <h3 class="text-lg font-semibold text-white mb-2">{{ $t('What I Cover Out-of-Pocket') }}</h3>
-                        <p class="text-sm leading-relaxed [&_a]:underline [&_a]:cursor-pointer [&_a]:text-blue-400 [&_a:hover]:text-blue-300"
-                            @click="onOperationalCostsLink"
-                            v-html="$t('Hardware costs (dedicated PC for DemoMe+DefragLive, EU server PC) and other expenses remain out-of-pocket. Your donations help offset <a href=#operational-costs>operational costs</a>.')"></p>
-                    </div>
-
-                    <div class="border-t border-white/10 pt-4">
-                        <h3 class="text-lg font-semibold text-blue-300 mb-3">{{ $t('How You Can Help Without Donating Money') }}</h3>
-                        <ul class="space-y-2 text-sm">
-                            <li class="flex gap-2">
-                                <span class="text-blue-400">•</span>
-                                <span v-html="$t('<strong>Allow DefragLive to spectate you</strong> - The more viewers it gets, the less I have to pay from my own pocket')"></span>
-                            </li>
-                            <li class="flex gap-2">
-                                <span class="text-blue-400">•</span>
-                                <span v-html="$t('<strong>Spread the word about DefragLegends YouTube channel</strong> - We\'re missing 1,600 yearly watch hours to get it monetized. Playing it in the background could help!')"></span>
-                            </li>
-                        </ul>
                     </div>
                 </div>
             </div>
@@ -939,7 +985,7 @@ const getYearProgress = (year, yearTotal) => {
                 <h2 class="text-2xl font-bold text-white mb-4">{{ $t('All-Time Total (since 2020)') }}</h2>
 
                 <!-- Progress Bar showing split -->
-                <div class="max-w-2xl mx-auto mb-6">
+                <div class="mb-6">
                     <div class="relative h-10 bg-black/30 rounded-full overflow-hidden border border-white/10">
                         <!-- Crowd-raised portion (green) -->
                         <div

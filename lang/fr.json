@@ -4188,5 +4188,22 @@
     "Any run you record on a map comps is playing that week is entered automatically when you upload the demo - there is no sign-up.": "Tout run réalisé sur une carte jouée cette semaine en comps entre automatiquement dans la manche dès que tu envoies la démo - il n'y a pas d'inscription.",
     "The demo stays hidden until the round ends, then appears like any other.": "La démo reste cachée jusqu'à la fin de la manche, puis apparaît comme n'importe quelle autre.",
     "If you do not want to be in it, do not upload a demo of that map until the round is over.": "Si tu ne veux pas y participer, n'envoie pas de démo de cette carte avant la fin de la manche.",
-    "Entering, and voting, need a Q3DF.org profile linked to your account.": "Participer et voter demandent un profil Q3DF.org associé à ton compte."
+    "Entering, and voting, need a Q3DF.org profile linked to your account.": "Participer et voter demandent un profil Q3DF.org associé à ton compte.",
+    "distributed over :count weekly comps": "réparti sur :count weekly comps",
+    "Want it to go to the comps prize pool?": "Tu veux la mettre dans la cagnotte comps ?",
+    "You decide what your donation pays for. Write \"comps\" in the PayPal note to send all or part of it to the weekly prize pool, and say how much and over how many weeklies it should be spread.": "Tu décides à quoi sert ton don. Écris \"comps\" dans la note PayPal pour en envoyer tout ou partie dans la cagnotte hebdomadaire, et précise combien et sur combien de weekly comps la répartir.",
+    "Not sure, or forgot to write it? Message <a href=/profile/8>the admin</a> on <a href=https://discordapp.com/users/248530770754625536 target=_blank>Discord</a> and it gets sorted.": "Un doute, ou tu as oublié de l'écrire ? Écris à <a href=/profile/8>l'admin</a> sur <a href=https://discordapp.com/users/248530770754625536 target=_blank>Discord</a> et ce sera réglé.",
+    ":time your time": ":time chez toi",
+    "Upload your demo, online or offline. The physics is read from the file, and the demo stays private until the round ends.": "Envoie ta démo, en ligne ou hors ligne. La physique est lue dans le fichier et la démo reste privée jusqu'à la fin de la manche.",
+    "If something does not look right, :admin will sort it out.": "Si quelque chose ne va pas, :admin s'en occupe.",
+    "Participated": "Participations",
+    "Best rank": "Meilleur rang",
+    "What admin covers out-of-pocket": "Ce que l'admin paie de sa poche",
+    "Want your donation linked to your profile? Send <a href=/profile/8>admin</a> a message on <a href=https://discordapp.com/users/248530770754625536 target=_blank>Discord</a> after donating and it gets linked to your account - you get a Supporter badge on your profile!": "Tu veux que ton don soit lié à ton profil ? Écris à <a href=/profile/8>l'admin</a> sur <a href=https://discordapp.com/users/248530770754625536 target=_blank>Discord</a> après ton don et il sera rattaché à ton compte - avec le badge Supporter à la clé.",
+    "A wildcard picks next week's map outright and overrules the vote. You earn one for every :count weekly wins in a physics, and it can be spent on either ballot. Whoever spends one first decides that round - everyone else keeps theirs.": "Un joker choisit la carte de la semaine suivante et annule le vote. Tu en gagnes un tous les :count succès hebdomadaires dans une physique, et tu peux le dépenser sur l'un ou l'autre des votes. Le premier à le dépenser décide de la manche - les autres gardent le leur.",
+    "Mind you, I never had any prior knowledge with coding, but I made it work and I am learning everyday as I go, bringing you a fully functional <a href=https://twitch.tv/defraglive target=_blank>DefragLive</a> with extension, the <a href=/bundles/7/defrag-launcher>Defrag Launcher</a>, improved defrag.racing, and more updates coming soon - <a href=:roadmap>Roadmap</a>.": "Sache que je n'avais aucune connaissance préalable en programmation, mais j'ai réussi à le faire fonctionner et j'apprends tous les jours au fur et à mesure, en vous proposant un <a href=https://twitch.tv/defraglive target=_blank>DefragLive</a> entièrement fonctionnel avec extension, le <a href=/bundles/7/defrag-launcher>Defrag Launcher</a>, un defrag.racing amélioré, et d'autres mises à jour à venir - <a href=:roadmap>Roadmap</a>.",
+    "to the winner of each physics": "au vainqueur de chaque physique",
+    "Voted from": "Au choix",
+    "votes": "votes",
+    "Choose a demo": "Choisir une démo"
 }
