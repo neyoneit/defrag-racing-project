@@ -4208,5 +4208,8 @@
     "Final votes": "Підсумки голосування",
     "Up next: :comp": "Далі: :comp",
     "Voting is over. These are the maps, and the round starts when the countdown runs out.": "Голосування завершено. Це карти, і раунд почнеться, коли добіжить зворотний відлік.",
-    "What gets played": "Що граємо"
+    "What gets played": "Що граємо",
+    "Add to favorites": "Додати в обране",
+    "Remove from favorites": "Прибрати з обраного",
+    "Click the star on a server to keep it at the top of this page.": "Натисни зірочку біля сервера, і він лишиться вгорі цієї сторінки."
 }

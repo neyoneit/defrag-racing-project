@@ -6,6 +6,7 @@ import OnlinePlayer from '@/Components/OnlinePlayer.vue';
 import CopyButton from '@/Components/Basic/CopyButton.vue';
 import LauncherBanner from '@/Components/LauncherBanner.vue';
 import CheatsBanner from '@/Components/CheatsBanner.vue';
+import FavoriteStar from '@/Components/FavoriteStar.vue';
 import { t } from '@/utils/i18n';
 import { getWeaponIcon, getWeaponName, getItemIcon, getItemName, getFunctionIcon, getFunctionName } from '@/utils/gameItems';
 const AddToMaplistModal = defineAsyncComponent(() => import('@/Components/Maplists/AddToMaplistModal.vue'));
@@ -19,7 +20,51 @@ const props = defineProps({
         type: Array,
         default: () => []
     },
+    // Ids the signed-in user starred. Sent once with the page, then kept
+    // here - the list itself reloads every 30 seconds and would otherwise
+    // undo a click whose request is still in flight.
+    favoriteServers: {
+        type: Array,
+        default: () => []
+    },
 });
+
+const favorites = ref(new Set(props.favoriteServers ?? []));
+const isFavorite = (server) => favorites.value.has(server.id);
+
+// Starring is per account, so it follows the person to every machine they
+// play from. Signed out the star still shows - it is how you find out the
+// feature exists - and asks for a login when clicked.
+const toggleFavorite = async (server) => {
+    if (! page.props.auth.user) {
+        router.visit('/login');
+        return;
+    }
+
+    const wasFavorite = favorites.value.has(server.id);
+
+    // Optimistic: the star answers the click, not the round trip.
+    const next = new Set(favorites.value);
+    wasFavorite ? next.delete(server.id) : next.add(server.id);
+    favorites.value = next;
+
+    try {
+        await (wasFavorite
+            ? window.axios.delete(`/servers/${server.id}/favorite`)
+            : window.axios.post(`/servers/${server.id}/favorite`));
+    } catch (error) {
+        // Put it back where it was, so the page never claims something
+        // the account does not actually hold.
+        const reverted = new Set(favorites.value);
+        wasFavorite ? reverted.add(server.id) : reverted.delete(server.id);
+        favorites.value = reverted;
+
+        const message = error?.response?.data?.message;
+        if (message) {
+            alert(message);
+        }
+    }
+};
 
 const localServers = ref([]);
 const serversLoading = ref(true);
@@ -78,13 +123,15 @@ const filters = ref({
     physics: 'all', // all, cpm, vq3
     hideEmpty: savedFilters.hideEmpty || false,
     showDetails: savedFilters.showDetails !== undefined ? savedFilters.showDetails : true,
+    favoritesOnly: savedFilters.favoritesOnly || false,
 });
 
 // Persist filter changes to localStorage
-watch(() => [filters.value.hideEmpty, filters.value.showDetails], () => {
+watch(() => [filters.value.hideEmpty, filters.value.showDetails, filters.value.favoritesOnly], () => {
     localStorage.setItem('servers_filters', JSON.stringify({
         hideEmpty: filters.value.hideEmpty,
         showDetails: filters.value.showDetails,
+        favoritesOnly: filters.value.favoritesOnly,
     }));
 });
 
@@ -264,14 +311,27 @@ const filteredAndSortedServers = computed(() => {
         });
     }
 
-    // Hide empty servers
+    // Only the starred ones
+    if (filters.value.favoritesOnly) {
+        result = result.filter(server => isFavorite(server));
+    }
+
+    // Hide empty servers. A starred server stays: the empty one you are
+    // about to join is the whole reason somebody starred it.
     if (filters.value.hideEmpty) {
-        result = result.filter(server => server.online_players.length > 0);
+        result = result.filter(server => server.online_players.length > 0 || isFavorite(server));
     }
 
 
     // Sort
     result.sort((a, b) => {
+        // Starred servers sit above the rest whatever the sort is, and
+        // sort among themselves by the same rule as everything else.
+        const starred = (isFavorite(b) ? 1 : 0) - (isFavorite(a) ? 1 : 0);
+        if (starred !== 0) {
+            return starred;
+        }
+
         let comparison = 0;
 
         if (sorting.value === 'popularity') {
@@ -405,6 +465,22 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2">
+                        <!-- Starred servers. Its own switch rather than a
+                             third button under "Hide", because it is the one
+                             filter somebody flips several times in a sitting
+                             and it names what it shows, not what it drops. -->
+                        <button
+                            @click="filters.favoritesOnly = !filters.favoritesOnly"
+                            :class="filters.favoritesOnly ? 'bg-amber-500/40 text-white border-amber-400/50' : 'bg-amber-500/[0.07] text-gray-400 hover:bg-white/5 border-amber-400/25'"
+                            class="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-colors whitespace-nowrap"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" :fill="filters.favoritesOnly ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.5a.56.56 0 0 1 1.04 0l2.13 5.11c.09.2.28.35.5.36l5.52.44c.5.04.7.67.32 1l-4.2 3.6a.56.56 0 0 0-.19.59l1.28 5.39c.12.49-.41.88-.84.62l-4.73-2.89a.56.56 0 0 0-.58 0l-4.73 2.89c-.43.26-.96-.13-.84-.62l1.28-5.39a.56.56 0 0 0-.19-.59l-4.2-3.6c-.38-.33-.18-.96.32-1l5.52-.44c.22-.01.41-.16.5-.36l2.13-5.11Z" />
+                            </svg>
+                            {{ $t('Favorites') }}
+                            <span v-if="favorites.size" class="px-1.5 rounded bg-black/30 text-amber-200">{{ favorites.size }}</span>
+                        </button>
+
                         <!-- Sort Options -->
                         <div class="flex flex-wrap items-stretch rounded-lg border border-emerald-400/25 bg-emerald-500/[0.07] overflow-hidden">
                             <span class="flex items-center px-2.5 py-1.5 bg-emerald-500/10 text-[11px] font-bold text-emerald-300/80 uppercase whitespace-nowrap">{{ $t('Sort:') }}</span>
@@ -478,7 +554,7 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
 
             <!-- Large Card Layout -->
             <div v-else-if="layout === 'large'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div v-for="server in filteredAndSortedServers" :key="server.id" :class="['group relative cursor-default bg-black/40 backdrop-blur-sm rounded-2xl border transition-all duration-300 hover:shadow-2xl overflow-hidden player-list-hover-group', server.cheats && !cheatsAreExpected(server) ? 'border-red-500/60 hover:border-red-400/80 hover:shadow-red-500/20' : 'border-white/10 hover:border-white/20 hover:shadow-blue-500/20']">
+                <div v-for="server in filteredAndSortedServers" :key="server.id" :class="['group relative cursor-default bg-black/40 backdrop-blur-sm rounded-2xl border transition-all duration-300 hover:shadow-2xl overflow-hidden player-list-hover-group', server.cheats && !cheatsAreExpected(server) ? 'border-red-500/60 hover:border-red-400/80 hover:shadow-red-500/20' : 'border-white/10 hover:border-white/20 hover:shadow-blue-500/20', isFavorite(server) ? 'ring-1 ring-amber-400/50' : '']">
                     <CheatsBanner :cheats="server.cheats" :subdued="cheatsAreExpected(server)" />
                     <!-- Background Image - FIXED SIZE, never changes, keeps aspect ratio -->
                     <div class="absolute top-0 left-0 right-0 h-[450px] rounded-t-2xl pointer-events-none">
@@ -522,6 +598,7 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                                 <img :src="`/images/flags/${server.location}.png`" class="w-5 h-3.5 rounded" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1)) drop-shadow(0 0 8px rgba(0,0,0,0.8));" :title="server.location" @error="$event.target.style.display='none'">
                                 <h3 class="text-xl font-bold text-white flex-1" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);" v-html="q3tohtml(server.name)"></h3>
                                 <CopyButton :text="server.ip + ':' + server.port" size="sm" :label="$t('Copy IP')" />
+                                <FavoriteStar :active="isFavorite(server)" @toggle="toggleFavorite(server)" />
                             </div>
 
                             <!-- Map Info with hover group -->
@@ -694,7 +771,7 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                         </div>
                     </div>
 
-                    <div v-for="server in filteredAndSortedServers.filter(s => !s.defrag.toLowerCase().includes('cpm'))" :key="server.id" :class="['group relative overflow-hidden rounded-xl border transition-all duration-300', server.cheats && !cheatsAreExpected(server) ? 'border-red-500/60 hover:border-red-400/80 pt-4' : ['border-white/10 hover:border-blue-500/50', server.cheats ? 'pt-4' : '']]">
+                    <div v-for="server in filteredAndSortedServers.filter(s => !s.defrag.toLowerCase().includes('cpm'))" :key="server.id" :class="['group relative overflow-hidden rounded-xl border transition-all duration-300', server.cheats && !cheatsAreExpected(server) ? 'border-red-500/60 hover:border-red-400/80 pt-4' : ['border-white/10 hover:border-blue-500/50', server.cheats ? 'pt-4' : ''], isFavorite(server) ? 'ring-1 ring-amber-400/50' : '']">
                         <CheatsBanner :cheats="server.cheats" compact :subdued="cheatsAreExpected(server)" />
                         <!-- Background Map Thumbnail -->
                         <div v-if="server.mapdata?.thumbnail" class="absolute inset-0 transition-all duration-500">
@@ -714,6 +791,7 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                             <div class="flex items-center justify-between gap-2">
                                 <!-- Left: Flag and Server Info -->
                                 <div class="flex items-center gap-2 flex-1 min-w-0">
+                                    <FavoriteStar :active="isFavorite(server)" size="xs" @toggle="toggleFavorite(server)" />
                                     <img :src="`/images/flags/${server.location}.png`" class="w-5 h-3.5 rounded shadow-md flex-shrink-0" :title="server.location" @error="$event.target.style.display='none'">
 
                                     <div class="inline-flex flex-col bg-black/40  px-2 py-1 rounded border border-white/20">
@@ -806,7 +884,7 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                         </div>
                     </div>
 
-                    <div v-for="server in filteredAndSortedServers.filter(s => s.defrag.toLowerCase().includes('cpm'))" :key="server.id" :class="['group relative overflow-hidden rounded-xl border transition-all duration-300', server.cheats && !cheatsAreExpected(server) ? 'border-red-500/60 hover:border-red-400/80 pt-4' : ['border-white/10 hover:border-purple-500/50', server.cheats ? 'pt-4' : '']]">
+                    <div v-for="server in filteredAndSortedServers.filter(s => s.defrag.toLowerCase().includes('cpm'))" :key="server.id" :class="['group relative overflow-hidden rounded-xl border transition-all duration-300', server.cheats && !cheatsAreExpected(server) ? 'border-red-500/60 hover:border-red-400/80 pt-4' : ['border-white/10 hover:border-purple-500/50', server.cheats ? 'pt-4' : ''], isFavorite(server) ? 'ring-1 ring-amber-400/50' : '']">
                         <CheatsBanner :cheats="server.cheats" compact :subdued="cheatsAreExpected(server)" />
                         <!-- Background Map Thumbnail -->
                         <div v-if="server.mapdata?.thumbnail" class="absolute inset-0 transition-all duration-500">
@@ -825,6 +903,7 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                             <div class="flex items-center justify-between gap-2">
                                 <!-- Left: Flag and Server Info -->
                                 <div class="flex items-center gap-2 flex-1 min-w-0">
+                                    <FavoriteStar :active="isFavorite(server)" size="xs" @toggle="toggleFavorite(server)" />
                                     <img :src="`/images/flags/${server.location}.png`" class="w-5 h-3.5 rounded shadow-md flex-shrink-0" :title="server.location" @error="$event.target.style.display='none'">
 
                                     <div class="inline-flex flex-col bg-black/40  px-2 py-1 rounded border border-white/20">
@@ -920,15 +999,17 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                  room to spare. -->
             <div v-else-if="layout === 'oldschool'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 <div v-for="server in filteredAndSortedServers" :key="server.id"
-                     :class="['rounded-xl border bg-black/40 backdrop-blur-sm p-3',
-                              server.cheats && !cheatsAreExpected(server) ? 'border-red-500/50' : 'border-white/10']">
+                     :class="['group rounded-xl border bg-black/40 backdrop-blur-sm p-3',
+                              server.cheats && !cheatsAreExpected(server) ? 'border-red-500/50' : 'border-white/10',
+                              isFavorite(server) ? 'ring-1 ring-amber-400/50' : '']">
 
                     <CheatsBanner :cheats="server.cheats" :subdued="cheatsAreExpected(server)" />
 
                     <div class="flex items-center gap-2 mb-3">
                         <img v-if="server.location" :src="`/images/flags/${server.location}.png`" :title="server.location"
                              class="w-5 h-3.5 rounded shrink-0" @error="$event.target.style.display='none'" />
-                        <h3 class="font-bold text-sm truncate" v-html="q3tohtml(server.name)"></h3>
+                        <h3 class="font-bold text-sm truncate flex-1" v-html="q3tohtml(server.name)"></h3>
+                        <FavoriteStar :active="isFavorite(server)" size="xs" @toggle="toggleFavorite(server)" />
                     </div>
 
                     <div class="flex gap-3">
@@ -1014,7 +1095,8 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
                     </svg>
                     <h3 class="text-xl font-bold text-white mb-2">{{ $t('No servers found') }}</h3>
-                    <p class="text-gray-400">{{ $t('Try adjusting your filters') }}</p>
+                    <p v-if="filters.favoritesOnly && favorites.size === 0" class="text-gray-400">{{ $t('Click the star on a server to keep it at the top of this page.') }}</p>
+                    <p v-else class="text-gray-400">{{ $t('Try adjusting your filters') }}</p>
                 </div>
             </div>
         </div>

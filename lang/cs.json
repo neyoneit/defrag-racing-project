@@ -4208,5 +4208,8 @@
     "Final votes": "Konečné hlasy",
     "Up next: :comp": "Na řadě je :comp",
     "Voting is over. These are the maps, and the round starts when the countdown runs out.": "Hlasování skončilo. Tohle jsou mapy a kolo začne, až doběhne odpočet.",
-    "What gets played": "Co se hraje"
+    "What gets played": "Co se hraje",
+    "Add to favorites": "Přidat do oblíbených",
+    "Remove from favorites": "Odebrat z oblíbených",
+    "Click the star on a server to keep it at the top of this page.": "Klikni na hvězdičku u serveru a zůstane ti nahoře na téhle stránce."
 }

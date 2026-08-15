@@ -4208,5 +4208,8 @@
     "Final votes": "Ostateczne głosy",
     "Up next: :comp": "Następnie: :comp",
     "Voting is over. These are the maps, and the round starts when the countdown runs out.": "Głosowanie się skończyło. To są mapy, a runda zacznie się, gdy odliczanie dobiegnie końca.",
-    "What gets played": "Co się gra"
+    "What gets played": "Co się gra",
+    "Add to favorites": "Dodaj do ulubionych",
+    "Remove from favorites": "Usuń z ulubionych",
+    "Click the star on a server to keep it at the top of this page.": "Kliknij gwiazdkę przy serwerze, a zostanie na górze tej strony."
 }

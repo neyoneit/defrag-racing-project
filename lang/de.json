@@ -4208,5 +4208,8 @@
     "Final votes": "Endergebnis der Abstimmung",
     "Up next: :comp": "Als Nächstes: :comp",
     "Voting is over. These are the maps, and the round starts when the countdown runs out.": "Die Abstimmung ist vorbei. Das sind die Karten, und die Runde startet, wenn der Countdown abläuft.",
-    "What gets played": "Was gespielt wird"
+    "What gets played": "Was gespielt wird",
+    "Add to favorites": "Zu Favoriten hinzufügen",
+    "Remove from favorites": "Aus Favoriten entfernen",
+    "Click the star on a server to keep it at the top of this page.": "Klick bei einem Server auf den Stern, dann bleibt er oben auf dieser Seite."
 }

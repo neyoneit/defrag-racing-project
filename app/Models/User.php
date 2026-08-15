@@ -461,6 +461,15 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
     }
 
     /**
+     * Servers the user pinned to the top of the server list.
+     */
+    public function favoritedServers()
+    {
+        return $this->belongsToMany(Server::class, 'server_favorites')
+            ->withTimestamps();
+    }
+
+    /**
      * Boot method to create "Play Later" maplist for new users
      */
     protected static function booted()

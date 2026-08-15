@@ -434,6 +434,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/user/api-tokens', [\App\Http\Controllers\ApiTokenController::class, 'store'])->name('api-tokens.store');
     Route::delete('/user/api-tokens/{tokenId}', [\App\Http\Controllers\ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
 
+    // Starred servers, pinned to the top of the server list
+    Route::post('/servers/{server}/favorite', [ServersController::class, 'favorite'])->name('servers.favorite');
+    Route::delete('/servers/{server}/favorite', [ServersController::class, 'unfavorite'])->name('servers.unfavorite');
+
     // Server hosting (SFTP serverdemo credentials)
     Route::get('/server-hosting', [\App\Http\Controllers\ServerHostingController::class, 'index'])->name('server-hosting.index');
     Route::post('/server-hosting/apply', [\App\Http\Controllers\ServerHostingController::class, 'apply'])->name('server-hosting.apply');
