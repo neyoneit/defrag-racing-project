@@ -530,29 +530,66 @@ class CommunityScoreService
 
     private function addDonations(Collection &$scores): void
     {
-        // Bulk donation calculation - group by user_id and sum per currency
+        // A donation names its donor by EMAIL, not by user id. Nothing that
+        // records a real donation fills user_id in - not the PayPal webhook,
+        // not the DefragHQ form, not the Filament admin; only a DefragLive
+        // contest prize donated back sets it. Matching on user_id therefore
+        // scored one person out of thirteen while their profiles all showed
+        // the donor badge, which has always matched by email
+        // (User::getDonorEmails). Match the same way here, and keep user_id
+        // as the stronger claim wherever it happens to be filled in.
         $donations = DB::table('site_donations')
-            ->whereNotNull('user_id')
             ->where('status', 'approved')
-            ->groupBy('user_id', 'currency')
-            ->select('user_id', 'currency', DB::raw('SUM(amount) as total'))
-            ->get()
-            ->groupBy('user_id');
+            ->groupBy('user_id', 'donor_email', 'currency')
+            ->select('user_id', 'donor_email', 'currency', DB::raw('SUM(amount) as total'))
+            ->get();
+
+        $emails = $donations->pluck('donor_email')
+            ->filter()
+            ->map(fn ($e) => mb_strtolower(trim($e)))
+            ->unique();
+
+        // Registration address first, then the extra addresses an admin
+        // listed on the profile - so a user cannot lose their own donation
+        // to somebody else's list.
+        $byEmail = [];
+        if ($emails->isNotEmpty()) {
+            foreach (DB::table('users')->whereIn('email', $emails)->get(['id', 'email']) as $user) {
+                $byEmail[mb_strtolower(trim($user->email))] = $user->id;
+            }
+            foreach (DB::table('users')->whereNotNull('donation_emails')->get(['id', 'donation_emails']) as $user) {
+                foreach (json_decode($user->donation_emails, true) ?: [] as $extra) {
+                    $key = mb_strtolower(trim((string) $extra));
+                    if ($key !== '' && ! isset($byEmail[$key])) {
+                        $byEmail[$key] = $user->id;
+                    }
+                }
+            }
+        }
 
         $rates = \Cache::get('exchange_rates_v4', [
             'EUR' => 1, 'USD' => 1.08, 'CZK' => 25.3, 'GBP' => 0.86, 'PLN' => 4.28,
         ]);
 
-        foreach ($donations as $userId => $currencyRows) {
-            $eur = 0;
-            foreach ($currencyRows as $row) {
-                if ($row->currency === 'EUR') {
-                    $eur += $row->total;
-                } elseif (isset($rates[$row->currency]) && $rates[$row->currency] > 0) {
-                    $eur += $row->total / $rates[$row->currency];
-                }
+        $totals = [];
+        foreach ($donations as $row) {
+            $userId = $row->user_id ?: ($byEmail[mb_strtolower(trim((string) $row->donor_email))] ?? null);
+            if (! $userId) {
+                continue;
             }
 
+            if ($row->currency === 'EUR') {
+                $eur = (float) $row->total;
+            } elseif (isset($rates[$row->currency]) && $rates[$row->currency] > 0) {
+                $eur = (float) $row->total / $rates[$row->currency];
+            } else {
+                continue;
+            }
+
+            $totals[$userId] = ($totals[$userId] ?? 0) + $eur;
+        }
+
+        foreach ($totals as $userId => $eur) {
             if ($eur > 0) {
                 $this->ensureUser($scores, $userId);
                 $data = $scores->get($userId);
