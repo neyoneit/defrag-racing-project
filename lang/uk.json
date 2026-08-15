@@ -4201,12 +4201,12 @@
     "votes": "голосів",
     "Choose a demo": "Обрати демо",
     "If something does not look right, please contact <a href=:url>admin</a>.": "Якщо щось виглядає не так, напиши <a href=:url>адміну</a>.",
-    "Next week's maps are decided": "Карти на наступний тиждень визначені",
     "Next week's vote will be :category": "Наступного тижня голосування буде за :category",
     "your timezone": "твій часовий пояс",
     "Playing for": "Розігрується",
     "Starts in": "Почнеться через",
-    "Voting is over. These are the maps for next week, and the round starts when the countdown runs out.": "Голосування завершено. Це карти на наступний тиждень, і раунд почнеться, коли добіжить зворотний відлік.",
     "Playing next week": "Наступного тижня граємо",
-    "Final votes": "Підсумки голосування"
+    "Final votes": "Підсумки голосування",
+    "Up next: :comp": "Далі: :comp",
+    "Voting is over. These are the maps, and the round starts when the countdown runs out.": "Голосування завершено. Це карти, і раунд почнеться, коли добіжить зворотний відлік."
 }

@@ -618,8 +618,17 @@ export default {
             <div class="border-b border-blue-400/20 bg-gradient-to-r from-blue-500/[0.12] to-white/5 backdrop-blur-sm px-5 py-3">
                 <div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1.5">
                     <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0">
+                        <!-- Once the ballot has shut, the panel stops being a
+                             ballot and becomes the announcement of the round
+                             that is about to run - so it names that round
+                             instead of describing what happened to the vote.
+                             "Next week's maps are decided" said neither what
+                             was starting nor when; paired with the countdown
+                             beside it, the comp's own name answers both. -->
                         <span class="text-lg font-black text-white">
-                            {{ voting.is_open ? $t('Vote on the next map') : $t("Next week's maps are decided") }}
+                            {{ voting.is_open
+                                ? $t('Vote on the next map')
+                                : $t('Up next: :comp', { comp: voting.comp_title }) }}
                         </span>
                         <span class="text-sm font-black uppercase tracking-wider text-blue-300">
                             {{ categoryLabel(voting.category) }}<template v-if="voting.weapon"> · {{ voting.weapon }}</template>
@@ -670,7 +679,7 @@ export default {
                      caption on the first row of maps. -->
                 <p class="mt-1.5 text-sm text-gray-400">
                     <template v-if="voting.is_open">{{ $t('CPM and VQ3 vote separately, so each physics gets the map its own players picked. You have one vote in each and can move it until the deadline.') }}</template>
-                    <template v-else>{{ $t('Voting is over. These are the maps for next week, and the round starts when the countdown runs out.') }}</template>
+                    <template v-else>{{ $t('Voting is over. These are the maps, and the round starts when the countdown runs out.') }}</template>
                 </p>
             </div>
 
