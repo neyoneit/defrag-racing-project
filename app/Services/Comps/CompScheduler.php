@@ -35,6 +35,7 @@ class CompScheduler
         private WildcardService $wildcards,
         private CompPreviewService $previews,
         private PrizeFunding $funding,
+        private UploadGuard $guard,
     ) {
     }
 
@@ -78,8 +79,15 @@ class CompScheduler
             $this->resolver->resolve($round);
             $round->update(['status' => 'locked']);
 
+            // Runs made while the ballot was open count, so the demos that were
+            // held on the winning maps come in now. They were uploaded before
+            // there was a round to enter them into; the losing maps' demos need
+            // nothing, their hold expires at the ballot's own deadline.
+            $adopted = $this->guard->adoptForRound($round->refresh()->load('maps.map'));
+
             $picked = $round->maps->map(fn ($m) => $m->physics . '=' . $m->map_id . ' (' . $m->decided_by . ')')->implode(', ');
-            $done[] = "round {$round->id}: ballot closed, {$picked}";
+            $done[] = "round {$round->id}: ballot closed, {$picked}"
+                . ($adopted > 0 ? ", {$adopted} demo(s) from the voting period entered" : '');
         }
 
         return $done;
@@ -111,7 +119,14 @@ class CompScheduler
                     ->select('uploaded_demo_id'))
                 ->update(['comps_hidden_until' => null]);
 
-            $done[] = "round {$round->id}: finished, standings frozen, {$released} demo(s) released";
+            // The entries above are only the demos somebody entered. Runs that
+            // were held because the map was being played - an old run, a run in
+            // the other physics - have no submission to be released through,
+            // and the round ending is exactly when they stop being secret.
+            $alsoReleased = $this->guard->releaseForRound($round->load('maps.map'));
+
+            $done[] = "round {$round->id}: finished, standings frozen, "
+                . ($released + $alsoReleased) . ' demo(s) released';
 
             $comp = $round->comp;
 
@@ -137,7 +152,15 @@ class CompScheduler
             ->get();
 
         foreach ($rounds as $round) {
-            $round->update(['status' => 'active']);
+            // Stamp what the pool pays at the moment play begins. Until now the
+            // round quoted the pool live, because a donation made this week has
+            // to be able to raise next week; from here on it is fixed, because
+            // what a week pays is what its players were told when they started
+            // grinding it.
+            $round->update([
+                'status' => 'active',
+                'prize_eur' => $this->funding->perPhysicsFor((int) $round->comp?->number),
+            ]);
             $round->comp()->update(['status' => 'active']);
             $done[] = "round {$round->id}: now playing";
         }

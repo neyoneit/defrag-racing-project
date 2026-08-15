@@ -12,12 +12,19 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Reports against a comps entry.
+ * Reports about comps demos, of two kinds.
  *
- * Upholding one drops the entry out of comps and rebuilds the standings
- * without it. The demo itself stays in the demo database - being wrong for a
- * competition is not a reason to erase somebody's file, and the demo is often
- * the only evidence of what happened.
+ * `entry` is an accusation: that run is not what it claims to be. Upholding one
+ * drops the entry out of comps and rebuilds the standings without it. The demo
+ * itself stays in the demo database - being wrong for a competition is not a
+ * reason to erase somebody's file, and the demo is often the only evidence of
+ * what happened.
+ *
+ * `help` is somebody asking about a demo of their own that comps did not take:
+ * a file the parser could not read, a run held for a map still being voted on.
+ * There is nothing to uphold - no entry exists - so it is read, answered and
+ * closed. It is the commoner of the two and the reason this queue is worth
+ * watching.
  */
 class CompDemoReportResource extends Resource
 {
@@ -25,7 +32,7 @@ class CompDemoReportResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-flag';
 
-    protected static ?string $navigationLabel = 'Comps: reported runs';
+    protected static ?string $navigationLabel = 'Comps: demo reports';
 
     protected static ?string $navigationGroup = 'Comps';
 
@@ -48,10 +55,22 @@ class CompDemoReportResource extends Resource
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
-                Tables\Columns\TextColumn::make('submission.user.name')
+                Tables\Columns\TextColumn::make('kind')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => $state === CompDemoReport::HELP ? 'Needs a look' : 'Reported run')
+                    ->color(fn ($state) => $state === CompDemoReport::HELP ? 'info' : 'warning'),
+
+                // A help report has no entry, so the name comes off the demo.
+                Tables\Columns\TextColumn::make('runner')
                     ->label('Run by')
-                    ->searchable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->getStateUsing(fn (CompDemoReport $r) => $r->submission?->user?->name ?? $r->demo?->user?->name ?? '-'),
+
+                Tables\Columns\TextColumn::make('demo.original_filename')
+                    ->label('Demo')
+                    ->limit(40)
+                    ->tooltip(fn (CompDemoReport $r) => $r->demo?->original_filename)
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('submission.time')
                     ->label('Time')
@@ -96,20 +115,28 @@ class CompDemoReportResource extends Resource
                         'dismissed' => 'Dismissed',
                     ])
                     ->default('open'),
+
+                Tables\Filters\SelectFilter::make('kind')
+                    ->options([
+                        CompDemoReport::HELP => 'Needs a look',
+                        CompDemoReport::ENTRY => 'Reported run',
+                    ]),
             ])
             ->actions([
                 Tables\Actions\Action::make('download')
                     ->label('Demo')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('gray')
-                    ->visible(fn (CompDemoReport $r) => (bool) $r->submission?->demo)
-                    ->url(fn (CompDemoReport $r) => route('demos.download', $r->submission->uploaded_demo_id), true),
+                    ->visible(fn (CompDemoReport $r) => (bool) static::demoId($r))
+                    ->url(fn (CompDemoReport $r) => route('demos.download', static::demoId($r)), true),
 
+                // Only an entry can be upheld: a help report has nothing to
+                // remove, and the answer to it is a message, not a verdict.
                 Tables\Actions\Action::make('uphold')
                     ->label('Uphold')
                     ->icon('heroicon-o-check')
                     ->color('danger')
-                    ->visible(fn (CompDemoReport $r) => $r->status === 'open')
+                    ->visible(fn (CompDemoReport $r) => $r->status === 'open' && $r->submission !== null)
                     ->requiresConfirmation()
                     ->modalDescription('Drops the entry from comps and rebuilds the standings without it. The demo stays in the demo database.')
                     ->action(function (CompDemoReport $r) {
@@ -143,7 +170,7 @@ class CompDemoReportResource extends Resource
                     }),
 
                 Tables\Actions\Action::make('dismiss')
-                    ->label('Dismiss')
+                    ->label(fn (CompDemoReport $r) => $r->kind === CompDemoReport::HELP ? 'Answered' : 'Dismiss')
                     ->icon('heroicon-o-x-mark')
                     ->color('gray')
                     ->visible(fn (CompDemoReport $r) => $r->status === 'open')
@@ -162,9 +189,15 @@ class CompDemoReportResource extends Resource
             ->emptyStateDescription('Nobody has reported a comps run.');
     }
 
+    /** The demo to open: the report's own, or the entry's if it has none. */
+    private static function demoId(CompDemoReport $report): ?int
+    {
+        return $report->uploaded_demo_id ?? $report->submission?->uploaded_demo_id;
+    }
+
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->with(['submission.user', 'submission.round', 'reporter']);
+        return parent::getEloquentQuery()->with(['submission.user', 'submission.round', 'demo.user', 'reporter']);
     }
 
     public static function getPages(): array

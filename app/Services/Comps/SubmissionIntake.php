@@ -8,6 +8,7 @@ use App\Models\CompSubmission;
 use App\Models\UploadedDemo;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -30,6 +31,33 @@ class SubmissionIntake
 
     /** Statuses that mean an earlier upload of this file failed and does not count. */
     private const FAILED_STATUSES = ['failed', 'failed-validity', 'unsupported-version'];
+
+    /**
+     * Why this person cannot enter a run, or null when they can.
+     *
+     * Comps pays a prize and hands out wildcards, and both are settled against
+     * a Q3DF.org profile. An account without one is a sign-up form and nothing
+     * more, which would make voting and winning as cheap as making another
+     * address - so entering asks for the same linked profile voting already
+     * does. Here rather than on one route, because the page and the launcher
+     * must not be able to disagree about who may enter.
+     */
+    public function userRejectionReason(?User $user): ?string
+    {
+        if (! $user) {
+            return __('Sign in to enter a run.');
+        }
+
+        if (! $user->hasVerifiedEmail()) {
+            return __('Confirm your email address before entering a run.');
+        }
+
+        if (! $user->mdd_id) {
+            return __('Link your Q3DF.org account to enter a run.');
+        }
+
+        return null;
+    }
 
     /**
      * Why this file cannot be entered, or null when it can.
@@ -93,8 +121,9 @@ class SubmissionIntake
         string $hash,
         bool $isHighlight = false,
         bool $autoEntered = false,
+        ?Carbon $clientMtime = null,
     ): CompSubmission {
-        $submission = DB::transaction(function () use ($round, $user, $file, $hash, $isHighlight, $autoEntered) {
+        $submission = DB::transaction(function () use ($round, $user, $file, $hash, $isHighlight, $autoEntered, $clientMtime) {
             $demo = UploadedDemo::create([
                 'original_filename' => $file->getClientOriginalName(),
                 'file_path' => '',
@@ -105,6 +134,10 @@ class SubmissionIntake
                 // Out of /demos, the map page, profiles and the launcher until
                 // the round is over. The demo is the route.
                 'comps_hidden_until' => $round->ends_at,
+                // When the file was written on the uploader's disk, if their
+                // client told us. A run has to have been made after the ballot
+                // opened, and this is the only date most online demos have.
+                'client_file_mtime' => $clientMtime,
             ]);
 
             $directory = storage_path("app/demos/temp/{$demo->id}");

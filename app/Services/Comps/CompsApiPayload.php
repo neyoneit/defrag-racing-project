@@ -30,6 +30,8 @@ class CompsApiPayload
     public function __construct(
         private CandidateSelector $selector,
         private PrizeFunding $funding,
+        private UploadGuard $guard,
+        private SubmissionIntake $intake,
     ) {
     }
 
@@ -41,6 +43,60 @@ class CompsApiPayload
         return [
             'playing' => $playing ? $this->playing($playing, $user) : null,
             'voting' => $voting ? $this->voting($voting) : null,
+            // Outside `playing`, because a demo can be held for a map that is
+            // still being voted on - a week when there is nothing being played
+            // at all, and the launcher still has to be able to say why the
+            // person's demo went quiet.
+            'my_notices' => $user ? $this->guard->noticesFor($user->id) : [],
+            'entry_gate' => $this->entryGate($user),
+            'pool' => $this->pool(),
+        ];
+    }
+
+    /**
+     * What is in the prize pool and where to add to it.
+     *
+     * Not a per-round figure - each round already carries its own - but the
+     * thing behind them: comps pays out because people put money in, and a
+     * competition that never says so quietly reads as something the site owes
+     * everybody. Who donated stays on the website; the launcher gets the
+     * total, how far it reaches, and a way to open the donations page.
+     */
+    private function pool(): array
+    {
+        return [
+            'total_eur' => $this->funding->totalDonated(),
+            'weeks' => $this->funding->fundedWeekCount(),
+            'through_comp' => $this->funding->fundedThroughComp(),
+            'donate_url' => route('donations.index'),
+        ];
+    }
+
+    /**
+     * Whether this person may enter a run at all.
+     *
+     * A launcher token is handed to any signed-in account, linked profile or
+     * not, because backing demos up and browsing servers have nothing to do
+     * with comps. Entering does, and without this the launcher would find out
+     * one rejected upload at a time - so it is told up front and can say the
+     * one useful thing instead: link your account, here is where.
+     */
+    private function entryGate(?User $user): array
+    {
+        $reason = $this->intake->userRejectionReason($user);
+
+        return [
+            'may' => $reason === null,
+            'reason' => $reason,
+            'needs' => match (true) {
+                $reason === null => null,
+                ! $user => 'signin',
+                ! $user->hasVerifiedEmail() => 'verify',
+                default => 'mdd',
+            },
+            // Where to go and fix it. The launcher cannot build a site URL and
+            // should not be inventing one.
+            'settings_url' => route('settings.show'),
         ];
     }
 
@@ -70,7 +126,7 @@ class CompsApiPayload
             'category' => $round->category,
             'weapon' => $round->weapon,
             'ends_at' => $round->ends_at?->toIso8601String(),
-            'prize_eur' => (float) ($round->prize_eur ?? $this->funding->perPhysicsFor((int) $round->comp->number)),
+            'prize_eur' => $this->funding->forRound($round),
             'maps' => $round->maps->mapWithKeys(fn ($m) => [$m->physics => $m->map?->name])->all(),
             // A count, never a list, and never a time. It answers "is anyone
             // else in this" without answering "what do I have to beat".
@@ -134,6 +190,11 @@ class CompsApiPayload
             'category' => $round->category,
             'closes_at' => $round->voting_closes_at?->toIso8601String(),
             'is_open' => $round->isVoting() && $round->voting_closes_at?->isFuture(),
+            // What next week pays, next to the maps it might be played on.
+            // The reason to go and vote is usually that the week is worth
+            // something, and the launcher is where somebody is standing when
+            // they decide whether to bother.
+            'prize_eur' => $this->funding->forRound($round),
             'candidates' => $round->candidates()->with('map:id,name')->get()
                 ->map(fn ($c) => $c->map?->name)
                 ->filter()

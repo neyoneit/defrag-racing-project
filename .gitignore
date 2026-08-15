@@ -107,3 +107,6 @@ __pycache__/
 
 # Plán webové části pro launcher. Pracovní poznámka, ne součást aplikace.
 /LAUNCHER_COMPS_API_PLAN.md
+
+# Plán serverové pojistky comps (viz COMPS_SPEC.md)
+/COMPS_GUARD_PLAN.md

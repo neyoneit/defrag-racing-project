@@ -6,8 +6,10 @@ use App\Models\CompDemoReport;
 use App\Models\CompMapReport;
 use App\Models\CompRound;
 use App\Models\CompSubmission;
+use App\Models\UploadedDemo;
 use App\Services\Comps\SubmissionIntake;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 /**
  * Entering a run, and reporting one.
@@ -32,9 +34,21 @@ class CompSubmissionController extends Controller
         $data = $request->validate([
             'demo' => ['required', 'file', 'max:' . SubmissionIntake::MAX_KB],
             'is_highlight' => ['sometimes', 'boolean'],
+            // Unix seconds from the browser's File object. Not proof of
+            // anything - the client sends it - but a file dated before this
+            // round's ballot opened is an old run, and that is the direction
+            // the check is used in.
+            'file_mtime' => ['nullable', 'integer', 'min:0'],
         ]);
 
         abort_unless($request->user(), 403);
+
+        // Who may enter at all - a linked Q3DF.org profile, same as voting.
+        // The page hides the form when this would fail; the check is here
+        // because a hidden form is not a rule.
+        if ($reason = $intake->userRejectionReason($request->user())) {
+            return back()->withErrors(['demo' => $reason]);
+        }
 
         $file = $request->file('demo');
         $hash = $intake->hash($file);
@@ -48,12 +62,19 @@ class CompSubmissionController extends Controller
             return back()->withErrors(['demo' => $reason]);
         }
 
+        $mtime = ! empty($data['file_mtime'])
+            ? Carbon::createFromTimestamp((int) $data['file_mtime'])
+            : null;
+
         $intake->accept(
             $round,
             $request->user(),
             $file,
             $hash,
             (bool) ($data['is_highlight'] ?? false),
+            // A clock running ahead would write a future date, and a future
+            // date passes every "made after the ballot opened" check there is.
+            clientMtime: $mtime?->isFuture() ? now() : $mtime,
         );
 
         return back();
@@ -67,6 +88,16 @@ class CompSubmissionController extends Controller
     {
         abort_unless($request->user()?->id === $submission->user_id, 403);
         abort_unless($submission->round?->acceptsUploads(), 403, __('This round is closed.'));
+
+        // Mark the demo before the entry goes, so the demo does not end up
+        // looking like one the guard never entered. It stays hidden - the run
+        // is still on the map being played and publishing it mid-round would
+        // hand out the route - and it is never entered again, not even by a
+        // re-parse.
+        if ($demo = UploadedDemo::withUnreleasedComps()->find($submission->uploaded_demo_id)) {
+            $demo->comps_withdrawn_at = now();
+            $demo->saveQuietly();
+        }
 
         $submission->delete();
 
@@ -90,6 +121,44 @@ class CompSubmissionController extends Controller
             [
                 'comp_submission_id' => $submission->id,
                 'reported_by' => $request->user()->id,
+            ],
+            [
+                'kind' => CompDemoReport::ENTRY,
+                'uploaded_demo_id' => $submission->uploaded_demo_id,
+                'reason' => $data['reason'],
+                'status' => 'open',
+            ]
+        );
+
+        return back();
+    }
+
+    /**
+     * "My own demo went in and nothing happened to it."
+     *
+     * The other half of reporting, and the one that comes up far more often.
+     * A demo the parser could not read has no entry to hang a report on, and
+     * neither does a run being held for a map that is still being voted on -
+     * which is exactly when somebody needs to ask. So this points at the demo.
+     *
+     * Only your own: this is asking for help with a file of yours, not an
+     * accusation about somebody else's, and the demos it is raised from are
+     * ones nobody else can even see.
+     */
+    public function reportOwnDemo(Request $request, UploadedDemo $demo)
+    {
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'min:10', 'max:2000'],
+        ]);
+
+        abort_unless($request->user(), 403);
+        abort_unless($request->user()->id === $demo->user_id, 403);
+
+        CompDemoReport::updateOrCreate(
+            [
+                'uploaded_demo_id' => $demo->id,
+                'reported_by' => $request->user()->id,
+                'kind' => CompDemoReport::HELP,
             ],
             [
                 'reason' => $data['reason'],

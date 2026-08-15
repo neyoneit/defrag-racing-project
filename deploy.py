@@ -142,6 +142,20 @@ else
     fi
 fi
 exit 0""",
+        # Flush the application cache AFTER the new code is confirmed to be
+        # serving, not before.
+        #
+        # `optimize:clear` above runs while the symlink has already swung but
+        # octane is still the OLD process. Every request landing in that window
+        # is served by the old code, and any of them that warms a cache - the
+        # Demos Top box, a map page, a profile - writes what the OLD code
+        # computed into a cache the NEW code then reads for an hour. That is
+        # how a corrected demo name can sit fixed in the database and wrong on
+        # the page after a deploy, with nothing in the log to suggest why.
+        #
+        # Cheap: the caches this drops are all rebuilt on first request.
+        "php artisan cache:clear",
+
         # Search indexing, and it has to be down here rather than up with the
         # other cache rebuilds. SCOUT_QUEUE is on, so `scout:import` only
         # dispatches jobs - and run before the restarts above, those jobs get

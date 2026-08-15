@@ -47,14 +47,22 @@ const uploadSummary = ref(null); // { total_sent, total_received, queued, duplic
 const errorsExpanded = ref(false);
 const successExpanded = ref(false);
 
+// Grouped by the code the server sends, not by reading its English. The
+// substrings this used to match on are translated now, and a translated
+// sentence never contains the word "Duplicate" - every error would have
+// landed under "Other" the moment somebody switched the site to Czech.
+const ERROR_CATEGORIES = {
+    duplicate: () => t('Duplicates'),
+    duplicate_name: () => t('Duplicate Filename'),
+    format: () => t('Invalid Format'),
+    archive: () => t('Upload Failed'),
+    failed: () => t('Upload Failed'),
+};
+
 const categorizedErrors = computed(() => {
     const cats = {};
     uploadErrors.value.forEach(err => {
-        let category = t('Other');
-        if (err.includes('Duplicate file content')) category = t('Duplicates');
-        else if (err.includes('Invalid demo file format')) category = t('Invalid Format');
-        else if (err.includes('Filename already uploaded')) category = t('Duplicate Filename');
-        else if (err.includes('Upload failed') || err.includes('Failed to queue')) category = t('Upload Failed');
+        const category = (ERROR_CATEGORIES[err.code] ?? (() => t('Other')))();
         if (!cats[category]) cats[category] = [];
         cats[category].push(err);
     });
@@ -129,6 +137,13 @@ const activelyProcessingDemos = computed(() => (processingDemos.value || []).fil
 const queuedDemoCount = computed(() => (queueStats.value?.total_queued || 0));
 const reprocessingFailed = ref(false);
 const recentlyProcessed = ref([]);
+
+// Demos of theirs that comps is holding. They are deliberately missing from
+// every list on this page - a run on a map being played is hidden site-wide -
+// so a demo uploaded here leaves the processing panel and arrives nowhere,
+// which reads as an upload that failed. This is the only place that says
+// otherwise.
+const compsNotices = ref([]);
 const reprocessMessage = ref('');
 const actionStartedAt = ref(null);
 const showReprocessConfirm = ref(false);
@@ -712,6 +727,11 @@ const uploadDemos = async () => {
     const sendBatch = async (batchFiles, label) => {
         const formData = new FormData();
         batchFiles.forEach(file => formData.append('demos[]', file));
+        // The date the file has on this machine, one per file, in the same
+        // order. An upload carries bytes and a name and nothing else, and comps
+        // has to be able to tell a run made this week from one that has been on
+        // a hard drive for years. Sent as unix seconds.
+        batchFiles.forEach(file => formData.append('demo_mtimes[]', Math.floor((file.lastModified || 0) / 1000)));
 
         try {
             const response = await axios.post(route('demos.upload'), formData, {
@@ -767,7 +787,7 @@ const uploadDemos = async () => {
             // Single file failed - mark as failed
             totalFailedBatchFiles += batchFiles.length;
             batchFiles.forEach(f => failedFileNames.push(f.name));
-            allErrors.push(`${label}: ${batchFiles[0].name} failed to upload`);
+            allErrors.push({ file: batchFiles[0].name, code: 'failed', message: label });
             console.error(`[Upload] ${label} FAILED: ${batchFiles[0].name}`);
             return;
         }
@@ -846,7 +866,11 @@ const uploadDemos = async () => {
         // Results stay visible until user dismisses them
     } catch (error) {
         console.error('Upload error:', error);
-        uploadErrors.value = [...allErrors, t('Upload failed: :message', { message: error.response?.data?.message || error.message })];
+        uploadErrors.value = [...allErrors, {
+            file: '',
+            code: 'failed',
+            message: t('Upload failed: :message', { message: error.response?.data?.message || error.message }),
+        }];
     } finally {
         uploading.value = false;
         setTimeout(() => {
@@ -1118,6 +1142,7 @@ const pollOnce = async () => {
         }
         processingDemos.value = response.data.processing_demos;
         queueStats.value = response.data.queue_stats;
+        compsNotices.value = response.data.comps_notices || [];
 
         // Backend returns recently completed demos (last 5 min + tracked IDs)
         const completed = response.data.completed_demos || [];
@@ -1183,6 +1208,10 @@ const checkForProcessingDemos = async () => {
             const response = await axios.get(route('demos.status'));
             processingDemos.value = response.data.processing_demos;
             queueStats.value = response.data.queue_stats;
+            // On load, not only while polling. A hold lasts until the round
+            // ends, which is days after the upload panel has gone - so the
+            // one moment this must not depend on is the upload itself.
+            compsNotices.value = response.data.comps_notices || [];
 
             const hasWork = response.data.processing_demos.length > 0
                 || (response.data.queue_stats.total_queued || 0) > 0
@@ -1748,11 +1777,14 @@ watch(selectedPhysics, () => {
                                     <span class="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[10px] rounded-full">{{ errors.length }}</span>
                                 </summary>
                                 <div class="ml-5 mt-1 space-y-1">
-                                    <div v-for="error in errors" :key="error" class="flex items-start space-x-1.5">
+                                    <div v-for="(error, i) in errors" :key="i" class="flex items-start space-x-1.5">
                                         <svg class="w-3 h-3 text-red-400/60 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                         </svg>
-                                        <span class="text-red-200/70 text-xs">{{ error }}</span>
+                                        <span class="text-red-200/70 text-xs">
+                                            <span v-if="error.file" class="text-red-300/60">{{ error.file }}:</span>
+                                            {{ error.message }}
+                                        </span>
                                     </div>
                                 </div>
                             </details>
@@ -1782,6 +1814,25 @@ watch(selectedPhysics, () => {
                                     <span v-if="demo.record_id" class="text-purple-300 text-[10px] ml-1">{{ $t('auto-assigned') }}</span>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Held by comps. Above the results panel, because a demo in
+                     here is one that will never appear in it: the run is on a
+                     map being played and the whole site hides it until the
+                     round ends. Without this the upload simply goes quiet. -->
+                <div v-if="compsNotices.length" class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4">
+                    <div class="flex items-center justify-between gap-3 mb-2">
+                        <div class="text-sm font-bold text-amber-200">{{ $t('Held by comps') }}</div>
+                        <Link :href="route('comps.index')" class="text-xs font-bold text-amber-300 underline decoration-amber-400/40 hover:text-amber-100">
+                            {{ $t('Open comps') }}
+                        </Link>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div v-for="notice in compsNotices" :key="notice.id" class="text-sm text-amber-100/80">
+                            <span class="text-[11px] text-amber-200/50 mr-2">{{ notice.filename }}</span>
+                            {{ notice.note }}
                         </div>
                     </div>
                 </div>

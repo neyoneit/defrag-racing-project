@@ -89,6 +89,7 @@ class ExtractAndQueueArchiveJob implements ShouldQueue
                     'file_hash' => $fileHash,
                     'user_id' => $this->userId,
                     'status' => 'uploaded',
+                    'client_file_mtime' => $this->archivedMtime($demoFile['mtime'] ?? null),
                 ]);
 
                 // Store file locally in temp directory
@@ -122,8 +123,24 @@ class ExtractAndQueueArchiveJob implements ShouldQueue
     }
 
     /**
+     * A date carried by an archive entry, as a timestamp, or null. Clamped to
+     * now, because a date in the future passes every "was this made after the
+     * ballot opened" check there is.
+     */
+    protected function archivedMtime($seconds): ?\Illuminate\Support\Carbon
+    {
+        if (! $seconds) {
+            return null;
+        }
+
+        $at = \Illuminate\Support\Carbon::createFromTimestamp((int) $seconds);
+
+        return $at->isFuture() ? now() : $at;
+    }
+
+    /**
      * Extract demo files from archive
-     * Returns array of ['name' => ..., 'path' => ..., 'size' => ...]
+     * Returns array of ['name' => ..., 'path' => ..., 'size' => ..., 'mtime' => ...]
      */
     protected function extractArchive(string $archivePath): array
     {
@@ -184,6 +201,11 @@ class ExtractAndQueueArchiveJob implements ShouldQueue
                     'name' => $basename,
                     'path' => $tempPath,
                     'size' => filesize($tempPath),
+                    // A zip entry keeps the date the file had before it was
+                    // archived, which is the only date an archived demo has -
+                    // extracting rewrites the one on disk. Comps reads it to
+                    // tell a fresh run from a folder somebody kept for years.
+                    'mtime' => $zip->statIndex($i)['mtime'] ?? null,
                 ];
             }
         }
@@ -229,6 +251,9 @@ class ExtractAndQueueArchiveJob implements ShouldQueue
                     'name' => $basename,
                     'path' => $tempPath,
                     'size' => filesize($tempPath),
+                    // 7z restores the stored date onto the extracted file, so
+                    // reading it back is reading the archive's own record.
+                    'mtime' => @filemtime($tempPath) ?: null,
                 ];
             }
         }

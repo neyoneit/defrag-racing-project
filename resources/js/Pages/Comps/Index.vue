@@ -9,6 +9,7 @@ export default {
 <script setup>
     import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
     import { computed, ref } from 'vue';
+    import moment from 'moment';
     import { t } from '@/utils/i18n';
     import { formatTime } from '@/utils/time';
 
@@ -34,6 +35,7 @@ export default {
         funders: { type: Object, default: null },
         betaNotice: { type: Boolean, default: false },
         adminUrl: { type: String, default: '' },
+        myNotices: { type: Array, default: () => [] },
     });
 
     const page = usePage();
@@ -77,6 +79,11 @@ export default {
 
         return { before: line.slice(0, at), after: line.slice(at + ':admin'.length) };
     };
+
+    // When a held demo shows up on the site. The sentence next to it already
+    // says "once the round is over", which is the reason; this is the date,
+    // which is the thing somebody actually wants.
+    const appearsAt = (iso) => moment(iso).format('D MMM, HH:mm');
 
     const betaLine = computed(() => aroundAdmin(
         t('Expect a few rough edges in the first weeks. If something does not look right, :admin will sort it out.'),
@@ -125,6 +132,28 @@ export default {
         });
     };
 
+    // "My demo did not go through." Raised from a demo comps is holding without
+    // having entered it, and from your own entry the site refused - both of
+    // which leave somebody with a file and no explanation they can act on.
+    //
+    // It points at the demo rather than at the entry, because the commonest
+    // case by far - a file the parser could not read - has no entry at all.
+    const demoReport = ref(null);
+    const demoReportForm = useForm({ reason: '' });
+
+    const askAboutDemo = (demoId, filename) => {
+        demoReportForm.reset();
+        demoReportForm.clearErrors();
+        demoReport.value = { demoId, filename };
+    };
+
+    const sendDemoReport = () => {
+        demoReportForm.post(route('comps.report-own-demo', demoReport.value.demoId), {
+            preserveScroll: true,
+            onSuccess: () => (demoReport.value = null),
+        });
+    };
+
     const mapReport = ref(null);
 
     const confirmMapReport = () => {
@@ -153,6 +182,10 @@ export default {
     const uploadForm = useForm({
         demo: null,
         is_highlight: false,
+        // Unix seconds, filled in when the file is picked: a run has to have
+        // been made after this round's ballot opened, and the upload itself
+        // carries no date at all.
+        file_mtime: null,
     });
 
     // Ticking the highlight box is easy to do by accident and impossible to
@@ -160,10 +193,18 @@ export default {
     // somebody notices, the round is over. So it asks, once, before sending.
     const highlightConfirm = ref(false);
 
+    // Keep the file and its date together: the date is read off the File
+    // object at pick time and travels with the upload.
+    const onPickDemo = (event) => {
+        const file = event.target.files[0] ?? null;
+        uploadForm.demo = file;
+        uploadForm.file_mtime = file ? Math.floor((file.lastModified || 0) / 1000) : null;
+    };
+
     const send = () => {
         uploadForm.post(route('comps.submit', props.playing.round_id), {
             preserveScroll: true,
-            onSuccess: () => uploadForm.reset('demo', 'is_highlight'),
+            onSuccess: () => uploadForm.reset('demo', 'is_highlight', 'file_mtime'),
             onFinish: () => (highlightConfirm.value = false),
         });
     };
@@ -185,8 +226,15 @@ export default {
         return valid.length ? Math.min(...valid.map((e) => e.time)) : null;
     };
 
-    const withdraw = (id) => {
-        router.delete(route('comps.submission.destroy', id), { preserveScroll: true });
+    // Withdrawing is not undoable: the entry goes, and the same file cannot be
+    // uploaded again because the site already holds its hash. So it asks.
+    const withdrawTarget = ref(null);
+
+    const confirmWithdraw = () => {
+        const id = withdrawTarget.value?.id;
+        withdrawTarget.value = null;
+
+        if (id) router.delete(route('comps.submission.destroy', id), { preserveScroll: true });
     };
 
     const errors = computed(() => page.props.errors ?? {});
@@ -467,6 +515,38 @@ export default {
 
         </div>
 
+        <!-- =========================== THE RULES =========================== -->
+        <!-- Four sentences, above both halves of the week rather than beside
+             the upload box. Three of them are things somebody finds out by
+             being surprised: that entering needs a linked profile, that a run
+             on the map enters by itself whether or not you meant it to, and
+             that your demo goes quiet until the round ends. A rule nobody is
+             told is not a rule, it is a trap. -->
+        <section class="rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm px-4 py-3">
+            <h2 class="mb-2 text-[10px] font-black uppercase tracking-wider text-gray-500">{{ $t('How comps works') }}</h2>
+            <ul class="space-y-1.5 text-sm text-gray-400">
+                <li class="flex gap-2">
+                    <span class="text-gray-600">1.</span>
+                    <span>
+                        {{ $t('You need a Q3DF.org profile linked to your account to enter a run or to vote.') }}
+                        <Link v-if="user" :href="route('settings.show')" class="font-bold text-amber-300 underline decoration-amber-400/40 hover:text-amber-100">{{ $t('Open settings') }}</Link>
+                    </span>
+                </li>
+                <li class="flex gap-2">
+                    <span class="text-gray-600">2.</span>
+                    <span>{{ $t('There is no sign-up. Record a run on the map being played and it enters by itself.') }}</span>
+                </li>
+                <li class="flex gap-2">
+                    <span class="text-gray-600">3.</span>
+                    <span>{{ $t('A demo of the map being played, in the physics it is being played in, stays hidden until the round is over. It appears then, together with everyone else\'s.') }}</span>
+                </li>
+                <li class="flex gap-2">
+                    <span class="text-gray-600">4.</span>
+                    <span>{{ $t('A run made before the vote for the round opened does not count in it.') }}</span>
+                </li>
+            </ul>
+        </section>
+
         <!-- ============================ VOTING ============================= -->
         <!-- Same panel as Playing now on purpose: the two halves of this page
              are the two halves of the same week, and giving one a box and the
@@ -692,8 +772,25 @@ export default {
                     {{ $t('Your demos stay private until the round ends. Once it does they appear normally in Demos, on the map page and on your profile.') }}
                 </p>
 
-                <div v-if="!user" class="rounded-lg border border-white/10 bg-black/40 backdrop-blur-sm px-4 py-3 text-sm text-gray-400">
-                    {{ $t('Sign in to enter.') }}
+                <!-- Who may enter, decided by the server and printed here. The
+                     sentence says what is missing; the link says where to fix
+                     it, which is the half a person cannot guess. -->
+                <div v-if="!playing.entry_gate?.may" class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                    {{ playing.entry_gate?.reason }}
+                    <Link
+                        v-if="playing.entry_gate?.needs === 'mdd'"
+                        :href="route('settings.show')"
+                        class="ml-1 font-bold underline decoration-amber-400/40 hover:text-amber-50"
+                    >
+                        {{ $t('Open settings') }}
+                    </Link>
+                    <Link
+                        v-else-if="playing.entry_gate?.needs === 'verify'"
+                        :href="route('verification.notice')"
+                        class="ml-1 font-bold underline decoration-amber-400/40 hover:text-amber-50"
+                    >
+                        {{ $t('Confirm your email') }}
+                    </Link>
                 </div>
 
                 <form v-else @submit.prevent="submitEntry" class="space-y-3">
@@ -701,7 +798,7 @@ export default {
                         <input
                             type="file"
                             accept=".dm_68"
-                            @input="uploadForm.demo = $event.target.files[0]"
+                            @input="onPickDemo($event)"
                             class="text-sm text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-sm file:text-white hover:file:bg-white/20"
                         />
 
@@ -768,13 +865,68 @@ export default {
 
                             <span v-if="entry.filename" class="hidden md:block truncate text-[11px] text-gray-600 max-w-[16rem]">{{ entry.filename }}</span>
 
+                            <!-- A refused entry says why in one sentence, and
+                                 the sentence is not always the end of it: a
+                                 validity note is a cvar we saw, not a verdict.
+                                 This is how somebody disagrees with it. -->
+                            <template v-if="entry.status !== 'valid' && entry.status !== 'pending' && entry.demo_id">
+                                <span v-if="entry.reported" class="text-xs text-gray-500">{{ $t('Sent to an admin') }}</span>
+                                <button
+                                    v-else
+                                    type="button"
+                                    @click="askAboutDemo(entry.demo_id, entry.filename)"
+                                    class="text-xs font-bold text-amber-300 underline decoration-amber-400/40 hover:text-amber-100"
+                                >
+                                    {{ $t('Ask an admin about this demo') }}
+                                </button>
+                            </template>
+
                             <button
                                 type="button"
-                                @click="withdraw(entry.id)"
+                                @click="withdrawTarget = entry"
                                 class="ml-auto text-xs text-gray-600 hover:text-red-400 transition-colors"
                             >
                                 {{ $t('Withdraw') }}
                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Runs of theirs comps is keeping back without having entered
+                     them: a file that could not be read, a run older than the
+                     round, one they withdrew themselves. Inside the entry
+                     panel and directly under the entries, because it answers
+                     the same question they do - what happened to my demo -
+                     and a separate section further down the page read as a
+                     different subject. -->
+                <div v-if="myNotices.length" class="mt-5">
+                    <div class="mb-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">{{ $t('Demos of yours on hold') }}</div>
+                    <div class="space-y-1.5">
+                        <div
+                            v-for="notice in myNotices"
+                            :key="notice.id"
+                            class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-white/5 bg-black/40 backdrop-blur-sm px-3 py-2"
+                        >
+                            <span class="max-w-full truncate text-[11px] text-gray-600 md:max-w-[16rem]">{{ notice.filename }}</span>
+
+                            <span class="text-sm" :class="notice.kind === 'unreadable' ? 'text-red-400' : 'text-gray-300'">{{ notice.note }}</span>
+
+                            <!-- An unreadable demo is the one case where the site
+                                 cannot say what went wrong, so it hands over the person
+                                 who can look at the file. -->
+                            <span v-if="notice.reported" class="text-xs text-gray-500">{{ $t('Sent to an admin') }}</span>
+                            <button
+                                v-else
+                                type="button"
+                                @click="askAboutDemo(notice.id, notice.filename)"
+                                class="text-xs font-bold text-amber-300 underline decoration-amber-400/40 hover:text-amber-100"
+                            >
+                                {{ $t('Ask an admin about this demo') }}
+                            </button>
+
+                            <span v-if="notice.appears_at" class="ml-auto text-[11px] text-gray-600">
+                                {{ $t('Appears :when', { when: appearsAt(notice.appears_at) }) }}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -873,6 +1025,65 @@ export default {
                         </button>
                         <button type="button" @click="confirmWildcard" class="rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-black hover:bg-amber-400">
                             {{ $t('Use it') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- Withdrawing is final, so it says so before doing it. -->
+        <Teleport to="body">
+            <div v-if="withdrawTarget" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" @click.self="withdrawTarget = null">
+                <div class="w-full max-w-md rounded-xl border border-white/10 bg-black/70 backdrop-blur-xl p-6">
+                    <h3 class="text-lg font-black text-white">{{ $t('Withdraw this run?') }}</h3>
+                    <p class="mt-2 truncate text-[11px] text-gray-600">{{ withdrawTarget.filename }}</p>
+                    <p class="mt-3 text-sm text-gray-400">
+                        {{ $t('It leaves the round and stops counting, and the same file cannot be entered again. The demo itself stays on the site and appears once the round is over.') }}
+                    </p>
+
+                    <div class="mt-5 flex justify-end gap-2">
+                        <button type="button" @click="withdrawTarget = null" class="rounded-lg border border-white/10 px-4 py-2 text-sm text-gray-300 hover:bg-white/5">
+                            {{ $t('Cancel') }}
+                        </button>
+                        <button type="button" @click="confirmWithdraw" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-500">
+                            {{ $t('Withdraw') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- "Look at my demo": the one way out of a refusal the site cannot
+             explain any further by itself. -->
+        <Teleport to="body">
+            <div v-if="demoReport" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" @click.self="demoReport = null">
+                <div class="w-full max-w-md rounded-xl border border-white/10 bg-black/70 backdrop-blur-xl p-6">
+                    <h3 class="text-lg font-black text-white">{{ $t('Ask an admin about this demo') }}</h3>
+                    <p class="mt-2 truncate text-[11px] text-gray-600">{{ demoReport.filename }}</p>
+                    <p class="mt-2 text-sm text-gray-400">
+                        {{ $t('Say what you expected to happen. An admin opens the file itself and answers you.') }}
+                    </p>
+
+                    <textarea
+                        v-model="demoReportForm.reason"
+                        rows="4"
+                        class="mt-4 w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-amber-500/50 focus:outline-none"
+                        :placeholder="$t('What happened?')"
+                    ></textarea>
+
+                    <div v-if="demoReportForm.errors.reason" class="mt-2 text-sm text-red-400">{{ demoReportForm.errors.reason }}</div>
+
+                    <div class="mt-5 flex justify-end gap-2">
+                        <button type="button" @click="demoReport = null" class="rounded-lg border border-white/10 px-4 py-2 text-sm text-gray-300 hover:bg-white/5">
+                            {{ $t('Cancel') }}
+                        </button>
+                        <button
+                            type="button"
+                            @click="sendDemoReport"
+                            :disabled="demoReportForm.processing"
+                            class="rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-black hover:bg-amber-400 disabled:opacity-50"
+                        >
+                            {{ $t('Send report') }}
                         </button>
                     </div>
                 </div>

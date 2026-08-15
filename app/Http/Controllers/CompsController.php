@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Comp;
 use App\Models\CompCandidate;
+use App\Models\CompDemoReport;
 use App\Models\CompResult;
 use App\Models\CompRound;
 use App\Models\CompSubmission;
@@ -15,6 +16,8 @@ use App\Services\Comps\CompPreviewService;
 use App\Services\Comps\CompSettings;
 use App\Services\Comps\PrizeFunding;
 use App\Services\Comps\ResultsCalculator;
+use App\Services\Comps\SubmissionIntake;
+use App\Services\Comps\UploadGuard;
 use App\Services\Comps\WildcardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +46,7 @@ class CompsController extends Controller
         private CompPreviewService $previews,
         private WildcardService $wildcards,
         private ResultsCalculator $results,
+        private UploadGuard $guard,
     ) {
     }
 
@@ -62,6 +66,11 @@ class CompsController extends Controller
             'voting' => $voting ? $this->votingPayload($voting, $request) : null,
             'history' => $this->history(),
             'me' => $request->user() ? $this->myStanding($request->user()->id) : null,
+            // Demos of theirs comps is holding back without having entered
+            // them. Outside `playing` on purpose: a demo can be on hold for a
+            // map that is still being voted on, which is a week when there may
+            // be no round being played at all.
+            'myNotices' => $request->user() ? $this->guard->noticesFor($request->user()->id) : [],
             'pointsTable' => ResultsCalculator::POINTS,
             'pointsForFinishing' => ResultsCalculator::POINTS_FOR_FINISHING,
             'winsPerWildcard' => CompWildcard::WEEKLY_WINS_REQUIRED,
@@ -93,10 +102,14 @@ class CompsController extends Controller
     {
         $funding = app(PrizeFunding::class);
 
-        // The round's own stamped amount first, because that is what its
-        // players were told. Only a week that does not exist yet asks the
-        // funding what it would pay.
-        $eur = (float) ($round?->prize_eur ?? $funding->perPhysicsFor(((int) Comp::weekly()->max('number')) + 1));
+        // A round being played is quoted from its own stamp, because that is
+        // what its players were told. A round that has not started yet is
+        // quoted from the pool as it stands, so money donated today raises
+        // next week instead of leaving it advertising the flat rate it
+        // happened to be created with. See PrizeFunding::forRound.
+        $eur = $round
+            ? $funding->forRound($round)
+            : $funding->perPhysicsFor(((int) Comp::weekly()->max('number')) + 1);
 
         return [
             'eur' => $this->money($eur),
@@ -411,6 +424,33 @@ class CompsController extends Controller
             'entrants' => $this->entrants($round),
             'removed_entrants' => $this->removedEntrants($round),
             'my_entries' => $user ? $this->myEntries($round, $user->id) : [],
+            'entry_gate' => $this->entryGate($request),
+        ];
+    }
+
+    /**
+     * Whether the person looking may enter a run at all, and what to say if
+     * not.
+     *
+     * A code as well as a sentence, because two of the three refusals have
+     * somewhere to go - sign in, or link the profile in settings - and the
+     * page has to know which link to put next to which sentence. The rule
+     * itself lives in SubmissionIntake, where both upload routes read it.
+     */
+    private function entryGate(Request $request): array
+    {
+        $user = $request->user();
+        $reason = app(SubmissionIntake::class)->userRejectionReason($user);
+
+        return [
+            'may' => $reason === null,
+            'reason' => $reason,
+            'needs' => match (true) {
+                $reason === null => null,
+                ! $user => 'signin',
+                ! $user->hasVerifiedEmail() => 'verify',
+                default => 'mdd',
+            },
         ];
     }
 
@@ -503,13 +543,22 @@ class CompsController extends Controller
     /** Your own entries, times and all. Yours are never a secret from you. */
     private function myEntries(CompRound $round, int $userId): array
     {
-        return CompSubmission::where('comp_round_id', $round->id)
+        $entries = CompSubmission::where('comp_round_id', $round->id)
             ->where('user_id', $userId)
             ->with(['demo' => fn ($q) => $q->withUnreleasedComps()])
             ->orderByRaw('physics IS NULL')
             ->orderBy('physics')
             ->orderBy('time')
-            ->get()
+            ->get();
+
+        // Refused entries can be asked about, and an entry already asked about
+        // says so rather than offering the same button a second time.
+        $asked = CompDemoReport::whereIn('uploaded_demo_id', $entries->pluck('uploaded_demo_id')->filter())
+            ->where('reported_by', $userId)
+            ->pluck('uploaded_demo_id')
+            ->all();
+
+        return $entries
             ->map(fn (CompSubmission $s) => [
                 'id' => $s->id,
                 'physics' => $s->physics,
@@ -524,6 +573,8 @@ class CompsController extends Controller
                 'status' => $s->status,
                 'reason' => $s->invalid_reason,
                 'filename' => $s->demo?->original_filename,
+                'demo_id' => $s->uploaded_demo_id,
+                'reported' => in_array($s->uploaded_demo_id, $asked, true),
             ])
             ->all();
     }

@@ -52,9 +52,11 @@ class UploadedDemo extends Model
         'q3df_login_name_colored',
         'country',
         'record_date',
+        'client_file_mtime',
         'validity',
         'status',
         'comps_hidden_until',
+        'comps_withdrawn_at',
         'source',
         'processing_output',
         'name_confidence',
@@ -72,11 +74,13 @@ class UploadedDemo extends Model
         'file_size' => 'integer',
         'time_ms' => 'integer',
         'record_date' => 'datetime',
+        'client_file_mtime' => 'datetime',
         'validity' => 'array',
         'name_confidence' => 'integer',
         'manually_assigned' => 'boolean',
         'download_count' => 'integer',
         'comps_hidden_until' => 'datetime',
+        'comps_withdrawn_at' => 'datetime',
     ];
 
     /**

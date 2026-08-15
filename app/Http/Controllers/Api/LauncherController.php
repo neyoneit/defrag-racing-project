@@ -15,6 +15,7 @@ use App\Services\Comps\CompsApiPayload;
 use App\Services\Comps\SubmissionIntake;
 use App\Services\ServerListService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -58,6 +59,26 @@ class LauncherController extends Controller
     }
 
     /**
+     * The `file_mtime` the launcher sent, as a timestamp, or null.
+     *
+     * Clamped to now: a clock running ahead would otherwise write a date in the
+     * future, and a future date passes every "was this made after the ballot
+     * opened" check there is.
+     */
+    private static function clientMtime(Request $request): ?Carbon
+    {
+        $seconds = $request->input('file_mtime');
+
+        if (! $seconds) {
+            return null;
+        }
+
+        $at = Carbon::createFromTimestamp((int) $seconds);
+
+        return $at->isFuture() ? now() : $at;
+    }
+
+    /**
      * Single-file demo upload. The launcher calls /lookup-by-hash first, so
      * duplicates are the exception, not the rule — we still defend against
      * them because two launchers on different PCs could race on the same
@@ -83,6 +104,11 @@ class LauncherController extends Controller
         $request->validate([
             'demo' => 'required|file|max:512000', // 512 MB, same cap as the web form
             'hash' => 'nullable|string|size:32',
+            // Unix seconds: when the file was last written on the uploader's
+            // own disk. An HTTP upload carries no such thing on its own, and
+            // comps needs it to tell a run made this week from a demo that has
+            // been sitting on a hard drive since 2019.
+            'file_mtime' => 'nullable|integer|min:0',
         ]);
 
         $file = $request->file('demo');
@@ -122,6 +148,7 @@ class LauncherController extends Controller
             'file_hash' => $hash,
             'user_id' => $user->id,
             'status' => 'uploaded',
+            'client_file_mtime' => self::clientMtime($request),
         ]);
 
         $directory = storage_path("app/demos/temp/{$demo->id}");
@@ -166,8 +193,15 @@ class LauncherController extends Controller
         // entries differ, so the shared half is what gets cached.
         $shared = Cache::remember('comps:launcher_payload', 60, fn () => $payload->build(null));
 
-        if ($user && $shared['playing']) {
-            $shared['playing']['my_entries'] = $payload->build($user)['playing']['my_entries'] ?? [];
+        if ($user) {
+            $mine = $payload->build($user);
+
+            if ($shared['playing']) {
+                $shared['playing']['my_entries'] = $mine['playing']['my_entries'] ?? [];
+            }
+
+            $shared['my_notices'] = $mine['my_notices'];
+            $shared['entry_gate'] = $mine['entry_gate'];
         }
 
         return response()->json($shared);
@@ -201,10 +235,17 @@ class LauncherController extends Controller
             ], 403);
         }
 
+        // Entering needs a linked Q3DF.org profile, the same as on the site. A
+        // rule enforced on one route only is not a rule, it is a detour.
+        if ($reason = $intake->userRejectionReason($user)) {
+            return response()->json(['error' => $reason], 422);
+        }
+
         $data = $request->validate([
             'demo' => ['required', 'file', 'max:' . SubmissionIntake::MAX_KB],
             'round_id' => ['required', 'integer'],
             'auto' => ['sometimes', 'boolean'],
+            'file_mtime' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $round = CompRound::find($data['round_id']);
@@ -237,6 +278,7 @@ class LauncherController extends Controller
             $hash,
             isHighlight: false,
             autoEntered: (bool) ($data['auto'] ?? false),
+            clientMtime: self::clientMtime($request),
         );
 
         return response()->json([

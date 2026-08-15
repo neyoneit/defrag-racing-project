@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use App\Models\UploadedDemo;
 use App\Models\RenderedVideo;
+use App\Services\Comps\UploadGuard;
 use App\Services\DemoProcessorService;
 use App\Jobs\ProcessDemoJob;
 
@@ -600,6 +601,24 @@ class DemosController extends Controller
     /**
      * Upload demos with rate limiting and queue processing
      */
+    /**
+     * A client-supplied file date (unix seconds) as a timestamp, or null.
+     *
+     * Clamped to now: a clock running ahead would write a date in the future,
+     * and a future date passes every "was this made after the ballot opened"
+     * check there is.
+     */
+    private function clientMtime($seconds): ?\Illuminate\Support\Carbon
+    {
+        if (! $seconds) {
+            return null;
+        }
+
+        $at = \Illuminate\Support\Carbon::createFromTimestamp((int) $seconds);
+
+        return $at->isFuture() ? now() : $at;
+    }
+
     public function upload(Request $request)
     {
         $currentUser = Auth::user();
@@ -642,6 +661,13 @@ class DemosController extends Controller
             'demos' => 'required|array|min:1|max:100000', // Max 100,000 uploads per request (files or archives)
             // Allow larger files for archives; per-file max 512MB (512000 KB)
             'demos.*' => 'required|file|max:512000',
+            // One unix timestamp per file, same order: the date each file has
+            // on the uploader's own disk. An HTTP upload carries no such thing,
+            // and comps needs it to tell a run made this week from a demo that
+            // has been sitting in a folder for years. Optional - an older
+            // client, or any other caller, simply sends nothing.
+            'demo_mtimes' => 'sometimes|array',
+            'demo_mtimes.*' => 'nullable|integer|min:0',
         ]);
 
         $uploadedDemos = [];
@@ -664,10 +690,14 @@ class DemosController extends Controller
 
         // Phase 1: Separate archives from demo files, compute hashes
         $demoFiles = $request->file('demos');
+        // Aligned with $demoFiles by index - the browser appends both arrays in
+        // the same order. Missing entries are fine and mean "this client did
+        // not tell us", not "the file is new".
+        $demoMtimes = array_values((array) $request->input('demo_mtimes', []));
         $demoCandidate = []; // ['file' => UploadedFile, 'hash' => string, 'name' => string]
         $archiveTempDir = storage_path('app/temp_archives');
 
-        foreach ($demoFiles as $demoFile) {
+        foreach ($demoFiles as $index => $demoFile) {
             try {
                 $extension = strtolower($demoFile->getClientOriginalExtension());
                 $originalName = $demoFile->getClientOriginalName();
@@ -697,13 +727,13 @@ class DemosController extends Controller
                         \App\Jobs\ExtractAndQueueArchiveJob::dispatch($archivePath, $userId, $originalName);
                         $filesProcessed++;
                     } catch (\Exception $e) {
-                        $errors[] = $originalName . ': Failed to queue archive - ' . $e->getMessage();
+                        $errors[] = $this->uploadError($originalName, 'archive', __('The archive could not be opened: :message', ['message' => $e->getMessage()]));
                     }
                     continue;
                 }
 
                 if (!preg_match('/^dm_\d+$/', $extension)) {
-                    $errors[] = $originalName . ': Invalid demo file format';
+                    $errors[] = $this->uploadError($originalName, 'format', __('That is not a Quake 3 demo file.'));
                     continue;
                 }
 
@@ -713,9 +743,10 @@ class DemosController extends Controller
                     'file' => $demoFile,
                     'hash' => $fileHash,
                     'name' => $originalName,
+                    'mtime' => $this->clientMtime($demoMtimes[$index] ?? null),
                 ];
             } catch (\Exception $e) {
-                $errors[] = $demoFile->getClientOriginalName() . ': Upload failed - ' . $e->getMessage();
+                $errors[] = $this->uploadError($demoFile->getClientOriginalName(), 'failed', __('The upload failed: :message', ['message' => $e->getMessage()]));
             }
         }
 
@@ -766,7 +797,7 @@ class DemosController extends Controller
                             // it would delete somebody's entry without saying so
                             // (comp_submissions cascades off this row), and
                             // naming it would say what a hidden demo is called.
-                            $errors[] = $originalName . ': Duplicate file content (this demo is entered in a comps round that is still running)';
+                            $errors[] = $this->uploadError($originalName, 'duplicate', __('You have already uploaded this demo - it is entered in a comps round that is still being played.'));
                             continue;
                         }
                         if (in_array($existing->status, $reuploadableStatuses)) {
@@ -775,7 +806,7 @@ class DemosController extends Controller
                             $replacedThisDemo = true;
                         } else {
                             $demoName = $existing->processed_filename ?: $existing->original_filename;
-                            $errors[] = $originalName . ': Duplicate file content (already uploaded as: ' . $demoName . ')';
+                            $errors[] = $this->uploadError($originalName, 'duplicate', __('This demo is already on the site as :name.', ['name' => $demoName]));
                             continue;
                         }
                     }
@@ -787,7 +818,7 @@ class DemosController extends Controller
                             // Same reason as the hash branch above: this row is
                             // carrying a live comps entry, so it does not get
                             // cleaned up and replaced.
-                            $errors[] = $originalName . ': Filename already used by your comps entry in a round that is still running';
+                            $errors[] = $this->uploadError($originalName, 'duplicate_name', __('You already have a demo with this filename, entered in a comps round that is still being played.'));
                             continue;
                         }
                         if (in_array($existing->status, $reuploadableStatuses)) {
@@ -795,7 +826,7 @@ class DemosController extends Controller
                             $existingByName->forget($originalName);
                             $replacedThisDemo = true;
                         } else {
-                            $errors[] = $originalName . ': Filename already uploaded by you';
+                            $errors[] = $this->uploadError($originalName, 'duplicate_name', __('You have already uploaded a demo with this filename.'));
                             continue;
                         }
                     }
@@ -811,10 +842,11 @@ class DemosController extends Controller
                             'file_hash' => $fileHash,
                             'user_id' => $userId,
                             'status' => 'uploaded',
+                            'client_file_mtime' => $candidate['mtime'] ?? null,
                         ]);
                     } catch (\Illuminate\Database\QueryException $qe) {
                         if (str_contains($qe->getMessage(), 'Duplicate entry')) {
-                            $errors[] = $originalName . ': Duplicate file content (same hash in this batch)';
+                            $errors[] = $this->uploadError($originalName, 'duplicate', __('The same file is in this upload twice.'));
                             continue;
                         }
                         throw $qe;
@@ -830,7 +862,7 @@ class DemosController extends Controller
                     $queuedDemos[] = $demo;
                     $filesProcessed++;
                 } catch (\Exception $e) {
-                    $errors[] = $candidate['name'] . ': Upload failed - ' . $e->getMessage();
+                    $errors[] = $this->uploadError($candidate['name'], 'failed', __('The upload failed: :message', ['message' => $e->getMessage()]));
                 }
             }
         }
@@ -842,7 +874,10 @@ class DemosController extends Controller
         Cache::put($rateLimitKey, $currentUploads + $filesProcessed, now()->addSeconds($rateLimitTtl));
 
         // Count error types for summary
-        $duplicateCount = count(array_filter($errors, fn($e) => str_contains($e, 'Duplicate') || str_contains($e, 'already uploaded')));
+        $duplicateCount = count(array_filter(
+            $errors,
+            fn ($e) => in_array($e['code'], ['duplicate', 'duplicate_name'], true)
+        ));
         $otherErrorCount = count($errors) - $duplicateCount;
 
         Log::info("Demo upload batch completed", [
@@ -1212,6 +1247,20 @@ class DemosController extends Controller
     /**
      * Get processing status for user's demos (polling endpoint)
      */
+    /**
+     * One failed file, as the uploader is told about it.
+     *
+     * Three separate things rather than one sentence: the filename, a code,
+     * and a translated message. The code is what the counting and the grouping
+     * use - they matched on English substrings before, so the day these
+     * sentences were translated was the day "Duplicates" stopped counting
+     * anything and every error landed under "Other".
+     */
+    private function uploadError(string $file, string $code, string $message): array
+    {
+        return ['file' => $file, 'code' => $code, 'message' => $message];
+    }
+
     public function status(Request $request)
     {
         $demoIds = $request->get('demo_ids');
@@ -1284,6 +1333,12 @@ class DemosController extends Controller
             'processing_demos' => $processingDemos,
             'completed_demos' => $completedDemos,
             'queue_stats' => $queueStats,
+            // Demos of theirs comps is holding. They are missing from
+            // everything above by design - the global scope hides a run on a
+            // map being played - so without this somebody uploading this
+            // week's map watches their demo leave the processing list and
+            // never arrive anywhere. It reads as an upload that failed.
+            'comps_notices' => app(UploadGuard::class)->noticesFor($userId, 20),
             'timestamp' => now()->toISOString(),
         ]);
     }
