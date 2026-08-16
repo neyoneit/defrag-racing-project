@@ -125,6 +125,7 @@ class CompsApiPayload
             'comp_number' => (int) $round->comp->number,
             'category' => $round->category,
             'weapon' => $round->weapon,
+            'starts_at' => $round->starts_at?->toIso8601String(),
             'ends_at' => $round->ends_at?->toIso8601String(),
             'prize_eur' => $this->funding->forRound($round),
             'maps' => $round->maps->mapWithKeys(fn ($m) => [$m->physics => $m->map?->name])->all(),
@@ -176,11 +177,15 @@ class CompsApiPayload
     }
 
     /**
-     * The open ballot, as names and nothing else.
+     * The next round: the ballot while it is open, and what came out of it
+     * once it is not.
      *
      * No preview videos and no vote counts: the launcher cannot play the
      * previews, and voting happens on the site, so a ballot here is a heads-up
-     * about what next week might be - not a voting booth.
+     * about what next week might be - not a voting booth. But once voting has
+     * closed, "closed" on its own is the least useful thing this could say, so
+     * the decided map goes out with it, along with when the week starts and
+     * what it pays. That is what somebody looking at this is asking.
      */
     private function voting(CompRound $round): array
     {
@@ -188,8 +193,21 @@ class CompsApiPayload
             'round_id' => $round->id,
             'comp_number' => (int) $round->comp->number,
             'category' => $round->category,
+            'weapon' => $round->weapon,
             'closes_at' => $round->voting_closes_at?->toIso8601String(),
+            'starts_at' => $round->starts_at?->toIso8601String(),
+            'ends_at' => $round->ends_at?->toIso8601String(),
             'is_open' => $round->isVoting() && $round->voting_closes_at?->isFuture(),
+            // What won, per physics, and whether it won by the count or by
+            // somebody spending a wildcard on it. Empty while the ballot is
+            // open - a map decided early by a wildcard is not announced before
+            // the vote it would pre-empt.
+            'decided' => $round->isVoting()
+                ? []
+                : $round->maps->mapWithKeys(fn ($m) => [$m->physics => [
+                    'map' => $m->map?->name,
+                    'decided_by' => $m->decided_by,
+                ]])->all(),
             // What next week pays, next to the maps it might be played on.
             // The reason to go and vote is usually that the week is worth
             // something, and the launcher is where somebody is standing when
