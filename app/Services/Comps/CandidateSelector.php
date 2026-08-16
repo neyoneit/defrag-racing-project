@@ -19,17 +19,25 @@ use Illuminate\Support\Facades\DB;
 class CandidateSelector
 {
     /**
-     * Weekly runs one map a week, so the three categories take turns. Spread
-     * rather than blocked - `strafe, strafe, strafe, weapon, combo` keeps the
-     * same 3:1:1 ratio but would hand out three strafe weeks in a row, and
-     * weapon and combo would then not appear for a month at a time.
+     * Weekly runs one map a week, so the categories take turns over a
+     * four-week cycle: half the weeks strafe, a quarter weapon, a quarter
+     * combo.
+     *
+     * That is not a preference, it is what defrag is. Of the maps that can be
+     * drawn at all, 49% are strafe, 27% combo and 24% weapon (7 340, 4 009 and
+     * 3 613 as of August 2026), so 50/25/25 hands each category the share of
+     * the weeks its share of the library already earns - nobody has to argue
+     * about whose kind of map is being favoured. The old five-week cycle gave
+     * strafe 60%, which was a third more than it has coming.
+     *
+     * Spread rather than blocked, so strafe lands every other week and neither
+     * of the other two disappears for a month.
      */
     public const WEEKLY_CYCLE = [
         MapClassifier::STRAFE,
         MapClassifier::WEAPON,
         MapClassifier::STRAFE,
         MapClassifier::COMBO,
-        MapClassifier::STRAFE,
     ];
 
     /**
@@ -262,16 +270,58 @@ class CandidateSelector
     }
 
     /**
-     * Which gun a weapon round runs. Drawn evenly across the five rather than
-     * weighted by how many maps each has, so lightning gets its turn: weighted
-     * by supply it would essentially never come up against rocket's 1 900 maps.
-     * Evenly, a weapon round lands on lightning about once in five, a weapon
-     * round comes about once in five weeks, and there are 32 lightning maps -
-     * so they last decades.
+     * Which gun a weapon round runs, weighted by the SQUARE ROOT of how many
+     * maps that gun still has left.
+     *
+     * The two obvious answers are both wrong. Drawn evenly, lightning comes up
+     * as often as rocket - and there are 32 lightning maps against rocket's
+     * 1 987, so a rocket map is a drop in the ocean while the lightning pool
+     * turns over in a few years and the same handful keeps reappearing on the
+     * ballot. Drawn in proportion to supply, lightning's 0.9% share means one
+     * lightning week per decade, which is the same as never, and "weapon week"
+     * quietly becomes "rocket week" five times in six.
+     *
+     * The square root sits between the two: it follows supply without letting
+     * it run away. Rocket 38%, plasma 29%, bfg 14%, grenade 12%, lightning 5%
+     * on today's numbers - so a big pool does get more weeks, and a small one
+     * still gets its turn about once every year and a half.
+     *
+     * Counted from what is still drawable, not from the whole library, so the
+     * weights follow the pools down as maps are played and never point at a
+     * gun that has run out.
      */
     public function drawWeapon(): string
     {
-        return MapClassifier::COUNTED[array_rand(MapClassifier::COUNTED)];
+        $weights = [];
+
+        foreach (MapClassifier::COUNTED as $gun) {
+            $count = count($this->eligible(MapClassifier::WEAPON, $gun));
+
+            if ($count > 0) {
+                // Scaled to an integer so the draw is a plain random pick out
+                // of a range rather than float comparisons.
+                $weights[$gun] = (int) round(sqrt($count) * 1000);
+            }
+        }
+
+        if ($weights === []) {
+            // Nothing left anywhere, which cannot happen with thousands of
+            // maps in play - but the caller still needs a gun back, and the
+            // draw that follows will simply come up short.
+            return MapClassifier::COUNTED[array_rand(MapClassifier::COUNTED)];
+        }
+
+        $roll = random_int(1, array_sum($weights));
+
+        foreach ($weights as $gun => $weight) {
+            $roll -= $weight;
+
+            if ($roll <= 0) {
+                return $gun;
+            }
+        }
+
+        return array_key_last($weights);
     }
 
     /**
