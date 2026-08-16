@@ -4211,5 +4211,8 @@
     "What gets played": "Det som spelas",
     "Add to favorites": "Lägg till i favoriter",
     "Remove from favorites": "Ta bort från favoriter",
-    "Click the star on a server to keep it at the top of this page.": "Klicka på stjärnan vid en server, så stannar den högst upp på sidan."
+    "Click the star on a server to keep it at the top of this page.": "Klicka på stjärnan vid en server, så stannar den högst upp på sidan.",
+    "Weekly comps": "Veckans comps",
+    "Vote now ->": "Rösta nu ->",
+    "Most watched player wins": "Spelaren med flest tittartimmar vinner"
 }
