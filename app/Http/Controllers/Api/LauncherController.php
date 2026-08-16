@@ -17,6 +17,7 @@ use App\Services\ServerListService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -50,12 +51,37 @@ class LauncherController extends Controller
         // leave this method, so seeing the row gives nothing else away.
         $demo = UploadedDemo::withUnreleasedComps()
             ->where('file_hash', strtolower($data['hash']))
-            ->first(['id']);
+            ->first(['id', 'file_path', 'record_id', 'comps_hidden_until']);
+
+        // A row whose file never arrived is not a backup, and answering "yes"
+        // for it is how a demo gets lost for good: the launcher writes the
+        // file off as already backed up and never offers it again.
+        if ($demo && self::isAbandoned($demo)) {
+            $demo = null;
+        }
 
         return response()->json([
             'exists' => $demo !== null,
             'demo_id' => $demo?->id,
         ]);
+    }
+
+    /**
+     * A row that claims a hash but holds no file.
+     *
+     * It happens when an upload dies between the INSERT and the file landing
+     * on disk - the write below is now one transaction, but rows from before
+     * that are still in the table (2087 of them from March 2026), and
+     * file_hash is unique, so each one blocks its demo from ever being sent
+     * again. Nothing is lost by letting the file back in: there are no bytes
+     * behind these rows on any disk, and one that carries a record or a comps
+     * entry is left alone regardless.
+     */
+    private static function isAbandoned(UploadedDemo $demo): bool
+    {
+        return $demo->file_path === ''
+            && $demo->record_id === null
+            && ! $demo->isHeldForComps();
     }
 
     /**
@@ -86,10 +112,13 @@ class LauncherController extends Controller
      *
      * Expected multipart body:
      *   demo     (file, .dm_68/.dm_69 etc.)
-     *   hash     (optional md5; if omitted we compute it server-side)
+     *   hash     (optional md5 the launcher already computed; the stored hash
+     *             is always taken from the bytes that arrived, and this one is
+     *             only compared against it for the log)
      *
      * Response 200: { "demo_id": int, "status": "uploaded" }
      * Response 409: { "error": "duplicate", "demo_id": int }
+     * Response 500: { "error": <sentence> }  - nothing was written, send again
      */
     public function uploadDemo(Request $request)
     {
@@ -121,7 +150,24 @@ class LauncherController extends Controller
             ], 422);
         }
 
-        $hash = strtolower($request->input('hash') ?: md5_file($file->getPathname()));
+        // The hash is computed from the bytes that arrived, not taken from the
+        // launcher's word for them. It is the identity of the file everywhere
+        // on the site - the duplicate check, the render request, the match to a
+        // record - and a stored hash that is not the hash of the stored file is
+        // a row that lies quietly for as long as nobody hashes it again. The
+        // launcher's claim is still read, only to say so in the log when the
+        // two disagree.
+        $claimed = strtolower((string) $request->input('hash'));
+        $hash = strtolower(md5_file($file->getPathname()));
+
+        if ($claimed !== '' && $claimed !== $hash) {
+            Log::warning('Launcher upload hash mismatch', [
+                'user_id' => $user->id,
+                'claimed' => $claimed,
+                'actual' => $hash,
+                'filename' => $originalName,
+            ]);
+        }
 
         // Short-circuit: if the hash is already in the DB, treat as duplicate.
         // Returning 409 so the launcher can skip + mark local demo as "already backed up".
@@ -132,8 +178,14 @@ class LauncherController extends Controller
         // after we had already decided to publish the user's own comps run.
         $existing = UploadedDemo::withUnreleasedComps()
             ->where('file_hash', $hash)
-            ->first(['id', 'status']);
-        if ($existing) {
+            ->first();
+
+        // An abandoned row is taken over rather than replaced: file_hash is
+        // unique, so a second row for the same demo is impossible, and the id
+        // is what anything already pointing at it would be pointing at.
+        $abandoned = $existing !== null && self::isAbandoned($existing);
+
+        if ($existing && ! $abandoned) {
             return response()->json([
                 'error' => 'duplicate',
                 'demo_id' => $existing->id,
@@ -141,23 +193,56 @@ class LauncherController extends Controller
             ], 409);
         }
 
-        $demo = UploadedDemo::create([
-            'original_filename' => $originalName,
-            'file_path' => '',
-            'file_size' => $file->getSize(),
-            'file_hash' => $hash,
-            'user_id' => $user->id,
-            'status' => 'uploaded',
-            'client_file_mtime' => self::clientMtime($request),
-        ]);
+        // The row and the file land together or not at all. Written the other
+        // way round - row first, file after - a failure in between (a full
+        // disk, a killed worker) left a hash in the table with nothing behind
+        // it, and because that hash then answered "already backed up", the
+        // demo was never offered again.
+        try {
+            $demo = DB::transaction(function () use ($existing, $abandoned, $file, $originalName, $hash, $user, $request) {
+                $fields = [
+                    'original_filename' => $originalName,
+                    'file_path' => '',
+                    'file_size' => $file->getSize(),
+                    'file_hash' => $hash,
+                    'user_id' => $user->id,
+                    'status' => 'uploaded',
+                    'client_file_mtime' => self::clientMtime($request),
+                ];
 
-        $directory = storage_path("app/demos/temp/{$demo->id}");
-        if (! is_dir($directory)) {
-            mkdir($directory, 0755, true);
+                if ($abandoned) {
+                    // Whatever the old attempt failed at is not this file's
+                    // history, so the note explaining it goes too.
+                    $existing->update($fields + ['processing_output' => null, 'validity' => null]);
+                    $demo = $existing;
+                } else {
+                    $demo = UploadedDemo::create($fields);
+                }
+
+                $directory = storage_path("app/demos/temp/{$demo->id}");
+                if (! is_dir($directory)) {
+                    mkdir($directory, 0755, true);
+                }
+                $file->move($directory, $originalName);
+                $demo->update(['file_path' => "demos/temp/{$demo->id}/{$originalName}"]);
+
+                return $demo;
+            });
+        } catch (\Throwable $e) {
+            Log::error('Launcher demo upload failed', [
+                'user_id' => $user->id,
+                'hash' => $hash,
+                'filename' => $originalName,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'error' => 'The upload could not be stored. Nothing was saved, so the launcher can send it again.',
+            ], 500);
         }
-        $file->move($directory, $originalName);
-        $demo->update(['file_path' => "demos/temp/{$demo->id}/{$originalName}"]);
 
+        // After the commit, never inside it: a worker fast enough to pick the
+        // job up mid-transaction would look for a row that is not there yet.
         ProcessDemoJob::dispatch($demo);
 
         Log::info('Launcher demo upload', [

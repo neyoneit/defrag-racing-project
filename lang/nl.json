@@ -4208,5 +4208,8 @@
     "Final votes": "Eindstand van de stemming",
     "Up next: :comp": "Hierna: :comp",
     "Voting is over. These are the maps, and the round starts when the countdown runs out.": "De stemming is voorbij. Dit zijn de maps, en de ronde begint als de aftelklok afloopt.",
-    "What gets played": "Wat er gespeeld wordt"
+    "What gets played": "Wat er gespeeld wordt",
+    "Add to favorites": "Aan favorieten toevoegen",
+    "Remove from favorites": "Uit favorieten verwijderen",
+    "Click the star on a server to keep it at the top of this page.": "Klik op de ster bij een server, dan blijft hij bovenaan deze pagina."
 }

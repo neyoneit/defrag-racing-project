@@ -4208,5 +4208,8 @@
     "Final votes": "Slutgiltiga röster",
     "Up next: :comp": "Härnäst: :comp",
     "Voting is over. These are the maps, and the round starts when the countdown runs out.": "Omröstningen är över. Det här är banorna, och rundan startar när nedräkningen tar slut.",
-    "What gets played": "Det som spelas"
+    "What gets played": "Det som spelas",
+    "Add to favorites": "Lägg till i favoriter",
+    "Remove from favorites": "Ta bort från favoriter",
+    "Click the star on a server to keep it at the top of this page.": "Klicka på stjärnan vid en server, så stannar den högst upp på sidan."
 }

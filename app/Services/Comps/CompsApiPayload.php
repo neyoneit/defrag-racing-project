@@ -100,6 +100,23 @@ class CompsApiPayload
         ];
     }
 
+    /**
+     * A map as something to look at rather than a string to read: the name,
+     * who made it, and its picture.
+     *
+     * The thumbnail goes out exactly as it is stored - a `/storage`-relative
+     * path or an absolute URL - which is the same thing the server browser
+     * already sends, so the launcher has one rule for both.
+     */
+    private function mapCard(?\App\Models\Map $map): array
+    {
+        return [
+            'map' => $map?->name,
+            'author' => $map?->author ?: null,
+            'thumbnail' => $map?->thumbnail ?: null,
+        ];
+    }
+
     private function round(string $status): ?CompRound
     {
         return CompRound::where('status', $status)
@@ -125,9 +142,13 @@ class CompsApiPayload
             'comp_number' => (int) $round->comp->number,
             'category' => $round->category,
             'weapon' => $round->weapon,
+            'starts_at' => $round->starts_at?->toIso8601String(),
             'ends_at' => $round->ends_at?->toIso8601String(),
             'prize_eur' => $this->funding->forRound($round),
             'maps' => $round->maps->mapWithKeys(fn ($m) => [$m->physics => $m->map?->name])->all(),
+            // The same two maps with their author and picture. Separate from
+            // `maps` above, which older launchers read as a plain name.
+            'map_cards' => $round->maps->mapWithKeys(fn ($m) => [$m->physics => $this->mapCard($m->map)])->all(),
             // A count, never a list, and never a time. It answers "is anyone
             // else in this" without answering "what do I have to beat".
             'entrants' => $this->entrantCounts($round),
@@ -176,28 +197,73 @@ class CompsApiPayload
     }
 
     /**
-     * The open ballot, as names and nothing else.
+     * The next round: the ballot while it is open, and what came out of it
+     * once it is not.
      *
      * No preview videos and no vote counts: the launcher cannot play the
      * previews, and voting happens on the site, so a ballot here is a heads-up
-     * about what next week might be - not a voting booth.
+     * about what next week might be - not a voting booth. But once voting has
+     * closed, "closed" on its own is the least useful thing this could say, so
+     * the decided map goes out with it, along with when the week starts and
+     * what it pays. That is what somebody looking at this is asking.
      */
     private function voting(CompRound $round): array
     {
+        // Fetched once: the ballot itself is built from it, and so is the vote
+        // count next to whichever map won.
+        $candidates = $round->candidates()->with('map:id,name,author,thumbnail')->get();
+
         return [
             'round_id' => $round->id,
             'comp_number' => (int) $round->comp->number,
             'category' => $round->category,
+            'weapon' => $round->weapon,
             'closes_at' => $round->voting_closes_at?->toIso8601String(),
+            'starts_at' => $round->starts_at?->toIso8601String(),
+            'ends_at' => $round->ends_at?->toIso8601String(),
             'is_open' => $round->isVoting() && $round->voting_closes_at?->isFuture(),
+            // What won, per physics, and whether it won by the count or by
+            // somebody spending a wildcard on it. Empty while the ballot is
+            // open - a map decided early by a wildcard is not announced before
+            // the vote it would pre-empt.
+            //
+            // With the map's author and picture, because "vq3: sprint" is a
+            // name, and what somebody wants to know about next week is which
+            // map that is.
+            'decided' => $round->isVoting()
+                ? []
+                : $round->maps->mapWithKeys(fn ($m) => [$m->physics => [
+                    'map' => $m->map?->name,
+                    'decided_by' => $m->decided_by,
+                    // How many votes it won that physics with. Null for a
+                    // wildcard, which is not a map anybody voted for.
+                    'votes' => $m->decided_by === 'wildcard'
+                        ? null
+                        : $candidates->firstWhere('map_id', $m->map_id)?->{"votes_{$m->physics}"},
+                ] + $this->mapCard($m->map)])->all(),
             // What next week pays, next to the maps it might be played on.
             // The reason to go and vote is usually that the week is worth
             // something, and the launcher is where somebody is standing when
             // they decide whether to bother.
             'prize_eur' => $this->funding->forRound($round),
-            'candidates' => $round->candidates()->with('map:id,name')->get()
-                ->map(fn ($c) => $c->map?->name)
-                ->filter()
+            // Names only, kept for launchers built before `candidate_maps`
+            // existed - they render this list directly, and handing them
+            // objects would print [object Object] on somebody's screen.
+            'candidates' => $candidates->map(fn ($c) => $c->map?->name)->filter()->values()->all(),
+            // The same ballot with everything worth seeing on it. Vote counts
+            // included: they are on the site's own ballot while it runs and
+            // stay there as the final count afterwards, so there is nothing
+            // here the launcher would be giving away.
+            'candidate_maps' => $candidates
+                ->filter(fn ($c) => $c->map !== null)
+                ->map(fn ($c) => $this->mapCard($c->map) + [
+                    'votes' => ['cpm' => (int) $c->votes_cpm, 'vq3' => (int) $c->votes_vq3],
+                    // A map can be barred from one physics - it has been
+                    // played there recently, or it is not ranked for it - and
+                    // a vote count under a physics it cannot win reads as a
+                    // race it is losing.
+                    'blocked_physics' => $c->blocked_physics,
+                ])
                 ->values()
                 ->all(),
             'next_category' => $this->selector->categoryForWeekly((int) $round->comp->number + 1),
