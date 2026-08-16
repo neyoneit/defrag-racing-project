@@ -100,6 +100,23 @@ class CompsApiPayload
         ];
     }
 
+    /**
+     * A map as something to look at rather than a string to read: the name,
+     * who made it, and its picture.
+     *
+     * The thumbnail goes out exactly as it is stored - a `/storage`-relative
+     * path or an absolute URL - which is the same thing the server browser
+     * already sends, so the launcher has one rule for both.
+     */
+    private function mapCard(?\App\Models\Map $map): array
+    {
+        return [
+            'map' => $map?->name,
+            'author' => $map?->author ?: null,
+            'thumbnail' => $map?->thumbnail ?: null,
+        ];
+    }
+
     private function round(string $status): ?CompRound
     {
         return CompRound::where('status', $status)
@@ -129,6 +146,9 @@ class CompsApiPayload
             'ends_at' => $round->ends_at?->toIso8601String(),
             'prize_eur' => $this->funding->forRound($round),
             'maps' => $round->maps->mapWithKeys(fn ($m) => [$m->physics => $m->map?->name])->all(),
+            // The same two maps with their author and picture. Separate from
+            // `maps` above, which older launchers read as a plain name.
+            'map_cards' => $round->maps->mapWithKeys(fn ($m) => [$m->physics => $this->mapCard($m->map)])->all(),
             // A count, never a list, and never a time. It answers "is anyone
             // else in this" without answering "what do I have to beat".
             'entrants' => $this->entrantCounts($round),
@@ -202,20 +222,32 @@ class CompsApiPayload
             // somebody spending a wildcard on it. Empty while the ballot is
             // open - a map decided early by a wildcard is not announced before
             // the vote it would pre-empt.
+            //
+            // With the map's author and picture, because "vq3: sprint" is a
+            // name, and what somebody wants to know about next week is which
+            // map that is.
             'decided' => $round->isVoting()
                 ? []
                 : $round->maps->mapWithKeys(fn ($m) => [$m->physics => [
                     'map' => $m->map?->name,
                     'decided_by' => $m->decided_by,
-                ]])->all(),
+                ] + $this->mapCard($m->map)])->all(),
             // What next week pays, next to the maps it might be played on.
             // The reason to go and vote is usually that the week is worth
             // something, and the launcher is where somebody is standing when
             // they decide whether to bother.
             'prize_eur' => $this->funding->forRound($round),
+            // Names only, kept for launchers built before `candidate_maps`
+            // existed - they render this list directly, and handing them
+            // objects would print [object Object] on somebody's screen.
             'candidates' => $round->candidates()->with('map:id,name')->get()
                 ->map(fn ($c) => $c->map?->name)
                 ->filter()
+                ->values()
+                ->all(),
+            'candidate_maps' => $round->candidates()->with('map:id,name,author,thumbnail')->get()
+                ->filter(fn ($c) => $c->map !== null)
+                ->map(fn ($c) => $this->mapCard($c->map))
                 ->values()
                 ->all(),
             'next_category' => $this->selector->categoryForWeekly((int) $round->comp->number + 1),
