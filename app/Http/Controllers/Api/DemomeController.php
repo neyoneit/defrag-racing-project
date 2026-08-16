@@ -1148,6 +1148,60 @@ class DemomeController extends Controller
     }
 
     /**
+     * Every row whose rendered mp4 could still be sitting on the demome PC.
+     *
+     * The mp4 is only deleted after an upload AND YouTube-side processing both
+     * confirm, so anything that failed on either half leaves its file behind -
+     * and nothing on this side knows the file is there. Only the bot can see
+     * the disk, and it derives the mp4 name from `demo_filename`, so the match
+     * has to happen there: this endpoint just hands over the rows cheaply and
+     * the bot keeps the ones it can find a file for.
+     *
+     * Both halves are needed. A `failed` row means the video never landed and
+     * the file is worth re-uploading; a `completed` row whose upload timed out
+     * waiting for YouTube means the video IS up and the file is pure waste.
+     */
+    public function localFileCandidates(Request $request)
+    {
+        $since = $request->input('since');
+        $sinceDate = $since ? Carbon::parse($since) : now()->subDays(365);
+        // Newest first, so a collection that hits the ceiling loses its oldest
+        // rows - the ones least likely to still have a file - and says so
+        // instead of quietly answering "nothing here" for the rest.
+        $limit = 20000;
+
+        $videos = RenderedVideo::query()
+            ->toBase()
+            ->whereNotNull('demo_filename')
+            ->where('demo_filename', '!=', '')
+            ->whereIn('status', ['failed', 'upload_pending', 'completed'])
+            // Failed rows are few and a file can outlive the window it was
+            // rendered in, so they come whatever their age. Completed rows are
+            // ten thousand and only the recent ones can still have a file.
+            ->where(fn ($query) => $query
+                ->whereIn('status', ['failed', 'upload_pending'])
+                ->orWhere('updated_at', '>=', $sinceDate))
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get(['id', 'demo_filename', 'status', 'source', 'youtube_video_id', 'updated_at'])
+            ->map(fn ($item) => [
+                'id' => $item->id,
+                'demo_filename' => $item->demo_filename,
+                'status' => $item->status,
+                'source' => $item->source,
+                'youtube_video_id' => $item->youtube_video_id,
+                'updated_at' => $item->updated_at,
+            ]);
+
+        return response()->json([
+            'since' => $sinceDate->toIso8601String(),
+            'count' => $videos->count(),
+            'capped' => $videos->count() >= $limit,
+            'videos' => $videos,
+        ]);
+    }
+
+    /**
      * Get video metadata (title, description, tags) for a specific video.
      * Used by bot to get correct metadata before upload.
      */
