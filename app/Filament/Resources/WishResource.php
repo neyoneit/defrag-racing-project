@@ -89,6 +89,13 @@ class WishResource extends Resource
             ->modifyQueryUsing(fn ($query) => $query
                 ->orderByRaw('removal_requested_at is not null desc')
                 ->orderByRaw('approved_at is null desc'))
+            // A narrow window used to squeeze the wish itself into two words
+            // per line while eight one-word columns held their ground. The
+            // wish column takes the slack now (nothing else asks for it) and
+            // carries a width it cannot be pushed below, so a narrow window
+            // scrolls sideways - which is readable - instead of wrapping the
+            // one thing on the row worth reading into a stack of fragments.
+            // The dates, names and badges are told not to wrap at all.
             ->columns([
                 Tables\Columns\IconColumn::make('approved_at')
                     ->label('Live')
@@ -109,6 +116,7 @@ class WishResource extends Resource
 
                 Tables\Columns\TextColumn::make('project')
                     ->badge()
+                    ->extraCellAttributes(['style' => 'white-space: nowrap'])
                     ->color('info')
                     ->formatStateUsing(fn (?string $state) => Wish::PROJECTS[$state] ?? $state)
                     ->toggleable(),
@@ -116,6 +124,12 @@ class WishResource extends Resource
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()
                     ->wrap()
+                    // The one column that may take the slack, and the one that
+                    // must not be squeezed: a wish read two words at a time is
+                    // a wish nobody can decide on.
+                    ->grow()
+                    ->extraCellAttributes(['style' => 'min-width: 24rem; max-width: 42rem'])
+                    ->extraHeaderAttributes(['style' => 'min-width: 24rem'])
                     // nl2br because the preview is HTML, and a wish written as
                     // three short lines otherwise arrives here as one run-on
                     // sentence - which is how it reads when deciding on it.
@@ -151,6 +165,7 @@ class WishResource extends Resource
 
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Author')
+                    ->extraCellAttributes(['style' => 'white-space: nowrap'])
                     // Raw, the column printed the colour codes themselves:
                     // ^3[^nS^mH^3]^7neyo^4. instead of a nick.
                     ->formatStateUsing(fn (?string $state) => UserResource::q3tohtml($state ?? ''))
@@ -178,6 +193,7 @@ class WishResource extends Resource
                 // was the widest thing in the row after the wish itself.
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Age')
+                    ->extraCellAttributes(['style' => 'white-space: nowrap'])
                     ->since()
                     ->tooltip(fn (Wish $record) => $record->created_at?->toDayDateTimeString())
                     ->alignEnd()
