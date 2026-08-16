@@ -6,6 +6,7 @@ import OnlinePlayer from '@/Components/OnlinePlayer.vue';
 import CopyButton from '@/Components/Basic/CopyButton.vue';
 import LauncherBanner from '@/Components/LauncherBanner.vue';
 import CheatsBanner from '@/Components/CheatsBanner.vue';
+import PromoRail from '@/Components/PromoRail.vue';
 import FavoriteStar from '@/Components/FavoriteStar.vue';
 import { t } from '@/utils/i18n';
 import { getWeaponIcon, getWeaponName, getItemIcon, getItemName, getFunctionIcon, getFunctionName } from '@/utils/gameItems';
@@ -355,6 +356,12 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
 <template>
     <div class="">
         <Head :title="$t('Servers')" />
+
+        <!-- Whatever is running for money right now. This page is where people
+             are while deciding what to play, so it is the one place a weekly
+             map or a watch contest reaches somebody who was not already going
+             to look for it. -->
+        <PromoRail />
 
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">

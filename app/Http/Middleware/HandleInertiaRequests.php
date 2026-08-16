@@ -173,7 +173,55 @@ class HandleInertiaRequests extends Middleware
                     'ends_at' => $contest->ends_at?->toIso8601String(),
                 ] : null;
             }),
+            'compsBanner'               =>      Cache::remember('comps:banner', 60, fn () => $this->compsBanner()),
         ]);
+    }
+
+    /**
+     * What the weekly is doing right now, small enough to ride along with every
+     * page: what is being played or voted on, and what it pays.
+     *
+     * There is money on the table every week and the servers page is where
+     * people actually are, so it has somewhere to say so. Cached with the
+     * contest for the same reason - this rides on every render and the answer
+     * changes twice a week.
+     */
+    private function compsBanner(): ?array
+    {
+        $round = $this->weeklyRound('active') ?? $this->weeklyRound('voting');
+
+        if (! $round) {
+            return null;
+        }
+
+        $eur = round(app(\App\Services\Comps\PrizeFunding::class)->forRound($round), 2);
+
+        return [
+            'round_id' => $round->id,
+            'number' => (int) ($round->comp?->number ?? 0),
+            'state' => $round->status,
+            'per_physics' => $eur,
+            // Both physics are paid, so the week is worth twice the per-physics
+            // figure - the same total the comps page leads with.
+            'total' => round($eur * count(\App\Services\Comps\BallotResolver::PHYSICS), 2),
+            // A round being played runs out; a ballot closes and the round it
+            // decides starts at that moment. Two different columns, one
+            // countdown on the card.
+            'until' => ($round->isVoting() ? $round->voting_closes_at : $round->ends_at)?->toIso8601String(),
+            'maps' => $round->isVoting()
+                ? []
+                : $round->maps->mapWithKeys(fn ($m) => [$m->physics => $m->map?->name])->filter()->all(),
+        ];
+    }
+
+    /** The one weekly round in the given state, if there is one. */
+    private function weeklyRound(string $status): ?\App\Models\CompRound
+    {
+        return \App\Models\CompRound::where('status', $status)
+            ->whereHas('comp', fn ($q) => $q->where('type', \App\Models\Comp::WEEKLY))
+            ->with(['comp:id,number', 'maps.map:id,name'])
+            ->orderBy('starts_at')
+            ->first();
     }
 
     private function getAvailableBadges($user): array
