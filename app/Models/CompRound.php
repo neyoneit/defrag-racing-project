@@ -94,9 +94,17 @@ class CompRound extends Model
         return $this->status === 'voting';
     }
 
+    /**
+     * `locked` counts as well as `active`: between the ballot closing and play
+     * starting the map is decided and public, and a run made in that day counts
+     * for the round the same way a run from the voting window does. Refusing it
+     * with "this round is closed" would be false - it has not started - and
+     * would only push the run onto the public site instead, which is the one
+     * thing the round cannot have.
+     */
     public function acceptsUploads(): bool
     {
-        return $this->status === 'active';
+        return in_array($this->status, ['locked', 'active'], true);
     }
 
     /**

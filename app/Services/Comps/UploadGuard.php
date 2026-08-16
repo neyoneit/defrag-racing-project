@@ -483,12 +483,20 @@ class UploadGuard
     }
 
     /**
-     * The round being played on this map, in any physics. Deliberately not
+     * The round this map is decided for, in any physics. Deliberately not
      * filtered by the demo's own physics - see the class docblock.
+     *
+     * `locked` as well as `active`: the ballot closes a day before play
+     * starts, and for that day the map is public knowledge with no round to
+     * guard it. Only `active` was asked for, so runs uploaded in that gap went
+     * straight onto the site, into the records and into the render queue -
+     * which is the route handed to everybody who has not played it yet. A run
+     * made then counts for the round exactly like one from the voting window,
+     * so it is held and entered the same way.
      */
     private function playedRoundFor(string $mapName): ?CompRound
     {
-        return CompRound::where('status', 'active')
+        return CompRound::whereIn('status', ['locked', 'active'])
             ->where('ends_at', '>', now())
             ->whereHas('comp', fn ($q) => $q->where('type', Comp::WEEKLY))
             ->whereHas('maps.map', fn ($q) => $q->whereRaw('LOWER(name) = ?', [mb_strtolower(trim($mapName))]))

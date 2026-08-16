@@ -674,6 +674,22 @@ class LauncherController extends Controller
             : UploadedDemo::where('file_hash', strtolower($data['file_hash']))->first();
 
         if (! $demo) {
+            // A demo comps is holding is hidden from this lookup by the global
+            // scope, and answering "upload it first" would send the launcher
+            // round the loop again. Say what is actually happening instead, and
+            // do not queue: a render publishes the run on YouTube, which is the
+            // one place a held run must not appear.
+            $held = UploadedDemo::withUnreleasedComps()
+                ->when(isset($data['demo_id']), fn ($q) => $q->whereKey($data['demo_id']))
+                ->when(! isset($data['demo_id']), fn ($q) => $q->where('file_hash', strtolower($data['file_hash'])))
+                ->first(['id', 'comps_hidden_until']);
+
+            if ($held) {
+                return response()->json([
+                    'error' => 'This run is on a map comps is using. It can be rendered once the round is over.',
+                ], 409);
+            }
+
             return response()->json([
                 'error' => 'Demo not found. Upload it first via /upload-demo.',
                 'needs_upload' => true,
