@@ -43,11 +43,26 @@ class DemomeController extends Controller
             ];
         };
 
+        // A demo comps is holding must never reach the render queue. Rendering
+        // publishes the run on YouTube, which is the same route into the open
+        // the hold exists to close - and it is worse than the site listing it,
+        // because a video outlives the round. Written as a NOT EXISTS rather
+        // than through the relation on purpose: `uploaded_demos` hides held
+        // rows by global scope, so a `whereHas` here would quietly mean the
+        // opposite of what it reads like.
+        $notHeldForComps = fn ($query) => $query->whereNotExists(fn ($sub) => $sub
+            ->selectRaw('1')
+            ->from('uploaded_demos')
+            ->whereColumn('uploaded_demos.id', 'rendered_videos.demo_id')
+            ->whereNotNull('uploaded_demos.comps_hidden_until')
+            ->where('uploaded_demos.comps_hidden_until', '>', now()));
+
         // Force-render queue: always served, ignores `paused`. Items land
         // here when admin clicks the Filament "Force render" action, which
         // sets priority=-1. Bot processes this list unconditionally.
         $forceRender = RenderedVideo::where('status', 'pending')
             ->where('priority', -1)
+            ->tap($notHeldForComps)
             ->orderBy('created_at', 'asc')
             ->limit(5)
             ->get()
@@ -62,6 +77,7 @@ class DemomeController extends Controller
         $items = ($paused
             ? RenderedVideo::where('status', 'pending')->where('priority', -1)
             : RenderedVideo::where('status', 'pending'))
+            ->tap($notHeldForComps)
             ->orderBy('priority', 'asc')
             ->orderBy('created_at', 'asc')
             ->limit(5)
