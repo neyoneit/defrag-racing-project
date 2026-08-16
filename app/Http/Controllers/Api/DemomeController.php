@@ -1183,13 +1183,21 @@ class DemomeController extends Controller
                 ->orWhere('updated_at', '>=', $sinceDate))
             ->orderByDesc('id')
             ->limit($limit)
-            ->get(['id', 'demo_filename', 'status', 'source', 'youtube_video_id', 'updated_at'])
+            ->get(['id', 'demo_filename', 'status', 'source', 'youtube_video_id', 'failure_reason', 'updated_at'])
             ->map(fn ($item) => [
                 'id' => $item->id,
                 'demo_filename' => $item->demo_filename,
                 'status' => $item->status,
                 'source' => $item->source,
                 'youtube_video_id' => $item->youtube_video_id,
+                // Carries the id of a video that WAS uploaded. A row fails with
+                // "YouTube processing failed for video X" when the status check
+                // timed out or transiently answered nothing, and those videos
+                // are routinely fine on the channel afterwards - so the file on
+                // the bot's disk is often waste rather than work to redo. The
+                // bot reads the id back out and asks YouTube before uploading
+                // tens of gigabytes a second time.
+                'failure_reason' => $item->failure_reason,
                 'updated_at' => $item->updated_at,
             ]);
 
