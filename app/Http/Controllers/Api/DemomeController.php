@@ -151,6 +151,11 @@ class DemomeController extends Controller
 
         $renderedVideo->update([
             'status' => 'completed',
+            // Whatever it failed with last time is no longer true, and a row
+            // reading "completed" while still carrying "no space left on
+            // device" sends whoever opens it looking for a problem that was
+            // fixed by the upload it is showing.
+            'failure_reason' => null,
             'youtube_url' => $validated['youtube_url'],
             'youtube_video_id' => $validated['youtube_video_id'],
             'render_duration_seconds' => $validated['render_duration_seconds'] ?? null,
