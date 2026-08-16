@@ -209,6 +209,10 @@ class CompsApiPayload
      */
     private function voting(CompRound $round): array
     {
+        // Fetched once: the ballot itself is built from it, and so is the vote
+        // count next to whichever map won.
+        $candidates = $round->candidates()->with('map:id,name,author,thumbnail')->get();
+
         return [
             'round_id' => $round->id,
             'comp_number' => (int) $round->comp->number,
@@ -231,6 +235,11 @@ class CompsApiPayload
                 : $round->maps->mapWithKeys(fn ($m) => [$m->physics => [
                     'map' => $m->map?->name,
                     'decided_by' => $m->decided_by,
+                    // How many votes it won that physics with. Null for a
+                    // wildcard, which is not a map anybody voted for.
+                    'votes' => $m->decided_by === 'wildcard'
+                        ? null
+                        : $candidates->firstWhere('map_id', $m->map_id)?->{"votes_{$m->physics}"},
                 ] + $this->mapCard($m->map)])->all(),
             // What next week pays, next to the maps it might be played on.
             // The reason to go and vote is usually that the week is worth
@@ -240,14 +249,21 @@ class CompsApiPayload
             // Names only, kept for launchers built before `candidate_maps`
             // existed - they render this list directly, and handing them
             // objects would print [object Object] on somebody's screen.
-            'candidates' => $round->candidates()->with('map:id,name')->get()
-                ->map(fn ($c) => $c->map?->name)
-                ->filter()
-                ->values()
-                ->all(),
-            'candidate_maps' => $round->candidates()->with('map:id,name,author,thumbnail')->get()
+            'candidates' => $candidates->map(fn ($c) => $c->map?->name)->filter()->values()->all(),
+            // The same ballot with everything worth seeing on it. Vote counts
+            // included: they are on the site's own ballot while it runs and
+            // stay there as the final count afterwards, so there is nothing
+            // here the launcher would be giving away.
+            'candidate_maps' => $candidates
                 ->filter(fn ($c) => $c->map !== null)
-                ->map(fn ($c) => $this->mapCard($c->map))
+                ->map(fn ($c) => $this->mapCard($c->map) + [
+                    'votes' => ['cpm' => (int) $c->votes_cpm, 'vq3' => (int) $c->votes_vq3],
+                    // A map can be barred from one physics - it has been
+                    // played there recently, or it is not ranked for it - and
+                    // a vote count under a physics it cannot win reads as a
+                    // race it is losing.
+                    'blocked_physics' => $c->blocked_physics,
+                ])
                 ->values()
                 ->all(),
             'next_category' => $this->selector->categoryForWeekly((int) $round->comp->number + 1),
