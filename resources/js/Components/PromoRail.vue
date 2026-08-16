@@ -20,19 +20,34 @@ const contest = computed(() => page.props.defragliveContest || null);
 const now = ref(Date.now());
 let timer = null;
 
+// The cross means "not now", not "never again". A round runs for the better
+// part of a week and a contest for a fortnight, so a permanent dismissal would
+// hide the prize for the whole thing over one click at the wrong moment - and
+// the money is the point. It holds for three days; a new round or contest
+// brings the card straight back anyway, because the key carries the id.
+const DISMISS_DAYS = 3;
+
 // Both start hidden and are let through on mount, so somebody who dismissed a
 // card does not watch it flash up and vanish on every page load.
 const dismissedComps = ref(true);
 const dismissedContest = ref(true);
 
 const compsKey = computed(() => comps.value ? `promo_comps_dismissed_${comps.value.round_id}` : null);
-// The same key the sitewide contest banner uses: dismissing this contest is one
-// decision, not one per place it happens to be shown.
-const contestKey = computed(() => contest.value ? `dl_contest_banner_dismissed_${contest.value.id}` : null);
+const contestKey = computed(() => contest.value ? `promo_contest_dismissed_${contest.value.id}` : null);
+
+// When it was dismissed, not that it was. Anything unreadable - including the
+// bare "1" the older sitewide banner wrote - simply counts as not dismissed.
+const isDismissed = (key) => {
+    if (!key) return false;
+
+    const at = Number(localStorage.getItem(key));
+
+    return at > 0 && Date.now() - at < DISMISS_DAYS * 86400000;
+};
 
 onMounted(() => {
-    dismissedComps.value = compsKey.value ? localStorage.getItem(compsKey.value) === '1' : false;
-    dismissedContest.value = contestKey.value ? localStorage.getItem(contestKey.value) === '1' : false;
+    dismissedComps.value = isDismissed(compsKey.value);
+    dismissedContest.value = isDismissed(contestKey.value);
 
     timer = setInterval(() => { now.value = Date.now(); }, 1000);
 });
@@ -40,14 +55,15 @@ onMounted(() => {
 onUnmounted(() => { if (timer) clearInterval(timer); });
 
 const dismiss = (which) => {
+    const key = which === 'comps' ? compsKey.value : contestKey.value;
+
     if (which === 'comps') {
         dismissedComps.value = true;
-        if (compsKey.value) localStorage.setItem(compsKey.value, '1');
-        return;
+    } else {
+        dismissedContest.value = true;
     }
 
-    dismissedContest.value = true;
-    if (contestKey.value) localStorage.setItem(contestKey.value, '1');
+    if (key) localStorage.setItem(key, String(Date.now()));
 };
 
 // One key with the whole "3d 7h" already in it. Splitting it per unit would
