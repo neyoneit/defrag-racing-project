@@ -103,7 +103,7 @@ class RawInfo:
     # ------------------------------------------------------------------
     def _build_game_info(self) -> GameInfo:
         client_cfg = split_config(self.rawConfig.get(const.Q3_DEMO_CFG_FIELD_CLIENT)) if self.rawConfig.get(const.Q3_DEMO_CFG_FIELD_CLIENT) else {}
-        game_cfg = split_config(self.rawConfig.get(const.Q3_DEMO_CFG_FIELD_GAME)) if self.rawConfig.get(const.Q3_DEMO_CFG_FIELD_GAME) else {}
+        game_cfg = self._split_config_game(self.rawConfig.get(const.Q3_DEMO_CFG_FIELD_GAME)) if self.rawConfig.get(const.Q3_DEMO_CFG_FIELD_GAME) else {}
         additional = self.consoleComandsParser.additionalInfos[-1].toDictionary() if self.consoleComandsParser.additionalInfos else {}
         parameters = Ext.JoinLowercased(client_cfg, game_cfg, additional)
         return GameInfo(parameters, self.client.isCpmInSnapshots)
@@ -147,6 +147,30 @@ class RawInfo:
             if prev.eventStartTime or prev.eventTimeReset:
                 return True
         return False
+
+    # ------------------------------------------------------------------
+    def _split_config_game(self, src: str) -> Dict[str, str]:
+        """The game config, with DeFRaG's own names for two cvars put back.
+
+        DeFRaG does not publish `sv_fps` and `com_maxfps` in the systeminfo -
+        it publishes the same two numbers under `defrag_svfps` and
+        `defrag_clfps`. DemoCleaner3 renames them on the way in
+        (RawInfo.cs split_config_game), and this port did not, so the two
+        validity rules that ask for them found nothing and passed everything.
+
+        They were not entirely dead: DeFRaG also sends the pair inside the
+        `TimerStopped` stats message, and that arrives later in the join, so it
+        still wins where it exists. But plenty of demos carry no TimerStopped
+        at all, and those had their framerate checked against nothing. Somebody
+        running offline at 333 fps went through clean.
+        """
+        split = ListMap(split_config(src))
+        Ext.replaceKeys(split, {
+            'defrag_clfps': 'com_maxfps',
+            'defrag_svfps': 'sv_fps',
+        })
+
+        return split.ToDictionary()
 
     # ------------------------------------------------------------------
     def _split_config_player(self, src: str) -> Dict[str, str]:
