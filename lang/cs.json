@@ -4218,5 +4218,11 @@
     "A comps entry. Hidden from the public until the round ends.": "Přihláška do comps. Veřejnost ji neuvidí, dokud kolo neskončí.",
     "Taken out of comps by its uploader. Hidden from the public until the round ends.": "Odhlášeno z comps tím, kdo demo nahrál. Veřejnost ho neuvidí, dokud kolo neskončí.",
     "comps hold": "zadrženo comps",
-    "withdrawn": "odhlášeno"
+    "withdrawn": "odhlášeno",
+    "This demo does not count in comps. :notes": "Tohle demo se v comps nepočítá. :notes",
+    "The finish was not confirmed inside the demo, so the time cannot be read from it.": "Dojezd není v demu potvrzený, takže z něj čas nejde přečíst.",
+    "The run was recorded with tool assistance.": "Běh byl nahraný s pomocí nástroje.",
+    "pmove_fixed was :actual. It has to be 1, or g_synchronousClients has to be 1 instead - one of the two has to hold the physics step steady, or the framerate decides how far you jump.": "pmove_fixed bylo :actual. Musí být 1, nebo místo toho musí být 1 v g_synchronousClients. Jedno z toho musí držet krok fyziky pevný, jinak o délce skoku rozhoduje framerate.",
+    ":cvar was :actual, and it has to be :expected.": ":cvar bylo :actual, a musí být :expected.",
+    ":cvar was :actual, which is not what comps expects.": ":cvar bylo :actual, což comps nečeká."
 }

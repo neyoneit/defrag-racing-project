@@ -166,6 +166,29 @@ class SubmissionValidator
     }
 
     /**
+     * What each noted cvar should have been.
+     *
+     * Mirrors the parser's own rules (DemoProcessor/bin/demo.py,
+     * `_check_validity`). Kept here so the refusal can say what the value
+     * should be rather than only that it was wrong - a person who is told
+     * "pmove_fixed" has to go and find out what pmove_fixed is supposed to be,
+     * and most will not.
+     */
+    private const EXPECTED = [
+        'sv_cheats' => '0',
+        'timescale' => '1',
+        'g_speed' => '320',
+        'g_gravity' => '800',
+        'handicap' => '100',
+        'g_knockback' => '1000',
+        'df_mp_interferenceoff' => '3',
+        'sv_fps' => '125',
+        'com_maxfps' => '125',
+        'pmove_msec' => '8',
+        'g_killWallbug' => '1',
+    ];
+
+    /**
      * The refusal a flagged demo carries, naming the cvars that were noted.
      *
      * The note itself is not a cheating verdict - `client_finish` only says the
@@ -179,11 +202,54 @@ class SubmissionValidator
      */
     public function validityReason(UploadedDemo $demo): string
     {
-        $flags = collect((array) $demo->validity)->keys()->implode(', ');
+        $notes = [];
 
-        return $flags === ''
-            ? __('This demo did not pass the validity check, so it does not count in comps.')
-            : __('This demo carries a validity note (:flags), so it does not count in comps.', ['flags' => $flags]);
+        foreach ((array) $demo->validity as $key => $value) {
+            $notes[] = $this->explainNote((string) $key, (string) $value);
+        }
+
+        if (! $notes) {
+            return __('This demo did not pass the validity check, so it does not count in comps.');
+        }
+
+        return __('This demo does not count in comps. :notes', ['notes' => implode(' ', $notes)]);
+    }
+
+    /**
+     * One noted cvar, in a sentence somebody can act on.
+     *
+     * Says the value that was in the demo and the value it should have been,
+     * because the whole point is that the person can go and fix their config.
+     * `pmove_fixed` gets a longer sentence than the rest: it is the only rule
+     * with two legal answers, and being told to set it to 1 while running the
+     * dfcomp ruleset - which deliberately keeps it at 0 - would be wrong.
+     */
+    private function explainNote(string $key, string $value): string
+    {
+        if ($key === 'client_finish') {
+            return __('The finish was not confirmed inside the demo, so the time cannot be read from it.');
+        }
+
+        if ($key === 'tool_assisted') {
+            return __('The run was recorded with tool assistance.');
+        }
+
+        if ($key === 'pmove_fixed') {
+            return __('pmove_fixed was :actual. It has to be 1, or g_synchronousClients has to be 1 instead - one of the two has to hold the physics step steady, or the framerate decides how far you jump.', ['actual' => $value]);
+        }
+
+        if (isset(self::EXPECTED[$key])) {
+            return __(':cvar was :actual, and it has to be :expected.', [
+                'cvar' => $key,
+                'actual' => $value,
+                'expected' => self::EXPECTED[$key],
+            ]);
+        }
+
+        return __(':cvar was :actual, which is not what comps expects.', [
+            'cvar' => $key,
+            'actual' => $value,
+        ]);
     }
 
     /**

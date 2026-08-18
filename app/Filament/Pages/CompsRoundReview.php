@@ -143,6 +143,10 @@ class CompsRoundReview extends Page
                     default => 'danger',
                 },
                 'reason' => $entry->invalid_reason,
+                // What the parser literally wrote down, for the hover. The
+                // sentence above explains it; this is the raw pair, which is
+                // what somebody comparing two demos actually wants to read.
+                'notes' => $this->rawNotes($demo),
                 'restorable' => false,
                 'entered' => true,
                 'auto' => (bool) $entry->auto_entered,
@@ -185,6 +189,7 @@ class CompsRoundReview extends Page
                     'other_physics' => 'A run on this map in the other physics. Public straight away.',
                     default => $guard->noticeText($kind),
                 },
+                'notes' => $this->rawNotes($demo),
                 'entered' => false,
                 'auto' => false,
                 'online' => ! $demo->is_offline,
@@ -326,6 +331,22 @@ class CompsRoundReview extends Page
             ->title('Back in the round.')
             ->body('Entry #' . $entry->id . ': ' . $entry->status . ($entry->invalid_reason ? ' - ' . $entry->invalid_reason : ''))
             ->send();
+    }
+
+    /** `pmove_fixed=0, com_maxfps=333`, or null when the demo is clean. */
+    private function rawNotes(?UploadedDemo $demo): ?string
+    {
+        $validity = (array) ($demo?->validity ?? []);
+
+        if (! $validity) {
+            return null;
+        }
+
+        return implode(', ', array_map(
+            fn ($key, $value) => $key . '=' . $value,
+            array_keys($validity),
+            $validity
+        ));
     }
 
     /**

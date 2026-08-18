@@ -79,7 +79,10 @@
                                     <td class="px-2 py-2">
                                         <div class="text-xs text-gray-700 dark:text-gray-300 break-all">{{ $row['filename'] }}</div>
                                         @if($row['reason'])
-                                            <div class="text-xs text-gray-500 mt-0.5">{{ $row['reason'] }}</div>
+                                            <div
+                                                class="text-xs text-gray-500 mt-0.5 @if($row['notes']) cursor-help @endif"
+                                                @if($row['notes']) title="The parser noted: {{ $row['notes'] }}" @endif
+                                            >{{ $row['reason'] }}</div>
                                         @endif
                                     </td>
 
