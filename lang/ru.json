@@ -4214,5 +4214,9 @@
     "Click the star on a server to keep it at the top of this page.": "Нажми на звёздочку у сервера, и он останется наверху этой страницы.",
     "Weekly comps": "Еженедельные comps",
     "Vote now ->": "Голосовать ->",
-    "Most watched player wins": "Самый просматриваемый игрок получает"
+    "Most watched player wins": "Самый просматриваемый игрок получает",
+    "A comps entry. Hidden from the public until the round ends.": "Заявка на comps. Скрыта от всех до конца раунда.",
+    "Taken out of comps by its uploader. Hidden from the public until the round ends.": "Снято с comps тем, кто его загрузил. Скрыто от всех до конца раунда.",
+    "comps hold": "удержано comps",
+    "withdrawn": "снято"
 }

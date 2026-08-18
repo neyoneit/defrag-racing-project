@@ -149,6 +149,18 @@ class UploadedDemo extends Model
         'download_count',
     ];
 
+    /**
+     * Serialised with every demo so a list can say why one of them is not
+     * where its owner expects it to be.
+     *
+     * Cheap - it reads two columns already on the row - and null for the
+     * overwhelming majority, which is the point: only a demo comps is holding
+     * has anything to explain.
+     */
+    protected $appends = [
+        'comps_hold',
+    ];
+
     protected $casts = [
         'file_size' => 'integer',
         'time_ms' => 'integer',
@@ -292,6 +304,31 @@ class UploadedDemo extends Model
     }
 
     /** True while this demo is a comps entry in a round still being played. */
+    /**
+     * Why this demo is missing from the public site: `held`, `withdrawn`, or
+     * null when it is not missing at all.
+     *
+     * Somebody who uploads a run of the map comps is playing gets it taken off
+     * the site until the round ends. That is correct and it is the whole point
+     * of the hold - but it was also invisible. The demo vanished from the
+     * uploader's own list with nothing said, so the only reading available was
+     * that the upload had failed. The file was never gone: download has let
+     * the owner and an admin through from the start. There was simply nothing
+     * left to click.
+     *
+     * `withdrawn` outranks `held` because it answers the better question. A
+     * person who took their own run out of comps wants to see that they did,
+     * not to be told the site is holding it.
+     */
+    public function getCompsHoldAttribute(): ?string
+    {
+        if (! $this->isHeldForComps()) {
+            return null;
+        }
+
+        return $this->comps_withdrawn_at ? 'withdrawn' : 'held';
+    }
+
     public function isHeldForComps(): bool
     {
         return $this->comps_hidden_until !== null

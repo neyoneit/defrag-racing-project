@@ -4214,5 +4214,9 @@
     "Click the star on a server to keep it at the top of this page.": "Klicka på stjärnan vid en server, så stannar den högst upp på sidan.",
     "Weekly comps": "Veckans comps",
     "Vote now ->": "Rösta nu ->",
-    "Most watched player wins": "Spelaren med flest tittartimmar vinner"
+    "Most watched player wins": "Spelaren med flest tittartimmar vinner",
+    "A comps entry. Hidden from the public until the round ends.": "Ett comps-bidrag. Dolt för allmänheten tills rundan är slut.",
+    "Taken out of comps by its uploader. Hidden from the public until the round ends.": "Borttaget från comps av den som laddade upp det. Dolt för allmänheten tills rundan är slut.",
+    "comps hold": "hålls för comps",
+    "withdrawn": "tillbakadraget"
 }

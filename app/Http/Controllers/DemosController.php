@@ -243,7 +243,13 @@ class DemosController extends Controller
         $demoCounts = null;
         if (Auth::check() && ($needs('userDemos') || $needs('demoCounts'))) {
             if ($isAdmin) {
-                $query = UploadedDemo::with(['record.user', 'user', 'offlineRecord', 'suggestedUser']);
+                // withUnreleasedComps() here and in the owner's branch below:
+                // these two lists are exactly the readers the comps scope was
+                // written to make an exception for. Everywhere else the demo
+                // stays hidden - the public browse further down does NOT get
+                // this, and neither does anything else on the site.
+                $query = UploadedDemo::withUnreleasedComps()
+                    ->with(['record.user', 'user', 'offlineRecord', 'suggestedUser']);
 
                 if ($filterTab === 'online') {
                     $query->where('gametype', 'LIKE', 'm%');
@@ -309,9 +315,10 @@ class DemosController extends Controller
                 }
 
                 if ($needs('userDemos')) $userDemos = $query->paginate(20, ['*'], 'userPage');
-                if ($needs('demoCounts')) $demoCounts = Cache::remember('demo_counts_admin', 60, fn () => $this->computeDemoCounts(UploadedDemo::query()));
+                if ($needs('demoCounts')) $demoCounts = Cache::remember('demo_counts_admin', 60, fn () => $this->computeDemoCounts(UploadedDemo::withUnreleasedComps()));
             } else {
-                $query = UploadedDemo::where('user_id', $currentUser->id)
+                $query = UploadedDemo::withUnreleasedComps()
+                    ->where('user_id', $currentUser->id)
                     ->with(['record.user', 'offlineRecord']);
 
                 if ($filterTab === 'online') {
@@ -354,7 +361,7 @@ class DemosController extends Controller
                 }
 
                 if ($needs('userDemos')) $userDemos = $query->paginate(20, ['*'], 'userPage');
-                if ($needs('demoCounts')) $demoCounts = Cache::remember("demo_counts_user_{$currentUser->id}", 3600, fn () => $this->computeDemoCounts(UploadedDemo::where('user_id', $currentUser->id)));
+                if ($needs('demoCounts')) $demoCounts = Cache::remember("demo_counts_user_{$currentUser->id}", 3600, fn () => $this->computeDemoCounts(UploadedDemo::withUnreleasedComps()->where('user_id', $currentUser->id)));
             }
         }
 
