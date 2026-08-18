@@ -40,7 +40,7 @@ use Illuminate\Support\Facades\Log;
 class UploadGuard
 {
     /** Parser outcome for a demo it read, but which carries a cvar note. */
-    private const FLAGGED = 'failed-validity';
+    private const FLAGGED = SubmissionValidator::FLAGGED;
 
     /** Parser outcome for a demo it could not read at all. */
     private const UNREADABLE = 'failed';
@@ -147,23 +147,6 @@ class UploadGuard
         }
 
         return $adopted;
-    }
-
-    /**
-     * The refusal a flagged demo carries, naming the cvars that were noted.
-     *
-     * The note itself is not a cheating verdict - `client_finish` only says the
-     * finish was not confirmed client-side - so the sentence says what was
-     * seen, not what it means, and leaves the judgement to whoever the person
-     * reports it to.
-     */
-    private function validityReason(UploadedDemo $demo): string
-    {
-        $flags = collect((array) $demo->validity)->keys()->implode(', ');
-
-        return $flags === ''
-            ? __('This demo did not pass the validity check, so it does not count in comps.')
-            : __('This demo carries a validity note (:flags), so it does not count in comps.', ['flags' => $flags]);
     }
 
     /**
@@ -377,7 +360,7 @@ class UploadGuard
             'uploaded_demo_id' => $demo->id,
             'is_highlight' => false,
             'status' => $flagged ? 'invalid' : 'pending',
-            'invalid_reason' => $flagged ? $this->validityReason($demo) : null,
+            'invalid_reason' => $flagged ? $this->validator->validityReason($demo) : null,
             // The person did not choose this, the site did. Same flag the
             // launcher's guesses carry, and it means the same thing: if this
             // turns out not to be a run of the map, undo it rather than leave

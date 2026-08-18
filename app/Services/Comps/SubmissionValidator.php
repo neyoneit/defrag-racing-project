@@ -47,6 +47,20 @@ class SubmissionValidator
     private const IN_FLIGHT = ['uploaded', 'processing'];
 
     /**
+     * The parser read the demo, and noted a cvar that was not what it should
+     * be - `pmove_fixed 0`, a timescale, an unconfirmed finish.
+     *
+     * NOT an unreadable file, however much the name suggests it. The rest of
+     * the site is explicit about this: the map page lists these demos beside
+     * the clean ones because "it deviated on some cvar" is not "it is
+     * unusable". Comps left the status out of PARSED and it fell through to
+     * the last branch, so a run whose time, map, physics and offending cvar
+     * were all known came back as "The demo could not be read." - to the one
+     * person who could have fixed their config if anybody had said which cvar.
+     */
+    public const FLAGGED = 'failed-validity';
+
+    /**
      * Settle every pending entry hanging off a finished upload.
      */
     public function settleFor(UploadedDemo $demo): void
@@ -69,7 +83,13 @@ class SubmissionValidator
             return;
         }
 
-        if (! in_array($demo->status, self::PARSED, true)) {
+        // A flagged demo goes on through the checks below rather than being
+        // refused here: its map, physics and time are all known, so it can be
+        // told exactly what was wrong with it, and the note is only the last
+        // of the reasons it does not count.
+        $flagged = $demo->status === self::FLAGGED;
+
+        if (! $flagged && ! in_array($demo->status, self::PARSED, true)) {
             $this->reject($submission, __('The demo could not be read.'), releasable: true);
 
             return;
@@ -112,6 +132,15 @@ class SubmissionValidator
             return;
         }
 
+        // A real run of this round's map, and it still does not count. Said
+        // with the cvar named, and never released: an entry somebody can read
+        // and report beats a demo that quietly went public.
+        if ($flagged) {
+            $this->reject($submission, $this->validityReason($demo));
+
+            return;
+        }
+
         if (! $demo->time_ms) {
             $this->reject($submission, __('No finish time was found in this demo.'));
 
@@ -134,6 +163,27 @@ class SubmissionValidator
         ]);
 
         Log::info("[comps] submission {$submission->id} accepted: {$physics} {$demo->time_ms}ms");
+    }
+
+    /**
+     * The refusal a flagged demo carries, naming the cvars that were noted.
+     *
+     * The note itself is not a cheating verdict - `client_finish` only says the
+     * finish was not confirmed client-side - so the sentence says what was
+     * seen, not what it means, and leaves the judgement to whoever the person
+     * reports it to.
+     *
+     * Lives here rather than on UploadGuard because both routes refuse the same
+     * demo for the same reason, and two wordings for one verdict is how the
+     * automatic path came to tell the truth while the form did not.
+     */
+    public function validityReason(UploadedDemo $demo): string
+    {
+        $flags = collect((array) $demo->validity)->keys()->implode(', ');
+
+        return $flags === ''
+            ? __('This demo did not pass the validity check, so it does not count in comps.')
+            : __('This demo carries a validity note (:flags), so it does not count in comps.', ['flags' => $flags]);
     }
 
     /**
