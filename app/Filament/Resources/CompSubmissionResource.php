@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\CompSubmissionResource\Pages;
+use App\Filament\Resources\UserResource;
 use App\Models\CompSubmission;
 use App\Services\Comps\ResultsCalculator;
 use Filament\Forms;
@@ -45,37 +46,59 @@ class CompSubmissionResource extends Resource
     {
         return $table
             ->defaultSort('created_at', 'desc')
+            ->striped()
             ->columns([
+                // Round and category on one line. As a column plus a
+                // description it was two lines tall, and that alone set the
+                // height of every row in the table.
                 Tables\Columns\TextColumn::make('round.comp.title')
                     ->label('Comp')
-                    ->description(fn (CompSubmission $s) => $s->round?->category)
+                    ->formatStateUsing(fn ($state, CompSubmission $s) => trim($state . ($s->round?->category ? ' · ' . $s->round->category : '')))
+                    ->size('xs')
                     ->sortable(),
 
+                // The nick as the player wrote it. Stored with Quake's own
+                // colour codes, so `^3Flasch^1-B.I.E.R-` is the raw form and
+                // needs the same rendering the rest of the admin uses.
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Player')
                     ->searchable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->size('xs')
+                    ->formatStateUsing(fn (?string $state): string => $state ? UserResource::q3tohtml($state) : '-')
+                    ->html(),
 
                 Tables\Columns\TextColumn::make('physics')
                     ->badge()
+                    ->size('xs')
                     ->formatStateUsing(fn ($state) => $state ? strtoupper($state) : '-'),
 
                 Tables\Columns\TextColumn::make('time')
+                    ->size('xs')
                     ->formatStateUsing(fn ($state) => $state
                         ? gmdate('i:s', intdiv($state, 1000)) . '.' . str_pad($state % 1000, 3, '0', STR_PAD_LEFT)
                         : '-')
                     ->sortable(),
 
-                Tables\Columns\IconColumn::make('is_highlight')
-                    ->label('Highlight')
-                    ->boolean(),
+                // Two boolean columns of mostly-red crosses cost two column
+                // widths to say nothing. One column names only what is true.
+                Tables\Columns\TextColumn::make('is_highlight')
+                    ->label('Flags')
+                    ->size('xs')
+                    ->badge()
+                    ->color('gray')
+                    ->formatStateUsing(function (CompSubmission $s): string {
+                        $flags = array_filter([
+                            $s->is_highlight ? 'highlight' : null,
+                            $s->is_online ? 'online' : null,
+                        ]);
 
-                Tables\Columns\IconColumn::make('is_online')
-                    ->label('Online')
-                    ->boolean(),
+                        return $flags ? implode(', ', $flags) : '-';
+                    }),
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
+                    ->size('xs')
                     ->color(fn (string $state) => match ($state) {
                         'valid' => 'success',
                         'pending' => 'warning',
@@ -85,15 +108,32 @@ class CompSubmissionResource extends Resource
                     // `invalid` and want telling apart at a glance.
                     ->formatStateUsing(fn (CompSubmission $s) => $s->wasRemovedByAdmin() ? 'removed' : $s->status),
 
+                // Not wrapped: a long refusal used to grow its row to three
+                // lines. The whole sentence is in the tooltip.
                 Tables\Columns\TextColumn::make('invalid_reason')
                     ->label('Reason')
-                    ->limit(50)
-                    ->wrap()
+                    ->size('xs')
+                    ->limit(40)
                     ->tooltip(fn (CompSubmission $s) => $s->invalid_reason)
+                    ->toggleable(),
+
+                // How the run got here, which is the first thing asked when
+                // somebody says they never entered: `auto` means the guard
+                // took the demo in on its own, and the route is where the file
+                // itself came from. `web` on a row older than 18 Aug 2026 only
+                // means nothing wrote a route - see UploadedDemo::SOURCE_WEB.
+                Tables\Columns\TextColumn::make('demo.source')
+                    ->label('Via')
+                    ->size('xs')
+                    ->badge()
+                    ->color('gray')
+                    ->formatStateUsing(fn (?string $state, CompSubmission $s): string =>
+                        ($s->auto_entered ? 'auto' : 'entered') . ' / ' . ($state ?: '?'))
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Uploaded')
+                    ->size('xs')
                     ->dateTime('d.m.Y H:i')
                     ->sortable(),
             ])
@@ -116,7 +156,10 @@ class CompSubmissionResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_highlight')
                     ->label('Highlight'),
             ])
+            // Collapsed into one menu: three buttons on every row is a
+            // column of its own, and only one of them is ever pressed.
             ->actions([
+                Tables\Actions\ActionGroup::make([
                 Tables\Actions\Action::make('download')
                     ->label('Demo')
                     ->icon('heroicon-o-arrow-down-tray')
@@ -173,6 +216,7 @@ class CompSubmissionResource extends Resource
 
                         Notification::make()->title('Run restored')->success()->send();
                     }),
+                ]),
             ])
             ->emptyStateHeading('No entries')
             ->emptyStateDescription('Nobody has uploaded a run to comps yet.');
@@ -193,7 +237,16 @@ class CompSubmissionResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->with(['user', 'round.comp']);
+        // The demo relation without the global scope. Every entry in a
+        // round still being played is held, which is exactly what that scope
+        // hides - eager loading it plainly returns null for the rows an admin
+        // most needs to look at. Same reason SubmissionValidator::reject does
+        // not go through $submission->demo.
+        return parent::getEloquentQuery()->with([
+            'user',
+            'round.comp',
+            'demo' => fn ($q) => $q->withUnreleasedComps(),
+        ]);
     }
 
     public static function getPages(): array
