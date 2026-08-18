@@ -4214,5 +4214,9 @@
     "Click the star on a server to keep it at the top of this page.": "Klick bei einem Server auf den Stern, dann bleibt er oben auf dieser Seite.",
     "Weekly comps": "Wöchentliche Comps",
     "Vote now ->": "Jetzt abstimmen ->",
-    "Most watched player wins": "Meistgesehener Spieler gewinnt"
+    "Most watched player wins": "Meistgesehener Spieler gewinnt",
+    "A comps entry. Hidden from the public until the round ends.": "Ein Comps-Beitrag. Bis zum Ende der Runde nicht öffentlich sichtbar.",
+    "Taken out of comps by its uploader. Hidden from the public until the round ends.": "Vom Uploader aus den Comps genommen. Bis zum Ende der Runde nicht öffentlich sichtbar.",
+    "comps hold": "comps-sperre",
+    "withdrawn": "zurückgezogen"
 }

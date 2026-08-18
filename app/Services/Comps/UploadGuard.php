@@ -40,7 +40,7 @@ use Illuminate\Support\Facades\Log;
 class UploadGuard
 {
     /** Parser outcome for a demo it read, but which carries a cvar note. */
-    private const FLAGGED = 'failed-validity';
+    private const FLAGGED = SubmissionValidator::FLAGGED;
 
     /** Parser outcome for a demo it could not read at all. */
     private const UNREADABLE = 'failed';
@@ -150,23 +150,6 @@ class UploadGuard
     }
 
     /**
-     * The refusal a flagged demo carries, naming the cvars that were noted.
-     *
-     * The note itself is not a cheating verdict - `client_finish` only says the
-     * finish was not confirmed client-side - so the sentence says what was
-     * seen, not what it means, and leaves the judgement to whoever the person
-     * reports it to.
-     */
-    private function validityReason(UploadedDemo $demo): string
-    {
-        $flags = collect((array) $demo->validity)->keys()->implode(', ');
-
-        return $flags === ''
-            ? __('This demo did not pass the validity check, so it does not count in comps.')
-            : __('This demo carries a validity note (:flags), so it does not count in comps.', ['flags' => $flags]);
-    }
-
-    /**
      * The round is over: let every demo held on its maps out at once.
      *
      * The entries are released by the scheduler through their submissions, but
@@ -189,6 +172,10 @@ class UploadGuard
                 ->whereNotNull('comps_hidden_until')
                 ->whereRaw('LOWER(map_name) = ?', [mb_strtolower(trim($roundMap->map->name))])
                 ->update(['comps_hidden_until' => null]);
+
+            // A query-builder update fires no model events, and this is the
+            // moment a whole round's runs are supposed to appear at once.
+            UploadedDemo::forgetDemosTop($roundMap->map->name);
         }
 
         return $released;
@@ -377,7 +364,7 @@ class UploadGuard
             'uploaded_demo_id' => $demo->id,
             'is_highlight' => false,
             'status' => $flagged ? 'invalid' : 'pending',
-            'invalid_reason' => $flagged ? $this->validityReason($demo) : null,
+            'invalid_reason' => $flagged ? $this->validator->validityReason($demo) : null,
             // The person did not choose this, the site did. Same flag the
             // launcher's guesses carry, and it means the same thing: if this
             // turns out not to be a run of the map, undo it rather than leave
@@ -475,6 +462,12 @@ class UploadGuard
         // the same demo twice before the first pass reached its own check.
         $demo->comps_hidden_until = $until;
         $demo->saveQuietly();
+
+        // saveQuietly skips the model's own events, so the map's Demos Top
+        // cache is retired here instead. Without it the run stays on the page
+        // for up to an hour after it was hidden, which for a comps map is the
+        // whole hour that mattered.
+        UploadedDemo::forgetDemosTop($demo->map_name);
     }
 
     private function alreadyEntered(UploadedDemo $demo): bool
@@ -552,6 +545,10 @@ class UploadGuard
 
         // Quietly, for the same reason holdUntil is - see the note there.
         $demo->saveQuietly();
+
+        // Same as holdUntil, in the other direction: the run has to come back
+        // to the map page, and nothing else will put it there.
+        UploadedDemo::forgetDemosTop($demo->map_name);
     }
 
     /**

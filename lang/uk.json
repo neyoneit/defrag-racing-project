@@ -4214,5 +4214,9 @@
     "Click the star on a server to keep it at the top of this page.": "Натисни зірочку біля сервера, і він лишиться вгорі цієї сторінки.",
     "Weekly comps": "Щотижневі comps",
     "Vote now ->": "Голосувати ->",
-    "Most watched player wins": "Гравець, за яким спостерігали найбільше, отримує"
+    "Most watched player wins": "Гравець, за яким спостерігали найбільше, отримує",
+    "A comps entry. Hidden from the public until the round ends.": "Заявка на comps. Прихована від усіх до кінця раунду.",
+    "Taken out of comps by its uploader. Hidden from the public until the round ends.": "Знято з comps тим, хто його завантажив. Приховано від усіх до кінця раунду.",
+    "comps hold": "утримано comps",
+    "withdrawn": "знято"
 }

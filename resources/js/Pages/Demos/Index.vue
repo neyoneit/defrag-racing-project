@@ -2383,6 +2383,22 @@ watch(selectedPhysics, () => {
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
                                                 </span>
+                                                <!-- A demo comps is holding is missing from the public
+                                                     site on purpose. Only this list and the admin's own
+                                                     show it, so this chip is the only place the reason
+                                                     is ever said. -->
+                                                <span
+                                                    v-if="demo.comps_hold"
+                                                    class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold cursor-help"
+                                                    :class="demo.comps_hold === 'withdrawn'
+                                                        ? 'bg-gray-500/20 text-gray-300'
+                                                        : 'bg-amber-500/20 text-amber-300'"
+                                                    :title="demo.comps_hold === 'withdrawn'
+                                                        ? $t('Taken out of comps by its uploader. Hidden from the public until the round ends.')
+                                                        : $t('A comps entry. Hidden from the public until the round ends.')"
+                                                >
+                                                    {{ demo.comps_hold === 'withdrawn' ? $t('withdrawn') : $t('comps hold') }}
+                                                </span>
                                                 <span
                                                     v-if="demo.match_method"
                                                     class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold"

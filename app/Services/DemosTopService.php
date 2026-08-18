@@ -30,9 +30,32 @@ class DemosTopService
     public function buildReps(string $mapName, string $physicsPattern, array $mainRecordIds = [], ?DemoProfileResolver $resolver = null): Collection
     {
 
+        // Demos comps is holding on this map, so pool 1 can leave them out.
+        //
+        // offline_records is its own table and carries no comps scope, so a run
+        // held back for a running round still had a row here and the map page
+        // printed its time - the one number the round exists to keep quiet.
+        // The FILE was never at risk: the demo behind the row is scoped away,
+        // which is why there was nothing to download and why this looked
+        // harmless. But a rival only needs the number, and on lovet-fifth the
+        // target time of a live round sat on the public page for two days.
+        //
+        // Pools 2 and 3 read uploaded_demos and the global scope covers them.
+        $heldDemoIds = UploadedDemo::withUnreleasedComps()
+            ->whereRaw('LOWER(map_name) = ?', [mb_strtolower(trim($mapName))])
+            ->whereNotNull('comps_hidden_until')
+            ->where('comps_hidden_until', '>', now())
+            ->pluck('id')
+            ->all();
+
         // Pool 1: offline_records (with demo eager-loaded so we can read q3df signals)
         $offline = OfflineRecord::where('map_name', $mapName)
             ->where('physics', 'LIKE', $physicsPattern)
+            // Rows with no demo at all stay: `NOT IN` answers null for a null
+            // demo_id, which would drop every one of them instead.
+            ->when($heldDemoIds, fn ($q) => $q->where(
+                fn ($w) => $w->whereNull('demo_id')->orWhereNotIn('demo_id', $heldDemoIds)
+            ))
             ->with([
                 // Whole row, not a column list: the record chips hand this demo
                 // to the details panel, which needs physics, gametype, time,

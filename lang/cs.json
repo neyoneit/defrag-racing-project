@@ -4214,5 +4214,9 @@
     "Click the star on a server to keep it at the top of this page.": "Klikni na hvězdičku u serveru a zůstane ti nahoře na téhle stránce.",
     "Weekly comps": "Týdenní comps",
     "Vote now ->": "Hlasuj ->",
-    "Most watched player wins": "Nejsledovanější hráč bere"
+    "Most watched player wins": "Nejsledovanější hráč bere",
+    "A comps entry. Hidden from the public until the round ends.": "Přihláška do comps. Veřejnost ji neuvidí, dokud kolo neskončí.",
+    "Taken out of comps by its uploader. Hidden from the public until the round ends.": "Odhlášeno z comps tím, kdo demo nahrál. Veřejnost ho neuvidí, dokud kolo neskončí.",
+    "comps hold": "zadrženo comps",
+    "withdrawn": "odhlášeno"
 }

@@ -48,8 +48,12 @@ class UploadedDemo extends Model
         //
         // `wasChanged` keeps it to the writes that matter: a download counter
         // or an assignment note leaves the cache alone.
+        // `comps_hidden_until` moves a demo in and out of Demos Top for the
+        // same reason: a held run is kept out of the offline pool while its
+        // round is being played, so both the moment it is held and the moment
+        // the round releases it change what that map should show.
         static::saved(function ($demo) {
-            if (! $demo->wasChanged('record_id')) {
+            if (! $demo->wasChanged('record_id') && ! $demo->wasChanged('comps_hidden_until')) {
                 return;
             }
 
@@ -59,17 +63,36 @@ class UploadedDemo extends Model
             // new value there finds null and silently skips the bump.
             $map = $demo->map_name ?: $demo->getOriginal('map_name');
 
-            if ($map) {
-                Cache::increment('demostop_gen:' . $map);
-            }
+            static::forgetDemosTop($map);
         });
 
         // A deleted demo leaves the same stale row behind.
         static::deleted(function ($demo) {
-            if ($demo->map_name && $demo->record_id) {
-                Cache::increment('demostop_gen:' . $demo->map_name);
+            if ($demo->record_id || $demo->comps_hidden_until) {
+                static::forgetDemosTop($demo->map_name);
             }
         });
+    }
+
+    /**
+     * Retire the cached Demos Top for one map.
+     *
+     * A counter rather than a tagged flush: tags do not flush reliably under
+     * Redis behind Octane, and a Demos Top that survives its own invalidation
+     * is worse than no cache at all - the page then shows live records beside
+     * an hour-old cluster and every action looks half-applied.
+     *
+     * Public and static because the model's own events cannot carry this
+     * alone. The comps hold and release write with `saveQuietly()` and with
+     * query-builder `update()`, both of which skip events on purpose, so those
+     * paths call this by hand. Anything that moves a demo between records, or
+     * in or out of a comps hold, owes this map one call.
+     */
+    public static function forgetDemosTop(?string $mapName): void
+    {
+        if ($mapName) {
+            Cache::increment('demostop_gen:' . $mapName);
+        }
     }
 
     /**
@@ -124,6 +147,18 @@ class UploadedDemo extends Model
         'matched_alias',
         'manually_assigned',
         'download_count',
+    ];
+
+    /**
+     * Serialised with every demo so a list can say why one of them is not
+     * where its owner expects it to be.
+     *
+     * Cheap - it reads two columns already on the row - and null for the
+     * overwhelming majority, which is the point: only a demo comps is holding
+     * has anything to explain.
+     */
+    protected $appends = [
+        'comps_hold',
     ];
 
     protected $casts = [
@@ -269,6 +304,31 @@ class UploadedDemo extends Model
     }
 
     /** True while this demo is a comps entry in a round still being played. */
+    /**
+     * Why this demo is missing from the public site: `held`, `withdrawn`, or
+     * null when it is not missing at all.
+     *
+     * Somebody who uploads a run of the map comps is playing gets it taken off
+     * the site until the round ends. That is correct and it is the whole point
+     * of the hold - but it was also invisible. The demo vanished from the
+     * uploader's own list with nothing said, so the only reading available was
+     * that the upload had failed. The file was never gone: download has let
+     * the owner and an admin through from the start. There was simply nothing
+     * left to click.
+     *
+     * `withdrawn` outranks `held` because it answers the better question. A
+     * person who took their own run out of comps wants to see that they did,
+     * not to be told the site is holding it.
+     */
+    public function getCompsHoldAttribute(): ?string
+    {
+        if (! $this->isHeldForComps()) {
+            return null;
+        }
+
+        return $this->comps_withdrawn_at ? 'withdrawn' : 'held';
+    }
+
     public function isHeldForComps(): bool
     {
         return $this->comps_hidden_until !== null
