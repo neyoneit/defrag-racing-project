@@ -207,6 +207,7 @@ class LauncherController extends Controller
                     'file_hash' => $hash,
                     'user_id' => $user->id,
                     'status' => 'uploaded',
+                    'source' => UploadedDemo::SOURCE_LAUNCHER,
                     'client_file_mtime' => self::clientMtime($request),
                 ];
 
