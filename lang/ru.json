@@ -4245,5 +4245,7 @@
     "Something went wrong reading that file.": "При чтении этого файла что-то пошло не так.",
     "That is not a demo file. A demo ends in .dm_68.": "Это не файл демо. Демо заканчивается на .dm_68.",
     "This file could not be read as a Quake 3 demo.": "Этот файл не удалось прочитать как демо Quake 3.",
-    "1, or g_synchronousClients 1": "1 или g_synchronousClients 1"
+    "1, or g_synchronousClients 1": "1 или g_synchronousClients 1",
+    "Record one second and stop, that is enough.": "Запишите одну секунду и остановите, этого хватит.",
+    "before you run": "перед забегом"
 }

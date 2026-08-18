@@ -1387,18 +1387,16 @@ watch(selectedPhysics, () => {
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-8">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
-                <div class="flex justify-between items-center flex-wrap gap-4">
+                <!-- items-start, not items-center. The limit cards on the right
+                     are two rows tall, and centring against them pushed the
+                     title down the page - so Demos sat lower than every other
+                     section, which all top-align their heading. -->
+                <div class="flex justify-between items-start flex-wrap gap-4">
                     <div>
                         <div class="flex items-center gap-3 mb-1">
                             <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('Demos') }}</h1>
                         </div>
-                        <p class="text-sm text-gray-400">
-                            {{ $t('Upload and manage demo files') }}
-                            <!-- The checker reads a demo and keeps nothing, so it belongs
-                                 beside the upload rather than inside it: the point is to
-                                 look BEFORE uploading a run that will not count. -->
-                            <Link :href="route('demos.check')" class="text-blue-400 hover:underline ml-1">{{ $t('Check your demo settings') }}</Link>
-                        </p>
+                        <p class="text-sm text-gray-400">{{ $t('Upload and manage demo files') }}</p>
                         <p class="text-xs text-gray-500 mt-1">
                             <span class="relative group inline-block">
                                 <span class="cursor-help border-b border-dotted border-gray-600 text-gray-400">{{ $t('Special thanks') }}</span>

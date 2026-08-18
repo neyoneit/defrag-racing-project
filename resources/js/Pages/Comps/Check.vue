@@ -39,7 +39,7 @@ async function send(picked) {
     body.append('demo', picked);
 
     try {
-        const { data } = await window.axios.post(route('demos.check.run'), body);
+        const { data } = await window.axios.post(route('comps.check.run'), body);
         result.value = data;
     } catch (e) {
         error.value = e.response?.status === 429
@@ -67,7 +67,7 @@ function onDrop(e) {
             </p>
             <p class="text-sm text-gray-400 mt-2">
                 <strong class="text-gray-200">{{ $t('You do not need a finished run.') }}</strong>
-                {{ $t('Record one second and stop. The settings are written at the very start of every demo.') }}
+                {{ $t('Record one second and stop, that is enough.') }}
             </p>
 
             <!-- Drop zone -->

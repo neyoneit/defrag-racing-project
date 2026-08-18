@@ -4245,5 +4245,7 @@
     "Something went wrong reading that file.": "Något gick fel när filen lästes.",
     "That is not a demo file. A demo ends in .dm_68.": "Det är ingen demofil. En demo slutar på .dm_68.",
     "This file could not be read as a Quake 3 demo.": "Filen gick inte att läsa som en Quake 3-demo.",
-    "1, or g_synchronousClients 1": "1, eller g_synchronousClients 1"
+    "1, or g_synchronousClients 1": "1, eller g_synchronousClients 1",
+    "Record one second and stop, that is enough.": "Spela in en sekund och stoppa, det räcker.",
+    "before you run": "innan du kör"
 }

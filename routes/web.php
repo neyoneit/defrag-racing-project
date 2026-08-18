@@ -131,6 +131,21 @@ Route::post('/wishlist/{wish}/request-removal', [\App\Http\Controllers\WishlistC
 // plus a linked MDD profile, because the prize for winning is a wildcard and
 // throwaway accounts would otherwise decide the map.
 Route::get('/comps', [\App\Http\Controllers\CompsController::class, 'index'])->name('comps.index');
+// Settings checker. Reads a demo and throws it away - see DemoCheckController.
+// Under /comps because that is the only place the answer matters: the rules it
+// checks are the comps rules, and somebody browsing the demo database has no
+// question this page answers.
+//
+// MUST stay above /comps/{comp}, which would otherwise swallow /comps/check
+// and look it up as a competition called "check".
+//
+// Open to everybody on purpose: the people who most need it are the ones who
+// have not worked out yet that they need an account for anything. Throttled
+// because it runs the parser on whatever it is handed.
+Route::get('/comps/check', [\App\Http\Controllers\DemoCheckController::class, 'show'])->name('comps.check');
+Route::post('/comps/check', [\App\Http\Controllers\DemoCheckController::class, 'check'])
+    ->middleware('throttle:20,1')
+    ->name('comps.check.run');
 Route::get('/comps/{comp}', [\App\Http\Controllers\CompsController::class, 'show'])->name('comps.show');
 
 Route::post('/comps/rounds/{round}/vote', [\App\Http\Controllers\CompsController::class, 'vote'])
@@ -240,14 +255,6 @@ Route::post('/models/batch-generate-still-thumbnails', [ModelsController::class,
 // Demo routes
 Route::get('/demos', [DemosController::class, 'index'])->name('demos.index');
 
-// Settings checker. Reads a demo and throws it away - see DemoCheckController.
-// Open to everybody on purpose: the people who most need it are the ones who
-// have not worked out yet that they need an account for anything. Throttled
-// because it runs the parser on whatever it is handed.
-Route::get('/demos/check', [\App\Http\Controllers\DemoCheckController::class, 'show'])->name('demos.check');
-Route::post('/demos/check', [\App\Http\Controllers\DemoCheckController::class, 'check'])
-    ->middleware('throttle:20,1')
-    ->name('demos.check.run');
 Route::get('/demos/search-uploaders', [DemosController::class, 'searchUploaders'])->name('demos.search-uploaders');
 Route::get('/demos/{demo}/download', [DemosController::class, 'download'])->name('demos.download');
 

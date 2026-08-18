@@ -20,7 +20,7 @@ class DemoCheckController extends Controller
 {
     public function show(): Response
     {
-        return Inertia::render('Demos/Check');
+        return Inertia::render('Comps/Check');
     }
 
     /**

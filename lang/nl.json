@@ -4245,5 +4245,7 @@
     "Something went wrong reading that file.": "Er ging iets mis bij het lezen van dat bestand.",
     "That is not a demo file. A demo ends in .dm_68.": "Dat is geen demobestand. Een demo eindigt op .dm_68.",
     "This file could not be read as a Quake 3 demo.": "Dit bestand kon niet als Quake 3-demo gelezen worden.",
-    "1, or g_synchronousClients 1": "1, of g_synchronousClients 1"
+    "1, or g_synchronousClients 1": "1, of g_synchronousClients 1",
+    "Record one second and stop, that is enough.": "Neem één seconde op en stop, dat is genoeg.",
+    "before you run": "voordat je gaat rennen"
 }

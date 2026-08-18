@@ -4245,5 +4245,7 @@
     "Something went wrong reading that file.": "Při čtení toho souboru se něco pokazilo.",
     "That is not a demo file. A demo ends in .dm_68.": "Tohle není demo. Demo končí na .dm_68.",
     "This file could not be read as a Quake 3 demo.": "Tenhle soubor se nepodařilo přečíst jako demo z Quake 3.",
-    "1, or g_synchronousClients 1": "1, nebo g_synchronousClients 1"
+    "1, or g_synchronousClients 1": "1, nebo g_synchronousClients 1",
+    "Record one second and stop, that is enough.": "Nahraj vteřinu a zastav, to stačí.",
+    "before you run": "než pojedeš"
 }
