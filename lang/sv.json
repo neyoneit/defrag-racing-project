@@ -4218,5 +4218,11 @@
     "A comps entry. Hidden from the public until the round ends.": "Ett comps-bidrag. Dolt för allmänheten tills rundan är slut.",
     "Taken out of comps by its uploader. Hidden from the public until the round ends.": "Borttaget från comps av den som laddade upp det. Dolt för allmänheten tills rundan är slut.",
     "comps hold": "hålls för comps",
-    "withdrawn": "tillbakadraget"
+    "withdrawn": "tillbakadraget",
+    "This demo does not count in comps. :notes": "Den här demon räknas inte i comps. :notes",
+    "The finish was not confirmed inside the demo, so the time cannot be read from it.": "Målgången är inte bekräftad i demon, så tiden går inte att läsa ur den.",
+    "The run was recorded with tool assistance.": "Loppet spelades in med hjälp av ett verktyg.",
+    "pmove_fixed was :actual. It has to be 1, or g_synchronousClients has to be 1 instead - one of the two has to hold the physics step steady, or the framerate decides how far you jump.": "pmove_fixed var :actual. Den måste vara 1, eller så måste g_synchronousClients vara 1 i stället - en av de två måste hålla fysiksteget konstant, annars avgör bildfrekvensen hur långt du hoppar.",
+    ":cvar was :actual, and it has to be :expected.": ":cvar var :actual, och den måste vara :expected.",
+    ":cvar was :actual, which is not what comps expects.": ":cvar var :actual, vilket comps inte förväntar sig."
 }

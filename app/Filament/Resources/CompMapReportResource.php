@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\CompMapReportResource\Pages;
+use App\Filament\Resources\UserResource;
 use App\Models\CompMapReport;
 use App\Services\Comps\MapEligibilityTagger;
 use Filament\Notifications\Notification;
@@ -62,7 +63,9 @@ class CompMapReportResource extends Resource
 
                 Tables\Columns\TextColumn::make('reporter.name')
                     ->label('Reported by')
-                    ->searchable(),
+                    ->searchable()
+                    ->formatStateUsing(fn (?string $state): string => $state ? UserResource::q3tohtml($state) : '-')
+                    ->html(),
 
                 Tables\Columns\TextColumn::make('round.comp.number')
                     ->label('Comp')

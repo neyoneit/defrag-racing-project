@@ -2,12 +2,14 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Resources\UserResource;
 use App\Models\CompDemoReport;
 use App\Models\CompRound;
 use App\Models\CompSubmission;
 use App\Models\OfflineRecord;
 use App\Models\UploadedDemo;
 use App\Services\Comps\UploadGuard;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
 
@@ -22,7 +24,11 @@ use Illuminate\Support\Collection;
  * other physics. Those are invisible everywhere else precisely because they
  * are not entries, and they are what people ask about.
  *
- * Nothing here changes anything. It is a place to look before answering.
+ * Almost nothing here changes anything - it is a place to look before
+ * answering. The one exception is putting a withdrawn run back, which belongs
+ * on this page because this is the only screen a withdrawn run appears on at
+ * all: withdrawing deletes the entry, so the submissions table has no row to
+ * act on.
  */
 class CompsRoundReview extends Page
 {
@@ -137,6 +143,11 @@ class CompsRoundReview extends Page
                     default => 'danger',
                 },
                 'reason' => $entry->invalid_reason,
+                // What the parser literally wrote down, for the hover. The
+                // sentence above explains it; this is the raw pair, which is
+                // what somebody comparing two demos actually wants to read.
+                'notes' => $this->rawNotes($demo),
+                'restorable' => false,
                 'entered' => true,
                 'auto' => (bool) $entry->auto_entered,
                 'online' => (bool) $entry->is_online,
@@ -154,6 +165,10 @@ class CompsRoundReview extends Page
             $rows->push([
                 'user' => $demo->user?->name ?? ('#' . $demo->user_id),
                 'demo_id' => $demo->id,
+                // Only while the round is still taking uploads. Afterwards the
+                // standings are frozen and putting a run back would rewrite a
+                // result everybody has already seen.
+                'restorable' => $kind === 'withdrawn' && $round->acceptsUploads(),
                 'filename' => $demo->original_filename,
                 'physics' => $demo->physics,
                 'time' => $demo->time_ms ?: null,
@@ -174,6 +189,7 @@ class CompsRoundReview extends Page
                     'other_physics' => 'A run on this map in the other physics. Public straight away.',
                     default => $guard->noticeText($kind),
                 },
+                'notes' => $this->rawNotes($demo),
                 'entered' => false,
                 'auto' => false,
                 'online' => ! $demo->is_offline,
@@ -253,6 +269,94 @@ class CompsRoundReview extends Page
         }
 
         return $round->status === 'active' ? $guard->noticeKind($demo) : 'not_entered';
+    }
+
+    /**
+     * Put a run somebody withdrew back into the round, on their request.
+     *
+     * Withdrawing is one-way by design: the guard refuses to re-enter a demo
+     * it sees a withdrawal stamp on, so that a re-parse cannot quietly undo
+     * somebody's decision. This is the deliberate exception, and it is an
+     * admin action rather than a button for the player, because a run that
+     * can be pulled and pushed back at will is a way to play with the
+     * standings rather than with the map.
+     *
+     * The stamp comes off and the guard is asked to do the entering, so the
+     * run goes through the same map, physics and window checks as any other.
+     * If the guard still says no, the stamp goes back on and nothing has
+     * changed - the alternative is a demo left in neither state.
+     */
+    public function restore(int $demoId): void
+    {
+        abort_unless(auth()->user()?->isAdmin(), 403);
+
+        $round = $this->round();
+
+        abort_unless($round && $round->acceptsUploads(), 403);
+
+        $demo = UploadedDemo::withUnreleasedComps()->find($demoId);
+
+        if (! $demo || ! $demo->comps_withdrawn_at) {
+            Notification::make()->danger()->title('That demo is not withdrawn.')->send();
+
+            return;
+        }
+
+        $stamp = $demo->comps_withdrawn_at;
+
+        $demo->comps_withdrawn_at = null;
+        $demo->saveQuietly();
+
+        app(UploadGuard::class)->apply($demo->fresh());
+
+        $entry = CompSubmission::where('comp_round_id', $round->id)
+            ->where('uploaded_demo_id', $demo->id)
+            ->first();
+
+        if (! $entry) {
+            $demo->comps_withdrawn_at = $stamp;
+            $demo->saveQuietly();
+
+            Notification::make()
+                ->danger()
+                ->title('The guard would not take it back.')
+                ->body('The run is older than the round, or it is on the wrong map or physics. Nothing was changed.')
+                ->send();
+
+            return;
+        }
+
+        Notification::make()
+            ->success()
+            ->title('Back in the round.')
+            ->body('Entry #' . $entry->id . ': ' . $entry->status . ($entry->invalid_reason ? ' - ' . $entry->invalid_reason : ''))
+            ->send();
+    }
+
+    /** `pmove_fixed=0, com_maxfps=333`, or null when the demo is clean. */
+    private function rawNotes(?UploadedDemo $demo): ?string
+    {
+        $validity = (array) ($demo?->validity ?? []);
+
+        if (! $validity) {
+            return null;
+        }
+
+        return implode(', ', array_map(
+            fn ($key, $value) => $key . '=' . $value,
+            array_keys($validity),
+            $validity
+        ));
+    }
+
+    /**
+     * The nick with its Quake colour codes rendered, the way the rest of the
+     * admin shows a name. Grouping still happens on the raw string, so two
+     * spellings of the same colours never split into two people.
+     */
+    public function nick(string $name): string
+    {
+        return UserResource::q3tohtml($name);
     }
 
     /** m:ss.mmm, the way every other comps screen prints a time. */

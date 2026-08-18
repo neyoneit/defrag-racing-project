@@ -149,7 +149,9 @@ class UserResource extends Resource
                     $i++;
                 }
             } else {
-                $colored_name .= '<span class="q3c-' . $color . '">' . $name[$i] . '</span>';
+                // Escaped: a nick is whatever somebody typed, and this now
+                // renders on a dozen admin screens instead of one.
+                $colored_name .= '<span class="q3c-' . $color . '">' . htmlspecialchars($name[$i], ENT_QUOTES, 'UTF-8') . '</span>';
             }
         }
 

@@ -4218,5 +4218,11 @@
     "A comps entry. Hidden from the public until the round ends.": "Een comps-inzending. Verborgen voor het publiek tot de ronde eindigt.",
     "Taken out of comps by its uploader. Hidden from the public until the round ends.": "Uit comps gehaald door de uploader. Verborgen voor het publiek tot de ronde eindigt.",
     "comps hold": "vastgehouden voor comps",
-    "withdrawn": "ingetrokken"
+    "withdrawn": "ingetrokken",
+    "This demo does not count in comps. :notes": "Deze demo telt niet mee in comps. :notes",
+    "The finish was not confirmed inside the demo, so the time cannot be read from it.": "De finish is niet bevestigd in de demo, dus de tijd kan er niet uit gelezen worden.",
+    "The run was recorded with tool assistance.": "De run is opgenomen met hulp van een tool.",
+    "pmove_fixed was :actual. It has to be 1, or g_synchronousClients has to be 1 instead - one of the two has to hold the physics step steady, or the framerate decides how far you jump.": "pmove_fixed was :actual. Het moet 1 zijn, of anders moet g_synchronousClients 1 zijn - een van de twee moet de physics-stap vast houden, anders bepaalt je framerate hoe ver je springt.",
+    ":cvar was :actual, and it has to be :expected.": ":cvar was :actual, en het moet :expected zijn.",
+    ":cvar was :actual, which is not what comps expects.": ":cvar was :actual, en dat verwacht comps niet."
 }

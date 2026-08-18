@@ -4218,5 +4218,11 @@
     "A comps entry. Hidden from the public until the round ends.": "Заявка на comps. Скрыта от всех до конца раунда.",
     "Taken out of comps by its uploader. Hidden from the public until the round ends.": "Снято с comps тем, кто его загрузил. Скрыто от всех до конца раунда.",
     "comps hold": "удержано comps",
-    "withdrawn": "снято"
+    "withdrawn": "снято",
+    "This demo does not count in comps. :notes": "Это демо не засчитывается в comps. :notes",
+    "The finish was not confirmed inside the demo, so the time cannot be read from it.": "Финиш не подтверждён внутри демо, поэтому время из него прочитать нельзя.",
+    "The run was recorded with tool assistance.": "Забег записан с помощью инструмента.",
+    "pmove_fixed was :actual. It has to be 1, or g_synchronousClients has to be 1 instead - one of the two has to hold the physics step steady, or the framerate decides how far you jump.": "pmove_fixed был :actual. Он должен быть 1, либо вместо этого g_synchronousClients должен быть 1 - одно из двух должно держать шаг физики постоянным, иначе частота кадров решает, как далеко вы прыгнете.",
+    ":cvar was :actual, and it has to be :expected.": ":cvar был :actual, а должен быть :expected.",
+    ":cvar was :actual, which is not what comps expects.": ":cvar был :actual, а comps этого не ожидает."
 }

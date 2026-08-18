@@ -4218,5 +4218,11 @@
     "A comps entry. Hidden from the public until the round ends.": "Une participation aux comps. Masquée au public jusqu'à la fin de la manche.",
     "Taken out of comps by its uploader. Hidden from the public until the round ends.": "Retiré des comps par la personne qui l'a envoyé. Masqué au public jusqu'à la fin de la manche.",
     "comps hold": "retenu par comps",
-    "withdrawn": "retiré"
+    "withdrawn": "retiré",
+    "This demo does not count in comps. :notes": "Cette démo ne compte pas dans les comps. :notes",
+    "The finish was not confirmed inside the demo, so the time cannot be read from it.": "L'arrivée n'est pas confirmée dans la démo, donc le temps ne peut pas en être lu.",
+    "The run was recorded with tool assistance.": "La course a été enregistrée avec assistance logicielle.",
+    "pmove_fixed was :actual. It has to be 1, or g_synchronousClients has to be 1 instead - one of the two has to hold the physics step steady, or the framerate decides how far you jump.": "pmove_fixed valait :actual. Il doit être à 1, ou alors g_synchronousClients doit être à 1 - l'un des deux doit garder le pas de la physique constant, sinon le nombre d'images par seconde décide de la longueur de vos sauts.",
+    ":cvar was :actual, and it has to be :expected.": ":cvar valait :actual, et il doit être à :expected.",
+    ":cvar was :actual, which is not what comps expects.": ":cvar valait :actual, ce que les comps n'attendent pas."
 }

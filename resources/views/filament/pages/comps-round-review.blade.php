@@ -52,7 +52,7 @@
         @forelse($players as $player)
             <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
                 <div class="flex items-center justify-between px-4 py-3 border-b border-gray-950/5 dark:border-white/10">
-                    <div class="text-sm font-extrabold">{{ $player['user'] }}</div>
+                    <div class="text-sm font-extrabold">{!! $this->nick($player['user']) !!}</div>
                     <div class="text-xs text-gray-500">
                         {{ count($player['rows']) }} {{ count($player['rows']) === 1 ? 'demo' : 'demos' }}
                         @if($player['problems'] > 0)
@@ -79,7 +79,10 @@
                                     <td class="px-2 py-2">
                                         <div class="text-xs text-gray-700 dark:text-gray-300 break-all">{{ $row['filename'] }}</div>
                                         @if($row['reason'])
-                                            <div class="text-xs text-gray-500 mt-0.5">{{ $row['reason'] }}</div>
+                                            <div
+                                                class="text-xs text-gray-500 mt-0.5 @if($row['notes']) cursor-help @endif"
+                                                @if($row['notes']) title="The parser noted: {{ $row['notes'] }}" @endif
+                                            >{{ $row['reason'] }}</div>
                                         @endif
                                     </td>
 
@@ -100,6 +103,18 @@
 
                                         @if($row['demo_id'])
                                             <a href="{{ route('demos.download', $row['demo_id']) }}" target="_blank" class="text-xs text-primary-600 hover:underline">demo</a>
+                                        @endif
+
+                                        {{-- The only thing on this page that changes anything, and the
+                                             only screen a withdrawn run shows up on: withdrawing deletes
+                                             the entry, so the submissions table has no row to act on. --}}
+                                        @if($row['restorable'])
+                                            <button
+                                                type="button"
+                                                wire:click="restore({{ $row['demo_id'] }})"
+                                                wire:confirm="Put this run back into the round? Do this when the player has asked for it."
+                                                class="ml-2 text-xs font-semibold text-primary-600 hover:underline"
+                                            >put back</button>
                                         @endif
                                     </td>
 
