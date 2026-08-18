@@ -239,6 +239,15 @@ Route::post('/models/batch-generate-still-thumbnails', [ModelsController::class,
 
 // Demo routes
 Route::get('/demos', [DemosController::class, 'index'])->name('demos.index');
+
+// Settings checker. Reads a demo and throws it away - see DemoCheckController.
+// Open to everybody on purpose: the people who most need it are the ones who
+// have not worked out yet that they need an account for anything. Throttled
+// because it runs the parser on whatever it is handed.
+Route::get('/demos/check', [\App\Http\Controllers\DemoCheckController::class, 'show'])->name('demos.check');
+Route::post('/demos/check', [\App\Http\Controllers\DemoCheckController::class, 'check'])
+    ->middleware('throttle:20,1')
+    ->name('demos.check.run');
 Route::get('/demos/search-uploaders', [DemosController::class, 'searchUploaders'])->name('demos.search-uploaders');
 Route::get('/demos/{demo}/download', [DemosController::class, 'download'])->name('demos.download');
 

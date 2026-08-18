@@ -1392,7 +1392,13 @@ watch(selectedPhysics, () => {
                         <div class="flex items-center gap-3 mb-1">
                             <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('Demos') }}</h1>
                         </div>
-                        <p class="text-sm text-gray-400">{{ $t('Upload and manage demo files') }}</p>
+                        <p class="text-sm text-gray-400">
+                            {{ $t('Upload and manage demo files') }}
+                            <!-- The checker reads a demo and keeps nothing, so it belongs
+                                 beside the upload rather than inside it: the point is to
+                                 look BEFORE uploading a run that will not count. -->
+                            <Link :href="route('demos.check')" class="text-blue-400 hover:underline ml-1">{{ $t('Check your demo settings') }}</Link>
+                        </p>
                         <p class="text-xs text-gray-500 mt-1">
                             <span class="relative group inline-block">
                                 <span class="cursor-help border-b border-dotted border-gray-600 text-gray-400">{{ $t('Special thanks') }}</span>
