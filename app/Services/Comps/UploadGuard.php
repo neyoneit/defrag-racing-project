@@ -172,6 +172,10 @@ class UploadGuard
                 ->whereNotNull('comps_hidden_until')
                 ->whereRaw('LOWER(map_name) = ?', [mb_strtolower(trim($roundMap->map->name))])
                 ->update(['comps_hidden_until' => null]);
+
+            // A query-builder update fires no model events, and this is the
+            // moment a whole round's runs are supposed to appear at once.
+            UploadedDemo::forgetDemosTop($roundMap->map->name);
         }
 
         return $released;
@@ -458,6 +462,12 @@ class UploadGuard
         // the same demo twice before the first pass reached its own check.
         $demo->comps_hidden_until = $until;
         $demo->saveQuietly();
+
+        // saveQuietly skips the model's own events, so the map's Demos Top
+        // cache is retired here instead. Without it the run stays on the page
+        // for up to an hour after it was hidden, which for a comps map is the
+        // whole hour that mattered.
+        UploadedDemo::forgetDemosTop($demo->map_name);
     }
 
     private function alreadyEntered(UploadedDemo $demo): bool
@@ -535,6 +545,10 @@ class UploadGuard
 
         // Quietly, for the same reason holdUntil is - see the note there.
         $demo->saveQuietly();
+
+        // Same as holdUntil, in the other direction: the run has to come back
+        // to the map page, and nothing else will put it there.
+        UploadedDemo::forgetDemosTop($demo->map_name);
     }
 
     /**

@@ -222,9 +222,18 @@ class SubmissionValidator
             // Not through `$submission->demo`: that relation runs into the
             // global scope which hides exactly the demo we are holding, so it
             // answers null and the release would silently not happen.
-            UploadedDemo::withUnreleasedComps()
-                ->whereKey($submission->uploaded_demo_id)
-                ->update(['comps_hidden_until' => null]);
+            $demo = UploadedDemo::withUnreleasedComps()->find($submission->uploaded_demo_id);
+
+            if ($demo) {
+                UploadedDemo::withUnreleasedComps()
+                    ->whereKey($demo->id)
+                    ->update(['comps_hidden_until' => null]);
+
+                // A query-builder update fires no model events, so the map's
+                // Demos Top would keep the run hidden for another hour after
+                // it was let out.
+                UploadedDemo::forgetDemosTop($demo->map_name);
+            }
 
             $submission->delete();
 
