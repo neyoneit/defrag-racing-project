@@ -300,19 +300,6 @@ export default {
                                 <span class="font-normal text-amber-100/70">{{ $t('The same rules as on the servers apply.') }}</span>
                             </Link>
 
-                            <!-- Beside the rules rather than under them: reading
-                                 what the settings must be and checking what your
-                                 own demo says are the same errand, and the second
-                                 half is the one that actually answers it. -->
-                            <Link :href="route('comps.check')"
-                                  class="inline-flex items-center gap-1.5 flex-shrink-0 rounded-lg border border-white/15 bg-white/[0.06] hover:bg-white/10 hover:border-white/25 px-2.5 py-1 text-sm font-bold text-gray-200 transition-colors">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                </svg>
-                                {{ $t('Check your demo settings') }}
-                                <span class="font-normal text-gray-400">{{ $t('before you run') }}</span>
-                            </Link>
-
                             <!-- Green and separate, because this is the half
                                  people are actually looking for. "Same rules as
                                  the servers" is the boring half; whether an
@@ -950,6 +937,17 @@ export default {
                         <div v-if="uploadForm.errors.demo" class="mt-3 text-center text-sm text-red-400">{{ uploadForm.errors.demo }}</div>
                     </div>
                 </form>
+
+                <!-- Here rather than up beside the rules chip. This is the
+                     moment somebody wonders whether their settings were right,
+                     with the file already in their hand - and up in the header
+                     it was one more link on a page that has several, which is
+                     the same as not being there. -->
+                <div class="mx-auto mt-4 max-w-3xl rounded-lg border border-white/10 bg-white/[0.04] backdrop-blur-sm px-4 py-2.5 text-center text-xs leading-relaxed text-gray-400">
+                    {{ $t('Not sure your settings were right?') }}
+                    <Link :href="route('comps.check')" class="font-bold text-blue-400 hover:underline">{{ $t('Check any demo') }}</Link>
+                    {{ $t('before you enter. Nothing is uploaded, and one second of recording is enough.') }}
+                </div>
 
                 <!-- Your own entries, times and all. Yours are never a secret
                      from you. -->

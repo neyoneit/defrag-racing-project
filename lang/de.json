@@ -4247,5 +4247,8 @@
     "This file could not be read as a Quake 3 demo.": "Diese Datei ließ sich nicht als Quake-3-Demo lesen.",
     "1, or g_synchronousClients 1": "1, oder g_synchronousClients 1",
     "Record one second and stop, that is enough.": "Nimm eine Sekunde auf und stopp, das reicht.",
-    "before you run": "bevor du läufst"
+    "before you run": "bevor du läufst",
+    "Not sure your settings were right?": "Unsicher, ob deine Einstellungen stimmten?",
+    "Check any demo": "Prüfe ein beliebiges Demo",
+    "before you enter. Nothing is uploaded, and one second of recording is enough.": "bevor du teilnimmst. Nichts wird hochgeladen, und eine Sekunde Aufnahme reicht."
 }
