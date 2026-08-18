@@ -196,7 +196,32 @@ def parse_demo_metadata(file_path: Path) -> Optional[dict]:
     if demo.hasError:
         return None
 
+    # The cvars the site has rules about, as the demo recorded them - the ones
+    # that passed as well as the ones that did not. `validity` only lists what
+    # was wrong, which is all a verdict needs and not enough for the settings
+    # checker: somebody looking for the reason their run will not count wants
+    # to see the whole row of rules, including the ones they got right.
+    #
+    # A missing key means the demo does not carry that cvar at all. That is not
+    # a failure and must not be shown as one - it is simply not checkable here.
+    try:
+        params = raw._build_game_info().parameters
+    except Exception:
+        params = {}
+
+    settings = {
+        key: params[key]
+        for key in (
+            'pmove_fixed', 'pmove_msec', 'g_synchronousclients', 'sv_fps',
+            'com_maxfps', 'timescale', 'g_speed', 'g_gravity', 'g_knockback',
+            'handicap', 'sv_cheats', 'df_mp_interferenceoff', 'g_killwallbug',
+            'defrag_vers', 'version',
+        )
+        if key in params
+    }
+
     metadata = {
+        "settings": settings,
         "suggested_filename": Path(demo.demoNewName).name,
         "record_date": demo.recordTime.isoformat() if demo.recordTime else None,
         "map_name": demo.mapName,

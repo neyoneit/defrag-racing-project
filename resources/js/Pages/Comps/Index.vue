@@ -19,6 +19,7 @@ export default {
     import CompsCountdown from '@/Components/Comps/CompsCountdown.vue';
     import CompsDonors from '@/Components/Comps/CompsDonors.vue';
     import CompsPlayer from '@/Components/Comps/CompsPlayer.vue';
+    import DemoSettingsCheck from '@/Components/DemoSettingsCheck.vue';
 
     // The comps hub.
     //
@@ -172,6 +173,11 @@ export default {
     // undo after the deadline: the run is off the leaderboard, and by the time
     // somebody notices, the round is over. So it asks, once, before sending.
     const highlightConfirm = ref(false);
+
+    // Closed by default: it answers a question most people do not have, and an
+    // open drop zone under the upload is one more thing to mistake for the
+    // upload itself.
+    const showCheck = ref(false);
 
     // Keep the file and its date together: the date is read off the File
     // object at pick time and travels with the upload.
@@ -855,7 +861,7 @@ export default {
                                     </div>
                                 </div>
 
-                                <p class="mt-2 text-[11px] text-gray-600 leading-snug">
+                                <p class="mt-2 text-[11px] text-gray-400 leading-snug">
                                     {{ $t('Times stay hidden until the round closes, so nobody can be handed the time to beat.') }}
                                 </p>
                             </div>
@@ -930,13 +936,36 @@ export default {
                             </label>
                         </div>
 
-                        <p class="mt-3 text-center text-xs text-gray-600">
+                        <p class="mt-3 text-center text-xs text-gray-400">
                             {{ $t('A highlight is shown as a curiosity and is left out of the leaderboard entirely. Use it for a run worth watching rather than a run worth scoring.') }}
                         </p>
 
                         <div v-if="uploadForm.errors.demo" class="mt-3 text-center text-sm text-red-400">{{ uploadForm.errors.demo }}</div>
                     </div>
                 </form>
+
+                <!-- Unrolls in place rather than linking away. Somebody is
+                     standing at the upload with a file in their hand; sending
+                     them to another page to ask one question about it, and back
+                     again to act on the answer, is three navigations for a
+                     thing that fits under the form. -->
+                <div class="mx-auto mt-4 max-w-3xl">
+                    <button
+                        type="button"
+                        @click="showCheck = !showCheck"
+                        class="flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] backdrop-blur-sm px-4 py-2.5 text-xs text-gray-300 transition-colors hover:border-white/20 hover:bg-white/[0.07]"
+                    >
+                        <svg class="h-4 w-4 flex-shrink-0 text-gray-400 transition-transform" :class="showCheck ? 'rotate-90' : ''" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                        </svg>
+                        <span class="text-sm font-black text-gray-100">{{ $t('Demo validator') }}</span>
+                        <span class="hidden text-gray-400 sm:inline">{{ $t('Check your demo settings') }} &middot; {{ $t('Nothing is uploaded.') }}</span>
+                    </button>
+
+                    <div v-if="showCheck" class="mt-3">
+                        <DemoSettingsCheck />
+                    </div>
+                </div>
 
                 <!-- Your own entries, times and all. Yours are never a secret
                      from you. -->

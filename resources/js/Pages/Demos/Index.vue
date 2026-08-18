@@ -1387,7 +1387,11 @@ watch(selectedPhysics, () => {
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-8">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
-                <div class="flex justify-between items-center flex-wrap gap-4">
+                <!-- items-start, not items-center. The limit cards on the right
+                     are two rows tall, and centring against them pushed the
+                     title down the page - so Demos sat lower than every other
+                     section, which all top-align their heading. -->
+                <div class="flex justify-between items-start flex-wrap gap-4">
                     <div>
                         <div class="flex items-center gap-3 mb-1">
                             <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('Demos') }}</h1>

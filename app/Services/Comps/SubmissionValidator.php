@@ -174,7 +174,7 @@ class SubmissionValidator
      * "pmove_fixed" has to go and find out what pmove_fixed is supposed to be,
      * and most will not.
      */
-    private const EXPECTED = [
+    public const EXPECTED = [
         'sv_cheats' => '0',
         'timescale' => '1',
         'g_speed' => '320',
