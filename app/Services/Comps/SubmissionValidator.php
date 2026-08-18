@@ -32,6 +32,21 @@ class SubmissionValidator
     public const PARSED = ['processed', 'assigned', 'fallback-assigned'];
 
     /**
+     * Outcomes that are not outcomes yet: the parser has the file and has not
+     * finished with it.
+     *
+     * Load-bearing. `ProcessDemoJob` sets `processing` before it reads a byte,
+     * and that write is a status change, so the observer lands here with an
+     * entry that is still waiting and a demo that looks unreadable only
+     * because nothing has read it yet. Without this every entry made through
+     * the comps form was refused with "The demo could not be read" seconds
+     * after it was made, and `settleFor` only ever revisits `pending` rows -
+     * so the real verdict, which arrived moments later, found nothing left to
+     * correct. 12 entries in the first week, every single manual one.
+     */
+    private const IN_FLIGHT = ['uploaded', 'processing'];
+
+    /**
      * Settle every pending entry hanging off a finished upload.
      */
     public function settleFor(UploadedDemo $demo): void
@@ -48,6 +63,12 @@ class SubmissionValidator
 
     public function settle(CompSubmission $submission, UploadedDemo $demo): void
     {
+        // Still being read. Say nothing and stay pending; the parser's own
+        // finish will bring us back here with something to judge.
+        if (in_array($demo->status, self::IN_FLIGHT, true)) {
+            return;
+        }
+
         if (! in_array($demo->status, self::PARSED, true)) {
             $this->reject($submission, __('The demo could not be read.'), releasable: true);
 
