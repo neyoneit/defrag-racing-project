@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Resources\UserResource;
 use App\Models\CompDemoReport;
 use App\Models\CompRound;
 use App\Models\CompSubmission;
@@ -325,6 +326,16 @@ class CompsRoundReview extends Page
             ->title('Back in the round.')
             ->body('Entry #' . $entry->id . ': ' . $entry->status . ($entry->invalid_reason ? ' - ' . $entry->invalid_reason : ''))
             ->send();
+    }
+
+    /**
+     * The nick with its Quake colour codes rendered, the way the rest of the
+     * admin shows a name. Grouping still happens on the raw string, so two
+     * spellings of the same colours never split into two people.
+     */
+    public function nick(string $name): string
+    {
+        return UserResource::q3tohtml($name);
     }
 
     /** m:ss.mmm, the way every other comps screen prints a time. */

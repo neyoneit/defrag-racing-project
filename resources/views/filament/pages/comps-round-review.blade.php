@@ -52,7 +52,7 @@
         @forelse($players as $player)
             <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
                 <div class="flex items-center justify-between px-4 py-3 border-b border-gray-950/5 dark:border-white/10">
-                    <div class="text-sm font-extrabold">{{ $player['user'] }}</div>
+                    <div class="text-sm font-extrabold">{!! $this->nick($player['user']) !!}</div>
                     <div class="text-xs text-gray-500">
                         {{ count($player['rows']) }} {{ count($player['rows']) === 1 ? 'demo' : 'demos' }}
                         @if($player['problems'] > 0)

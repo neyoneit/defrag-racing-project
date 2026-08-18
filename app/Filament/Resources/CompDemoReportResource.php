@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\CompDemoReportResource\Pages;
+use App\Filament\Resources\UserResource;
 use App\Models\CompDemoReport;
 use App\Services\Comps\ResultsCalculator;
 use Filament\Notifications\Notification;
@@ -64,7 +65,9 @@ class CompDemoReportResource extends Resource
                 Tables\Columns\TextColumn::make('runner')
                     ->label('Run by')
                     ->weight('bold')
-                    ->getStateUsing(fn (CompDemoReport $r) => $r->submission?->user?->name ?? $r->demo?->user?->name ?? '-'),
+                    ->getStateUsing(fn (CompDemoReport $r) => $r->submission?->user?->name ?? $r->demo?->user?->name ?? '-')
+                    ->formatStateUsing(fn (?string $state): string => $state && $state !== '-' ? UserResource::q3tohtml($state) : '-')
+                    ->html(),
 
                 Tables\Columns\TextColumn::make('demo.original_filename')
                     ->label('Demo')
@@ -88,7 +91,9 @@ class CompDemoReportResource extends Resource
 
                 Tables\Columns\TextColumn::make('reporter.name')
                     ->label('Reported by')
-                    ->searchable(),
+                    ->searchable()
+                    ->formatStateUsing(fn (?string $state): string => $state ? UserResource::q3tohtml($state) : '-')
+                    ->html(),
 
                 Tables\Columns\TextColumn::make('reason')
                     ->limit(60)
