@@ -33,6 +33,43 @@ class UploadedDemo extends Model
 
         static::saved($clearCache);
         static::deleted($clearCache);
+
+        // Which record a demo belongs to decides whether Demos Top shows it as
+        // a row of its own or folds it into the main record's cluster - so the
+        // moment it moves, the cached Demos Top for that map is wrong.
+        //
+        // Here rather than at the callers. Five places move a demo between
+        // records: two assign endpoints, two unassign paths and the admin's
+        // reassignment action. Exactly one of them remembered to bump the
+        // counter, so a demo assigned to an existing record stayed on screen
+        // twice - once folded into the record it now belongs to, once as the
+        // orphan row the hour-old cache still believed in. Anywhere but the
+        // model, the sixth caller forgets again.
+        //
+        // `wasChanged` keeps it to the writes that matter: a download counter
+        // or an assignment note leaves the cache alone.
+        static::saved(function ($demo) {
+            if (! $demo->wasChanged('record_id')) {
+                return;
+            }
+
+            // The map as it was before this write, when the write cleared it.
+            // Reprocessing a demo nulls map_name and record_id together, and
+            // the stale row to clear is filed under the OLD map - reading the
+            // new value there finds null and silently skips the bump.
+            $map = $demo->map_name ?: $demo->getOriginal('map_name');
+
+            if ($map) {
+                Cache::increment('demostop_gen:' . $map);
+            }
+        });
+
+        // A deleted demo leaves the same stale row behind.
+        static::deleted(function ($demo) {
+            if ($demo->map_name && $demo->record_id) {
+                Cache::increment('demostop_gen:' . $demo->map_name);
+            }
+        });
     }
 
     /**

@@ -5,6 +5,13 @@
 // badge: a time set where cheats are enabled is worth nothing, and somebody
 // scanning the list should not have to hunt for that.
 //
+// Full width, but not full brightness. At bg-red-600/90 with a red-500/60
+// border on the card as well, a cheats server pulled the eye harder than any
+// normal one and read as the most important thing on the page - which is
+// backwards, since it is the server whose times do not count. Toned down
+// 18 Aug 2026 on a player's report; the warning still reads at a glance and
+// no longer outranks everything around it.
+//
 // Renders nothing for false OR null. Null means the server never told us -
 // only an engine new enough to put sv_cheats in its getdfstatus reply does,
 // because the cvar is systeminfo and never reaches a server browser otherwise.
@@ -29,7 +36,7 @@ defineProps({
             'absolute top-0 inset-x-0 z-20 flex items-center justify-center gap-2 backdrop-blur-sm pointer-events-none',
             subdued
                 ? 'bg-gray-900/70 border-b border-white/10 py-0.5'
-                : ['bg-red-600/90 border-b border-red-300/40', compact ? 'py-0.5' : 'py-1.5'],
+                : ['bg-red-800/85 border-b border-red-400/25', compact ? 'py-0.5' : 'py-1.5'],
         ]"
         :title="subdued
             ? $t('This server runs with sv_cheats enabled. It is a freestyle server, so nothing here is a timed result anyway.')
