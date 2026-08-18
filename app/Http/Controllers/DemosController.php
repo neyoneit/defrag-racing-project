@@ -849,6 +849,7 @@ class DemosController extends Controller
                                 'file_hash' => $fileHash,
                                 'user_id' => $userId,
                                 'status' => 'uploaded',
+                                'source' => UploadedDemo::SOURCE_WEB,
                                 'client_file_mtime' => $candidate['mtime'] ?? null,
                             ]);
 

@@ -131,6 +131,7 @@ class SubmissionIntake
                 'file_hash' => $hash,
                 'user_id' => $user->id,
                 'status' => 'uploaded',
+                'source' => UploadedDemo::SOURCE_COMPS,
                 // Out of /demos, the map page, profiles and the launcher until
                 // the round is over. The demo is the route.
                 'comps_hidden_until' => $round->ends_at,

@@ -35,6 +35,25 @@ class UploadedDemo extends Model
         static::deleted($clearCache);
     }
 
+    /**
+     * Which route put this file on the site.
+     *
+     * The column has existed since March 2026 with a default of `web`, but
+     * only demome ever wrote to it, so every other route landed on the
+     * default and the four of them were indistinguishable. That mattered the
+     * first time somebody asked how a demo of theirs had reached comps: the
+     * honest answer was that the database could not say.
+     *
+     * `WEB` keeps its old meaning, so rows written before 18 Aug 2026 read
+     * the same as they always did - which for those rows means "the /demos
+     * form, the launcher, an archive or comps", not "the /demos form".
+     */
+    public const SOURCE_WEB = 'web';
+    public const SOURCE_LAUNCHER = 'launcher';
+    public const SOURCE_COMPS = 'comps';
+    public const SOURCE_ARCHIVE = 'archive';
+    public const SOURCE_DEMOME = 'demome';
+
     protected $fillable = [
         'original_filename',
         'processed_filename',

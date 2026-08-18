@@ -725,7 +725,7 @@ class DemomeController extends Controller
             'file_size' => $file->getSize(),
             'file_hash' => $hash,
             'status' => 'uploaded',
-            'source' => 'demome',
+            'source' => UploadedDemo::SOURCE_DEMOME,
             'client_file_mtime' => $mtime,
         ]);
 

@@ -89,6 +89,7 @@ class ExtractAndQueueArchiveJob implements ShouldQueue
                     'file_hash' => $fileHash,
                     'user_id' => $this->userId,
                     'status' => 'uploaded',
+                    'source' => UploadedDemo::SOURCE_ARCHIVE,
                     'client_file_mtime' => $this->archivedMtime($demoFile['mtime'] ?? null),
                 ]);
 
