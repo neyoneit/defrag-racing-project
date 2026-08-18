@@ -15,7 +15,7 @@ import DemoSettingsCheck from '@/Components/DemoSettingsCheck.vue';
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div class="min-w-0">
-                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('Check your demo settings') }}</h1>
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('Demo validator') }}</h1>
                         <p class="mt-1 max-w-2xl text-sm text-gray-400">
                             {{ $t('Drop a demo here and this tells you whether the settings in it would count. Nothing is saved - the file is read and thrown away.') }}
                         </p>

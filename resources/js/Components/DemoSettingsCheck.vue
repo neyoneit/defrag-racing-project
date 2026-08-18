@@ -59,6 +59,15 @@ function onDrop(e) {
 
 <template>
     <div class="space-y-3">
+        <!-- Above the drop zone and at reading size, not caption size inside
+             it. It is the one thing somebody has to know before they can use
+             this at all - that they do not have to go and set a time first -
+             and buried in the box at text-xs it was read by nobody. -->
+        <p class="rounded-xl border border-blue-400/20 bg-blue-500/[0.08] backdrop-blur-sm px-5 py-3.5 text-base leading-relaxed text-gray-200">
+            <strong class="font-black text-white">{{ $t('You do not need a finished run.') }}</strong>
+            {{ $t('Record one second and stop, that is enough.') }}
+        </p>
+
         <!-- Drop zone -->
         <label
             class="block cursor-pointer rounded-xl border bg-gradient-to-br from-white/[0.08] to-white/[0.02] backdrop-blur-sm p-1 transition"
@@ -74,10 +83,6 @@ function onDrop(e) {
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                 </svg>
                 <span class="text-sm font-bold text-gray-200">{{ busy ? $t('Reading the demo...') : $t('Drop a demo here, or click to pick one') }}</span>
-                <span class="text-xs text-gray-400">
-                    <strong class="text-gray-300">{{ $t('You do not need a finished run.') }}</strong>
-                    {{ $t('Record one second and stop, that is enough.') }}
-                </span>
                 <span v-if="file && !busy" class="mt-1 break-all font-mono text-[11px] text-gray-500">{{ file.name }}</span>
             </div>
         </label>

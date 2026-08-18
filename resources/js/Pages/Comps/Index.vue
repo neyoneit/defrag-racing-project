@@ -958,8 +958,8 @@ export default {
                         <svg class="h-4 w-4 flex-shrink-0 text-gray-400 transition-transform" :class="showCheck ? 'rotate-90' : ''" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                         </svg>
-                        <span class="font-bold text-gray-200">{{ $t('Check your demo settings') }}</span>
-                        <span class="hidden text-gray-400 sm:inline">{{ $t('Nothing is uploaded.') }}</span>
+                        <span class="text-sm font-black text-gray-100">{{ $t('Demo validator') }}</span>
+                        <span class="hidden text-gray-400 sm:inline">{{ $t('Check your demo settings') }} &middot; {{ $t('Nothing is uploaded.') }}</span>
                     </button>
 
                     <div v-if="showCheck" class="mt-3">
