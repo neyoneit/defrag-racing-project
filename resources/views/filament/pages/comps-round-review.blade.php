@@ -101,6 +101,18 @@
                                         @if($row['demo_id'])
                                             <a href="{{ route('demos.download', $row['demo_id']) }}" target="_blank" class="text-xs text-primary-600 hover:underline">demo</a>
                                         @endif
+
+                                        {{-- The only thing on this page that changes anything, and the
+                                             only screen a withdrawn run shows up on: withdrawing deletes
+                                             the entry, so the submissions table has no row to act on. --}}
+                                        @if($row['restorable'])
+                                            <button
+                                                type="button"
+                                                wire:click="restore({{ $row['demo_id'] }})"
+                                                wire:confirm="Put this run back into the round? Do this when the player has asked for it."
+                                                class="ml-2 text-xs font-semibold text-primary-600 hover:underline"
+                                            >put back</button>
+                                        @endif
                                     </td>
 
                                     <td class="px-4 py-2 w-32 text-right text-xs text-gray-500 whitespace-nowrap">
