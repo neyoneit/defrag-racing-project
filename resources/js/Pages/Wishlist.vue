@@ -8,7 +8,7 @@ export default {
 
 <script setup>
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { currentLocale, t } from '@/utils/i18n';
 
 import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
@@ -97,6 +97,30 @@ const onKeydown = (event) => {
 };
 
 onMounted(() => window.addEventListener('keydown', onKeydown));
+
+// One wish, pointed at. A notification about a finished wish sends people to
+// /wishlist/<id>, which lands here with ?highlight=<id> and the right tab
+// already chosen - see WishlistController::show. Without the scroll and the
+// ring the link drops somebody on a list of three hundred and leaves them to
+// find their own wish, which is the whole reason a link to one was needed.
+//
+// The ring times out rather than staying: it says "here", and a wish left
+// permanently ringed reads as a wish with something wrong with it.
+const highlightId = ref(null);
+
+onMounted(() => {
+    const id = parseInt(new URLSearchParams(window.location.search).get('highlight'));
+
+    if (!id) return;
+
+    highlightId.value = id;
+
+    nextTick(() => {
+        document.getElementById('wish-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    setTimeout(() => { highlightId.value = null; }, 4000);
+});
 onBeforeUnmount(() => {
     window.removeEventListener('keydown', onKeydown);
     if (imagePreview.value) URL.revokeObjectURL(imagePreview.value);
@@ -358,8 +382,9 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(currentLocale())
             </div>
 
             <div v-else class="space-y-3">
-                <div v-for="wish in wishes" :key="wish.id"
-                    class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl p-4 md:p-5 flex gap-4">
+                <div v-for="wish in wishes" :key="wish.id" :id="'wish-' + wish.id"
+                    class="bg-black/40 backdrop-blur-sm border rounded-2xl p-4 md:p-5 flex gap-4 transition-colors duration-500"
+                    :class="highlightId === wish.id ? 'border-fuchsia-400/60 ring-2 ring-fuchsia-500/40' : 'border-white/10'">
 
                     <!-- Score column. The net number is the big one because it
                          is what the list is sorted by; the split sits under it

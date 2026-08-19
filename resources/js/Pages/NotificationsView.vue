@@ -312,6 +312,13 @@
                 borderColor: 'border-amber-500/30',
                 iconColor: 'text-amber-400'
             },
+            'wish_done': {
+                label: 'Wishlist',
+                icon: 'M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z',
+                bgColor: 'bg-fuchsia-500/20',
+                borderColor: 'border-fuchsia-500/30',
+                iconColor: 'text-fuchsia-400'
+            },
             'render_completed': {
                 label: 'Render Done',
                 icon: 'm15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z',
@@ -734,6 +741,10 @@
                                             </svg>
                                             <span v-html="q3tohtml(notification.headline)"></span>
                                         </a>
+                                    </template>
+                                    <template v-else-if="notification.type === 'wish_done'">
+                                        <span class="text-gray-400">{{ $t('Your wish is done:') }}</span>
+                                        <span class="ml-1.5 text-fuchsia-300 group-hover:text-fuchsia-200 group-hover:underline font-bold transition-colors" v-html="q3tohtml(notification.headline)"></span>
                                     </template>
                                     <template v-else>
                                         <span v-if="getNotificationPrefix(notification.type)" class="text-gray-400 mr-1.5">{{ getNotificationPrefix(notification.type) }}</span>

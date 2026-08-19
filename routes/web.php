@@ -117,6 +117,12 @@ Route::get('/wishlist', [\App\Http\Controllers\WishlistController::class, 'index
 Route::post('/wishlist', [\App\Http\Controllers\WishlistController::class, 'store'])
     ->middleware(['auth', 'verified', 'throttle:20,60'])
     ->name('wishlist.store');
+// One wish, by id. Nothing is rendered here: it works out which tab the wish
+// currently sits under and sends the browser to the list with it highlighted.
+// A notification written weeks ago stores only /wishlist/123, so the link
+// still lands on the right tab after the wish has moved between them.
+Route::get('/wishlist/{wish}', [\App\Http\Controllers\WishlistController::class, 'show'])
+    ->name('wishlist.show');
 Route::post('/wishlist/{wish}/vote', [\App\Http\Controllers\WishlistController::class, 'vote'])
     ->middleware(['auth', 'verified', 'throttle:120,60'])
     ->name('wishlist.vote');
