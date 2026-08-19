@@ -185,6 +185,10 @@ class SubmissionValidator
         'sv_fps' => '125',
         'com_maxfps' => '125',
         'pmove_msec' => '8',
+        // Only when g_synchronousClients is not 1 - see the parser's
+        // `_check_validity`, which skips both pmove rules in that case.
+        // explainNote() never reads this one, it has its own sentence.
+        'pmove_fixed' => '1',
         'g_killWallbug' => '1',
     ];
 

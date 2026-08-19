@@ -33,8 +33,8 @@ class DemoSettingsChecker
     /**
      * The rules, in the order somebody should read them.
      *
-     * `pmove_fixed` first because it is the one people get wrong, and the only
-     * one with two right answers.
+     * `pmove_fixed` first because it is the one people get wrong. It and
+     * `pmove_msec` are the two with a second right answer - see SYNC_WAIVED.
      */
     private const RULES = [
         'pmove_fixed',
@@ -50,6 +50,18 @@ class DemoSettingsChecker
         'df_mp_interferenceoff',
         'g_killWallbug',
     ];
+
+    /**
+     * The rules `g_synchronousClients 1` answers instead of.
+     *
+     * There is one escape hatch and it covers BOTH pmove rules, not just
+     * `pmove_fixed`: the parser skips them together (`_check_validity`),
+     * exactly as DemoCleaner3 does. The page used to name the alternative on
+     * `pmove_fixed` only and print a bare "8" beside `pmove_msec`, so somebody
+     * running the dfcomp ruleset read a demand their config does not have to
+     * meet - on the one page whose whole job is to stop people guessing.
+     */
+    private const SYNC_WAIVED = ['pmove_fixed', 'pmove_msec'];
 
     public function __construct(private SubmissionValidator $validator)
     {
@@ -81,19 +93,22 @@ class DemoSettingsChecker
                 default => 'unknown',
             };
 
+            $expected = SubmissionValidator::EXPECTED[$cvar] ?? '?';
+            $waived = in_array($cvar, self::SYNC_WAIVED, true);
+
             $rules[] = [
                 'cvar' => $cvar,
-                'needed' => $cvar === 'pmove_fixed'
-                    ? __('1, or g_synchronousClients 1')
-                    : (SubmissionValidator::EXPECTED[$cvar] ?? '?'),
+                'needed' => $waived
+                    ? __(':expected, or g_synchronousClients 1', ['expected' => $expected])
+                    : $expected,
                 'found' => $settings[$key] ?? null,
                 'state' => $state,
+                // What g_synchronousClients actually was, beside the rules it
+                // answers for: "pmove_fixed 0" on its own reads as a mistake
+                // even when it is the dfcomp ruleset being followed exactly.
+                ...($waived ? ['companion' => $settings['g_synchronousclients'] ?? null] : []),
             ];
         }
-
-        // Shown beside pmove_fixed, because "pmove_fixed 0" on its own reads as
-        // a mistake even when it is the dfcomp ruleset being followed exactly.
-        $rules[0]['companion'] = $settings['g_synchronousclients'] ?? null;
 
         $flagged = array_diff_key($validity, array_flip(['client_finish', 'tool_assisted']));
 
