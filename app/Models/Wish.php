@@ -5,10 +5,47 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class Wish extends Model
 {
     use SoftDeletes;
+
+    /**
+     * Tell the author when their wish is built.
+     *
+     * On the model rather than at the admin action, because two places in the
+     * panel set a status - the one-field "Set status" action and the ordinary
+     * edit form - and a third will be added the day somebody wants a bulk one.
+     * Anywhere else, one of them forgets.
+     *
+     * Only `done`, and only when the status actually moves. Saving the same
+     * status again is what an admin does while writing the public answer, and
+     * it must not send the person a second notification each time.
+     */
+    protected static function booted(): void
+    {
+        static::updated(function (Wish $wish) {
+            if (! $wish->user_id || $wish->status !== 'done' || ! $wish->wasChanged('status')) {
+                return;
+            }
+
+            Notification::create([
+                'user_id' => $wish->user_id,
+                'type' => 'wish_done',
+                // The title carries the whole message: the notification list
+                // is a single line per row, and "your wish is done" without
+                // saying which wish is a notification you have to go and
+                // decode.
+                'headline' => Str::limit($wish->title, 90),
+                // /wishlist/<id>, not the list with a tab already chosen. The
+                // wish can move between tabs afterwards, and the redirect
+                // works the tab out at the moment somebody clicks - see
+                // WishlistController::show.
+                'url' => route('wishlist.show', $wish),
+            ]);
+        });
+    }
 
     /**
      * Screenshots go on the local public disk, not the community bucket: they

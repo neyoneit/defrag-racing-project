@@ -115,6 +115,30 @@ class WishlistController extends Controller
         ]);
     }
 
+    /**
+     * Send somebody to one wish on the list.
+     *
+     * The board defaults to the open tab, so a finished wish is not on the
+     * page a bare /wishlist link opens - which is exactly the wish somebody is
+     * most likely to be sent a link to. This picks the tab the wish is under
+     * now, rather than the one it was under when the link was written, and
+     * marks it so the page can scroll to it and ring it for a moment.
+     *
+     * A redirect rather than a page of its own: one wish alone, out of the
+     * list it is being voted on in, tells you nothing about whether anyone
+     * else wanted it.
+     */
+    public function show(Wish $wish)
+    {
+        return redirect()->route('wishlist.index', array_filter([
+            // Only the closed tabs need naming. The open ones are the default
+            // view, and pinning the tab to `considering` would hide every
+            // other wish for no reason.
+            'status' => in_array($wish->status, Wish::OPEN_STATUSES, true) ? null : $wish->status,
+            'highlight' => $wish->id,
+        ]));
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([
