@@ -150,7 +150,19 @@ const showReprocessConfirm = ref(false);
 const processingStartTime = ref(null);
 const processingDuration = ref(null);
 const processingResultsExpanded = ref(false);
-const globalQueueExpanded = ref(true);
+const globalQueueExpanded = ref(false);
+
+// The queue panel is only worth screen space while the queue has something
+// in it. Empty, it was a box of zeroes on every page load. This is the same
+// test that decides whether to poll at all, so the panel is on screen exactly
+// while the numbers behind it move.
+const queueHasWork = computed(() =>
+    (queueStats.value?.total_queued || 0) > 0
+    || (queueStats.value?.total_processing || 0) > 0
+    || (queueStats.value?.user_queued || 0) > 0
+    || (queueStats.value?.user_processing || 0) > 0
+    || activelyProcessingDemos.value.length > 0
+);
 
 const processingSummary = computed(() => {
     if (recentlyProcessed.value.length === 0) return null;
@@ -176,6 +188,31 @@ const processingSummary = computed(() => {
     return { groups: active, total: recentlyProcessed.value.length, success: successCount, fail: failCount };
 });
 
+// The upload panel is folded away to start with. It is machinery, and most
+// people open this page to watch a demo, not to send one.
+//
+// It opens by itself the moment it has something to show: files waiting, an
+// upload running, a summary, or demos that just finished processing. It also
+// opens when a file is dragged anywhere over the page, because the drop zone
+// lives inside it and a folded panel cannot catch the drop.
+const uploadOpen = ref(false);
+
+watch(
+    [selectedFiles, uploading, uploadSummary, processingSummary, compsNotices],
+    ([files, busy, summary, processed, notices]) => {
+        if (files.length || busy || summary || processed || notices.length) {
+            uploadOpen.value = true;
+        }
+    },
+    { deep: true }
+);
+
+const openUploadOnDrag = (event) => {
+    if (!uploadOpen.value && Array.from(event.dataTransfer?.types || []).includes('Files')) {
+        uploadOpen.value = true;
+    }
+};
+
 const reprocessAllFailed = async () => {
     showReprocessConfirm.value = false;
     reprocessingFailed.value = true;
@@ -194,6 +231,43 @@ const reprocessAllFailed = async () => {
     } finally {
         reprocessingFailed.value = false;
     }
+};
+
+// Which list the page is showing. Only one is on screen at a time, so the
+// page has one table instead of two stacked ones. It lives in the URL, which
+// makes a link to somebody's own uploads shareable and survives a reload.
+const activeList = ref(
+    new URLSearchParams(window.location.search).get('list') === 'mine' ? 'mine' : 'all'
+);
+
+const changeList = (list) => {
+    activeList.value = list;
+    const currentUrl = new URL(window.location.href);
+
+    if (list === 'all') {
+        currentUrl.searchParams.delete('list');
+    } else {
+        currentUrl.searchParams.set('list', list);
+    }
+
+    // This has to name the props it wants. A plain visit is not a partial
+    // reload, and the controller answers those with null lists on purpose,
+    // so the table would empty itself on every tab click.
+    const only = list === 'mine'
+        ? ['userDemos', 'demoCounts']
+        : ['publicDemos', 'browseCounts'];
+
+    const alreadyLoaded = list === 'mine' ? props.userDemos : props.publicDemos;
+    if (!alreadyLoaded) {
+        demosLoading.value = true;
+    }
+
+    router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
+        preserveScroll: true,
+        preserveState: true,
+        only,
+        onFinish: () => { demosLoading.value = false; },
+    });
 };
 
 // Filter state (for Your Uploads section)
@@ -1232,10 +1306,19 @@ const demosLoading = ref(true);
 onMounted(() => {
     checkForProcessingDemos();
 
+    if (new URLSearchParams(window.location.search).get('upload') === '1') {
+        uploadOpen.value = true;
+    }
+    document.addEventListener('dragover', openUploadOnDrag);
+
     if (!props.userDemos && !props.publicDemos) {
         const start = Date.now();
+        // Both counts, because both sit on the tab buttons. Only one list,
+        // because only one list is on screen.
         router.reload({
-            only: ['userDemos', 'publicDemos', 'demoCounts', 'browseCounts'],
+            only: activeList.value === 'mine'
+                ? ['userDemos', 'demoCounts', 'browseCounts']
+                : ['publicDemos', 'demoCounts', 'browseCounts'],
             onFinish: () => {
                 const remaining = 400 - (Date.now() - start);
                 if (remaining > 0) {
@@ -1252,6 +1335,7 @@ onMounted(() => {
 
 onUnmounted(() => {
     stopStatusPolling();
+    document.removeEventListener('dragover', openUploadOnDrag);
 });
 
 // Manual assignment functions
@@ -1479,12 +1563,30 @@ watch(selectedPhysics, () => {
 
                 <!-- Upload Section (visible to all users; guests will have restricted actions) -->
                 <div class="bg-black/40 backdrop-blur-sm rounded-xl p-3 mb-4 shadow-2xl border border-white/5">
-                    <h3 class="text-sm font-bold text-gray-300 mb-2 flex items-center">
-                        <svg class="w-4 h-4 mr-1.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button
+                        type="button"
+                        @click="uploadOpen = !uploadOpen"
+                        class="w-full flex items-center text-sm font-bold text-gray-300 hover:text-white transition-colors"
+                        :class="uploadOpen ? 'mb-2' : ''"
+                        :aria-expanded="uploadOpen"
+                    >
+                        <svg class="w-4 h-4 mr-1.5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                         </svg>
                         {{ $t('Upload Demos') }}
-                    </h3>
+                        <span v-if="!uploadOpen" class="ml-2 font-normal text-xs text-gray-500 hidden sm:inline">
+                            {{ $t('Drag files here or click to open') }}
+                        </span>
+                        <svg
+                            class="w-4 h-4 ml-auto text-gray-500 transition-transform flex-shrink-0"
+                            :class="uploadOpen ? 'rotate-180' : ''"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        >
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+
+                    <div v-show="uploadOpen">
 
                     <!-- Not logged in: full clickable login overlay -->
                     <div v-if="!$page.props.auth.user" class="relative">
@@ -1820,6 +1922,7 @@ watch(selectedPhysics, () => {
                             </div>
                         </div>
                     </div>
+                    </div>
                 </div>
 
                 <!-- Held by comps. Above the results panel, because a demo in
@@ -1934,15 +2037,20 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Global Processing Status (logged in only) -->
-                <div v-if="$page.props.auth.user" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 mb-4 shadow-2xl border border-white/5">
-                    <button @click.stop="globalQueueExpanded = !globalQueueExpanded" class="w-full flex items-center justify-between" :class="{ 'mb-3': globalQueueExpanded }">
-                        <h3 class="text-base font-semibold text-gray-200">{{ $t('Global Queue Status') }}</h3>
-                        <div class="flex items-center gap-2">
-                            <span class="text-gray-500 text-xs">{{ $t('updates every 2s') }}</span>
-                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="{ 'rotate-180': globalQueueExpanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </div>
+                <div v-if="$page.props.auth.user && queueHasWork" class="bg-black/40 backdrop-blur-sm rounded-xl p-3 mb-4 shadow-2xl border border-white/5">
+                    <button @click.stop="globalQueueExpanded = !globalQueueExpanded" class="w-full flex items-center gap-2 text-left" :class="{ 'mb-3': globalQueueExpanded }">
+                        <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse flex-shrink-0"></span>
+                        <h3 class="text-sm font-semibold text-gray-200 flex-shrink-0">{{ $t('Global Queue Status') }}</h3>
+                        <span v-if="!globalQueueExpanded" class="text-xs text-gray-400 truncate">
+                            {{ $t('yours :yours, all :total', {
+                                yours: (queueStats.user_queued || 0) + (queueStats.user_processing || 0),
+                                total: (queueStats.total_queued || 0) + (queueStats.total_processing || 0)
+                            }) }}
+                        </span>
+                        <span class="text-gray-500 text-xs ml-auto flex-shrink-0 hidden sm:inline">{{ $t('updates every 2s') }}</span>
+                        <svg class="w-4 h-4 text-gray-400 transition-transform flex-shrink-0" :class="{ 'rotate-180': globalQueueExpanded, 'ml-auto sm:ml-0': true }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
                     </button>
 
                     <!-- Queue Statistics -->
@@ -1992,28 +2100,47 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Loading skeleton while demo lists load -->
-                <div v-if="demosLoading" class="space-y-6">
-                    <!-- Your Uploads skeleton -->
-                    <div v-if="$page.props.auth.user" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/5 animate-pulse mb-8">
-                        <div class="h-6 bg-white/10 rounded w-48 mb-4"></div>
-                        <div class="flex gap-2 mb-4">
-                            <div v-for="i in 5" :key="'tab'+i" class="h-8 bg-white/5 rounded-full w-24"></div>
-                        </div>
-                        <div class="space-y-3">
-                            <div v-for="i in 8" :key="'row'+i" class="h-12 bg-white/5 rounded"></div>
-                        </div>
+                <div v-if="demosLoading" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/5 animate-pulse">
+                    <div class="h-6 bg-white/10 rounded w-56 mb-4"></div>
+                    <div class="flex gap-2 mb-4">
+                        <div v-for="i in 5" :key="'tab'+i" class="h-8 bg-white/5 rounded-full w-24"></div>
                     </div>
-                    <!-- Browse All Demos skeleton -->
-                    <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/5 animate-pulse">
-                        <div class="h-6 bg-white/10 rounded w-56 mb-4"></div>
-                        <div class="space-y-3">
-                            <div v-for="i in 8" :key="'browse'+i" class="h-12 bg-white/5 rounded"></div>
-                        </div>
+                    <div class="space-y-3">
+                        <div v-for="i in 8" :key="'row'+i" class="h-12 bg-white/5 rounded"></div>
                     </div>
                 </div>
 
+                <!-- One list at a time. The page used to stack both, so a person
+                     who wanted to watch somebody else's demo had to scroll past
+                     their own upload history first. -->
+                <div v-if="!demosLoading" class="flex flex-wrap items-center gap-2 mb-3">
+                    <button
+                        type="button"
+                        @click="changeList('all')"
+                        class="inline-flex items-center gap-1.5 h-8 rounded-lg px-3 text-sm font-medium transition-colors"
+                        :class="activeList === 'all'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
+                    >
+                        {{ $t('All Demos') }}
+                        <span class="opacity-75 text-xs">{{ browseCountsComputed.all.toLocaleString() }}</span>
+                    </button>
+                    <button
+                        v-if="$page.props.auth.user"
+                        type="button"
+                        @click="changeList('mine')"
+                        class="inline-flex items-center gap-1.5 h-8 rounded-lg px-3 text-sm font-medium transition-colors"
+                        :class="activeList === 'mine'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
+                    >
+                        {{ $t('My Uploads') }}
+                        <span class="opacity-75 text-xs">{{ demoCountsComputed.all.toLocaleString() }}</span>
+                    </button>
+                </div>
+
                 <!-- Your Uploads Section (authenticated users only) -->
-                <div v-else-if="$page.props.auth.user && userDemos" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5 mb-8">
+                <div v-if="!demosLoading && activeList === 'mine' && $page.props.auth.user && userDemos" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5 mb-8">
                     <!-- Show message when no demos uploaded at all -->
                     <div v-if="demoCountsComputed.all === 0" class="text-center py-12">
                         <svg class="w-16 h-16 mx-auto text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2511,7 +2638,7 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Browse All Demos Section (for everyone) -->
-                <div v-if="!demosLoading && publicDemos" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5">
+                <div v-if="!demosLoading && activeList === 'all' && publicDemos" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5">
                     <h3 class="text-xl font-semibold text-gray-200 mb-4">
                         {{ $t('Browse All Demos') }}
                     </h3>
