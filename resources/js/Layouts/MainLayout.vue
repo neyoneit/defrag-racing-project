@@ -374,6 +374,12 @@
         const type = notification?.type ?? '';
 
         if (type === 'new_map') return notification.before || t('New map:');
+        // Both of these reached the header for the first time when the preview
+        // filter stopped being an allow-list, and both would have arrived
+        // labelled "Announcement:" - which is exactly what the comment above
+        // is about.
+        if (type === 'wish_done') return t('Your wish is done:');
+        if (type === 'alias_suggestion') return t('Alias:');
         if (type.startsWith('clan_')) return t('Clan:');
         if (type.startsWith('tournament_') || type.startsWith('round_')) return t('Tournament:');
         if (type.startsWith('render_')) return t('Render:');

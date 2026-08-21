@@ -88,41 +88,54 @@ class HandleInertiaRequests extends Middleware
                 $recordsNotifications = $recordsQuery->orderBy('created_at', 'DESC')->get();
             }
 
-            // Filter system notifications based on preview_system setting
+            // What the header ticker shows, out of what the bell already has.
+            //
+            // Muting is the wrong way round on purpose. The old version built
+            // a list of ALLOWED types and filtered to it, so a notification
+            // type that belonged to no category on this list simply never
+            // reached the header - and nothing said so. `wish_done` was
+            // invisible up there from the day it shipped, `alias_suggestion`
+            // for far longer: somebody suggests an alias for your profile and
+            // the only place it appears is a page you have to already know
+            // about.
+            //
+            // Turning it into a mute list makes the default "show it". A
+            // category the user unticked is hidden; a type nobody has filed
+            // under a category yet is shown, which is the safer way for this
+            // to be wrong. Adding a real setting for one is then a choice, not
+            // a thing you have to remember or it disappears.
+            //
+            // It also fixes the case where the setting meant the opposite of
+            // itself: with every category unticked the old allow-list came out
+            // empty, the filter was skipped as "nothing to filter by", and the
+            // header showed EVERYTHING to the one person who had asked for
+            // none of it.
             $previewSystem = $user->preview_system ?? ['announcement', 'clan', 'tournament', 'render', 'map'];
 
             $systemQuery = Notification::where('read', false)
                 ->where('user_id', $user->id);
 
-            // Build notification type filter based on preview_system preferences
-            $allowedTypes = [];
+            $categories = [
+                'announcement' => ['announcement'],
+                'clan' => [
+                    'clan_invite', 'clan_kick', 'clan_accept', 'clan_leave',
+                    'clan_transfer', 'clan_request', 'clan_request_accept', 'clan_request_reject',
+                ],
+                'tournament' => ['tournament_start', 'round_start', 'round_end'],
+                'render' => ['render_completed'],
+                'map' => ['new_map'],
+            ];
 
-            if (in_array('announcement', $previewSystem)) {
-                $allowedTypes[] = 'announcement';
+            $muted = [];
+
+            foreach ($categories as $category => $types) {
+                if (! in_array($category, $previewSystem)) {
+                    $muted = array_merge($muted, $types);
+                }
             }
 
-            if (in_array('clan', $previewSystem)) {
-                $allowedTypes = array_merge($allowedTypes, [
-                    'clan_invite', 'clan_kick', 'clan_accept', 'clan_leave', 'clan_transfer', 'clan_request', 'clan_request_accept', 'clan_request_reject'
-                ]);
-            }
-
-            if (in_array('tournament', $previewSystem)) {
-                $allowedTypes = array_merge($allowedTypes, [
-                    'tournament_start', 'round_start', 'round_end'
-                ]);
-            }
-
-            if (in_array('render', $previewSystem)) {
-                $allowedTypes[] = 'render_completed';
-            }
-
-            if (in_array('map', $previewSystem)) {
-                $allowedTypes[] = 'new_map';
-            }
-
-            if (!empty($allowedTypes)) {
-                $systemQuery->whereIn('type', $allowedTypes);
+            if ($muted) {
+                $systemQuery->whereNotIn('type', $muted);
             }
 
             $systemNotifications = $systemQuery->orderBy('created_at', 'DESC')->get();
