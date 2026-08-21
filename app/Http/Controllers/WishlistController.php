@@ -54,6 +54,14 @@ class WishlistController extends Controller
             // Anything still waiting sits at the top for its author, who has
             // just posted it and is looking for it.
             ->orderByRaw('approved_at is null desc')
+            // Done is the one tab that is a record rather than a question.
+            // Everywhere else the score IS the list - it says what the site
+            // wants built next, which is the only reason the board exists -
+            // but nobody arrives at Done to find the most popular thing ever
+            // finished. They come to see what has been built lately, and
+            // sorting it by score buried this morning's work under something
+            // from March with more votes.
+            ->when($filter === 'done', fn ($q) => $q->orderByRaw('completed_at is null')->orderByDesc('completed_at'))
             ->orderByDesc('score')
             ->orderByDesc('created_at')
             ->limit(300)
