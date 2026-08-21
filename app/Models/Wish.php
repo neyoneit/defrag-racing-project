@@ -38,6 +38,15 @@ class Wish extends Model
                 // saying which wish is a notification you have to go and
                 // decode.
                 'headline' => Str::limit($wish->title, 90),
+                // Both columns are NOT NULL with no default, so leaving them
+                // out is an insert that fails on a strict MySQL - which is
+                // production, while local is lax enough to fill in the blanks
+                // itself. Empty rather than filled: the notification list has
+                // its own branch for `wish_done` that reads `headline` and a
+                // translated sentence around it, so anything put here would be
+                // English frozen into the row and shown to nobody.
+                'before' => '',
+                'after' => '',
                 // /wishlist/<id>, not the list with a tab already chosen. The
                 // wish can move between tabs afterwards, and the redirect
                 // works the tab out at the moment somebody clicks - see
