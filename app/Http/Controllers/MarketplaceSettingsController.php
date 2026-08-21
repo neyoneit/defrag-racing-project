@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\MarketplaceCreatorProfile;
+use App\Models\MarketplaceWorkType;
 use App\Models\Map;
 use Illuminate\Http\Request;
 
@@ -23,6 +24,7 @@ class MarketplaceSettingsController extends Controller
                 'featured_map_ids' => [],
                 'portfolio_urls' => [],
                 'featured_maps' => [],
+                'work_types' => MarketplaceWorkType::options(),
             ]);
         }
 
@@ -31,6 +33,7 @@ class MarketplaceSettingsController extends Controller
         return response()->json([
             ...$profile->toArray(),
             'featured_maps' => $featuredMaps,
+            'work_types' => MarketplaceWorkType::options(),
         ]);
     }
 
@@ -40,7 +43,7 @@ class MarketplaceSettingsController extends Controller
             'is_listed' => 'boolean',
             'accepting_commissions' => 'boolean',
             'specialties' => 'array',
-            'specialties.*' => 'in:map,player_model,weapon_model,shadow_model',
+            'specialties.*' => \Illuminate\Validation\Rule::in(\App\Models\MarketplaceListing::workTypes()),
             'bio' => 'nullable|string|max:2000',
             'rate_maps' => 'nullable|string|max:255',
             'rate_models' => 'nullable|string|max:255',

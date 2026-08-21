@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import ReviewSection from '@/Components/Marketplace/ReviewSection.vue';
 import { t } from '@/utils/i18n';
+import { workTypeChip, findWorkType } from '@/utils/workTypes';
 
 const props = defineProps({
     user: Object,
@@ -12,28 +13,13 @@ const props = defineProps({
     reviews: Array,
     listings: Array,
     featuredMaps: Array,
+    workTypes: { type: Array, default: () => [] },
 });
 
-const specialtyLabels = computed(() => ({
-    map: t('Mapping'),
-    player_model: t('Player Models'),
-    weapon_model: t('Weapon Models'),
-    shadow_model: t('Shadow Models'),
-}));
-
-const specialtyColors = {
-    map: 'text-emerald-400 bg-emerald-500/15',
-    player_model: 'text-purple-400 bg-purple-500/15',
-    weapon_model: 'text-orange-400 bg-orange-500/15',
-    shadow_model: 'text-cyan-400 bg-cyan-500/15',
-};
-
-const workTypeLabels = computed(() => ({
-    map: t('Map'),
-    player_model: t('Player Model'),
-    weapon_model: t('Weapon Model'),
-    shadow_model: t('Shadow Model'),
-}));
+// A specialty is stored as a work type slug. It is shown in the plural, and a
+// slug whose type has since been removed still has to read as something.
+const specialtyLabel = (slug) => findWorkType(props.workTypes, slug)?.plural || slug;
+const specialtyColor = (slug) => workTypeChip(findWorkType(props.workTypes, slug)?.color);
 
 const listingTypeLabels = computed(() => ({
     request: t('Request'),
@@ -101,7 +87,7 @@ const listingTypeLabels = computed(() => ({
                                         </span>
                                         <span class="text-sm text-white font-semibold truncate">{{ listing.title }}</span>
                                     </div>
-                                    <span class="text-xs text-gray-500">{{ workTypeLabels[listing.work_type] }}</span>
+                                    <span class="text-xs text-gray-500">{{ listing.work_type_label }}</span>
                                 </div>
                             </Link>
                         </div>
@@ -163,10 +149,10 @@ const listingTypeLabels = computed(() => ({
                             <span
                                 v-for="spec in (profile.specialties || [])"
                                 :key="spec"
-                                :class="specialtyColors[spec]"
+                                :class="specialtyColor(spec)"
                                 class="px-2 py-0.5 text-xs font-medium rounded"
                             >
-                                {{ specialtyLabels[spec] }}
+                                {{ specialtyLabel(spec) }}
                             </span>
                         </div>
 

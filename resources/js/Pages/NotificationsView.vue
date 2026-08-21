@@ -208,6 +208,7 @@
         if (type.startsWith('clan_')) return t('Clan:');
         if (type.startsWith('tournament_') || type.startsWith('round_')) return t('Tournament:');
         if (type === 'alias_suggestion') return t('Alias:');
+        if (type === 'marketplace') return t('Marketplace:');
         return null;
     };
 
@@ -318,6 +319,13 @@
                 bgColor: 'bg-fuchsia-500/20',
                 borderColor: 'border-fuchsia-500/30',
                 iconColor: 'text-fuchsia-400'
+            },
+            'marketplace': {
+                label: 'Marketplace',
+                icon: 'M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.401 2.999 2.999 0 0 0 4.5 0 2.999 2.999 0 0 0 4.5 0 3.001 3.001 0 0 0 3.75.401m-16.5 0a3.001 3.001 0 0 1-.75-3.751L4.5 3h15l1.5 2.598a3.001 3.001 0 0 1-.75 3.751',
+                bgColor: 'bg-blue-500/20',
+                borderColor: 'border-blue-500/30',
+                iconColor: 'text-blue-400'
             },
             'render_completed': {
                 label: 'Render Done',

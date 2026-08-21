@@ -7,6 +7,7 @@ import { t } from '@/utils/i18n';
 const props = defineProps({
     creators: Array,
     filters: Object,
+    workTypes: { type: Array, default: () => [] },
 });
 
 const specialtyFilter = ref(props.filters?.specialty || '');
@@ -14,12 +15,10 @@ const sortBy = ref(props.filters?.sort || '');
 const specialtyDropdownOpen = ref(false);
 const sortDropdownOpen = ref(false);
 
+// A specialty is a work type in the plural. The server sends both.
 const specialties = computed(() => [
     { value: '', label: t('All Specialties') },
-    { value: 'map', label: t('Mapping') },
-    { value: 'player_model', label: t('Player Models') },
-    { value: 'weapon_model', label: t('Weapon Models') },
-    { value: 'shadow_model', label: t('Shadow Models') },
+    ...props.workTypes.map((wt) => ({ value: wt.value, label: wt.plural })),
 ]);
 
 const sorts = computed(() => [
@@ -134,6 +133,7 @@ const selectSort = (value) => {
                     v-for="creator in creators"
                     :key="creator.id"
                     :creator="creator"
+                    :work-types="workTypes"
                 />
             </div>
 

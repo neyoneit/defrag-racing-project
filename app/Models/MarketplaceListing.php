@@ -28,6 +28,17 @@ class MarketplaceListing extends Model
         'cancelled_at' => 'datetime',
     ];
 
+    /**
+     * The badge travels with the listing. Without this every page that shows
+     * a listing would need its own copy of the label table, which is exactly
+     * what this replaced.
+     */
+    protected $appends = [
+        'work_type_label',
+        'work_type_color',
+        'work_type_pending',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -58,19 +69,38 @@ class MarketplaceListing extends Model
         return $query->where('status', 'open');
     }
 
-    public static function workTypes(): array
+    public function workType()
     {
-        return ['map', 'player_model', 'weapon_model', 'shadow_model'];
+        return $this->belongsTo(MarketplaceWorkType::class, 'work_type', 'slug');
     }
 
+    public function getWorkTypeLabelAttribute(): string
+    {
+        $type = MarketplaceWorkType::find_cached($this->work_type);
+
+        return $type ? $type->localized('label') : (string) $this->work_type;
+    }
+
+    public function getWorkTypeColorAttribute(): string
+    {
+        return MarketplaceWorkType::find_cached($this->work_type)?->color ?? 'gray';
+    }
+
+    /** True while an admin has not confirmed a type somebody suggested. */
+    public function getWorkTypePendingAttribute(): bool
+    {
+        return MarketplaceWorkType::find_cached($this->work_type)?->status === 'pending';
+    }
+
+    /** Slugs that may be picked right now. */
+    public static function workTypes(): array
+    {
+        return array_column(MarketplaceWorkType::options(), 'value');
+    }
+
+    /** English label, for the admin and anything that is not a page. */
     public static function workTypeLabel(string $type): string
     {
-        return match ($type) {
-            'map' => 'Map',
-            'player_model' => 'Player Model',
-            'weapon_model' => 'Weapon Model',
-            'shadow_model' => 'Shadow Model',
-            default => $type,
-        };
+        return MarketplaceWorkType::find_cached($type)?->label ?? $type;
     }
 }

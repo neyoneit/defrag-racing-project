@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\MarketplaceListingResource\Pages;
 use App\Models\MarketplaceListing;
+use App\Models\MarketplaceWorkType;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -25,6 +26,17 @@ class MarketplaceListingResource extends Resource
         return auth()->user()?->isAdmin() ?? false;
     }
 
+    /**
+     * Every type, pending ones included: the admin must be able to see and
+     * change a listing that is on one.
+     */
+    private static function workTypeOptions(): array
+    {
+        return MarketplaceWorkType::lookup()
+            ->map(fn (MarketplaceWorkType $t) => $t->label . ($t->status === 'pending' ? ' (pending)' : ''))
+            ->all();
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -36,12 +48,7 @@ class MarketplaceListingResource extends Resource
                     ->options(['request' => 'Request', 'offer' => 'Offer'])
                     ->required(),
                 Forms\Components\Select::make('work_type')
-                    ->options([
-                        'map' => 'Map',
-                        'player_model' => 'Player Model',
-                        'weapon_model' => 'Weapon Model',
-                        'shadow_model' => 'Shadow Model',
-                    ])
+                    ->options(fn () => static::workTypeOptions())
                     ->required(),
                 Forms\Components\Textarea::make('description')
                     ->required()
@@ -83,13 +90,12 @@ class MarketplaceListingResource extends Resource
                         'primary' => 'request',
                         'success' => 'offer',
                     ]),
-                Tables\Columns\BadgeColumn::make('work_type')
-                    ->colors([
-                        'success' => 'map',
-                        'warning' => 'player_model',
-                        'danger' => 'weapon_model',
-                        'info' => 'shadow_model',
-                    ]),
+                Tables\Columns\TextColumn::make('work_type')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => static::workTypeOptions()[$state] ?? (string) $state)
+                    // A type somebody suggested and nobody has approved yet is
+                    // the one worth spotting in this list.
+                    ->color(fn (?string $state): string => MarketplaceWorkType::find_cached($state)?->status === 'pending' ? 'warning' : 'gray'),
                 Tables\Columns\BadgeColumn::make('status')
                     ->colors([
                         'success' => 'open',
@@ -115,12 +121,7 @@ class MarketplaceListingResource extends Resource
                 Tables\Filters\SelectFilter::make('listing_type')
                     ->options(['request' => 'Request', 'offer' => 'Offer']),
                 Tables\Filters\SelectFilter::make('work_type')
-                    ->options([
-                        'map' => 'Map',
-                        'player_model' => 'Player Model',
-                        'weapon_model' => 'Weapon Model',
-                        'shadow_model' => 'Shadow Model',
-                    ]),
+                    ->options(fn () => static::workTypeOptions()),
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
                         'open' => 'Open',

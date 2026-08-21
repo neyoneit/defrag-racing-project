@@ -1,24 +1,11 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
 import StatusBadge from './StatusBadge.vue';
+import { workTypeBadge } from '@/utils/workTypes';
 
 const props = defineProps({
     listing: Object,
 });
-
-const workTypeLabels = {
-    map: 'Map',
-    player_model: 'Player Model',
-    weapon_model: 'Weapon Model',
-    shadow_model: 'Shadow Model',
-};
-
-const workTypeColors = {
-    map: 'text-emerald-400 bg-emerald-500/20 border-emerald-500/30',
-    player_model: 'text-purple-400 bg-purple-500/20 border-purple-500/30',
-    weapon_model: 'text-orange-400 bg-orange-500/20 border-orange-500/30',
-    shadow_model: 'text-cyan-400 bg-cyan-500/20 border-cyan-500/30',
-};
 
 const timeAgo = (date) => {
     const now = new Date();
@@ -47,8 +34,8 @@ const timeAgo = (date) => {
                 <p class="text-gray-400 text-sm mb-3 line-clamp-2">{{ listing.description }}</p>
 
                 <div class="flex flex-wrap items-center gap-3 text-sm">
-                    <span :class="`px-2 py-0.5 text-xs font-semibold rounded border ${workTypeColors[listing.work_type]}`">
-                        {{ workTypeLabels[listing.work_type] }}
+                    <span :class="`px-2 py-0.5 text-xs font-semibold rounded border ${workTypeBadge(listing.work_type_color)}`">
+                        {{ listing.work_type_label }}
                     </span>
 
                     <div v-if="listing.budget" class="flex items-center gap-1.5">

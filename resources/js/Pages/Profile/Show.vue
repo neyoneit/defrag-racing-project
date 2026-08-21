@@ -764,6 +764,10 @@ const mpProfile = ref({
     featured_map_ids: [],
     portfolio_urls: [],
     featured_maps: [],
+    // Filled in by the same request that loads the profile: the specialties a
+    // creator can tick are the marketplace's work types, and those live in the
+    // database now.
+    work_types: [],
 });
 const mpLoading = ref(false);
 const mpSaving = ref(false);
@@ -1719,14 +1723,14 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs.
                             <label class="block text-sm font-bold text-white mb-2">{{ $t('Specialties') }}</label>
                             <div class="flex flex-wrap gap-2">
                                 <button
-                                    v-for="spec in [{v:'map',l:$t('Mapping')},{v:'player_model',l:$t('Player Models')},{v:'weapon_model',l:$t('Weapon Models')},{v:'shadow_model',l:$t('Shadow Models')}]"
-                                    :key="spec.v"
+                                    v-for="spec in mpProfile.work_types"
+                                    :key="spec.value"
                                     type="button"
-                                    @click="toggleMpSpecialty(spec.v)"
-                                    :class="mpProfile.specialties.includes(spec.v) ? 'bg-blue-600/20 border-blue-500/50 text-blue-300' : 'bg-black/20 border-white/10 text-gray-400 hover:border-white/20'"
+                                    @click="toggleMpSpecialty(spec.value)"
+                                    :class="mpProfile.specialties.includes(spec.value) ? 'bg-blue-600/20 border-blue-500/50 text-blue-300' : 'bg-black/20 border-white/10 text-gray-400 hover:border-white/20'"
                                     class="px-3 py-1.5 text-sm font-medium rounded-lg border transition"
                                 >
-                                    {{ spec.l }}
+                                    {{ spec.plural }}
                                 </button>
                             </div>
                         </div>

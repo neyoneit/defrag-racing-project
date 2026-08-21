@@ -4,6 +4,7 @@ import { ref, computed } from 'vue';
 import StatusBadge from '@/Components/Marketplace/StatusBadge.vue';
 import ReviewSection from '@/Components/Marketplace/ReviewSection.vue';
 import { t, currentLocale } from '@/utils/i18n';
+import { workTypeBadge } from '@/utils/workTypes';
 
 const props = defineProps({
     listing: Object,
@@ -14,20 +15,6 @@ const props = defineProps({
 });
 
 const processing = ref(false);
-
-const workTypeLabels = computed(() => ({
-    map: t('Map'),
-    player_model: t('Player Model'),
-    weapon_model: t('Weapon Model'),
-    shadow_model: t('Shadow Model'),
-}));
-
-const workTypeColors = {
-    map: 'text-emerald-400 bg-emerald-500/20 border-emerald-500/30',
-    player_model: 'text-purple-400 bg-purple-500/20 border-purple-500/30',
-    weapon_model: 'text-orange-400 bg-orange-500/20 border-orange-500/30',
-    shadow_model: 'text-cyan-400 bg-cyan-500/20 border-cyan-500/30',
-};
 
 const listingTypeLabels = computed(() => ({
     request: t('Request'),
@@ -89,8 +76,8 @@ const renderStars = (rating) => {
                             <span :class="`px-2 py-0.5 text-xs font-semibold rounded uppercase ${listing.listing_type === 'request' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}`">
                                 {{ listingTypeLabels[listing.listing_type] }}
                             </span>
-                            <span :class="`px-2 py-0.5 text-xs font-semibold rounded border ${workTypeColors[listing.work_type]}`">
-                                {{ workTypeLabels[listing.work_type] }}
+                            <span :class="`px-2 py-0.5 text-xs font-semibold rounded border ${workTypeBadge(listing.work_type_color)}`">
+                                {{ listing.work_type_label }}
                             </span>
                             <StatusBadge :status="listing.status" />
                         </div>
@@ -226,7 +213,7 @@ const renderStars = (rating) => {
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-400">{{ $t('Category') }}</span>
-                                <span class="text-white">{{ workTypeLabels[listing.work_type] }}</span>
+                                <span class="text-white">{{ listing.work_type_label }}</span>
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-400">{{ $t('Status') }}</span>

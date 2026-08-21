@@ -10,6 +10,9 @@ export default {
         './storage/framework/views/*.php',
         './resources/views/**/*.blade.php',
         './resources/js/**/*.vue',
+        // Work type badge colours live in a plain .js map (see
+        // resources/js/utils/workTypes.js); without this they get purged.
+        './resources/js/utils/*.js',
     ],
 
     theme: {

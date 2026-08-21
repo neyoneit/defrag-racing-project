@@ -424,6 +424,7 @@
         // is about.
         if (type === 'wish_done') return t('Your wish is done:');
         if (type === 'alias_suggestion') return t('Alias:');
+        if (type === 'marketplace') return t('Marketplace:');
         if (type.startsWith('clan_')) return t('Clan:');
         if (type.startsWith('tournament_') || type.startsWith('round_')) return t('Tournament:');
         if (type.startsWith('render_')) return t('Render:');
