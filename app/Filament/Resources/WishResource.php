@@ -85,7 +85,17 @@ class WishResource extends Resource
             ->striped()
             // Anything needing a decision first, whatever the sort: those are
             // the queue, the rest is archive.
-            ->defaultSort('score', 'desc')
+            // Done is the one tab where the order that matters is not the
+            // score but when it was finished: it reads as a changelog, newest
+            // first, the same way the public board shows it. Every other tab
+            // is still asking what people want most, so it stays on score.
+            ->defaultSort(function (Builder $query, string $direction, $livewire) {
+                if (($livewire->activeTab ?? null) === 'done') {
+                    return $query->orderByDesc('completed_at')->orderByDesc('id');
+                }
+
+                return $query->orderBy('score', $direction);
+            }, 'desc')
             ->modifyQueryUsing(fn ($query) => $query
                 ->orderByRaw('removal_requested_at is not null desc')
                 ->orderByRaw('approved_at is null desc'))
