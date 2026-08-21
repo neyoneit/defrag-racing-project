@@ -30,6 +30,13 @@ class Wish extends Model
                 return;
             }
 
+            // Stamped here rather than in the admin, for the same reason the
+            // notification is: two places in the panel set a status. Quietly,
+            // because this is a record of the write that just happened, not a
+            // new one - saving again would re-enter this listener.
+            $wish->completed_at = now();
+            $wish->saveQuietly();
+
             $wish->notifyAuthorDone();
         });
     }
@@ -103,6 +110,7 @@ class Wish extends Model
         'youtube_id',
         'status',
         'status_note',
+        'completed_at',
         'approved_at',
         'approved_by',
         'removal_requested_at',
@@ -114,6 +122,7 @@ class Wish extends Model
 
     protected $casts = [
         'approved_at' => 'datetime',
+        'completed_at' => 'datetime',
         'removal_requested_at' => 'datetime',
     ];
 
