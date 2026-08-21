@@ -3,14 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\MarketplaceListing;
+use App\Models\MarketplaceWorkType;
 use App\Models\MarketplaceReview;
 use App\Models\MarketplaceCreatorProfile;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class MarketplaceController extends Controller
 {
+    /** What the picker sends when the four types do not fit. */
+    private const OTHER = '__other__';
+
+    private const MAX_PENDING_SUGGESTIONS = 3;
+
     public function index(Request $request)
     {
         $isPartial = $request->header('X-Inertia-Partial-Data') !== null;
@@ -22,6 +29,8 @@ class MarketplaceController extends Controller
                 'listings' => null,
                 'filters' => $request->only(['tab', 'work_type', 'status', 'search']),
                 'canPost' => $canPost,
+                'workTypes' => MarketplaceWorkType::options(),
+                'openCreate' => $request->boolean('create'),
             ]);
         }
 
@@ -45,6 +54,8 @@ class MarketplaceController extends Controller
             'listings' => $listings,
             'filters' => $request->only(['tab', 'work_type', 'status', 'search']),
             'canPost' => $canPost,
+            'workTypes' => MarketplaceWorkType::options(),
+            'openCreate' => $request->boolean('create'),
         ]);
     }
 
@@ -80,6 +91,10 @@ class MarketplaceController extends Controller
         ]);
     }
 
+    /**
+     * Posting is a dialog on the marketplace itself now. The route stays so
+     * that a link somebody saved still lands somewhere useful.
+     */
     public function createListing()
     {
         if (!auth()->user()->mdd_id) {
@@ -87,7 +102,7 @@ class MarketplaceController extends Controller
                 ->withDanger('You need to link your account to post on the Marketplace.');
         }
 
-        return Inertia::render('Marketplace/Create');
+        return redirect()->route('marketplace.index', ['create' => 1]);
     }
 
     public function storeListing(Request $request)
@@ -99,11 +114,26 @@ class MarketplaceController extends Controller
 
         $validated = $request->validate([
             'listing_type' => 'required|in:request,offer',
-            'work_type' => 'required|in:map,player_model,weapon_model,shadow_model',
+            'work_type' => ['required', 'string', Rule::in([...MarketplaceListing::workTypes(), self::OTHER])],
             'title' => 'required|string|max:255',
             'description' => 'required|string|max:5000',
             'budget' => 'nullable|string|max:255',
+
+            // Only read when the picker says "Something else".
+            'custom_label' => 'required_if:work_type,' . self::OTHER . '|nullable|string|max:60',
+            'custom_description' => 'nullable|string|max:160',
+            'custom_label_local' => 'nullable|string|max:60',
         ]);
+
+        if ($validated['work_type'] === self::OTHER) {
+            $type = $this->workTypeFromSuggestion($validated);
+
+            if (is_string($type)) {
+                return redirect()->back()->withDanger($type)->withInput();
+            }
+
+            $validated['work_type'] = $type->slug;
+        }
 
         $validated['user_id'] = auth()->id();
 
@@ -111,6 +141,58 @@ class MarketplaceController extends Controller
 
         return redirect()->route('marketplace.show', $listing)
             ->withSuccess('Listing created successfully!');
+    }
+
+    /**
+     * A work type nobody had thought of yet. It is used straight away, so the
+     * listing reads correctly the moment it is posted, and it is marked
+     * pending until an admin confirms the wording and fills in the languages
+     * the author did not.
+     *
+     * Returns the type, or a message explaining why not.
+     */
+    private function workTypeFromSuggestion(array $input): MarketplaceWorkType|string
+    {
+        $label = trim($input['custom_label']);
+
+        // Somebody has already asked for this one. Reuse it rather than
+        // growing two spellings of the same thing.
+        $existing = MarketplaceWorkType::whereRaw('LOWER(label) = ?', [mb_strtolower($label)])
+            ->where('status', '!=', 'rejected')
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        $pending = MarketplaceWorkType::where('suggested_by_user_id', auth()->id())
+            ->where('status', 'pending')
+            ->count();
+
+        if ($pending >= self::MAX_PENDING_SUGGESTIONS) {
+            return 'You already have ' . self::MAX_PENDING_SUGGESTIONS
+                . ' work types waiting to be approved. Please wait for those first.';
+        }
+
+        $locale = app()->getLocale();
+        $translations = [];
+
+        // The author's own language, if they filled it in and it is not the
+        // language the label is already written in.
+        if ($locale !== 'en' && !empty($input['custom_label_local'])) {
+            $translations[$locale] = ['label' => trim($input['custom_label_local'])];
+        }
+
+        return MarketplaceWorkType::create([
+            'slug' => MarketplaceWorkType::slugFor($label),
+            'label' => $label,
+            'description' => !empty($input['custom_description']) ? trim($input['custom_description']) : null,
+            'translations' => $translations ?: null,
+            'color' => 'gray',
+            'status' => 'pending',
+            'sort_order' => 500,
+            'suggested_by_user_id' => auth()->id(),
+        ]);
     }
 
     public function updateListingStatus(Request $request, MarketplaceListing $listing)
@@ -152,9 +234,13 @@ class MarketplaceController extends Controller
             'status' => 'in_progress',
         ]);
 
-        // Notify listing owner
+        // Notify listing owner. systemNotify takes five arguments
+        // (type, before, headline, after, url) and before/after are NOT NULL
+        // in the database, so they are passed as empty strings rather than
+        // left out.
         $listing->user->systemNotify(
             'marketplace',
+            '',
             'Someone took your commission',
             auth()->user()->name . ' has accepted your listing "' . $listing->title . '".',
             route('marketplace.show', $listing)
@@ -236,6 +322,7 @@ class MarketplaceController extends Controller
         return Inertia::render('Marketplace/Creators', [
             'creators' => $creators,
             'filters' => $request->only(['specialty', 'sort']),
+            'workTypes' => MarketplaceWorkType::options(),
         ]);
     }
 
@@ -267,6 +354,7 @@ class MarketplaceController extends Controller
             'reviews' => $reviews,
             'listings' => $listings,
             'featuredMaps' => $featuredMaps,
+            'workTypes' => MarketplaceWorkType::options(),
         ]);
     }
 }

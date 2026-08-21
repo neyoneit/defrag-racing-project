@@ -20,6 +20,7 @@ export default {
     import CompsDonors from '@/Components/Comps/CompsDonors.vue';
     import CompsPlayer from '@/Components/Comps/CompsPlayer.vue';
     import DemoSettingsCheck from '@/Components/DemoSettingsCheck.vue';
+    import ConfigModal from '@/Components/Comps/ConfigModal.vue';
 
     // The comps hub.
     //
@@ -179,6 +180,11 @@ export default {
     // upload itself.
     const showCheck = ref(false);
 
+    // What a run has to be recorded with. It sits beside Rules rather than
+    // inside them: the rules page says what is not allowed, this says what to
+    // set, and the second question is the one that gets asked.
+    const showConfig = ref(false);
+
     // Keep the file and its date together: the date is read off the File
     // object at pick time and travels with the upload.
     // Shown on the picker itself. The native file input renders as an OS
@@ -269,21 +275,17 @@ export default {
                                  about the page and the ruleset it runs on at
                                  the same volume - and only one of them is
                                  something you have to read. -->
-                            <section v-if="betaNotice"
-                                     class="rounded-lg border border-white/10 bg-white/[0.04] backdrop-blur-sm px-3 py-1.5">
-                                <div class="flex items-start gap-2">
-                                    <svg class="w-4 h-4 flex-shrink-0 text-gray-500 mt-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm0 6l7.5 13h-15L12 8zm-1 3v4h2v-4h-2zm0 5v2h2v-2h-2z" /></svg>
-                                    <p class="text-xs text-gray-400 leading-snug">
-                                        <!-- The space is written out: Vue drops
-                                             whitespace between elements when it
-                                             contains a newline, which ran this
-                                             straight into the sentence before it. -->
-                                        <span class="font-bold text-gray-300">{{ $t('Comps is brand new.') }}</span>{{ ' ' }}
-                                        <span class="[&_a]:font-bold [&_a]:text-gray-300 [&_a]:underline [&_a]:decoration-white/25 [&_a:hover]:text-white"
-                                              v-html="betaLine"></span>
-                                    </p>
-                                </div>
-                            </section>
+                            <span v-if="betaNotice"
+                                  class="inline-flex items-center gap-1.5 h-7 flex-shrink-0 rounded-lg px-2.5 text-xs leading-none transition-colors cursor-default bg-white/[0.05] text-gray-400">
+                                <svg class="w-3.5 h-3.5 flex-shrink-0 text-gray-500" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm0 6l7.5 13h-15L12 8zm-1 3v4h2v-4h-2zm0 5v2h2v-2h-2z" /></svg>
+                                <!-- The space is written out: Vue drops
+                                     whitespace between elements when it
+                                     contains a newline, which ran this
+                                     straight into the sentence before it. -->
+                                <span class="font-bold text-gray-300">{{ $t('Comps is brand new.') }}</span>{{ ' ' }}
+                                <span class="[&_a]:font-bold [&_a]:text-gray-300 [&_a]:underline [&_a]:decoration-white/25 [&_a:hover]:text-white"
+                                      v-html="betaLine"></span>
+                            </span>
                         </div>
 
                         <!-- Comps invents no ruleset of its own, and the two
@@ -291,42 +293,7 @@ export default {
                              name. "No special rules" is not an answer to
                              "is an overbounce allowed" - it just sends them to
                              read nine sections and guess. -->
-                        <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 max-w-3xl">
-                            <Link :href="route('rules')"
-                                  class="inline-flex items-center gap-1.5 flex-shrink-0 rounded-lg border border-amber-400/40 bg-amber-500/15 hover:bg-amber-500/25 hover:border-amber-300/60 px-2.5 py-1 text-sm font-bold text-amber-200 transition-colors">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 0 1-2.031.352 5.988 5.988 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971Zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 0 1-2.031.352 5.989 5.989 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971Z" />
-                                </svg>
-                                {{ $t('Rules') }}
-                                <!-- Inside the chip, not floating beside it.
-                                     The sentence is what the link is for, and
-                                     as loose grey text next to it read as an
-                                     unrelated remark that happened to land
-                                     there. -->
-                                <span class="font-normal text-amber-100/70">{{ $t('The same rules as on the servers apply.') }}</span>
-                            </Link>
-
-                            <!-- Green and separate, because this is the half
-                                 people are actually looking for. "Same rules as
-                                 the servers" is the boring half; whether an
-                                 overbounce costs you the run is the question
-                                 that gets asked in Discord every week, and the
-                                 answer should be findable without reading a
-                                 sentence to the end.
-
-                                 The two abbreviations carry the markup: they
-                                 are what somebody scanning the page is looking
-                                 for, and they are the same two letters in every
-                                 language, so the emphasis survives translation
-                                 wherever the clause lands in the sentence. -->
-                            <!-- Not green: green is money on this page - the
-                                 pool, the donors, the donate button - and a
-                                 rules note has nothing to do with any of it. -->
-                            <span class="inline-flex items-center gap-1.5 rounded-lg border border-sky-400/35 bg-sky-500/15 px-2.5 py-1 text-sm text-sky-100">
-                                <svg class="w-4 h-4 flex-shrink-0 text-sky-400" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" /></svg>
-                                <span v-html="$t('Overbounces (<strong>OB</strong>) and time resets (<strong>TR</strong>) are allowed.')"></span>
-                            </span>
-
+                        <div class="mt-3 flex flex-wrap items-center gap-2 max-w-5xl">
                             <!-- What comps is and the four things that surprise
                                  people, behind one mark rather than as a panel.
                                  They are worth saying and worth saying once:
@@ -335,10 +302,14 @@ export default {
                                  them has to scroll past them every week after.
                                  Same "?" as the server cards, so it behaves the
                                  way the rest of the site does. -->
-                            <Popper arrow hover placement="bottom" class="comps-popper" style="z-index: 1000;">
+                            <Popper arrow hover placement="bottom-start" class="comps-popper" style="z-index: 1000;">
                                 <button type="button"
-                                        class="inline-flex items-center justify-center w-7 h-7 rounded-full border border-white/20 bg-white/[0.06] text-sm font-black text-gray-300 hover:bg-white/15 hover:text-white transition-colors"
-                                        :title="$t('How comps works')">?</button>
+                                        class="inline-flex items-center gap-1.5 h-7 flex-shrink-0 rounded-lg px-2.5 text-xs leading-none transition-colors cursor-help border border-dashed border-white/25 bg-white/[0.04] hover:bg-white/10 hover:border-white/40 font-bold text-gray-200">
+                                    <svg class="w-3.5 h-3.5 flex-shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+                                    </svg>
+                                    {{ $t('How comps works') }}
+                                </button>
                                 <template #content>
                                     <div class="px-4 py-3 max-w-md">
                                         <div class="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">{{ $t('How comps works') }}</div>
@@ -369,6 +340,48 @@ export default {
                                     </div>
                                 </template>
                             </Popper>
+
+                            <Link :href="route('rules')"
+                                  class="inline-flex items-center gap-1.5 h-7 flex-shrink-0 rounded-lg px-2.5 text-xs leading-none transition-colors cursor-pointer border border-amber-400/50 bg-amber-500/15 hover:bg-amber-500/25 hover:border-amber-300/70 font-bold text-amber-200">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 0 1-2.031.352 5.988 5.988 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971Zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 0 1-2.031.352 5.989 5.989 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971Z" />
+                                </svg>
+                                {{ $t('Rules') }}
+                            </Link>
+
+                            <!-- Offline is the only case where the player has
+                                 to do anything, and it is the case nobody is
+                                 told about until a run is refused. -->
+                            <button type="button"
+                                    @click="showConfig = true"
+                                    class="inline-flex items-center gap-1.5 h-7 flex-shrink-0 rounded-lg px-2.5 text-xs leading-none transition-colors cursor-pointer border border-blue-400/50 bg-blue-500/15 hover:bg-blue-500/25 hover:border-blue-300/70 font-bold text-blue-200">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.782-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.272-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                </svg>
+                                {{ $t('Config') }}
+                            </button>
+
+                            <!-- Green and separate, because this is the half
+                                 people are actually looking for. "Same rules as
+                                 the servers" is the boring half; whether an
+                                 overbounce costs you the run is the question
+                                 that gets asked in Discord every week, and the
+                                 answer should be findable without reading a
+                                 sentence to the end.
+
+                                 The two abbreviations carry the markup: they
+                                 are what somebody scanning the page is looking
+                                 for, and they are the same two letters in every
+                                 language, so the emphasis survives translation
+                                 wherever the clause lands in the sentence. -->
+                            <!-- Not green: green is money on this page - the
+                                 pool, the donors, the donate button - and a
+                                 rules note has nothing to do with any of it. -->
+                            <span class="inline-flex items-center gap-1.5 h-7 flex-shrink-0 rounded-lg px-2.5 text-xs leading-none transition-colors cursor-default bg-sky-500/10 text-sky-100/90">
+                                <svg class="w-3.5 h-3.5 flex-shrink-0 text-sky-400" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" /></svg>
+                                <span v-html="$t('Overbounces (<strong>OB</strong>) and time resets (<strong>TR</strong>) are allowed.')"></span>
+                            </span>
                         </div>
                     </div>
 
@@ -908,7 +921,7 @@ export default {
                     <div class="rounded-xl border border-white/10 bg-black/40 p-4">
                         <div class="flex flex-wrap items-center justify-center gap-3">
                             <label class="inline-flex min-w-0 max-w-full cursor-pointer items-center gap-2 rounded-lg border border-white/15 bg-white/[0.06] px-4 py-2.5 text-sm text-gray-200 transition-colors hover:border-white/25 hover:bg-white/10">
-                                <svg class="w-4 h-4 flex-shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <svg class="w-3.5 h-3.5 flex-shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
                                 </svg>
                                 <span class="truncate">{{ pickedDemoName || $t('Choose a demo') }}</span>
@@ -1264,6 +1277,8 @@ export default {
                 </div>
             </div>
         </Teleport>
+
+        <ConfigModal :show="showConfig" @close="showConfig = false" />
     </div>
 </template>
 

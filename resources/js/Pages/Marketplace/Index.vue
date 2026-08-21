@@ -2,13 +2,20 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, computed, onMounted } from 'vue';
 import ListingCard from '@/Components/Marketplace/ListingCard.vue';
+import CreateListingModal from '@/Components/Marketplace/CreateListingModal.vue';
 import { t } from '@/utils/i18n';
 
 const props = defineProps({
     listings: Object,
     filters: Object,
     canPost: Boolean,
+    workTypes: { type: Array, default: () => [] },
+    openCreate: Boolean,
 });
+
+// Posting used to be its own page. /marketplace/listing/create still works and
+// now lands here with the dialog already open.
+const showCreate = ref(props.openCreate === true);
 
 const listingsLoaded = ref(false);
 
@@ -38,12 +45,11 @@ const statusFilter = ref(props.filters?.status || '');
 const workTypeDropdownOpen = ref(false);
 const statusDropdownOpen = ref(false);
 
-const workTypes = computed(() => [
+// The types themselves come from the server already translated; only the
+// "everything" row is ours.
+const workTypeOptions = computed(() => [
     { value: '', label: t('All Types') },
-    { value: 'map', label: t('Map') },
-    { value: 'player_model', label: t('Player Model') },
-    { value: 'weapon_model', label: t('Weapon Model') },
-    { value: 'shadow_model', label: t('Shadow Model') },
+    ...props.workTypes.map((wt) => ({ value: wt.value, label: wt.label })),
 ]);
 
 const statuses = computed(() => [
@@ -54,7 +60,7 @@ const statuses = computed(() => [
     { value: 'cancelled', label: t('Cancelled') },
 ]);
 
-const selectedWorkTypeLabel = () => workTypes.value.find(w => w.value === workTypeFilter.value)?.label || t('All Types');
+const selectedWorkTypeLabel = () => workTypeOptions.value.find(w => w.value === workTypeFilter.value)?.label || t('All Types');
 const selectedStatusLabel = () => statuses.value.find(s => s.value === statusFilter.value)?.label || t('All Statuses');
 
 const applyFilters = () => {
@@ -113,13 +119,14 @@ const selectStatus = (value) => {
                         >
                             {{ $t('Verify Email to Post') }}
                         </Link>
-                        <Link
+                        <button
                             v-else-if="$page.props.auth.user && canPost"
-                            :href="route('marketplace.create')"
+                            type="button"
+                            @click="showCreate = true"
                             class="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
                         >
                             {{ $t('Create Listing') }}
-                        </Link>
+                        </button>
                         <Link
                             v-else-if="$page.props.auth.user"
                             :href="route('settings.show')"
@@ -199,7 +206,7 @@ const selectStatus = (value) => {
                         </button>
                         <div v-if="workTypeDropdownOpen" class="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-white/10 rounded-lg overflow-hidden z-50 shadow-2xl">
                             <button
-                                v-for="wt in workTypes"
+                                v-for="wt in workTypeOptions"
                                 :key="wt.value"
                                 @click="selectWorkType(wt.value)"
                                 :class="workTypeFilter === wt.value ? 'bg-blue-600/30 text-blue-300' : 'text-gray-300 hover:bg-white/10'"
@@ -287,5 +294,11 @@ const selectStatus = (value) => {
                 </nav>
             </div>
         </div>
+
+        <CreateListingModal
+            :show="showCreate"
+            :work-types="workTypes"
+            @close="showCreate = false"
+        />
     </div>
 </template>
