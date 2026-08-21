@@ -370,6 +370,50 @@
     // What the banner calls the notification it is showing. Everything used to
     // fall through to "Announcement:", so a new map read as an announcement of
     // one - the label has to name the thing, or it is worse than none.
+    // What the banner LOOKS like, by kind of news rather than by type.
+    //
+    // There were two looks hard-coded into the markup: amber while an
+    // announcement holds the bar, blue for everything else. So a wish being
+    // built arrived blue with a speech bubble, while the notification centre
+    // gave the same row a fuchsia star - two different notifications as far as
+    // anyone reading them is concerned.
+    //
+    // A table rather than more ternaries in the template. The old form had the
+    // same condition written out six times, once per element that changes
+    // colour, which is why only some of them would ever have been updated.
+    const SYSTEM_BANNER_TONES = {
+        announcement: {
+            box: 'bg-gradient-to-r from-amber-500/15 to-orange-500/15 border-amber-500/40 hover:border-amber-400/70',
+            dot: 'bg-amber-400',
+            icon: 'text-amber-400',
+            prefix: 'text-amber-300/80 font-semibold',
+            title: 'text-amber-200',
+            badge: 'bg-amber-500',
+        },
+        wish_done: {
+            box: 'bg-gradient-to-r from-fuchsia-500/15 to-purple-500/15 border-fuchsia-500/40 hover:border-fuchsia-400/70',
+            dot: 'bg-fuchsia-400',
+            icon: 'text-fuchsia-400',
+            prefix: 'text-fuchsia-300/80 font-semibold',
+            title: 'text-fuchsia-200',
+            badge: 'bg-fuchsia-500',
+        },
+        default: {
+            box: 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20 hover:border-blue-500/40',
+            dot: 'bg-blue-400',
+            icon: 'text-blue-400',
+            prefix: 'text-gray-500',
+            title: 'text-blue-400',
+            badge: 'bg-blue-500',
+        },
+    };
+
+    const systemBannerTone = computed(() => {
+        if (announcementMode.value) return SYSTEM_BANNER_TONES.announcement;
+
+        return SYSTEM_BANNER_TONES[currentSystemNotification.value?.type] ?? SYSTEM_BANNER_TONES.default;
+    });
+
     const systemNotificationPrefix = (notification) => {
         const type = notification?.type ?? '';
 
@@ -691,15 +735,18 @@
                             <div v-if="$page.props.auth.user && currentSystemNotification" class="hidden lg:flex items-center gap-1">
                                 <button @click="dismissSystemNotification(true)"
                                     class="flex items-center gap-2 px-3 py-1.5 border rounded-l-lg transition-all cursor-pointer group"
-                                    :class="announcementMode
-                                        ? 'bg-gradient-to-r from-amber-500/15 to-orange-500/15 border-amber-500/40 hover:border-amber-400/70'
-                                        : 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20 hover:border-blue-500/40'">
-                                    <div class="shrink-0 w-2 h-2 rounded-full animate-pulse" :class="announcementMode ? 'bg-amber-400' : 'bg-blue-400'"></div>
+                                    :class="systemBannerTone.box">
+                                    <div class="shrink-0 w-2 h-2 rounded-full animate-pulse" :class="systemBannerTone.dot"></div>
                                     <div class="flex items-center gap-1.5 min-w-0 text-xs">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 shrink-0" :class="announcementMode ? 'text-amber-400' : 'text-blue-400'">
+                                        <!-- The star is the wishlist's mark in the notification centre; the
+                                             speech bubble is everything else. -->
+                                        <svg v-if="currentSystemNotification.type === 'wish_done' && !announcementMode" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 shrink-0" :class="systemBannerTone.icon">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+                                        </svg>
+                                        <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 shrink-0" :class="systemBannerTone.icon">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
                                         </svg>
-                                        <span class="shrink-0" :class="announcementMode ? 'text-amber-300/80 font-semibold' : 'text-gray-500'">{{ systemNotificationPrefix(currentSystemNotification) }}</span>
+                                        <span class="shrink-0" :class="systemBannerTone.prefix">{{ systemNotificationPrefix(currentSystemNotification) }}</span>
                                         <template v-if="currentSystemNotification.type === 'render_completed'">
                                             <span class="font-bold text-emerald-300 truncate" v-html="q3tohtml(currentSystemNotification.before || '')"></span>
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 shrink-0 text-red-500">
@@ -708,10 +755,10 @@
                                             <span class="font-bold text-blue-400 truncate">{{ $t('ready') }}</span>
                                         </template>
                                         <template v-else>
-                                            <span class="font-bold truncate" :class="announcementMode ? 'text-amber-200' : 'text-blue-400'" v-html="q3tohtml(currentSystemNotification.headline || '')"></span>
+                                            <span class="font-bold truncate" :class="systemBannerTone.title" v-html="q3tohtml(currentSystemNotification.headline || '')"></span>
                                         </template>
                                     </div>
-                                    <div class="shrink-0 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-white text-xs font-bold rounded" :class="announcementMode ? 'bg-amber-500' : 'bg-blue-500'">
+                                    <div class="shrink-0 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-white text-xs font-bold rounded" :class="systemBannerTone.badge">
                                         {{ previewSystemNotifications.length }}
                                     </div>
                                 </button>
