@@ -106,6 +106,15 @@ class WishResource extends Resource
                     ->trueColor('success')
                     ->falseColor('warning'),
 
+                // Sortable, and that is the whole point of it: the board has
+                // no other stable "in the order they arrived" handle, and the
+                // number is also what /wishlist/<id> links to.
+                Tables\Columns\TextColumn::make('id')
+                    ->label('#')
+                    ->extraCellAttributes(['style' => 'white-space: nowrap'])
+                    ->sortable()
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('score')
                     ->label('Score')
                     ->badge()
@@ -142,12 +151,19 @@ class WishResource extends Resource
 
                 // A wish is approved before anyone else sees it, so whatever
                 // it carries has to be visible at the point of approving it.
-                Tables\Columns\ImageColumn::make('image_path')
+                // A link, not a preview.
+                //
+                // As an ImageColumn the cell was sized by the picture inside
+                // it, so one wide screenshot set the width of the column for
+                // every row - a lot of table given to a thumbnail too small to
+                // judge anything by. The full image is one click away and that
+                // is where it can actually be looked at.
+                Tables\Columns\TextColumn::make('image_path')
                     ->label('Shot')
-                    ->disk(Wish::IMAGE_DISK)
-                    ->height(40)
-                    ->extraImgAttributes(['class' => 'rounded object-cover'])
+                    ->extraCellAttributes(['style' => 'white-space: nowrap'])
+                    ->formatStateUsing(fn (?string $state) => $state ? 'Image' : null)
                     ->url(fn (Wish $record) => $record->imageUrl(), shouldOpenInNewTab: true)
+                    ->color('info')
                     ->placeholder('-')
                     ->toggleable(),
 
@@ -191,6 +207,19 @@ class WishResource extends Resource
                 // "3 days ago" in a column, the full stamp in the tooltip: the
                 // date only matters as "how old is this", and spelled out it
                 // was the widest thing in the row after the wish itself.
+                // Empty until a wish is done, which is the point: sort by it
+                // and the Done tab reads newest-finished first, the same order
+                // the public board uses.
+                Tables\Columns\TextColumn::make('completed_at')
+                    ->label('Done')
+                    ->extraCellAttributes(['style' => 'white-space: nowrap'])
+                    ->since()
+                    ->placeholder('-')
+                    ->tooltip(fn (Wish $record) => $record->completed_at?->toDayDateTimeString())
+                    ->alignEnd()
+                    ->sortable()
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Age')
                     ->extraCellAttributes(['style' => 'white-space: nowrap'])
