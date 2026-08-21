@@ -26,34 +26,63 @@ class Wish extends Model
     protected static function booted(): void
     {
         static::updated(function (Wish $wish) {
-            if (! $wish->user_id || $wish->status !== 'done' || ! $wish->wasChanged('status')) {
+            if ($wish->status !== 'done' || ! $wish->wasChanged('status')) {
                 return;
             }
 
-            Notification::create([
-                'user_id' => $wish->user_id,
-                'type' => 'wish_done',
-                // The title carries the whole message: the notification list
-                // is a single line per row, and "your wish is done" without
-                // saying which wish is a notification you have to go and
-                // decode.
-                'headline' => Str::limit($wish->title, 90),
-                // Both columns are NOT NULL with no default, so leaving them
-                // out is an insert that fails on a strict MySQL - which is
-                // production, while local is lax enough to fill in the blanks
-                // itself. Empty rather than filled: the notification list has
-                // its own branch for `wish_done` that reads `headline` and a
-                // translated sentence around it, so anything put here would be
-                // English frozen into the row and shown to nobody.
-                'before' => '',
-                'after' => '',
-                // /wishlist/<id>, not the list with a tab already chosen. The
-                // wish can move between tabs afterwards, and the redirect
-                // works the tab out at the moment somebody clicks - see
-                // WishlistController::show.
-                'url' => route('wishlist.show', $wish),
-            ]);
+            $wish->notifyAuthorDone();
         });
+    }
+
+    /**
+     * Tell the author their wish is built. Returns whether one was sent.
+     *
+     * A method rather than the body of the model event, because the event only
+     * ever fires on a status CHANGE and there are wishes that were finished
+     * while the notification was broken. Those authors are owed one and there
+     * is no status left to change: flipping a wish out of Done and back to make
+     * the event fire would be moving real data to trigger a side effect. This
+     * can be called on exactly the wishes that need it.
+     *
+     * Never sends twice for the same wish. "Your wish is done" says nothing the
+     * second time, and being able to run the backfill again without counting
+     * which rows it already covered is the whole point of having it.
+     */
+    public function notifyAuthorDone(): bool
+    {
+        if (! $this->user_id) {
+            return false;
+        }
+
+        // /wishlist/<id>, not the list with a tab already chosen. The wish can
+        // move between tabs afterwards, and the redirect works the tab out at
+        // the moment somebody clicks - see WishlistController::show.
+        $url = route('wishlist.show', $this);
+
+        if (Notification::where('type', 'wish_done')->where('url', $url)->exists()) {
+            return false;
+        }
+
+        Notification::create([
+            'user_id' => $this->user_id,
+            'type' => 'wish_done',
+            // The title carries the whole message: the notification list is a
+            // single line per row, and "your wish is done" without saying which
+            // wish is a notification you have to go and decode.
+            'headline' => Str::limit($this->title, 90),
+            // Both columns are NOT NULL with no default, so leaving them out is
+            // an insert that fails on a strict MySQL - which is production,
+            // while local is lax enough to fill in the blanks itself. Empty
+            // rather than filled: the notification list has its own branch for
+            // `wish_done` that reads `headline` and a translated sentence
+            // around it, so anything put here would be English frozen into the
+            // row and shown to nobody.
+            'before' => '',
+            'after' => '',
+            'url' => $url,
+        ]);
+
+        return true;
     }
 
     /**
