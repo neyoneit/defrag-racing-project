@@ -2,18 +2,12 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Pages\CommunityTaskReview;
 use App\Filament\Resources\CommunityTaskReviewResource\Pages;
 use App\Models\CommunityTaskVote;
-use App\Models\RenderedVideo;
-use App\Models\UploadedDemo;
-use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Notifications\Notification;
-use Filament\Infolists;
-use Filament\Infolists\Infolist;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -38,9 +32,9 @@ class CommunityTaskReviewResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return static::getEloquentQuery()
-            ->where('consensus_status', 'needs_review')
-            ->count() ?: null;
+        return CommunityTaskVote::where('consensus_status', 'needs_review')
+            ->distinct()
+            ->count('demo_id') ?: null;
     }
 
     public static function getNavigationBadgeColor(): ?string
@@ -48,11 +42,26 @@ class CommunityTaskReviewResource extends Resource
         return 'warning';
     }
 
+    /**
+     * One row per DEMO, not per vote.
+     *
+     * The comment here used to promise this and the query did not do it, so a
+     * demo four people had voted on filled four rows of the queue - each one
+     * carrying the same vote summary, each one a button that resolved all four
+     * votes at once. Three of those rows were the same decision made twice
+     * more, and the count in the navigation badge was votes rather than work.
+     *
+     * The kept row is the newest vote on each demo, which is the one that
+     * triggered the review.
+     */
     public static function getEloquentQuery(): Builder
     {
-        // Group votes by demo_id, show one row per demo that needs review
-        // We show the latest vote per demo that triggered the review
+        $latest = CommunityTaskVote::query()
+            ->selectRaw('MAX(id)')
+            ->groupBy('demo_id');
+
         return parent::getEloquentQuery()
+            ->whereIn('id', $latest)
             ->with(['user', 'demo', 'selectedRecord', 'resolver']);
     }
 
@@ -156,182 +165,25 @@ class CommunityTaskReviewResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\Action::make('viewVotes')
-                    ->label('Votes')
-                    ->icon('heroicon-o-eye')
-                    ->color('info')
-                    ->modalHeading(fn (CommunityTaskVote $record) => "Votes for demo #{$record->demo_id}")
-                    ->modalContent(function (CommunityTaskVote $record) {
-                        $votes = CommunityTaskVote::where('demo_id', $record->demo_id)
-                            ->with(['user', 'selectedRecord'])
-                            ->orderBy('created_at')
-                            ->get();
-
-                        $html = '<div class="space-y-2">';
-                        foreach ($votes as $vote) {
-                            $userName = $vote->user ? UserResource::q3tohtml($vote->user->name) : 'Unknown';
-                            $recordInfo = $vote->selectedRecord
-                                ? " → #{$vote->selectedRecord->rank} ({$vote->selectedRecord->name})"
-                                : '';
-                            $html .= '<div class="flex items-center justify-between p-2 bg-gray-800 rounded">';
-                            $html .= "<div>{$userName}</div>";
-                            $html .= "<div class='flex items-center gap-2'>";
-                            $html .= "<span class='px-2 py-0.5 text-xs rounded bg-gray-700'>{$vote->vote_type}</span>";
-                            $html .= "<span class='text-xs text-gray-400'>{$recordInfo}</span>";
-                            $html .= "<span class='text-xs text-gray-500'>{$vote->created_at->diffForHumans()}</span>";
-                            $html .= "</div></div>";
-                        }
-                        $html .= '</div>';
-
-                        return new \Illuminate\Support\HtmlString($html);
-                    })
-                    ->modalWidth('lg'),
-
-                Tables\Actions\Action::make('viewMapRecords')
-                    ->label('Map records')
-                    ->icon('heroicon-o-table-cells')
-                    ->color('warning')
-                    ->modalHeading(fn (CommunityTaskVote $record) => "Records on {$record->demo?->map_name}")
-                    ->modalDescription('All records on the demo\'s map+gametype. Use the time difference column to find the rival run.')
-                    ->modalWidth('6xl')
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Close')
-                    ->modalContent(function (CommunityTaskVote $record) {
-                        $demo = $record->demo;
-                        if (!$demo) {
-                            return new \Illuminate\Support\HtmlString(
-                                '<div class="p-4 text-red-300">Demo not found.</div>'
-                            );
-                        }
-
-                        // Records.gametype is a `run_<physics>` string
-                        // (matches Map\Record convention). The demo's
-                        // own `gametype` is often a mod string ("mdf",
-                        // ...), so duplicate the public flow's
-                        // resolveGametype() logic here.
-                        $resolvedGametype = ($demo->gametype && str_starts_with($demo->gametype, 'run_'))
-                            ? $demo->gametype
-                            : ('run_' . strtolower($demo->physics ?? 'vq3'));
-
-                        $records = \App\Models\Record::query()
-                            ->where('mapname', $demo->map_name)
-                            ->where('gametype', $resolvedGametype)
-                            ->whereNull('deleted_at')
-                            ->with([
-                                'user:id,name',
-                                'uploadedDemos:id,record_id',
-                                'renderedVideos:id,record_id',
-                            ])
-                            ->orderBy('time')
-                            ->limit(200)
-                            ->get();
-
-                        return view('filament.community-task-review.map-records-modal', [
-                            'mapName'         => $demo->map_name,
-                            'physics'         => $demo->physics,
-                            'gametype'        => $resolvedGametype,
-                            'demoTimeMs'      => $demo->time_ms,
-                            'demoPlayerHtml'  => $demo->player_name ? UserResource::q3tohtml($demo->player_name) : '—',
-                            'records'         => $records,
-                        ]);
-                    }),
-
-                Tables\Actions\Action::make('assignRecord')
-                    ->label('Assign')
-                    ->icon('heroicon-o-link')
-                    ->color('success')
-                    ->visible(fn (CommunityTaskVote $record) => $record->consensus_status === 'needs_review')
-                    ->form([
-                        Forms\Components\TextInput::make('record_id')
-                            ->label('Record ID to assign')
-                            ->numeric()
-                            ->required(),
-                        Forms\Components\Textarea::make('admin_notes')
-                            ->label('Notes')
-                            ->rows(2),
-                    ])
-                    ->action(function (CommunityTaskVote $record, array $data) {
-                        $demo = $record->demo;
-                        $recordModel = \App\Models\Record::find($data['record_id']);
-
-                        if (!$demo || !$recordModel) {
-                            Notification::make()->title('Invalid demo or record')->danger()->send();
-                            return;
-                        }
-
-                        if ($demo->offlineRecord) {
-                            $demo->offlineRecord->delete();
-                        }
-
-                        $demo->update([
-                            'record_id' => $recordModel->id,
-                            'status' => 'assigned',
-                            'manually_assigned' => true,
-                        ]);
-
-                        RenderedVideo::where('demo_id', $demo->id)->update(['record_id' => $recordModel->id]);
-
-                        // Resolve all votes for this demo
-                        CommunityTaskVote::where('demo_id', $record->demo_id)
-                            ->whereIn('consensus_status', ['needs_review', null])
-                            ->update([
-                                'consensus_status' => 'resolved',
-                                'resolved_by' => auth()->id(),
-                                'resolved_at' => now(),
-                                'admin_notes' => $data['admin_notes'] ?? null,
-                            ]);
-
-                        Notification::make()
-                            ->title('Demo assigned')
-                            ->body("Demo #{$demo->id} assigned to record #{$recordModel->id}")
-                            ->success()
-                            ->send();
-                    }),
-
-                Tables\Actions\Action::make('markCorrect')
-                    ->label('Correct')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->visible(fn (CommunityTaskVote $record) => $record->consensus_status === 'needs_review')
-                    ->requiresConfirmation()
-                    ->modalDescription('Mark this demo assignment as correct and archive all votes.')
-                    ->action(function (CommunityTaskVote $record) {
-                        CommunityTaskVote::where('demo_id', $record->demo_id)
-                            ->whereIn('consensus_status', ['needs_review', null])
-                            ->update([
-                                'consensus_status' => 'archived',
-                                'resolved_by' => auth()->id(),
-                                'resolved_at' => now(),
-                                'admin_notes' => 'Confirmed correct by admin',
-                            ]);
-
-                        Notification::make()
-                            ->title('Marked as correct')
-                            ->success()
-                            ->send();
-                    }),
-
-                Tables\Actions\Action::make('dismiss')
-                    ->label('Dismiss')
-                    ->icon('heroicon-o-x-circle')
-                    ->color('gray')
-                    ->visible(fn (CommunityTaskVote $record) => $record->consensus_status === 'needs_review')
-                    ->requiresConfirmation()
-                    ->action(function (CommunityTaskVote $record) {
-                        CommunityTaskVote::where('demo_id', $record->demo_id)
-                            ->whereIn('consensus_status', ['needs_review', null])
-                            ->update([
-                                'consensus_status' => 'archived',
-                                'resolved_by' => auth()->id(),
-                                'resolved_at' => now(),
-                                'admin_notes' => 'Dismissed by admin',
-                            ]);
-
-                        Notification::make()
-                            ->title('Dismissed')
-                            ->info()
-                            ->send();
-                    }),
+                // One button, and it opens a page.
+                //
+                // There were four: a modal listing the votes (with a Submit
+                // button that submitted nothing), a modal listing the map's
+                // records, and an Assign form whose only real field was a
+                // record id typed in by hand - an id that lived in the second
+                // modal, which had to be closed before the third could open.
+                // Deciding meant copying a number between two dialogs while
+                // remembering what the votes had said.
+                //
+                // All of it is on the review page now, which also carries what
+                // none of the modals had: the record the demo is on today and
+                // whether any record holder has ever used the name written in
+                // the demo. See CommunityTaskReview.
+                Tables\Actions\Action::make('review')
+                    ->label('Review')
+                    ->icon('heroicon-o-arrow-top-right-on-square')
+                    ->color('primary')
+                    ->url(fn (CommunityTaskVote $record) => CommunityTaskReview::getUrl() . '?demo=' . $record->demo_id),
             ])
             ->bulkActions([])
             ->paginated([10, 25, 50])
