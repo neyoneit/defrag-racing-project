@@ -24,7 +24,8 @@ class DemosController extends Controller
         // Default: protect most actions with auth. Exempt index and download.
         // Also exempt the main upload action so the demos page can accept
         // anonymous uploads directly.
-        $except = ['index', 'download', 'upload'];
+        // The filter pickers are open because the filter panel is open.
+        $except = ['index', 'download', 'upload', 'searchDemoPlayers', 'searchDemoMaps'];
         if (app()->environment('local')) {
             $except = array_merge($except, ['debugDetect', 'debugUpload']);
         }
@@ -125,13 +126,244 @@ class DemosController extends Controller
     /**
      * Display demo upload page
      */
+    /** Statuses the public list is allowed to show. */
+    private const PUBLIC_STATUSES = ['assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed'];
+
+    /** Statuses a person may pick that only exist on their own list. */
+    private const OWN_ONLY_STATUSES = ['uploaded', 'unsupported-version'];
+
+    /** Columns a list may be sorted by. */
+    private const SORTABLE = [
+        'id', 'original_filename', 'processed_filename', 'map_name', 'time_ms',
+        'status', 'created_at', 'gametype', 'physics', 'country', 'record_date',
+        'file_size', 'download_count',
+    ];
+
+    /**
+     * Read the filter panel out of the query string.
+     *
+     * There is one set of names for both tabs. The panel sits above the tabs
+     * and applies to whichever list is on screen, so a person who has narrowed
+     * things down to one map keeps that when they switch. The values a tab
+     * cannot use are dropped here rather than silently returning nothing:
+     * picking "uploaded" on your own list and then switching to the public one
+     * used to hand you an empty table with no explanation.
+     *
+     * The old browse_* names still work, so links people saved keep working.
+     */
+    private function readFilters(Request $request, string $list, bool $isAdmin): array
+    {
+        $pick = function (string $name, $default = null) use ($request) {
+            $value = $request->input($name);
+            if ($value === null || $value === '') {
+                $value = $request->input('browse_' . $name);
+            }
+            return ($value === null || $value === '') ? $default : $value;
+        };
+
+        $isOwnList = $list === 'mine';
+
+        $status = $pick('status', 'all');
+        if (!$isOwnList && in_array($status, self::OWN_ONLY_STATUSES, true)) {
+            $status = 'all';
+        }
+
+        $sort = $pick('sort', 'created_at');
+        if (!in_array($sort, self::SORTABLE, true)) {
+            $sort = 'created_at';
+        }
+
+        $order = strtolower((string) $pick('order', 'desc'));
+        if (!in_array($order, ['asc', 'desc'], true)) {
+            $order = 'desc';
+        }
+
+        // Multi-value filters arrive either as repeated params or comma
+        // separated, because a hand-written link is easier to read that way.
+        $list_of = function ($value): array {
+            if (is_array($value)) {
+                $parts = $value;
+            } else {
+                $parts = explode(',', (string) $value);
+            }
+            return array_values(array_filter(array_map('trim', $parts), fn ($v) => $v !== ''));
+        };
+
+        $seconds_to_ms = function ($value): ?int {
+            if ($value === null || $value === '' || !is_numeric($value)) {
+                return null;
+            }
+            return (int) round(((float) $value) * 1000);
+        };
+
+        return [
+            'list' => $list,
+            'tab' => in_array($pick('tab', 'all'), ['all', 'online', 'offline'], true) ? $pick('tab', 'all') : 'all',
+            'status' => $status,
+            'search' => (string) $pick('search', ''),
+            'map' => (string) $pick('map', ''),
+            'players' => $list_of($pick('players', [])),
+            'physics' => $list_of($pick('physics', [])),
+            'time_min' => $seconds_to_ms($pick('time_min')),
+            'time_max' => $seconds_to_ms($pick('time_max')),
+            'country' => (string) $pick('country', ''),
+            'date_from' => (string) $pick('date_from', ''),
+            'date_to' => (string) $pick('date_to', ''),
+            'uploaded_by' => (string) $pick('uploaded_by', ''),
+
+            // Only on your own list, and only for staff. Dropped otherwise so
+            // switching tabs cannot leave an invisible filter behind.
+            'confidence' => ($isOwnList && $isAdmin) ? (string) $pick('confidence', '') : '',
+            'other_user_matches' => ($isOwnList && $isAdmin) ? (bool) $pick('other_user_matches', false) : false,
+
+            'sort' => $sort,
+            'order' => $order,
+        ];
+    }
+
+    /**
+     * True when the filters narrow the list beyond the two tab rows.
+     *
+     * This decides whether the list is worth an exact total. Counting the
+     * matches of a broad filter reads the whole table and costs about half a
+     * second, while the page of twenty rows itself costs two milliseconds.
+     */
+    private function filtersAreNarrowed(array $f): bool
+    {
+        return $f['search'] !== ''
+            || $f['map'] !== ''
+            || $f['players'] !== []
+            || $f['physics'] !== []
+            || $f['time_min'] !== null
+            || $f['time_max'] !== null
+            || $f['country'] !== ''
+            || $f['date_from'] !== ''
+            || $f['date_to'] !== ''
+            || $f['uploaded_by'] !== ''
+            || $f['confidence'] !== ''
+            || $f['other_user_matches'];
+    }
+
+    /**
+     * One filter pass for both lists. This used to be written out three times,
+     * once for the admin list, once for a person's own list and once for the
+     * public one, and the three had already drifted apart.
+     */
+    private function applyFilters($query, array $f)
+    {
+        if ($f['tab'] === 'online') {
+            $query->where('gametype', 'LIKE', 'm%');
+        } elseif ($f['tab'] === 'offline') {
+            $query->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype');
+        }
+
+        if ($f['status'] === 'assigned') {
+            $query->whereIn('status', ['assigned', 'fallback-assigned']);
+        } elseif ($f['status'] === 'uploaded') {
+            $query->whereIn('status', ['uploaded', 'pending', 'processing']);
+        } elseif ($f['status'] !== 'all' && $f['status'] !== '') {
+            $query->where('status', $f['status']);
+        }
+
+        if ($f['search'] !== '') {
+            $query->where(function ($q) use ($f) {
+                $q->where('original_filename', 'LIKE', '%' . $f['search'] . '%')
+                  ->orWhere('processed_filename', 'LIKE', '%' . $f['search'] . '%');
+            });
+        }
+
+        // Anchored at the start where possible. map_name carries an index, and
+        // a leading wildcard throws it away.
+        if ($f['map'] !== '') {
+            $query->where('map_name', 'LIKE', $f['map'] . '%');
+        }
+
+        // player_name, not q3df_login_name. There are two name columns on a
+        // demo and only one of them is usable: the q3df login is filled in on
+        // 8 226 rows, while player_name, the name written inside the demo
+        // itself, is filled in on 366 444 of 369 391.
+        //
+        // Exact names, never a wildcard. The panel offers a list to pick from,
+        // so the value that arrives here is always a name that exists and the
+        // index answers it.
+        if ($f['players'] !== []) {
+            $query->whereIn('player_name', $f['players']);
+        }
+
+        if ($f['physics'] !== []) {
+            $query->whereIn('physics', $f['physics']);
+        }
+
+        if ($f['time_min'] !== null) {
+            $query->where('time_ms', '>=', $f['time_min']);
+        }
+
+        if ($f['time_max'] !== null) {
+            $query->where('time_ms', '<=', $f['time_max']);
+        }
+
+        if ($f['country'] !== '') {
+            $query->where('country', $f['country']);
+        }
+
+        if ($f['date_from'] !== '') {
+            $query->whereDate('created_at', '>=', $f['date_from']);
+        }
+
+        if ($f['date_to'] !== '') {
+            $query->whereDate('created_at', '<=', $f['date_to']);
+        }
+
+        if ($f['uploaded_by'] !== '') {
+            $uploader = \App\Models\User::where('plain_name', $f['uploaded_by'])
+                ->orWhere('name', $f['uploaded_by'])
+                ->first();
+
+            $uploader ? $query->where('user_id', $uploader->id) : $query->whereRaw('1 = 0');
+        }
+
+        if ($f['confidence'] !== '') {
+            $ranges = [
+                '90-99' => [90, 99], '80-89' => [80, 89], '70-79' => [70, 79],
+                '60-69' => [60, 69], '50-59' => [50, 59],
+            ];
+            if (isset($ranges[$f['confidence']])) {
+                $query->whereBetween('name_confidence', $ranges[$f['confidence']]);
+            } elseif ($f['confidence'] === 'below-50') {
+                $query->where('name_confidence', '<', 50);
+            }
+        }
+
+        if ($f['other_user_matches']) {
+            $query->where('name_confidence', 100)
+                  ->whereNotNull('suggested_user_id')
+                  ->where('suggested_user_id', '!=', Auth::id());
+        }
+
+        if ($f['sort'] === 'status') {
+            // Status has no useful alphabetical order, so it is ranked by how
+            // far a demo got. The direction still has to be honoured: the
+            // header arrow flips on every click, and without this the rows
+            // underneath it never moved.
+            $query->orderByRaw(
+                "FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed-validity', 'failed') "
+                . ($f['order'] === 'asc' ? 'asc' : 'desc')
+            );
+        } else {
+            $query->orderBy($f['sort'], $f['order']);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Display the demos page.
+     */
     public function index(Request $request)
     {
-        // Get current user
         $currentUser = Auth::user();
         $isAdmin = ($currentUser && ((isset($currentUser->is_admin) && $currentUser->is_admin) || (isset($currentUser->admin) && $currentUser->admin)));
 
-        // Check which props Inertia is requesting (partial reload)
         $only = $request->header('X-Inertia-Partial-Data');
         $partialProps = $only ? explode(',', $only) : [];
         $isPartial = !empty($partialProps);
@@ -140,79 +372,14 @@ class DemosController extends Controller
             return !$isPartial || in_array($prop, $partialProps);
         };
 
-        // Get sorting parameters
-        $sortBy = $request->input('sort', 'created_at');
-        $sortOrder = $request->input('order', 'desc');
+        $list = $request->input('list') === 'mine' && $currentUser ? 'mine' : 'all';
+        $filters = $this->readFilters($request, $list, $isAdmin);
+        $narrowed = $this->filtersAreNarrowed($filters);
 
-        // Get filter parameters
-        $filterTab = $request->input('tab', 'all');
-        $filterStatus = $request->input('status', 'all');
-        $searchQuery = $request->input('search', '');
-
-        // Get advanced filter parameters (admin only)
-        $confidenceFilter = $request->input('confidence');
-        $showOtherUserMatches = $request->input('other_user_matches');
-        $uploadedBy = $request->input('uploaded_by');
-
-        // Validate sort column
-        $allowedColumns = ['id', 'original_filename', 'processed_filename', 'map_name', 'time_ms', 'status', 'created_at', 'gametype', 'physics'];
-        if (!in_array($sortBy, $allowedColumns)) {
-            $sortBy = 'created_at';
-        }
-
-        // Validate sort order
-        if (!in_array($sortOrder, ['asc', 'desc'])) {
-            $sortOrder = 'desc';
-        }
-
-        // Browse parameters (needed for both full and partial loads)
-        $browseTab = $request->input('browse_tab', 'all');
-        $browseStatus = $request->input('browse_status', 'all');
-        $browseSearch = $request->input('browse_search', '');
-        $browseSortBy = $request->input('browse_sort', 'created_at');
-        $browseSortOrder = $request->input('browse_order', 'desc');
-
-        if (!in_array($browseSortBy, $allowedColumns)) {
-            $browseSortBy = 'created_at';
-        }
-        if (!in_array($browseSortOrder, ['asc', 'desc'])) {
-            $browseSortOrder = 'desc';
-        }
-
-        // On full page load, return immediately with null data - frontend will partial reload
+        // A full page load answers with empty lists on purpose. The page asks
+        // for the rows straight afterwards as a partial reload, which keeps
+        // the first paint off the database.
         if (!$isPartial) {
-            $downloadLimitInfo = null;
-            $uploadLimitInfo = null;
-
-            if ($currentUser) {
-                $downloadLimitInfo = [
-                    'used' => Cache::get("demo_download_user_{$currentUser->id}", 0),
-                    'limit' => 50,
-                    'remaining' => max(0, 50 - Cache::get("demo_download_user_{$currentUser->id}", 0)),
-                    'isGuest' => false,
-                ];
-                $uploadLimitInfo = [
-                    'used' => Cache::get("demo_upload_rate_limit_{$currentUser->id}", 0),
-                    'limit' => 100000,
-                    'remaining' => max(0, 100000 - Cache::get("demo_upload_rate_limit_{$currentUser->id}", 0)),
-                    'isGuest' => false,
-                ];
-            } else {
-                $ip = request()->ip();
-                $downloadLimitInfo = [
-                    'used' => Cache::get("demo_download_ip_{$ip}", 0),
-                    'limit' => 1,
-                    'remaining' => max(0, 1 - Cache::get("demo_download_ip_{$ip}", 0)),
-                    'isGuest' => true,
-                ];
-                $uploadLimitInfo = [
-                    'used' => Cache::get("demo_upload_rate_limit_guest_{$ip}", 0),
-                    'limit' => 100,
-                    'remaining' => max(0, 100 - Cache::get("demo_upload_rate_limit_guest_{$ip}", 0)),
-                    'isGuest' => true,
-                ];
-            }
-
             return Inertia::render('Demos/Index', [
                 'userDemos' => null,
                 'publicDemos' => null,
@@ -220,264 +387,181 @@ class DemosController extends Controller
                     ? Cache::get('demo_counts_admin')
                     : ($currentUser ? Cache::get("demo_counts_user_{$currentUser->id}") : null),
                 'browseCounts' => Cache::get('demo_counts_browse'),
-                'downloadLimitInfo' => $downloadLimitInfo,
-                'uploadLimitInfo' => $uploadLimitInfo,
-                'sortBy' => $sortBy,
-                'sortOrder' => $sortOrder,
-                'browseTab' => $browseTab,
-                'browseStatus' => $browseStatus,
-                'browseSearch' => $browseSearch,
-                'browseSortBy' => $browseSortBy,
-                'browseSortOrder' => $browseSortOrder,
-                'userSearch' => $searchQuery,
-                'confidenceFilter' => $confidenceFilter,
-                'showOtherUserMatches' => $showOtherUserMatches,
-                'uploadedBy' => $uploadedBy,
+                'downloadLimitInfo' => $this->downloadLimitInfo($currentUser),
+                'uploadLimitInfo' => $this->uploadLimitInfo($currentUser),
+                'filters' => $filters,
+                'filtersNarrowed' => $narrowed,
+                'countries' => $this->demoCountries(),
+                'physicsOptions' => $this->demoPhysicsOptions(),
             ]);
         }
 
-        // --- Partial reload: fetch actual data ---
-
-        // --- User's own uploads (only when needed) ---
-        $userDemos = null;
-        $demoCounts = null;
-        if (Auth::check() && ($needs('userDemos') || $needs('demoCounts'))) {
-            if ($isAdmin) {
-                // withUnreleasedComps() here and in the owner's branch below:
-                // these two lists are exactly the readers the comps scope was
-                // written to make an exception for. Everywhere else the demo
-                // stays hidden - the public browse further down does NOT get
-                // this, and neither does anything else on the site.
-                $query = UploadedDemo::withUnreleasedComps()
-                    ->with(['record.user', 'user', 'offlineRecord', 'suggestedUser']);
-
-                if ($filterTab === 'online') {
-                    $query->where('gametype', 'LIKE', 'm%');
-                } elseif ($filterTab === 'offline') {
-                    $query->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype');
-                }
-
-                if ($filterStatus === 'assigned') {
-                    $query->whereIn('status', ['assigned', 'fallback-assigned']);
-                } elseif ($filterStatus === 'fallback-assigned') {
-                    $query->where('status', 'fallback-assigned');
-                } elseif ($filterStatus === 'processed') {
-                    $query->where('status', 'processed');
-                } elseif ($filterStatus === 'failed-validity') {
-                    $query->where('status', 'failed-validity');
-                } elseif ($filterStatus === 'failed') {
-                    $query->where('status', 'failed');
-                } elseif ($filterStatus === 'unsupported-version') {
-                    $query->where('status', 'unsupported-version');
-                } elseif ($filterStatus === 'uploaded') {
-                    $query->whereIn('status', ['uploaded', 'pending', 'processing']);
-                }
-
-                if (!empty($searchQuery)) {
-                    $query->where(function($q) use ($searchQuery) {
-                        $q->where('original_filename', 'LIKE', '%' . $searchQuery . '%')
-                          ->orWhere('processed_filename', 'LIKE', '%' . $searchQuery . '%');
-                    });
-                }
-
-                if ($confidenceFilter) {
-                    switch ($confidenceFilter) {
-                        case '90-99': $query->whereBetween('name_confidence', [90, 99]); break;
-                        case '80-89': $query->whereBetween('name_confidence', [80, 89]); break;
-                        case '70-79': $query->whereBetween('name_confidence', [70, 79]); break;
-                        case '60-69': $query->whereBetween('name_confidence', [60, 69]); break;
-                        case '50-59': $query->whereBetween('name_confidence', [50, 59]); break;
-                        case 'below-50': $query->where('name_confidence', '<', 50); break;
-                    }
-                }
-
-                if ($showOtherUserMatches) {
-                    $query->where('name_confidence', 100)
-                          ->whereNotNull('suggested_user_id')
-                          ->where('suggested_user_id', '!=', Auth::id());
-                }
-
-                if ($uploadedBy) {
-                    $uploaderUser = \App\Models\User::where('name', $uploadedBy)->first();
-                    if ($uploaderUser) {
-                        $query->where('user_id', $uploaderUser->id);
-                    }
-                }
-
-                if ($sortBy === 'status') {
-                    // Status has no useful alphabetical order, so it is ranked
-                    // by how far a demo got. The direction still has to be
-                    // honoured: the header arrow flips on every click, and
-                    // without this the rows underneath it never moved.
-                    $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed-validity', 'failed') " . ($sortOrder === 'asc' ? 'asc' : 'desc'));
-                } else {
-                    $query->orderBy($sortBy, $sortOrder);
-                }
-
-                if ($needs('userDemos')) $userDemos = $query->paginate(20, ['*'], 'userPage');
-                if ($needs('demoCounts')) $demoCounts = Cache::remember('demo_counts_admin', 60, fn () => $this->computeDemoCounts(UploadedDemo::withUnreleasedComps()));
-            } else {
-                $query = UploadedDemo::withUnreleasedComps()
-                    ->where('user_id', $currentUser->id)
-                    ->with(['record.user', 'offlineRecord']);
-
-                if ($filterTab === 'online') {
-                    $query->where('gametype', 'LIKE', 'm%');
-                } elseif ($filterTab === 'offline') {
-                    $query->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype');
-                }
-
-                if ($filterStatus === 'assigned') {
-                    $query->whereIn('status', ['assigned', 'fallback-assigned']);
-                } elseif ($filterStatus === 'fallback-assigned') {
-                    $query->where('status', 'fallback-assigned');
-                } elseif ($filterStatus === 'processed') {
-                    $query->where('status', 'processed');
-                } elseif ($filterStatus === 'failed-validity') {
-                    $query->where('status', 'failed-validity');
-                } elseif ($filterStatus === 'failed') {
-                    $query->where('status', 'failed');
-                } elseif ($filterStatus === 'unsupported-version') {
-                    $query->where('status', 'unsupported-version');
-                } elseif ($filterStatus === 'uploaded') {
-                    $query->whereIn('status', ['uploaded', 'pending', 'processing']);
-                }
-
-                if (!empty($searchQuery)) {
-                    $query->where(function($q) use ($searchQuery) {
-                        $q->where('original_filename', 'LIKE', '%' . $searchQuery . '%')
-                          ->orWhere('processed_filename', 'LIKE', '%' . $searchQuery . '%');
-                    });
-                }
-
-                if ($sortBy === 'status') {
-                    // Status has no useful alphabetical order, so it is ranked
-                    // by how far a demo got. The direction still has to be
-                    // honoured: the header arrow flips on every click, and
-                    // without this the rows underneath it never moved.
-                    $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed-validity', 'failed') " . ($sortOrder === 'asc' ? 'asc' : 'desc'));
-                } else {
-                    $query->orderBy($sortBy, $sortOrder);
-                }
-
-                if ($needs('userDemos')) $userDemos = $query->paginate(20, ['*'], 'userPage');
-                if ($needs('demoCounts')) $demoCounts = Cache::remember("demo_counts_user_{$currentUser->id}", 3600, fn () => $this->computeDemoCounts(UploadedDemo::withUnreleasedComps()->where('user_id', $currentUser->id)));
-            }
-        }
-
-        // --- Browse section (only when needed) ---
-        $publicDemos = null;
-        $browseCounts = null;
-
-        if ($needs('publicDemos') || $needs('browseCounts')) {
-            if ($needs('publicDemos')) {
-                $query = UploadedDemo::with(['record.user', 'user', 'offlineRecord']);
-
-                if ($browseStatus === 'assigned') {
-                    $query->whereIn('status', ['assigned', 'fallback-assigned']);
-                } elseif ($browseStatus === 'fallback-assigned') {
-                    $query->where('status', 'fallback-assigned');
-                } elseif ($browseStatus === 'processed') {
-                    $query->where('status', 'processed');
-                } elseif ($browseStatus === 'failed-validity') {
-                    $query->where('status', 'failed-validity');
-                } elseif ($browseStatus === 'failed') {
-                    $query->where('status', 'failed');
-                } else {
-                    $query->whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed']);
-                }
-
-                if ($browseTab === 'online') {
-                    $query->where('gametype', 'LIKE', 'm%');
-                } elseif ($browseTab === 'offline') {
-                    $query->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype');
-                }
-
-                if (!empty($browseSearch)) {
-                    $query->where(function($q) use ($browseSearch) {
-                        $q->where('original_filename', 'LIKE', "%{$browseSearch}%")
-                          ->orWhere('processed_filename', 'LIKE', "%{$browseSearch}%");
-                    });
-                }
-
-                $browseUploadedBy = $request->input('browse_uploaded_by');
-                if ($browseUploadedBy) {
-                    $uploaderUser = \App\Models\User::where('plain_name', $browseUploadedBy)->first();
-                    if ($uploaderUser) {
-                        $query->where('user_id', $uploaderUser->id);
-                    } else {
-                        $query->whereRaw('1 = 0'); // no match
-                    }
-                }
-
-                if ($browseSortBy === 'status') {
-                    $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed') " . ($browseSortOrder === 'asc' ? 'asc' : 'desc'));
-                } else {
-                    $query->orderBy($browseSortBy, $browseSortOrder);
-                }
-
-                $publicDemos = $query->paginate(20, ['*'], 'browsePage');
-            }
-
-            if ($needs('browseCounts')) {
-                $browseCounts = Cache::remember('demo_counts_browse', 3600, fn () => $this->computeDemoCounts(
-                    UploadedDemo::whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed'])
-                ));
-            }
-        }
-
         $data = [
-            'sortBy' => $sortBy,
-            'sortOrder' => $sortOrder,
-            'browseTab' => $browseTab,
-            'browseStatus' => $browseStatus,
-            'browseSearch' => $browseSearch,
-            'browseSortBy' => $browseSortBy,
-            'browseSortOrder' => $browseSortOrder,
-            'userSearch' => $searchQuery,
-            'confidenceFilter' => $confidenceFilter,
-            'showOtherUserMatches' => $showOtherUserMatches,
-            'uploadedBy' => $uploadedBy,
-            'browseUploadedBy' => $request->input('browse_uploaded_by', ''),
+            'filters' => $filters,
+            'filtersNarrowed' => $narrowed,
         ];
 
-        if ($needs('userDemos')) $data['userDemos'] = $userDemos;
-        if ($needs('demoCounts')) $data['demoCounts'] = $demoCounts;
-        if ($needs('publicDemos')) $data['publicDemos'] = $publicDemos;
-        if ($needs('browseCounts')) $data['browseCounts'] = $browseCounts;
+        // --- The person's own uploads ---
+        if ($currentUser && $needs('userDemos')) {
+            // withUnreleasedComps() here and in the admin branch: these are the
+            // readers the comps scope was written to make an exception for. The
+            // public list below does NOT get it, and neither does anything else
+            // on the site.
+            $query = UploadedDemo::withUnreleasedComps()
+                ->with($isAdmin ? ['record.user', 'user', 'offlineRecord', 'suggestedUser'] : ['record.user', 'offlineRecord']);
 
-        // Download & Upload limits (only on full load)
-        if (!$isPartial) {
-            $rateLimitKey = $currentUser
-                ? "demo_download_user_{$currentUser->id}"
-                : "demo_download_ip_" . request()->ip();
+            if (!$isAdmin) {
+                $query->where('user_id', $currentUser->id);
+            }
 
-            $downloadsToday = Cache::get($rateLimitKey, 0);
-            $maxDownloads = $currentUser ? 50 : 1;
+            $this->applyFilters($query, $filters);
 
-            $data['downloadLimitInfo'] = [
-                'used' => $downloadsToday,
-                'limit' => $maxDownloads,
-                'remaining' => max(0, $maxDownloads - $downloadsToday),
-                'isGuest' => !$currentUser,
-            ];
+            $data['userDemos'] = $query->simplePaginate(20, ['*'], 'userPage');
+        }
 
-            $uploadRateLimitKey = $currentUser
-                ? "demo_upload_rate_limit_{$currentUser->id}"
-                : "demo_upload_rate_limit_guest_" . request()->ip();
+        if ($currentUser && $needs('demoCounts')) {
+            $data['demoCounts'] = $isAdmin
+                ? Cache::remember('demo_counts_admin', 60, fn () => $this->computeDemoCounts(UploadedDemo::withUnreleasedComps()))
+                : Cache::remember(
+                    "demo_counts_user_{$currentUser->id}",
+                    3600,
+                    fn () => $this->computeDemoCounts(UploadedDemo::withUnreleasedComps()->where('user_id', $currentUser->id))
+                );
+        }
 
-            $uploadsUsed = Cache::get($uploadRateLimitKey, 0);
-            $maxUploads = $currentUser ? 100000 : 100;
+        // --- The public list ---
+        if ($needs('publicDemos')) {
+            $query = UploadedDemo::with(['record.user', 'user', 'offlineRecord'])
+                ->whereIn('status', self::PUBLIC_STATUSES);
 
-            $data['uploadLimitInfo'] = [
-                'used' => $uploadsUsed,
-                'limit' => $maxUploads,
-                'remaining' => max(0, $maxUploads - $uploadsUsed),
-                'isGuest' => !$currentUser,
-            ];
+            $this->applyFilters($query, $filters);
+
+            $data['publicDemos'] = $query->simplePaginate(20, ['*'], 'browsePage');
+        }
+
+        if ($needs('browseCounts')) {
+            $data['browseCounts'] = Cache::remember(
+                'demo_counts_browse',
+                3600,
+                fn () => $this->computeDemoCounts(UploadedDemo::whereIn('status', self::PUBLIC_STATUSES))
+            );
         }
 
         return Inertia::render('Demos/Index', $data);
+    }
+
+    /**
+     * Names to offer in the player filter.
+     *
+     * Anchored at the start first, because that is what a person typing a name
+     * means, and it is the form the index answers outright. A second pass
+     * looks inside the name for anybody who writes their clan tag first.
+     */
+    public function searchDemoPlayers(Request $request)
+    {
+        $q = trim((string) $request->input('q', ''));
+
+        if (mb_strlen($q) < 2) {
+            return response()->json([]);
+        }
+
+        $names = UploadedDemo::query()
+            ->where('player_name', 'LIKE', $q . '%')
+            ->distinct()
+            ->orderBy('player_name')
+            ->limit(10)
+            ->pluck('player_name');
+
+        if ($names->count() < 10) {
+            $more = UploadedDemo::query()
+                ->where('player_name', 'LIKE', '%' . $q . '%')
+                ->whereNotIn('player_name', $names->all())
+                ->distinct()
+                ->orderBy('player_name')
+                ->limit(10 - $names->count())
+                ->pluck('player_name');
+
+            $names = $names->concat($more);
+        }
+
+        return response()->json($names->values());
+    }
+
+    /** Map names to offer in the map filter. */
+    public function searchDemoMaps(Request $request)
+    {
+        $q = trim((string) $request->input('q', ''));
+
+        if (mb_strlen($q) < 2) {
+            return response()->json([]);
+        }
+
+        return response()->json(
+            UploadedDemo::query()
+                ->where('map_name', 'LIKE', $q . '%')
+                ->distinct()
+                ->orderBy('map_name')
+                ->limit(10)
+                ->pluck('map_name')
+        );
+    }
+
+    /** Distinct countries that actually appear on a demo, for the filter panel. */
+    private function demoCountries(): array
+    {
+        return Cache::remember('demo_filter_countries', 86400, fn () => UploadedDemo::query()
+            ->select('country')
+            ->whereNotNull('country')
+            ->where('country', '!=', '')
+            ->distinct()
+            ->orderBy('country')
+            ->pluck('country')
+            ->all());
+    }
+
+    /** Physics values that actually appear on a demo, commonest first. */
+    private function demoPhysicsOptions(): array
+    {
+        return Cache::remember('demo_filter_physics', 86400, fn () => UploadedDemo::query()
+            ->select('physics', DB::raw('COUNT(*) as total'))
+            ->whereNotNull('physics')
+            ->where('physics', '!=', '')
+            ->groupBy('physics')
+            ->orderByDesc('total')
+            ->pluck('physics')
+            ->all());
+    }
+
+    private function downloadLimitInfo($currentUser): array
+    {
+        $key = $currentUser
+            ? "demo_download_user_{$currentUser->id}"
+            : 'demo_download_ip_' . request()->ip();
+        $limit = $currentUser ? 50 : 1;
+        $used = Cache::get($key, 0);
+
+        return [
+            'used' => $used,
+            'limit' => $limit,
+            'remaining' => max(0, $limit - $used),
+            'isGuest' => !$currentUser,
+        ];
+    }
+
+    private function uploadLimitInfo($currentUser): array
+    {
+        $key = $currentUser
+            ? "demo_upload_rate_limit_{$currentUser->id}"
+            : 'demo_upload_rate_limit_guest_' . request()->ip();
+        $limit = $currentUser ? 100000 : 100;
+        $used = Cache::get($key, 0);
+
+        return [
+            'used' => $used,
+            'limit' => $limit,
+            'remaining' => max(0, $limit - $used),
+            'isGuest' => !$currentUser,
+        ];
     }
 
     /**

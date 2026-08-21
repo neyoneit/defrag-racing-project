@@ -262,6 +262,9 @@ Route::post('/models/batch-generate-still-thumbnails', [ModelsController::class,
 Route::get('/demos', [DemosController::class, 'index'])->name('demos.index');
 
 Route::get('/demos/search-uploaders', [DemosController::class, 'searchUploaders'])->name('demos.search-uploaders');
+// Pickers for the demo filter panel. They stay public because the filters do.
+Route::get('/demos/search-demo-players', [DemosController::class, 'searchDemoPlayers'])->name('demos.search-demo-players');
+Route::get('/demos/search-demo-maps', [DemosController::class, 'searchDemoMaps'])->name('demos.search-demo-maps');
 Route::get('/demos/{demo}/download', [DemosController::class, 'download'])->name('demos.download');
 
 // Demo upload routes (requires authentication)
