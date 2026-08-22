@@ -278,6 +278,45 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         return round($eur, 2);
     }
 
+    /**
+     * What this person's donations paid towards running the site, in EUR.
+     *
+     * Not the same as what they gave. A donation can be earmarked for the
+     * comps prize pool, and that money is promised to a winner rather than
+     * spent on hosting - the progress bar has always split the two, and
+     * anything the site hands out in return for paying its bills has to split
+     * them the same way. One of the two people who funded the prize pool put
+     * in 50 EUR of which every cent was prize money.
+     */
+    public function getSiteDonationTotalEur(): float
+    {
+        $emails = $this->getDonorEmails();
+        if (empty($emails)) return 0;
+
+        $rates = \Cache::get('exchange_rates_v4', [
+            'EUR' => 1, 'USD' => 1.08, 'CZK' => 25.3, 'GBP' => 0.86, 'PLN' => 4.28,
+        ]);
+
+        $total = 0;
+
+        foreach (SiteDonation::whereIn('donor_email', $emails)->where('status', 'approved')->get() as $donation) {
+            $rate = $rates[$donation->currency] ?? null;
+            if ($donation->currency !== 'EUR' && (!$rate || $rate <= 0)) {
+                continue;
+            }
+
+            $eur = $donation->currency === 'EUR'
+                ? (float) $donation->amount
+                : (float) $donation->amount / $rate;
+
+            // min(), because the earmark is stored in EUR and a donation made
+            // in another currency can round to slightly less than it.
+            $total += max(0, $eur - min((float) $donation->comps_amount, $eur));
+        }
+
+        return round($total, 2);
+    }
+
     /** Demos a guest may download in a day. */
     public const DEMO_DOWNLOADS_GUEST = 1;
 
@@ -313,7 +352,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         return \Cache::remember(
             self::demoDownloadPerkKey($this->id),
             3600,
-            fn () => $this->getDonationTotalEur() >= self::DEMO_DOWNLOADS_DONOR_EUR
+            fn () => $this->getSiteDonationTotalEur() >= self::DEMO_DOWNLOADS_DONOR_EUR
         );
     }
 
