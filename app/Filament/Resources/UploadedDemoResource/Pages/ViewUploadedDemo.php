@@ -31,20 +31,20 @@ class ViewUploadedDemo extends ViewRecord
                         Infolists\Components\TextEntry::make('file_path')
                             ->label('file_path')
                             ->copyable()
-                            ->placeholder('— empty (legacy demo, no longer downloadable)'),
+                            ->placeholder('- empty (legacy demo, no longer downloadable)'),
                         Infolists\Components\TextEntry::make('processed_filename')
                             ->label('processed_filename')
                             ->copyable()
-                            ->placeholder('—'),
+                            ->placeholder('-'),
                         Infolists\Components\TextEntry::make('file_size')
                             ->label('Size')
                             ->formatStateUsing(fn ($state) => $state
                                 ? number_format($state) . ' bytes (' . round($state / 1024, 1) . ' KB)'
-                                : '—'),
+                                : '-'),
                         Infolists\Components\TextEntry::make('file_hash')
                             ->label('MD5')
                             ->copyable()
-                            ->placeholder('—'),
+                            ->placeholder('-'),
                     ])->columns(2),
 
                 Infolists\Components\Section::make('Status & source')
@@ -59,7 +59,7 @@ class ViewUploadedDemo extends ViewRecord
                                 'failed', 'failed-validity', 'unsupported-version' => 'danger',
                                 default                => 'gray',
                             }),
-                        Infolists\Components\TextEntry::make('source')->placeholder('—'),
+                        Infolists\Components\TextEntry::make('source')->placeholder('-'),
                         Infolists\Components\TextEntry::make('download_count')
                             ->label('Downloads')
                             ->formatStateUsing(fn ($state) => (int) ($state ?? 0)),
@@ -71,19 +71,19 @@ class ViewUploadedDemo extends ViewRecord
                         Infolists\Components\TextEntry::make('processing_output')
                             ->label('Processing output / log')
                             ->columnSpanFull()
-                            ->placeholder('—')
+                            ->placeholder('-')
                             ->extraAttributes(['style' => 'white-space: pre-wrap; font-family: monospace; font-size: 12px;']),
                     ])->columns(4),
 
                 Infolists\Components\Section::make('Run details')
                     ->schema([
-                        Infolists\Components\TextEntry::make('map_name')->label('Map')->placeholder('—'),
-                        Infolists\Components\TextEntry::make('physics')->placeholder('—'),
-                        Infolists\Components\TextEntry::make('gametype')->placeholder('—'),
+                        Infolists\Components\TextEntry::make('map_name')->label('Map')->placeholder('-'),
+                        Infolists\Components\TextEntry::make('physics')->placeholder('-'),
+                        Infolists\Components\TextEntry::make('gametype')->placeholder('-'),
                         Infolists\Components\TextEntry::make('time_ms')
                             ->label('Time')
                             ->formatStateUsing(function ($state) {
-                                if (! $state) return '—';
+                                if (! $state) return '-';
                                 $m = floor($state / 60000);
                                 $s = floor(($state % 60000) / 1000);
                                 $ms = $state % 1000;
@@ -92,15 +92,15 @@ class ViewUploadedDemo extends ViewRecord
                         Infolists\Components\TextEntry::make('record_date')
                             ->label('Record date (from demo)')
                             ->dateTime('Y-m-d H:i:s')
-                            ->placeholder('—'),
-                        Infolists\Components\TextEntry::make('country')->placeholder('—'),
+                            ->placeholder('-'),
+                        Infolists\Components\TextEntry::make('country')->placeholder('-'),
                         Infolists\Components\TextEntry::make('validity')
                             ->label('Validity flags')
                             ->columnSpanFull()
                             ->formatStateUsing(function ($state) {
-                                if (empty($state)) return '— none';
+                                if (empty($state)) return '- none';
                                 $arr = is_array($state) ? $state : json_decode($state, true);
-                                if (! $arr) return '—';
+                                if (! $arr) return '-';
                                 return new HtmlString('<pre style="font-size:12px; margin:0;">'
                                     . e(json_encode($arr, JSON_PRETTY_PRINT))
                                     . '</pre>');
@@ -112,15 +112,15 @@ class ViewUploadedDemo extends ViewRecord
                         Infolists\Components\TextEntry::make('player_name')
                             ->label('player_name (raw)')
                             ->copyable()
-                            ->placeholder('—'),
+                            ->placeholder('-'),
                         Infolists\Components\TextEntry::make('q3df_login_name')
                             ->label('q3df_login_name')
                             ->copyable()
-                            ->placeholder('—'),
+                            ->placeholder('-'),
                         Infolists\Components\TextEntry::make('q3df_login_name_colored')
                             ->label('q3df_login_name_colored')
                             ->copyable()
-                            ->placeholder('—'),
+                            ->placeholder('-'),
                     ])->columns(3),
 
                 Infolists\Components\Section::make('Matching / auto-assignment')
@@ -128,19 +128,19 @@ class ViewUploadedDemo extends ViewRecord
                         Infolists\Components\TextEntry::make('match_method')
                             ->badge()
                             ->color('info')
-                            ->placeholder('—'),
+                            ->placeholder('-'),
                         Infolists\Components\TextEntry::make('name_confidence')
                             ->label('Name confidence')
-                            ->formatStateUsing(fn ($state) => $state === null ? '—' : $state . ' %'),
-                        Infolists\Components\TextEntry::make('matched_alias')->placeholder('—'),
+                            ->formatStateUsing(fn ($state) => $state === null ? '-' : $state . ' %'),
+                        Infolists\Components\TextEntry::make('matched_alias')->placeholder('-'),
                         Infolists\Components\TextEntry::make('suggested_user_id')
                             ->label('Suggested user id')
-                            ->placeholder('—'),
+                            ->placeholder('-'),
                         Infolists\Components\TextEntry::make('suggestedUser.name')
                             ->label('Suggested user')
                             ->formatStateUsing(fn ($state) => $state
                                 ? strip_tags(preg_replace('/\^[0-9]/', '', $state))
-                                : '—')
+                                : '-')
                             ->url(fn ($record) => $record->suggested_user_id
                                 ? "/profile/" . $record->suggested_user_id
                                 : null)
@@ -155,13 +155,13 @@ class ViewUploadedDemo extends ViewRecord
                             ->label('Name')
                             ->formatStateUsing(fn ($state) => $state
                                 ? strip_tags(preg_replace('/\^[0-9]/', '', $state))
-                                : '—')
+                                : '-')
                             ->url(fn ($record) => $record->user_id
                                 ? "/profile/" . $record->user_id
                                 : null)
                             ->openUrlInNewTab(),
-                        Infolists\Components\TextEntry::make('user.email')->label('Email')->placeholder('—'),
-                        Infolists\Components\TextEntry::make('user.mdd_id')->label('MDD ID')->placeholder('—'),
+                        Infolists\Components\TextEntry::make('user.email')->label('Email')->placeholder('-'),
+                        Infolists\Components\TextEntry::make('user.mdd_id')->label('MDD ID')->placeholder('-'),
                     ])->columns(4),
 
                 Infolists\Components\Section::make('Linked online record')
@@ -172,43 +172,43 @@ class ViewUploadedDemo extends ViewRecord
                             ->label('Record player')
                             ->formatStateUsing(fn ($state) => $state
                                 ? strip_tags(preg_replace('/\^[0-9]/', '', $state))
-                                : '—'),
+                                : '-'),
                         Infolists\Components\TextEntry::make('record.time')
                             ->label('Record time')
                             ->formatStateUsing(function ($state) {
-                                if (! $state) return '—';
+                                if (! $state) return '-';
                                 $m = floor($state / 60000);
                                 $s = floor(($state % 60000) / 1000);
                                 $ms = $state % 1000;
                                 return sprintf('%d:%02d.%03d', $m, $s, $ms);
                             }),
-                        Infolists\Components\TextEntry::make('record.rank')->label('Rank')->placeholder('—'),
-                        Infolists\Components\TextEntry::make('record.mapname')->label('Record map')->placeholder('—'),
-                        Infolists\Components\TextEntry::make('record.physics')->label('Record physics')->placeholder('—'),
-                        Infolists\Components\TextEntry::make('record.gametype')->label('Record gametype')->placeholder('—'),
+                        Infolists\Components\TextEntry::make('record.rank')->label('Rank')->placeholder('-'),
+                        Infolists\Components\TextEntry::make('record.mapname')->label('Record map')->placeholder('-'),
+                        Infolists\Components\TextEntry::make('record.physics')->label('Record physics')->placeholder('-'),
+                        Infolists\Components\TextEntry::make('record.gametype')->label('Record gametype')->placeholder('-'),
                         Infolists\Components\TextEntry::make('record.date_set')
                             ->label('Record date_set')
                             ->dateTime('Y-m-d H:i')
-                            ->placeholder('—'),
+                            ->placeholder('-'),
                     ])->columns(4),
 
                 Infolists\Components\Section::make('Linked offline record')
                     ->visible(fn ($record) => $record->offlineRecord !== null)
                     ->schema([
                         Infolists\Components\TextEntry::make('offlineRecord.id')->label('OfflineRecord ID'),
-                        Infolists\Components\TextEntry::make('offlineRecord.mapname')->label('Map')->placeholder('—'),
-                        Infolists\Components\TextEntry::make('offlineRecord.physics')->placeholder('—'),
-                        Infolists\Components\TextEntry::make('offlineRecord.gametype')->placeholder('—'),
+                        Infolists\Components\TextEntry::make('offlineRecord.mapname')->label('Map')->placeholder('-'),
+                        Infolists\Components\TextEntry::make('offlineRecord.physics')->placeholder('-'),
+                        Infolists\Components\TextEntry::make('offlineRecord.gametype')->placeholder('-'),
                         Infolists\Components\TextEntry::make('offlineRecord.time')
                             ->label('Time')
                             ->formatStateUsing(function ($state) {
-                                if (! $state) return '—';
+                                if (! $state) return '-';
                                 $m = floor($state / 60000);
                                 $s = floor(($state % 60000) / 1000);
                                 $ms = $state % 1000;
                                 return sprintf('%d:%02d.%03d', $m, $s, $ms);
                             }),
-                        Infolists\Components\TextEntry::make('offlineRecord.rank')->label('Rank')->placeholder('—'),
+                        Infolists\Components\TextEntry::make('offlineRecord.rank')->label('Rank')->placeholder('-'),
                     ])->columns(5),
 
                 Infolists\Components\Section::make('Rendered video')
@@ -216,7 +216,7 @@ class ViewUploadedDemo extends ViewRecord
                     ->schema([
                         Infolists\Components\TextEntry::make('renderedVideo.id')->label('Render ID'),
                         Infolists\Components\TextEntry::make('renderedVideo.status')->badge(),
-                        Infolists\Components\TextEntry::make('renderedVideo.quality_tier')->placeholder('—'),
+                        Infolists\Components\TextEntry::make('renderedVideo.quality_tier')->placeholder('-'),
                         Infolists\Components\TextEntry::make('renderedVideo.created_at')
                             ->label('Render created')
                             ->dateTime('Y-m-d H:i'),
@@ -232,7 +232,7 @@ class ViewUploadedDemo extends ViewRecord
                                 $rows = $record->assignmentReports()
                                     ->orderByDesc('created_at')
                                     ->get(['id', 'report_type', 'status', 'created_at']);
-                                if ($rows->isEmpty()) return '—';
+                                if ($rows->isEmpty()) return '-';
                                 $html = '<table style="width:100%; font-size:12px;"><thead><tr><th align="left">ID</th><th align="left">Type</th><th align="left">Status</th><th align="left">Created</th></tr></thead><tbody>';
                                 foreach ($rows as $r) {
                                     $url = url('/defraghq/demo-assignment-reports/' . $r->id);
@@ -269,7 +269,7 @@ class ViewUploadedDemo extends ViewRecord
                 try {
                     $local = Storage::disk('local')->exists($record->file_path);
                 } catch (\Throwable $e) {
-                    // ignore — keep $local = false
+                    // ignore - keep $local = false
                 }
 
                 try {
@@ -281,18 +281,18 @@ class ViewUploadedDemo extends ViewRecord
 
             $rows = [];
             if (empty($record->file_path)) {
-                $rows[] = '<span style="color:#fbbf24;">⚠ file_path is empty — legacy demo, never had a stored file</span>';
+                $rows[] = '<span style="color:#fbbf24;">⚠ file_path is empty - legacy demo, never had a stored file</span>';
             } else {
                 $rows[] = ($local ? '<span style="color:#34d399;">✓</span>' : '<span style="color:#f87171;">✗</span>')
                     . ' <strong>Local disk</strong> <code style="font-size:12px;">storage/app/' . e($record->file_path) . '</code>';
                 if ($remoteError) {
-                    $rows[] = '<span style="color:#f87171;">✗</span> <strong>Backblaze (s3)</strong> — error: <code style="font-size:12px;">' . e($remoteError) . '</code>';
+                    $rows[] = '<span style="color:#f87171;">✗</span> <strong>Backblaze (s3)</strong> - error: <code style="font-size:12px;">' . e($remoteError) . '</code>';
                 } else {
                     $rows[] = ($remote ? '<span style="color:#34d399;">✓</span>' : '<span style="color:#f87171;">✗</span>')
                         . ' <strong>Backblaze (s3)</strong> <code style="font-size:12px;">' . e($record->file_path) . '</code>';
                 }
                 if (! $local && ! $remote) {
-                    $rows[] = '<div style="margin-top:6px; color:#f87171;"><strong>Download will return 404</strong> — file is missing from both disks.</div>';
+                    $rows[] = '<div style="margin-top:6px; color:#f87171;"><strong>Download will return 404</strong> - file is missing from both disks.</div>';
                 } elseif ($remote && ! $local) {
                     $rows[] = '<div style="margin-top:6px; color:#9ca3af;">Will be served from Backblaze.</div>';
                 } elseif ($local && ! $remote) {

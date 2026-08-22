@@ -176,7 +176,7 @@ const byDay = computed(() => {
             </div>
             <!-- Lazy-load tail: spinner while fetching the next chunk, quiet end note otherwise -->
             <div v-if="loadingMore" class="py-6 text-center text-sm text-gray-500">{{ $t('Loading more…') }}</div>
-            <div v-else-if="!hasMore && blocks?.length" class="py-6 text-center text-xs text-gray-600">{{ $t("That's the whole log we keep.") }}</div>
+            <div v-else-if="!hasMore && blocks?.length" class="py-6 text-center text-xs text-gray-600">{{ $t("That's the whole log I keep.") }}</div>
         </div>
     </div>
 </template>

@@ -9,8 +9,8 @@ export default {
 
 <script setup>
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import Pagination from '@/Components/Basic/Pagination.vue';
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue';
+import DemoFilters from '@/Components/Demos/DemoFilters.vue';
 import LauncherBanner from '@/Components/LauncherBanner.vue';
 import DemoDetails from '@/Components/DemoDetails.vue';
 import DemoPhysicsBadges from '@/Components/DemoPhysicsBadges.vue';
@@ -23,20 +23,13 @@ const props = defineProps({
     publicDemos: Object,
     demoCounts: Object,
     browseCounts: Object,
-    sortBy: String,
-    sortOrder: String,
-    browseTab: String,
-    browseStatus: String,
-    browseSearch: String,
-    browseSortBy: String,
-    browseSortOrder: String,
-    userSearch: String,
     downloadLimitInfo: Object,
     uploadLimitInfo: Object,
-    confidenceFilter: String,
-    showOtherUserMatches: Boolean,
-    uploadedBy: String,
-    browseUploadedBy: String,
+    // One filter set for both tabs, read and normalised by the controller.
+    filters: Object,
+    filtersNarrowed: Boolean,
+    countries: Object,
+    physicsOptions: Array,
 });
 const fileInput = ref(null);
 const selectedFiles = ref([]);
@@ -150,7 +143,19 @@ const showReprocessConfirm = ref(false);
 const processingStartTime = ref(null);
 const processingDuration = ref(null);
 const processingResultsExpanded = ref(false);
-const globalQueueExpanded = ref(true);
+const globalQueueExpanded = ref(false);
+
+// The queue panel is only worth screen space while the queue has something
+// in it. Empty, it was a box of zeroes on every page load. This is the same
+// test that decides whether to poll at all, so the panel is on screen exactly
+// while the numbers behind it move.
+const queueHasWork = computed(() =>
+    (queueStats.value?.total_queued || 0) > 0
+    || (queueStats.value?.total_processing || 0) > 0
+    || (queueStats.value?.user_queued || 0) > 0
+    || (queueStats.value?.user_processing || 0) > 0
+    || activelyProcessingDemos.value.length > 0
+);
 
 const processingSummary = computed(() => {
     if (recentlyProcessed.value.length === 0) return null;
@@ -176,6 +181,31 @@ const processingSummary = computed(() => {
     return { groups: active, total: recentlyProcessed.value.length, success: successCount, fail: failCount };
 });
 
+// The upload panel is folded away to start with. It is machinery, and most
+// people open this page to watch a demo, not to send one.
+//
+// It opens by itself the moment it has something to show: files waiting, an
+// upload running, a summary, or demos that just finished processing. It also
+// opens when a file is dragged anywhere over the page, because the drop zone
+// lives inside it and a folded panel cannot catch the drop.
+const uploadOpen = ref(false);
+
+watch(
+    [selectedFiles, uploading, uploadSummary, processingSummary, compsNotices],
+    ([files, busy, summary, processed, notices]) => {
+        if (files.length || busy || summary || processed || notices.length) {
+            uploadOpen.value = true;
+        }
+    },
+    { deep: true }
+);
+
+const openUploadOnDrag = (event) => {
+    if (!uploadOpen.value && Array.from(event.dataTransfer?.types || []).includes('Files')) {
+        uploadOpen.value = true;
+    }
+};
+
 const reprocessAllFailed = async () => {
     showReprocessConfirm.value = false;
     reprocessingFailed.value = true;
@@ -196,90 +226,132 @@ const reprocessAllFailed = async () => {
     }
 };
 
-// Filter state (for Your Uploads section)
-const activeTab = ref('all'); // all, online, offline
-const activeStatusFilter = ref('all'); // all, assigned, failed
+// Which list the page is showing. Only one is on screen at a time, so the
+// page has one table instead of two stacked ones. It lives in the URL, which
+// makes a link to somebody's own uploads shareable and survives a reload.
+const activeList = ref(
+    new URLSearchParams(window.location.search).get('list') === 'mine' ? 'mine' : 'all'
+);
 
-// Browse filter state (for Browse All Demos section)
-const activeBrowseTab = ref(props.browseTab || 'all'); // all, online, offline
-const activeBrowseStatus = ref(props.browseStatus || 'all'); // all, assigned, processed
-const browseSearchQuery = ref(props.browseSearch || '');
-const userSearchQuery = ref(props.userSearch || '');
+const changeList = (list) => {
+    activeList.value = list;
+    const currentUrl = new URL(window.location.href);
 
-// Advanced filter state (admin only)
-const confidenceFilterValue = ref(props.confidenceFilter || '');
-const confidenceDropdownOpen = ref(false);
-const showOtherUserMatchesValue = ref(props.showOtherUserMatches || false);
-const uploadedByValue = ref(props.uploadedBy || '');
-
-// Browse uploaded by filter with autocomplete
-const browseUploadedByValue = ref(props.browseUploadedBy || '');
-const browseUploadedBySuggestions = ref([]);
-const browseUploadedByOpen = ref(false);
-let browseUploadedBySearchTimeout = null;
-let browseUploadedBySkipSearch = false;
-
-const searchUploaders = async (query) => {
-    if (query.length < 2) {
-        browseUploadedBySuggestions.value = [];
-        browseUploadedByOpen.value = false;
-        return;
+    if (list === 'all') {
+        currentUrl.searchParams.delete('list');
+    } else {
+        currentUrl.searchParams.set('list', list);
     }
-    try {
-        const response = await axios.get('/demos/search-uploaders', { params: { q: query } });
-        browseUploadedBySuggestions.value = response.data;
-        browseUploadedByOpen.value = response.data.length > 0;
-    } catch (e) {
-        browseUploadedBySuggestions.value = [];
-        browseUploadedByOpen.value = false;
+
+    // This has to name the props it wants. A plain visit is not a partial
+    // reload, and the controller answers those with null lists on purpose,
+    // so the table would empty itself on every tab click.
+    // 'filters' comes back too. Switching tabs can drop a value the new tab
+    // cannot use - a status like "waiting" exists only on your own list - and
+    // without this the panel would keep showing a filter the server ignored.
+    const only = list === 'mine'
+        ? ['userDemos', 'demoCounts', 'filters', 'filtersNarrowed']
+        : ['publicDemos', 'browseCounts', 'filters', 'filtersNarrowed'];
+
+    const alreadyLoaded = list === 'mine' ? props.userDemos : props.publicDemos;
+    if (!alreadyLoaded) {
+        demosLoading.value = true;
     }
+
+    router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
+        preserveScroll: true,
+        preserveState: true,
+        only,
+        onFinish: () => { demosLoading.value = false; },
+    });
 };
 
-watch(browseUploadedByValue, (val) => {
-    if (browseUploadedBySkipSearch) {
-        browseUploadedBySkipSearch = false;
-        return;
-    }
-    clearTimeout(browseUploadedBySearchTimeout);
-    browseUploadedBySearchTimeout = setTimeout(() => searchUploaders(val), 300);
+// Filter state (for Your Uploads section)
+// One filter set, shared by both tabs. The panel sits above the tabs, so
+// somebody who has narrowed things down to a map keeps that when they switch.
+// The values a tab cannot use are dropped by the controller rather than
+// silently returning nothing.
+const DEFAULT_FILTERS = {
+    tab: 'all', status: 'all', search: '', map: '', players: [], physics: [],
+    time_min: null, time_max: null, country: '', date_from: '', date_to: '',
+    uploaded_by: '', rank_min: null, rank_max: null,
+    confidence: '', other_user_matches: false,
+    sort: 'created_at', order: 'desc',
+};
+
+const filterState = reactive({ ...DEFAULT_FILTERS, ...(props.filters || {}) });
+
+// The controller normalises what it was given, so the panel follows it rather
+// than keeping its own idea of the truth.
+watch(() => props.filters, (next) => {
+    if (next) Object.assign(filterState, next);
 });
 
-const selectUploader = (name) => {
-    browseUploadedBySkipSearch = true;
-    browseUploadedByValue.value = name;
-    browseUploadedByOpen.value = false;
-    browseUploadedBySuggestions.value = [];
-    applyBrowseUploadedBy();
+const isAdminUser = computed(() => !!($page.props.auth.user?.admin || $page.props.auth.user?.is_admin));
+
+const applyFilters = (patch = {}) => {
+    Object.assign(filterState, patch);
+
+    const url = new URL(window.location.href);
+    const params = url.searchParams;
+
+    // Wipe every name this panel owns, including the old browse_* spellings a
+    // saved link may still carry, then write back only what is set. Without
+    // the wipe a filter that was cleared would live on in the URL.
+    Object.keys(DEFAULT_FILTERS).forEach((key) => {
+        params.delete(key);
+        params.delete('browse_' + key);
+    });
+    params.delete('userPage');
+    params.delete('browsePage');
+
+    Object.entries(DEFAULT_FILTERS).forEach(([key, fallback]) => {
+        const value = filterState[key];
+        if (value === null || value === undefined || value === '' || value === false) return;
+        if (Array.isArray(value)) {
+            if (value.length) params.set(key, value.join(','));
+            return;
+        }
+        if (value !== fallback) params.set(key, value);
+    });
+
+    router.visit(url.pathname + (params.toString() ? '?' + params.toString() : ''), {
+        preserveScroll: true,
+        preserveState: true,
+        only: activeList.value === 'mine'
+            ? ['userDemos', 'demoCounts', 'filters', 'filtersNarrowed']
+            : ['publicDemos', 'browseCounts', 'filters', 'filtersNarrowed'],
+    });
 };
 
-const applyBrowseUploadedBy = () => {
-    const currentUrl = new URL(window.location.href);
-    if (browseUploadedByValue.value.trim() === '') {
-        currentUrl.searchParams.delete('browse_uploaded_by');
-    } else {
-        currentUrl.searchParams.set('browse_uploaded_by', browseUploadedByValue.value.trim());
-    }
-    currentUrl.searchParams.delete('browsePage');
-    router.visit(currentUrl.toString(), { preserveState: true, preserveScroll: true, only: ['publicDemos'] });
+// The template still speaks the old names in a few places. These keep it
+// working while everything reads from one object underneath.
+const activeTab = computed(() => filterState.tab);
+const activeStatusFilter = computed(() => filterState.status);
+const activeBrowseTab = computed(() => filterState.tab);
+const activeBrowseStatus = computed(() => filterState.status);
+const sortBy = computed(() => filterState.sort);
+const sortOrder = computed(() => filterState.order);
+const browseSortBy = computed(() => filterState.sort);
+const browseSortOrder = computed(() => filterState.order);
+
+// Why a demo failed, in a sentence.
+//
+// `processing_output` is a log line written for us, not for the player, and
+// two of its shapes carry a path on the server. This turns the four shapes
+// that actually occur into something readable, and the raw line stays for
+// staff. Counted on the 2 921 failed demos that recorded anything: 2 908
+// could not be parsed, 10 timed out, 3 broke while being packed away.
+const failureReason = (demo) => {
+    const output = demo?.processing_output || '';
+
+    if (!output) return t('No reason was recorded for this one.');
+    if (output.includes('Could not parse demo file')) return t('The file could not be read as a demo.');
+    if (output.includes('timed out')) return t('The demo took too long to read and was given up on.');
+    if (output.includes('7z') || output.includes('rmdir')) return t('The demo was read, but storing it failed.');
+
+    return t('Processing failed.');
 };
-
-const clearBrowseUploadedBy = () => {
-    browseUploadedByValue.value = '';
-    browseUploadedByOpen.value = false;
-    applyBrowseUploadedBy();
-};
-
-const confidenceOptions = computed(() => [
-    { value: '', label: t('All Confidence Levels') },
-    { value: '90-99', label: '90-99%' },
-    { value: '80-89', label: '80-89%' },
-    { value: '70-79', label: '70-79%' },
-    { value: '60-69', label: '60-69%' },
-    { value: '50-59', label: '50-59%' },
-    { value: 'below-50', label: t('Below 50%') },
-]);
-
-const selectedConfidenceLabel = () => confidenceOptions.value.find(c => c.value === confidenceFilterValue.value)?.label || t('All Confidence Levels');
 
 // Tooltip state
 const hoveredDemo = ref(null);
@@ -365,47 +437,8 @@ const uploadRestrictionMessage = computed(() => {
     return t('You need at least 30 records to upload demos. You currently have :count record(s). :needed more needed.', { count: recordsCount, needed });
 });
 
-// Function to change tab filter (ONLINE/OFFLINE/ALL)
-const changeTabFilter = (tab) => {
-    activeTab.value = tab;
-    const currentUrl = new URL(window.location.href);
-
-    if (tab === 'all') {
-        currentUrl.searchParams.delete('tab');
-    } else {
-        currentUrl.searchParams.set('tab', tab);
-    }
-
-    // Reset to page 1 when changing filters
-    currentUrl.searchParams.delete('userPage');
-
-    router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
-        preserveScroll: true,
-        preserveState: true,
-        only: ['userDemos', 'demoCounts'],
-    });
-};
-
-// Function to change status filter (ASSIGNED/FAILED/ALL)
-const changeStatusFilter = (status) => {
-    activeStatusFilter.value = status;
-    const currentUrl = new URL(window.location.href);
-
-    if (status === 'all') {
-        currentUrl.searchParams.delete('status');
-    } else {
-        currentUrl.searchParams.set('status', status);
-    }
-
-    // Reset to page 1 when changing filters
-    currentUrl.searchParams.delete('userPage');
-
-    router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
-        preserveScroll: true,
-        preserveState: true,
-        only: ['userDemos', 'demoCounts'],
-    });
-};
+const changeTabFilter = (tab) => applyFilters({ tab });
+const changeStatusFilter = (status) => applyFilters({ status });
 
 // Use server-provided counts instead of counting current page
 const demoCountsComputed = computed(() => {
@@ -537,67 +570,8 @@ const browseCountsComputed = computed(() => {
     }
 });
 
-// Function to change browse tab filter (ONLINE/OFFLINE/ALL)
-const changeBrowseTabFilter = (tab) => {
-    activeBrowseTab.value = tab;
-    const currentUrl = new URL(window.location.href);
-
-    if (tab === 'all') {
-        currentUrl.searchParams.delete('browse_tab');
-    } else {
-        currentUrl.searchParams.set('browse_tab', tab);
-    }
-
-    // Reset to page 1 when changing filters
-    currentUrl.searchParams.delete('browsePage');
-
-    router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
-        preserveScroll: true,
-        preserveState: true,
-        only: ['publicDemos', 'browseCounts'],
-    });
-};
-
-// Function to change browse status filter (ASSIGNED/PROCESSED/ALL)
-const changeBrowseStatusFilter = (status) => {
-    activeBrowseStatus.value = status;
-    const currentUrl = new URL(window.location.href);
-
-    if (status === 'all') {
-        currentUrl.searchParams.delete('browse_status');
-    } else {
-        currentUrl.searchParams.set('browse_status', status);
-    }
-
-    // Reset to page 1 when changing filters
-    currentUrl.searchParams.delete('browsePage');
-
-    router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
-        preserveScroll: true,
-        preserveState: true,
-        only: ['publicDemos', 'browseCounts'],
-    });
-};
-
-// Function to handle browse search
-const handleBrowseSearch = () => {
-    const currentUrl = new URL(window.location.href);
-
-    if (browseSearchQuery.value.trim() === '') {
-        currentUrl.searchParams.delete('browse_search');
-    } else {
-        currentUrl.searchParams.set('browse_search', browseSearchQuery.value.trim());
-    }
-
-    // Reset to page 1 when searching
-    currentUrl.searchParams.delete('browsePage');
-
-    router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
-        preserveScroll: true,
-        preserveState: true,
-        only: ['publicDemos', 'browseCounts'],
-    });
-};
+const changeBrowseTabFilter = (tab) => applyFilters({ tab });
+const changeBrowseStatusFilter = (status) => applyFilters({ status });
 
 const handleFileSelect = (event) => {
     const files = Array.from(event.target.files || event.dataTransfer.files);
@@ -895,36 +869,30 @@ const formatFileSize = (bytes) => {
 // that mount never happens again and the table simply goes blank. Reported
 // twice from the browse table: clicking Time emptied the list, while opening
 // the identical URL by hand worked.
+const goToPage = (pageName, page) => {
+    const url = new URL(window.location.href);
+
+    if (page <= 1) {
+        url.searchParams.delete(pageName);
+    } else {
+        url.searchParams.set(pageName, page);
+    }
+
+    router.visit(url.pathname + (url.searchParams.toString() ? '?' + url.searchParams.toString() : ''), {
+        preserveScroll: true,
+        preserveState: true,
+        only: activeList.value === 'mine' ? ['userDemos'] : ['publicDemos'],
+    });
+};
+
 const sortColumn = (column) => {
-    const newOrder = props.sortBy === column && props.sortOrder === 'asc' ? 'desc' : 'asc';
-    // Carried over from the current URL rather than rebuilt from the route, so
-    // sorting your own uploads no longer throws away the browse table's search,
-    // tab and status filters sitting further down the same page.
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('sort', column);
-    currentUrl.searchParams.set('order', newOrder);
-    currentUrl.searchParams.set('userPage', props.userDemos?.current_page || 1);
-
-    router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
-        preserveState: true,
-        preserveScroll: true,
-        only: ['userDemos'],
+    applyFilters({
+        sort: column,
+        order: filterState.sort === column && filterState.order === 'asc' ? 'desc' : 'asc',
     });
 };
 
-const sortBrowseColumn = (column) => {
-    const newOrder = props.browseSortBy === column && props.browseSortOrder === 'asc' ? 'desc' : 'asc';
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('browse_sort', column);
-    currentUrl.searchParams.set('browse_order', newOrder);
-    currentUrl.searchParams.delete('browsePage');
-
-    router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
-        preserveState: true,
-        preserveScroll: true,
-        only: ['publicDemos'],
-    });
-};
+const sortBrowseColumn = sortColumn;
 
 const formatTime = (ms) => {
     if (!ms) return '-';
@@ -964,94 +932,6 @@ const matchMethodTooltip = (demo) => {
         default: return '';
     }
 };
-
-// Watch for user search query changes and trigger server-side search
-let searchTimeout = null;
-watch(userSearchQuery, (newValue) => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-        const currentUrl = new URL(window.location.href);
-
-        if (newValue.trim() === '') {
-            currentUrl.searchParams.delete('search');
-        } else {
-            currentUrl.searchParams.set('search', newValue.trim());
-        }
-
-        // Reset to page 1 when searching
-        currentUrl.searchParams.delete('userPage');
-
-        router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
-            preserveScroll: true,
-            preserveState: true,
-            only: ['userDemos', 'demoCounts'],
-        });
-    }, 300); // 300ms debounce
-});
-
-// Watch for confidence filter changes
-watch(confidenceFilterValue, (newValue) => {
-    const currentUrl = new URL(window.location.href);
-
-    if (!newValue || newValue === '') {
-        currentUrl.searchParams.delete('confidence');
-    } else {
-        currentUrl.searchParams.set('confidence', newValue);
-    }
-
-    // Reset to page 1 when filtering
-    currentUrl.searchParams.delete('userPage');
-
-    router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
-        preserveScroll: true,
-        preserveState: true,
-        only: ['userDemos', 'demoCounts'],
-    });
-});
-
-// Watch for show other user matches toggle
-watch(showOtherUserMatchesValue, (newValue) => {
-    const currentUrl = new URL(window.location.href);
-
-    if (newValue) {
-        currentUrl.searchParams.set('other_user_matches', '1');
-    } else {
-        currentUrl.searchParams.delete('other_user_matches');
-    }
-
-    // Reset to page 1 when filtering
-    currentUrl.searchParams.delete('userPage');
-
-    router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
-        preserveScroll: true,
-        preserveState: true,
-        only: ['userDemos', 'demoCounts'],
-    });
-});
-
-// Watch for uploaded by filter changes
-let uploadedByTimeout = null;
-watch(uploadedByValue, (newValue) => {
-    clearTimeout(uploadedByTimeout);
-    uploadedByTimeout = setTimeout(() => {
-        const currentUrl = new URL(window.location.href);
-
-        if (newValue.trim() === '') {
-            currentUrl.searchParams.delete('uploaded_by');
-        } else {
-            currentUrl.searchParams.set('uploaded_by', newValue.trim());
-        }
-
-        // Reset to page 1 when filtering
-        currentUrl.searchParams.delete('userPage');
-
-        router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
-            preserveScroll: true,
-            preserveState: true,
-            only: ['userDemos', 'demoCounts'],
-        });
-    }, 300); // 300ms debounce
-});
 
 const getStatusColor = (status) => {
     switch (status) {
@@ -1232,10 +1112,19 @@ const demosLoading = ref(true);
 onMounted(() => {
     checkForProcessingDemos();
 
+    if (new URLSearchParams(window.location.search).get('upload') === '1') {
+        uploadOpen.value = true;
+    }
+    document.addEventListener('dragover', openUploadOnDrag);
+
     if (!props.userDemos && !props.publicDemos) {
         const start = Date.now();
+        // Both counts, because both sit on the tab buttons. Only one list,
+        // because only one list is on screen.
         router.reload({
-            only: ['userDemos', 'publicDemos', 'demoCounts', 'browseCounts'],
+            only: activeList.value === 'mine'
+                ? ['userDemos', 'demoCounts', 'browseCounts']
+                : ['publicDemos', 'demoCounts', 'browseCounts'],
             onFinish: () => {
                 const remaining = 400 - (Date.now() - start);
                 if (remaining > 0) {
@@ -1252,6 +1141,7 @@ onMounted(() => {
 
 onUnmounted(() => {
     stopStatusPolling();
+    document.removeEventListener('dragover', openUploadOnDrag);
 });
 
 // Manual assignment functions
@@ -1274,7 +1164,7 @@ const openAssignModal = (demo) => {
     }
 };
 
-// Suggested matches — records sorted by time distance to demo's time
+// Suggested matches - records sorted by time distance to demo's time
 const suggestedRecords = computed(() => {
     if (!assigningDemo.value || availableRecords.value.length === 0) return [];
     const demoTime = assigningDemo.value.time_ms;
@@ -1387,24 +1277,25 @@ watch(selectedPhysics, () => {
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-8">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
-                <!-- items-start, not items-center. The limit cards on the right
-                     are two rows tall, and centring against them pushed the
-                     title down the page - so Demos sat lower than every other
-                     section, which all top-align their heading. -->
-                <div class="flex justify-between items-start flex-wrap gap-4">
-                    <div>
-                        <div class="flex items-center gap-3 mb-1">
-                            <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('Demos') }}</h1>
-                        </div>
+                <!-- Everything in the header is one line tall now - the two
+                     limit cards used to be two rows, which is why this used to
+                     top-align. It still wraps on its own when the window is too
+                     narrow to hold the lot. -->
+                <div class="flex justify-between items-center flex-wrap gap-3">
+                    <!-- Title, what the page is for, and the credit, on one
+                         line. They wrap onto the next line on their own when
+                         the window is too narrow to hold them. Aligned on the
+                         baseline so the small text sits on the same line as the
+                         letters of the heading rather than its box. -->
+                    <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('Demos') }}</h1>
                         <p class="text-sm text-gray-400">{{ $t('Upload and manage demo files') }}</p>
-                        <p class="text-xs text-gray-500 mt-1">
-                            <span class="relative group inline-block">
-                                <span class="cursor-help border-b border-dotted border-gray-600 text-gray-400">{{ $t('Special thanks') }}</span>
-                                <span class="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-opacity absolute left-0 top-full z-30 w-64 rounded-lg bg-gray-900 border border-white/10 px-3 py-2 text-xs text-gray-300 shadow-xl leading-snug">
-                                    {{ $t('Special thanks to') }} <Link href="/profile/549" class="text-gray-200 hover:text-white underline transition-colors">Enter</Link> {{ $t('for his demo collection that helped populate this database.') }}
-                                </span>
+                        <span class="relative group inline-block text-xs">
+                            <span class="cursor-help border-b border-dotted border-gray-600 text-gray-400">{{ $t('Special thanks') }}</span>
+                            <span class="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-opacity absolute left-0 top-full z-30 w-64 rounded-lg bg-gray-900 border border-white/10 px-3 py-2 text-xs text-gray-300 shadow-xl leading-snug">
+                                {{ $t('Special thanks to') }} <Link href="/profile/549" class="text-gray-200 hover:text-white underline transition-colors">Enter</Link> {{ $t('for his demo collection that helped populate this database.') }}
                             </span>
-                        </p>
+                        </span>
                     </div>
 
                     <Link :href="route('launcher')"
@@ -1415,13 +1306,28 @@ watch(selectedPhysics, () => {
                             <line x1="12" y1="15" x2="12" y2="3"/>
                         </svg>
                         <span class="font-bold text-white whitespace-nowrap">{{ $t('Get the launcher') }}</span>
-                        <span class="hidden sm:inline text-blue-200/80 font-semibold text-xs">{{ $t('auto backup demos + many more features') }}</span>
+                        <!-- Same shape as the servers page, different half of
+                             the launcher: there it is connecting, here it is
+                             the watcher that sends your runs in as you play. -->
+                        <span class="hidden lg:inline text-blue-200/80 font-semibold text-xs">{{ $t('auto-backup every run, and more') }}</span>
                     </Link>
 
                     <!-- Limits Info (Right Side) -->
-                    <div class="flex flex-col gap-2">
+                    <!-- One line each. The long sentence that used to sit under
+                         the numbers is the hover text now, which is what made
+                         these two rows tall and pushed the whole header down. -->
+                    <div class="flex flex-wrap gap-2 items-center">
                         <!-- Download Limit -->
-                        <div v-if="localDownloadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border backdrop-blur-sm" :class="localDownloadLimitInfo.isGuest ? 'bg-blue-900/20 border-blue-500/30' : localDownloadLimitInfo.remaining === 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-white/[0.06] border-white/10'">
+                        <div
+                            v-if="localDownloadLimitInfo"
+                            class="rounded-lg px-3 py-2 shadow-xl border backdrop-blur-sm text-xs whitespace-nowrap"
+                            :class="localDownloadLimitInfo.isGuest ? 'bg-blue-900/20 border-blue-500/30' : localDownloadLimitInfo.remaining === 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-white/[0.06] border-white/10'"
+                            :title="localDownloadLimitInfo.isGuest
+                                ? $t('Unlock more downloads after')
+                                : localDownloadLimitInfo.raised
+                                    ? $t('Raised because you donated. Thank you.')
+                                    : $t('Downloads limited due to bandwidth costs.')"
+                        >
                             <div class="flex items-center gap-2">
                                 <svg v-if="localDownloadLimitInfo.isGuest" class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -1432,39 +1338,57 @@ watch(selectedPhysics, () => {
                                 <svg v-else class="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
-                                <div v-if="localDownloadLimitInfo.isGuest" class="text-xs">
+
+                                <template v-if="localDownloadLimitInfo.isGuest">
                                     <span class="text-blue-200 font-semibold">{{ localDownloadLimitInfo.remaining }}/{{ localDownloadLimitInfo.limit }}</span>
-                                    <span class="text-blue-300/80 ml-1">{{ $t('downloads left today') }}</span>
-                                    <div class="text-sm text-blue-200 font-semibold mt-1">{{ $t('Unlock more downloads after') }} <a href="/login" class="underline hover:text-white transition-colors">{{ $t('login') }}</a>/<a href="/register" class="underline hover:text-white transition-colors">{{ $t('register') }}</a>. <a href="/donations" class="underline hover:text-white transition-colors">{{ $t('Donate') }}</a> {{ $t('for unlimited.') }}</div>
-                                </div>
-                                <div v-else-if="localDownloadLimitInfo.remaining === 0" class="text-xs">
+                                    <span class="text-blue-300/80">{{ $t('downloads left today') }}</span>
+                                    <a href="/login" class="text-blue-200 font-semibold underline hover:text-white transition-colors">{{ $t('login') }}</a>
+                                    <span class="text-blue-300/50">/</span>
+                                    <a href="/register" class="text-blue-200 font-semibold underline hover:text-white transition-colors">{{ $t('register') }}</a>
+                                </template>
+
+                                <template v-else-if="localDownloadLimitInfo.remaining === 0">
                                     <span class="text-red-200 font-semibold">{{ $t('Limit reached') }}</span>
-                                </div>
-                                <div v-else class="text-xs">
+                                    <a href="/donations" class="text-red-200 underline hover:text-white transition-colors">{{ $t('Donate') }}</a>
+                                </template>
+
+                                <template v-else>
                                     <span class="text-green-400 font-semibold">{{ localDownloadLimitInfo.remaining }}</span>
-                                    <span class="text-gray-300 mx-1">/</span>
-                                    <span class="text-gray-300">{{ localDownloadLimitInfo.limit }}</span>
-                                    <span class="text-gray-400 ml-1">{{ $t('downloads left today') }}</span>
-                                    <div class="text-gray-400 mt-1">{{ $t('Downloads limited due to bandwidth costs.') }} <a href="/donations" class="underline hover:text-white transition-colors">{{ $t('Donate') }}</a> {{ $t('for unlimited.') }}</div>
-                                </div>
+                                    <span class="text-gray-300">/{{ localDownloadLimitInfo.limit }}</span>
+                                    <span class="text-gray-400">{{ $t('downloads left today') }}</span>
+                                    <a
+                                        v-if="!localDownloadLimitInfo.raised"
+                                        href="/donations"
+                                        class="text-gray-300 underline hover:text-white transition-colors"
+                                    >{{ $t('Donate to raise it') }}</a>
+                                </template>
                             </div>
                         </div>
+
                         <!-- Upload Limit -->
-                        <div v-if="localUploadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border backdrop-blur-sm" :class="localUploadLimitInfo.isGuest ? 'bg-purple-900/20 border-purple-500/30' : 'bg-white/[0.06] border-white/10'">
+                        <div
+                            v-if="localUploadLimitInfo"
+                            class="rounded-lg px-3 py-2 shadow-xl border backdrop-blur-sm text-xs whitespace-nowrap"
+                            :class="localUploadLimitInfo.isGuest ? 'bg-purple-900/20 border-purple-500/30' : 'bg-white/[0.06] border-white/10'"
+                            :title="localUploadLimitInfo.isGuest ? $t('Unlock unlimited uploads after') : $t('Uploads are free, no bandwidth cost.')"
+                        >
                             <div class="flex items-center gap-2">
                                 <svg class="w-4 h-4 flex-shrink-0" :class="localUploadLimitInfo.isGuest ? 'text-purple-400' : 'text-green-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"></path>
                                 </svg>
-                                <div v-if="localUploadLimitInfo.isGuest" class="text-xs">
+
+                                <template v-if="localUploadLimitInfo.isGuest">
                                     <span class="text-purple-200 font-semibold">{{ localUploadLimitInfo.remaining }}/{{ localUploadLimitInfo.limit }}</span>
-                                    <span class="text-purple-300/80 ml-1">{{ $t('uploads left today') }}</span>
-                                    <div class="text-sm text-purple-200 font-semibold mt-1">{{ $t('Unlock unlimited uploads after') }} <a href="/login" class="underline hover:text-white transition-colors">{{ $t('login') }}</a>/<a href="/register" class="underline hover:text-white transition-colors">{{ $t('register') }}</a>.</div>
-                                </div>
-                                <div v-else class="text-xs">
+                                    <span class="text-purple-300/80">{{ $t('uploads left today') }}</span>
+                                    <a href="/login" class="text-purple-200 font-semibold underline hover:text-white transition-colors">{{ $t('login') }}</a>
+                                    <span class="text-purple-300/50">/</span>
+                                    <a href="/register" class="text-purple-200 font-semibold underline hover:text-white transition-colors">{{ $t('register') }}</a>
+                                </template>
+
+                                <template v-else>
                                     <span class="text-green-400 font-semibold">{{ $t('Unlimited') }}</span>
-                                    <span class="text-gray-400 ml-1">{{ $t('uploads') }}</span>
-                                    <div class="text-gray-500 mt-0.5">{{ $t('Uploads are free, no bandwidth cost.') }}</div>
-                                </div>
+                                    <span class="text-gray-400">{{ $t('uploads') }}</span>
+                                </template>
                             </div>
                         </div>
                     </div>
@@ -1479,12 +1403,30 @@ watch(selectedPhysics, () => {
 
                 <!-- Upload Section (visible to all users; guests will have restricted actions) -->
                 <div class="bg-black/40 backdrop-blur-sm rounded-xl p-3 mb-4 shadow-2xl border border-white/5">
-                    <h3 class="text-sm font-bold text-gray-300 mb-2 flex items-center">
-                        <svg class="w-4 h-4 mr-1.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button
+                        type="button"
+                        @click="uploadOpen = !uploadOpen"
+                        class="w-full flex items-center text-sm font-bold text-gray-300 hover:text-white transition-colors"
+                        :class="uploadOpen ? 'mb-2' : ''"
+                        :aria-expanded="uploadOpen"
+                    >
+                        <svg class="w-4 h-4 mr-1.5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                         </svg>
                         {{ $t('Upload Demos') }}
-                    </h3>
+                        <span v-if="!uploadOpen" class="ml-2 font-normal text-xs text-gray-500 hidden sm:inline">
+                            {{ $t('Drag files here or click to open') }}
+                        </span>
+                        <svg
+                            class="w-4 h-4 ml-auto text-gray-500 transition-transform flex-shrink-0"
+                            :class="uploadOpen ? 'rotate-180' : ''"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        >
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+
+                    <div v-show="uploadOpen">
 
                     <!-- Not logged in: full clickable login overlay -->
                     <div v-if="!$page.props.auth.user" class="relative">
@@ -1820,6 +1762,7 @@ watch(selectedPhysics, () => {
                             </div>
                         </div>
                     </div>
+                    </div>
                 </div>
 
                 <!-- Held by comps. Above the results panel, because a demo in
@@ -1924,7 +1867,7 @@ watch(selectedPhysics, () => {
                                         <div class="min-w-0 flex-1">
                                             <span class="text-xs text-gray-300">{{ demo.processed_filename || demo.original_filename }}</span>
                                             <span v-if="demo.map_name" class="text-[10px] text-gray-500 ml-1">{{ demo.map_name }}</span>
-                                            <span v-if="demo.processing_output" class="text-[10px] text-gray-500 ml-1">— {{ demo.processing_output }}</span>
+                                            <span v-if="demo.processing_output" class="text-[10px] text-gray-500 ml-1">- {{ demo.processing_output }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1934,15 +1877,20 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Global Processing Status (logged in only) -->
-                <div v-if="$page.props.auth.user" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 mb-4 shadow-2xl border border-white/5">
-                    <button @click.stop="globalQueueExpanded = !globalQueueExpanded" class="w-full flex items-center justify-between" :class="{ 'mb-3': globalQueueExpanded }">
-                        <h3 class="text-base font-semibold text-gray-200">{{ $t('Global Queue Status') }}</h3>
-                        <div class="flex items-center gap-2">
-                            <span class="text-gray-500 text-xs">{{ $t('updates every 2s') }}</span>
-                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="{ 'rotate-180': globalQueueExpanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </div>
+                <div v-if="$page.props.auth.user && queueHasWork" class="bg-black/40 backdrop-blur-sm rounded-xl p-3 mb-4 shadow-2xl border border-white/5">
+                    <button @click.stop="globalQueueExpanded = !globalQueueExpanded" class="w-full flex items-center gap-2 text-left" :class="{ 'mb-3': globalQueueExpanded }">
+                        <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse flex-shrink-0"></span>
+                        <h3 class="text-sm font-semibold text-gray-200 flex-shrink-0">{{ $t('Global Queue Status') }}</h3>
+                        <span v-if="!globalQueueExpanded" class="text-xs text-gray-400 truncate">
+                            {{ $t('yours :yours, all :total', {
+                                yours: (queueStats.user_queued || 0) + (queueStats.user_processing || 0),
+                                total: (queueStats.total_queued || 0) + (queueStats.total_processing || 0)
+                            }) }}
+                        </span>
+                        <span class="text-gray-500 text-xs ml-auto flex-shrink-0 hidden sm:inline">{{ $t('updates every 2s') }}</span>
+                        <svg class="w-4 h-4 text-gray-400 transition-transform flex-shrink-0" :class="{ 'rotate-180': globalQueueExpanded, 'ml-auto sm:ml-0': true }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
                     </button>
 
                     <!-- Queue Statistics -->
@@ -1992,28 +1940,66 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Loading skeleton while demo lists load -->
-                <div v-if="demosLoading" class="space-y-6">
-                    <!-- Your Uploads skeleton -->
-                    <div v-if="$page.props.auth.user" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/5 animate-pulse mb-8">
-                        <div class="h-6 bg-white/10 rounded w-48 mb-4"></div>
-                        <div class="flex gap-2 mb-4">
-                            <div v-for="i in 5" :key="'tab'+i" class="h-8 bg-white/5 rounded-full w-24"></div>
-                        </div>
-                        <div class="space-y-3">
-                            <div v-for="i in 8" :key="'row'+i" class="h-12 bg-white/5 rounded"></div>
-                        </div>
+                <div v-if="demosLoading" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/5 animate-pulse">
+                    <div class="h-6 bg-white/10 rounded w-56 mb-4"></div>
+                    <div class="flex gap-2 mb-4">
+                        <div v-for="i in 5" :key="'tab'+i" class="h-8 bg-white/5 rounded-full w-24"></div>
                     </div>
-                    <!-- Browse All Demos skeleton -->
-                    <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/5 animate-pulse">
-                        <div class="h-6 bg-white/10 rounded w-56 mb-4"></div>
-                        <div class="space-y-3">
-                            <div v-for="i in 8" :key="'browse'+i" class="h-12 bg-white/5 rounded"></div>
-                        </div>
+                    <div class="space-y-3">
+                        <div v-for="i in 8" :key="'row'+i" class="h-12 bg-white/5 rounded"></div>
                     </div>
                 </div>
 
-                <!-- Your Uploads Section (authenticated users only) -->
-                <div v-else-if="$page.props.auth.user && userDemos" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5 mb-8">
+                <!-- One panel for both lists. It used to be written out twice,
+                     once above each table, and the two copies had drifted. -->
+                <!-- Tabs, filters and table are one panel. The tabs used to
+                     float above it as a shape of their own, which read as a
+                     control belonging to the page rather than to the list
+                     underneath it. The active tab is the list's title now, so
+                     the headings that repeated it are gone. -->
+                <div v-if="!demosLoading" class="bg-black/40 backdrop-blur-sm rounded-xl shadow-2xl border border-white/5">
+                    <div class="flex flex-wrap items-end gap-1 px-3 pt-2 border-b border-white/5">
+                        <button
+                            type="button"
+                            @click="changeList('all')"
+                            class="inline-flex items-center gap-2 h-9 px-3 text-sm font-semibold rounded-t-lg border-b-2 -mb-px transition-colors"
+                            :class="activeList === 'all'
+                                ? 'bg-white/[0.05] text-white border-blue-500'
+                                : 'text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/[0.03]'"
+                        >
+                            {{ $t('All Demos') }}
+                            <span class="text-xs font-normal tabular-nums" :class="activeList === 'all' ? 'text-blue-300' : 'text-gray-500'">
+                                {{ browseCountsComputed.all.toLocaleString() }}
+                            </span>
+                        </button>
+                        <button
+                            v-if="$page.props.auth.user"
+                            type="button"
+                            @click="changeList('mine')"
+                            class="inline-flex items-center gap-2 h-9 px-3 text-sm font-semibold rounded-t-lg border-b-2 -mb-px transition-colors"
+                            :class="activeList === 'mine'
+                                ? 'bg-white/[0.05] text-white border-blue-500'
+                                : 'text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/[0.03]'"
+                        >
+                            {{ $t('My Uploads') }}
+                            <span class="text-xs font-normal tabular-nums" :class="activeList === 'mine' ? 'text-blue-300' : 'text-gray-500'">
+                                {{ demoCountsComputed.all.toLocaleString() }}
+                            </span>
+                        </button>
+                    </div>
+
+                    <DemoFilters
+                        :filters="filterState"
+                        :counts="activeList === 'mine' ? demoCountsComputed : browseCountsComputed"
+                        :physics-options="physicsOptions || []"
+                        :countries="countries || { codes: [], other: 0, none: 0 }"
+                        :is-admin="isAdminUser"
+                        :list="activeList"
+                        @change="applyFilters"
+                    />
+
+                <!-- Your Uploads -->
+                <div v-if="activeList === 'mine' && $page.props.auth.user && userDemos" class="p-4">
                     <!-- Show message when no demos uploaded at all -->
                     <div v-if="demoCountsComputed.all === 0" class="text-center py-12">
                         <svg class="w-16 h-16 mx-auto text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2022,209 +2008,7 @@ watch(selectedPhysics, () => {
                         <p class="text-gray-400 text-lg">{{ $t("You haven't uploaded any demos yet.") }}</p>
                     </div>
 
-                    <!-- Show title, filters and table when demos exist -->
                     <template v-else>
-                        <h3 class="text-xl font-semibold text-gray-200 mb-4">
-                            {{ $t('Your Uploaded Demos') }}
-                        </h3>
-
-                        <!-- Filter Tabs -->
-                        <div class="mb-4 space-y-2">
-                            <!-- Row 1: Category + Status Filters -->
-                            <div class="flex flex-wrap gap-1.5">
-                                <button
-                                    @click="changeTabFilter('all')"
-                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                    :class="activeTab === 'all'
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
-                                >
-                                    {{ $t('All') }} <span class="opacity-75">({{ demoCountsComputed.all }})</span>
-                                </button>
-                                <button
-                                    @click="changeTabFilter('online')"
-                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                    :class="activeTab === 'online'
-                                        ? 'bg-green-600 text-white'
-                                        : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
-                                >
-                                    {{ $t('Online') }} <span class="opacity-75">({{ demoCountsComputed.online }})</span>
-                                </button>
-                                <button
-                                    @click="changeTabFilter('offline')"
-                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                    :class="activeTab === 'offline'
-                                        ? 'bg-purple-600 text-white'
-                                        : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
-                                >
-                                    {{ $t('Offline') }} <span class="opacity-75">({{ demoCountsComputed.offline }})</span>
-                                </button>
-
-                                <span class="border-l border-gray-600/50 mx-1"></span>
-
-                                <button
-                                    @click="changeStatusFilter('all')"
-                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                    :class="activeStatusFilter === 'all'
-                                        ? 'bg-gray-600 text-white'
-                                        : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
-                                >
-                                    {{ $t('All Status') }}
-                                </button>
-                                <button
-                                    @click="changeStatusFilter('assigned')"
-                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                    :class="activeStatusFilter === 'assigned'
-                                        ? 'bg-purple-600 text-white'
-                                        : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
-                                >
-                                    {{ $t('Assigned') }} <span class="opacity-75">({{ demoCountsComputed.assigned }})</span>
-                                </button>
-                                <button
-                                    @click="changeStatusFilter('fallback-assigned')"
-                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                    :class="activeStatusFilter === 'fallback-assigned'
-                                        ? 'bg-orange-600 text-white'
-                                        : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
-                                >
-                                    {{ $t('Fallback') }} <span class="opacity-75">({{ demoCountsComputed.fallback_assigned || 0 }})</span>
-                                </button>
-                                <button
-                                    v-if="(demoCountsComputed.uploaded || 0) > 0"
-                                    @click="changeStatusFilter('uploaded')"
-                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                    :class="activeStatusFilter === 'uploaded'
-                                        ? 'bg-cyan-600 text-white'
-                                        : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
-                                >
-                                    {{ $t('Uploaded') }} <span class="opacity-75">({{ demoCountsComputed.uploaded || 0 }})</span>
-                                </button>
-                                <button
-                                    @click="changeStatusFilter('processed')"
-                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                    :class="activeStatusFilter === 'processed'
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
-                                >
-                                    {{ $t('Processed') }} <span class="opacity-75">({{ demoCountsComputed.processed }})</span>
-                                </button>
-                                <button
-                                    @click="changeStatusFilter('failed-validity')"
-                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                    :class="activeStatusFilter === 'failed-validity'
-                                        ? 'bg-orange-600 text-white'
-                                        : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
-                                >
-                                    {{ $t('Invalid') }} <span class="opacity-75">({{ demoCountsComputed.failed_validity || 0 }})</span>
-                                </button>
-                                <button
-                                    @click="changeStatusFilter('failed')"
-                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                    :class="activeStatusFilter === 'failed'
-                                        ? 'bg-red-600 text-white'
-                                        : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
-                                >
-                                    {{ $t('Failed') }} <span class="opacity-75">({{ demoCountsComputed.failed }})</span>
-                                </button>
-                                <button
-                                    @click="changeStatusFilter('unsupported-version')"
-                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                    :class="activeStatusFilter === 'unsupported-version'
-                                        ? 'bg-purple-600 text-white'
-                                        : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
-                                >
-                                    {{ $t('Unsupported') }} <span class="opacity-75">({{ demoCountsComputed.unsupported_version || 0 }})</span>
-                                </button>
-                                <button
-                                    v-if="$page.props.auth.user?.admin && (demoCountsComputed.failed || 0) > 0"
-                                    @click="showReprocessConfirm = true"
-                                    :disabled="reprocessingFailed"
-                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all bg-orange-700/30 text-orange-300 hover:bg-orange-700/50 border border-orange-600/30 disabled:opacity-50"
-                                >
-                                    {{ reprocessingFailed ? $t('Reprocessing...') : $t('Reprocess All Failed') }}
-                                </button>
-                                <span v-if="reprocessMessage" class="text-xs text-yellow-300 ml-2">{{ reprocessMessage }}</span>
-                            </div>
-
-                            <!-- Row 2: Search Input -->
-                            <div class="relative">
-                                <input
-                                    v-model="userSearchQuery"
-                                    type="text"
-                                    :placeholder="$t('Search by filename...')"
-                                    class="w-full px-4 py-1.5 bg-gray-700/50 border border-gray-600/50 rounded-lg text-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                                <div class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                    </svg>
-                                </div>
-                            </div>
-
-                            <!-- Advanced Filters (Admin Only) -->
-                            <div v-if="$page.props.auth.user && ($page.props.auth.user.is_admin || $page.props.auth.user.admin)" class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-gray-600/50">
-                                <!-- Confidence Filter -->
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-400 mb-1.5">{{ $t('Confidence Range') }}</label>
-                                    <div class="relative">
-                                        <button
-                                            @click="confidenceDropdownOpen = !confidenceDropdownOpen"
-                                            class="w-full bg-gray-700/50 border border-gray-600/50 rounded-lg px-3 py-1.5 text-sm text-gray-200 text-left flex items-center justify-between hover:border-gray-500/50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        >
-                                            <span>{{ selectedConfidenceLabel() }}</span>
-                                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="confidenceDropdownOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                            </svg>
-                                        </button>
-                                        <div v-if="confidenceDropdownOpen" class="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-white/10 rounded-lg overflow-hidden z-50 shadow-2xl">
-                                            <button
-                                                v-for="opt in confidenceOptions"
-                                                :key="opt.value"
-                                                @click="confidenceFilterValue = opt.value; confidenceDropdownOpen = false"
-                                                :class="confidenceFilterValue === opt.value ? 'bg-blue-600/30 text-blue-300' : 'text-gray-300 hover:bg-white/10'"
-                                                class="w-full px-3 py-1.5 text-left text-sm transition-colors"
-                                            >
-                                                {{ opt.label }}
-                                            </button>
-                                        </div>
-                                        <div v-if="confidenceDropdownOpen" @click="confidenceDropdownOpen = false" class="fixed inset-0 z-40"></div>
-                                    </div>
-                                </div>
-
-                                <!-- 100% Match Other User Filter -->
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-400 mb-1.5">{{ $t('Match Type') }}</label>
-                                    <button
-                                        @click="showOtherUserMatchesValue = !showOtherUserMatchesValue"
-                                        :class="[
-                                            'w-full px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200',
-                                            showOtherUserMatchesValue
-                                                ? 'bg-purple-600/30 text-purple-300 border-2 border-purple-500/50 hover:bg-purple-600/40'
-                                                : 'bg-gray-700/50 text-gray-300 border border-gray-600/50 hover:bg-gray-700'
-                                        ]"
-                                    >
-                                        <div class="flex items-center justify-center gap-2">
-                                            <svg v-if="showOtherUserMatchesValue" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                                            </svg>
-                                            <span>{{ $t('100% Match (Other User)') }}</span>
-                                        </div>
-                                    </button>
-                                </div>
-
-                                <!-- Uploaded By Filter -->
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-400 mb-1.5">{{ $t('Uploaded By') }}</label>
-                                    <input
-                                        v-model="uploadedByValue"
-                                        type="text"
-                                        :placeholder="$t('Username...')"
-                                        class="w-full px-3 py-1.5 bg-gray-700/50 border border-gray-600/50 rounded-lg text-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
                         <div v-if="filteredDemos.length === 0" class="text-gray-400 text-center py-8">
                             {{ $t('No demos match the selected filters.') }}
                         </div>
@@ -2369,7 +2153,7 @@ watch(selectedPhysics, () => {
                                                         'bg-red-500/20 text-red-300 hover:bg-red-500/30 cursor-help': demo.status === 'failed',
                                                         'bg-gray-500/20 text-gray-300': !['uploaded', 'processing', 'processed', 'assigned', 'fallback-assigned', 'failed-validity', 'failed', 'unsupported-version'].includes(demo.status)
                                                     }"
-                                                    @mouseenter="(demo.status === 'failed' && demo.processing_output) || (demo.status === 'failed-validity' && demo.validity) || (demo.status === 'unsupported-version' && demo.processing_output) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) || (demo.status === 'fallback-assigned' && demo.offline_record) ? showTooltip(demo, $event) : null"
+                                                    @mouseenter="demo.status === 'failed' || (demo.status === 'failed-validity' && demo.validity) || (demo.status === 'unsupported-version' && demo.processing_output) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) || (demo.status === 'fallback-assigned' && demo.offline_record) ? showTooltip(demo, $event) : null"
                                                     @mouseleave="hideTooltip"
                                                     @mousemove="hoveredDemo?.id === demo.id ? updateTooltipPosition($event) : null"
                                                 >
@@ -2377,7 +2161,7 @@ watch(selectedPhysics, () => {
                                                     <svg v-if="demo.status === 'unsupported-version' && demo.processing_output" class="w-3 h-3 ml-1 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
-                                                    <svg v-if="demo.status === 'failed' && demo.processing_output" class="w-3 h-3 ml-1 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <svg v-if="demo.status === 'failed'" class="w-3 h-3 ml-1 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
                                                     <svg v-if="demo.status === 'assigned' && (demo.record || demo.offline_record)" class="w-3 h-3 ml-1 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2497,176 +2281,41 @@ watch(selectedPhysics, () => {
                         </table>
                     </div>
 
-                        <!-- Pagination -->
-                        <div v-if="userDemos.last_page > 1" class="mt-6">
-                            <Pagination
-                                :last_page="userDemos.last_page"
-                                :current_page="userDemos.current_page"
-                                :link="userDemos.path + '?'"
-                                pageName="userPage"
-                                :only="['userDemos', 'publicDemos']"
-                            />
+                        <!-- Pagination. There is no page count, on purpose.
+                             Counting the matches of a broad filter reads all
+                             369 000 rows and costs about half a second, while
+                             the twenty rows above cost two. The total is shown
+                             only when nothing is filtered, where it is a number
+                             that was already cached. -->
+                        <div v-if="userDemos.prev_page_url || userDemos.next_page_url" class="mt-6 flex flex-wrap items-center justify-center gap-3">
+                            <button
+                                type="button"
+                                :disabled="!userDemos.prev_page_url"
+                                @click="goToPage('userPage', userDemos.current_page - 1)"
+                                class="px-3 py-1.5 rounded-lg text-sm bg-gray-700/50 border border-gray-600/50 text-gray-200 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            >
+                                {{ $t('Previous') }}
+                            </button>
+                            <span class="text-sm text-gray-400">
+                                {{ $t('Page :page', { page: userDemos.current_page }) }}
+                                <span v-if="!filtersNarrowed" class="text-gray-500">
+                                    {{ $t('of :total demos', { total: (demoCountsComputed.all || 0).toLocaleString() }) }}
+                                </span>
+                            </span>
+                            <button
+                                type="button"
+                                :disabled="!userDemos.next_page_url"
+                                @click="goToPage('userPage', userDemos.current_page + 1)"
+                                class="px-3 py-1.5 rounded-lg text-sm bg-gray-700/50 border border-gray-600/50 text-gray-200 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            >
+                                {{ $t('Next') }}
+                            </button>
                         </div>
                     </template>
                 </div>
 
-                <!-- Browse All Demos Section (for everyone) -->
-                <div v-if="!demosLoading && publicDemos" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5">
-                    <h3 class="text-xl font-semibold text-gray-200 mb-4">
-                        {{ $t('Browse All Demos') }}
-                    </h3>
-
-                    <!-- Browse Filter Tabs and Search -->
-                    <div class="mb-4 space-y-2">
-                        <!-- Row 1: Category + Status Filters -->
-                        <div class="flex flex-wrap gap-1.5 items-center">
-                            <button
-                                @click="changeBrowseTabFilter('all')"
-                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                :class="activeBrowseTab === 'all'
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
-                            >
-                                {{ $t('All') }} <span class="opacity-75">({{ browseCountsComputed.all }})</span>
-                            </button>
-                            <button
-                                @click="changeBrowseTabFilter('online')"
-                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                :class="activeBrowseTab === 'online'
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
-                            >
-                                {{ $t('Online') }} <span class="opacity-75">({{ browseCountsComputed.online }})</span>
-                            </button>
-                            <button
-                                @click="changeBrowseTabFilter('offline')"
-                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                :class="activeBrowseTab === 'offline'
-                                    ? 'bg-purple-600 text-white'
-                                    : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
-                            >
-                                {{ $t('Offline') }} <span class="opacity-75">({{ browseCountsComputed.offline }})</span>
-                            </button>
-
-                            <span class="border-l border-gray-600/50 mx-1"></span>
-
-                            <button
-                                @click="changeBrowseStatusFilter('all')"
-                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                :class="activeBrowseStatus === 'all'
-                                    ? 'bg-gray-600 text-white'
-                                    : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
-                            >
-                                {{ $t('All Status') }}
-                            </button>
-                            <button
-                                @click="changeBrowseStatusFilter('assigned')"
-                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                :class="activeBrowseStatus === 'assigned'
-                                    ? 'bg-purple-600 text-white'
-                                    : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
-                            >
-                                {{ $t('Assigned') }} <span class="opacity-75">({{ browseCountsComputed.assigned }})</span>
-                            </button>
-                            <button
-                                @click="changeBrowseStatusFilter('fallback-assigned')"
-                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                :class="activeBrowseStatus === 'fallback-assigned'
-                                    ? 'bg-orange-600 text-white'
-                                    : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
-                            >
-                                {{ $t('Fallback') }} <span class="opacity-75">({{ browseCountsComputed.fallback_assigned || 0 }})</span>
-                            </button>
-                            <button
-                                @click="changeBrowseStatusFilter('processed')"
-                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                :class="activeBrowseStatus === 'processed'
-                                    ? 'bg-yellow-600 text-white'
-                                    : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
-                            >
-                                {{ $t('Processed') }} <span class="opacity-75">({{ browseCountsComputed.processed }})</span>
-                            </button>
-                            <button
-                                @click="changeBrowseStatusFilter('failed-validity')"
-                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                :class="activeBrowseStatus === 'failed-validity'
-                                    ? 'bg-orange-600 text-white'
-                                    : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
-                            >
-                                {{ $t('Invalid') }} <span class="opacity-75">({{ browseCountsComputed.failed_validity || 0 }})</span>
-                            </button>
-                            <button
-                                @click="changeBrowseStatusFilter('failed')"
-                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                :class="activeBrowseStatus === 'failed'
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
-                            >
-                                {{ $t('Failed') }} <span class="opacity-75">({{ browseCountsComputed.failed }})</span>
-                            </button>
-                            <button
-                                @click="changeBrowseStatusFilter('unsupported-version')"
-                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
-                                :class="activeBrowseStatus === 'unsupported-version'
-                                    ? 'bg-purple-600 text-white'
-                                    : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
-                            >
-                                {{ $t('Unsupported') }} <span class="opacity-75">({{ browseCountsComputed.unsupported_version || 0 }})</span>
-                            </button>
-                        </div>
-
-                        <!-- Row 2: Search Bar + Uploaded By -->
-                        <div class="flex flex-wrap gap-2 items-center">
-                            <div class="flex-grow max-w-md">
-                                <div class="relative">
-                                    <input
-                                        v-model="browseSearchQuery"
-                                        @keyup.enter="handleBrowseSearch"
-                                        type="text"
-                                        :placeholder="$t('Search by filename...')"
-                                        class="w-full px-4 py-1.5 bg-gray-700/50 border border-gray-600/50 rounded-lg text-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    />
-                                    <button
-                                        @click="handleBrowseSearch"
-                                        class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors"
-                                    >
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="relative max-w-xs">
-                                <input
-                                    v-model="browseUploadedByValue"
-                                    @keyup.enter="applyBrowseUploadedBy"
-                                    @focus="browseUploadedBySuggestions.length > 0 && (browseUploadedByOpen = true)"
-                                    @blur="setTimeout(() => browseUploadedByOpen = false, 200)"
-                                    type="text"
-                                    :placeholder="$t('Uploaded by...')"
-                                    class="w-full px-4 py-1.5 bg-gray-700/50 border border-gray-600/50 rounded-lg text-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                                <button
-                                    v-if="browseUploadedByValue"
-                                    @click="clearBrowseUploadedBy"
-                                    class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors"
-                                >
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                </button>
-                                <!-- Autocomplete dropdown -->
-                                <div v-if="browseUploadedByOpen && browseUploadedBySuggestions.length > 0" class="absolute z-50 mt-1 w-full bg-gray-800 border border-gray-600 rounded-lg shadow-xl overflow-hidden">
-                                    <button
-                                        v-for="name in browseUploadedBySuggestions"
-                                        :key="name"
-                                        @mousedown.prevent="selectUploader(name)"
-                                        class="w-full px-3 py-1.5 text-sm text-left text-gray-200 hover:bg-blue-500/20 hover:text-white transition-colors"
-                                    >
-                                        {{ name }}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <!-- All Demos -->
+                <div v-if="activeList === 'all' && publicDemos" class="p-4">
 
                     <div v-if="!publicDemos.data || publicDemos.data.length === 0" class="text-gray-400">
                         {{ $t('No demos available yet.') }}
@@ -2779,7 +2428,7 @@ watch(selectedPhysics, () => {
                                                 'bg-red-500/20 text-red-300 hover:bg-red-500/30 cursor-help': demo.status === 'failed',
                                                 'bg-gray-500/20 text-gray-300': !['uploaded', 'processing', 'processed', 'assigned', 'fallback-assigned', 'failed-validity', 'failed', 'unsupported-version'].includes(demo.status)
                                             }"
-                                            @mouseenter="(demo.status === 'failed' && demo.processing_output) || (demo.status === 'failed-validity' && demo.validity) || (demo.status === 'unsupported-version' && demo.processing_output) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) || (demo.status === 'fallback-assigned' && demo.offline_record) ? showTooltip(demo, $event) : null"
+                                            @mouseenter="demo.status === 'failed' || (demo.status === 'failed-validity' && demo.validity) || (demo.status === 'unsupported-version' && demo.processing_output) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) || (demo.status === 'fallback-assigned' && demo.offline_record) ? showTooltip(demo, $event) : null"
                                             @mouseleave="hideTooltip"
                                             @mousemove="hoveredDemo?.id === demo.id ? updateTooltipPosition($event) : null"
                                         >
@@ -2787,7 +2436,7 @@ watch(selectedPhysics, () => {
                                             <svg v-if="demo.status === 'unsupported-version' && demo.processing_output" class="w-3 h-3 ml-1 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                             </svg>
-                                            <svg v-if="demo.status === 'failed' && demo.processing_output" class="w-3 h-3 ml-1 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg v-if="demo.status === 'failed'" class="w-3 h-3 ml-1 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                             </svg>
                                             <svg v-if="demo.status === 'assigned' && (demo.record || demo.offline_record)" class="w-3 h-3 ml-1 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2846,16 +2495,37 @@ watch(selectedPhysics, () => {
                         </table>
                     </div>
 
-                    <!-- Pagination for Browse All Demos -->
-                    <div v-if="publicDemos.last_page > 1" class="mt-6">
-                        <Pagination
-                            :last_page="publicDemos.last_page"
-                            :current_page="publicDemos.current_page"
-                            :link="publicDemos.path + '?'"
-                            pageName="browsePage"
-                            :only="['userDemos', 'publicDemos']"
-                        />
+                    <!-- Pagination. There is no page count, on purpose.
+                         Counting the matches of a broad filter reads all
+                         369 000 rows and costs about half a second, while
+                         the twenty rows above cost two. The total is shown
+                         only when nothing is filtered, where it is a number
+                         that was already cached. -->
+                    <div v-if="publicDemos.prev_page_url || publicDemos.next_page_url" class="mt-6 flex flex-wrap items-center justify-center gap-3">
+                        <button
+                            type="button"
+                            :disabled="!publicDemos.prev_page_url"
+                            @click="goToPage('browsePage', publicDemos.current_page - 1)"
+                            class="px-3 py-1.5 rounded-lg text-sm bg-gray-700/50 border border-gray-600/50 text-gray-200 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {{ $t('Previous') }}
+                        </button>
+                        <span class="text-sm text-gray-400">
+                            {{ $t('Page :page', { page: publicDemos.current_page }) }}
+                            <span v-if="!filtersNarrowed" class="text-gray-500">
+                                {{ $t('of :total demos', { total: (browseCountsComputed.all || 0).toLocaleString() }) }}
+                            </span>
+                        </span>
+                        <button
+                            type="button"
+                            :disabled="!publicDemos.next_page_url"
+                            @click="goToPage('browsePage', publicDemos.current_page + 1)"
+                            class="px-3 py-1.5 rounded-lg text-sm bg-gray-700/50 border border-gray-600/50 text-gray-200 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {{ $t('Next') }}
+                        </button>
                     </div>
+                </div>
                 </div>
             </div>
         </div>
@@ -3066,7 +2736,7 @@ watch(selectedPhysics, () => {
 
         <!-- Failed Demo Tooltip -->
         <div
-            v-if="hoveredDemo && hoveredDemo.status === 'failed' && hoveredDemo.processing_output"
+            v-if="hoveredDemo && hoveredDemo.status === 'failed'"
             class="fixed z-50 pointer-events-none"
             :style="{
                 left: tooltipPosition.x + 15 + 'px',
@@ -3081,7 +2751,11 @@ watch(selectedPhysics, () => {
                     </svg>
                     {{ $t('Error Details:') }}
                 </div>
-                <div class="font-mono text-[11px] text-red-200 whitespace-pre-wrap break-words max-h-60 overflow-y-auto">{{ hoveredDemo.processing_output }}</div>
+                <div class="text-[11px] text-red-100 leading-snug">{{ failureReason(hoveredDemo) }}</div>
+                <div
+                    v-if="isAdminUser && hoveredDemo.processing_output"
+                    class="mt-2 pt-2 border-t border-red-600/30 font-mono text-[10px] text-red-200/70 whitespace-pre-wrap break-words max-h-48 overflow-y-auto"
+                >{{ hoveredDemo.processing_output }}</div>
             </div>
         </div>
 

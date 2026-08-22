@@ -1017,7 +1017,7 @@ const generateGifThumbnail = async () => {
                     animManager.legsTime = 0; animManager.torsoTime = 0;
                     animManager.legsFrame = 0; animManager.torsoFrame = 0;
 
-                    // Initialize mesh vertices to frame 0 — without this,
+                    // Initialize mesh vertices to frame 0 - without this,
                     // the first GIF frame shows stale vertex data causing a loop stutter
                     animManager.update(0);
 
@@ -1720,7 +1720,7 @@ const confirmNsfw = () => {
                                             <Link :href="route('models.show', baseModelData.id)" class="text-amber-400 font-semibold hover:text-amber-300 transition-colors">
                                                 {{ baseModelData.display_name || baseModelData.name }}
                                             </Link>
-                                            {{ $t('— textures reference files from that PK3.') }}
+                                            {{ $t('- textures reference files from that PK3.') }}
                                         </p>
                                         <a v-if="baseModelData.zip_path"
                                            :href="`/storage/${baseModelData.zip_path}`"

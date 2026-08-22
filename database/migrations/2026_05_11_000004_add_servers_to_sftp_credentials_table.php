@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('sftp_credentials', function (Blueprint $table) {
-            // Working set of the user's declared servers — copied from
+            // Working set of the user's declared servers - copied from
             // server_owner_applications.server_info on approval, then
             // mutable by admin (rs_code is filled in here). Shape:
             //   [{gametype, ip, port, rcon, rs_code}]

@@ -17,7 +17,7 @@ use App\Models\UserAlias;
  *       * User side:  UserAlias.alias_colored
  *       * Comparison: exact match, case-sensitive, after trim
  *   - Plain fallback only when colored misses AND exactly one user owns the
- *     plain value (ambiguous plain — multiple users — is skipped)
+ *     plain value (ambiguous plain - multiple users - is skipped)
  *       * Demo side:  player_name with ^ codes stripped, q3df_login_name
  *       * User side:  User.plain_name, UserAlias.alias
  *       * Comparison: lowercase + trim
@@ -40,7 +40,7 @@ class DemoProfileResolver
     /**
      * Return a profile key for a demo (or similar shape), or null if no
      * unique match. The key is either "user:<id>" (registered defrag.racing
-     * account) or "mdd:<id>" (unclaimed q3df profile — the alias is linked
+     * account) or "mdd:<id>" (unclaimed q3df profile - the alias is linked
      * only via mdd_id because no local User has registered yet). Demos that
      * resolve to the same key cluster together even when their on-demo
      * signals differ.
@@ -87,7 +87,7 @@ class DemoProfileResolver
             if (isset($this->plainBucket[$plain])) {
                 return $this->plainBucket[$plain];
             }
-            // Ambiguous plain — try the priority allow-list as a tiebreaker.
+            // Ambiguous plain - try the priority allow-list as a tiebreaker.
             if ($priorityKeys !== null && isset($this->plainBucketMulti[$plain])) {
                 $intersect = array_values(array_intersect($this->plainBucketMulti[$plain], $priorityKeys));
                 if (count($intersect) === 1) {
@@ -110,7 +110,7 @@ class DemoProfileResolver
 
         // Track occurrences per PROFILE KEY per value. Profile keys are
         // either "user:<id>" (registered defrag.racing account) or
-        // "mdd:<id>" (unclaimed q3df profile — UserAlias row with user_id
+        // "mdd:<id>" (unclaimed q3df profile - UserAlias row with user_id
         // NULL but mdd_id set, typical for scraped/imported aliases). Both
         // are treated as first-class cluster identities.
         //
@@ -122,7 +122,7 @@ class DemoProfileResolver
         $plainCounts = [];   // normalized plain value -> [profile key => count]
         $coloredCounts = []; // colored value -> [profile key => count]
 
-        // User.plain_name — each user contributes their own plain_name
+        // User.plain_name - each user contributes their own plain_name
         // under their "user:<id>" key.
         User::query()
             ->whereNotNull('plain_name')
@@ -137,7 +137,7 @@ class DemoProfileResolver
                 }
             });
 
-        // UserAlias — only approved aliases count. Prefer user_id when the
+        // UserAlias - only approved aliases count. Prefer user_id when the
         // alias is linked to a local account, otherwise fall back to mdd_id
         // (scraped q3df profile that hasn't been claimed yet). Multiple
         // rows for the same (profile key, value) bump the count and

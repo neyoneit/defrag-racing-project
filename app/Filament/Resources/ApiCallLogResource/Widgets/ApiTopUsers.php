@@ -24,7 +24,7 @@ class ApiTopUsers extends BaseWidget
 
     public function getTableRecordKey($record): string
     {
-        // GROUP BY query has no real primary id — use user_id as the key.
+        // GROUP BY query has no real primary id - use user_id as the key.
         return (string) ($record->user_id ?? '0');
     }
 

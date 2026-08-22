@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
  * Each token is a Sanctum personal access token whose `name` is prefixed
  * with "api:" so we can filter for API tokens without adding another
  * column to the shared personal_access_tokens table. Mirrors the launcher
- * tokens flow — same pattern, different prefix + ability.
+ * tokens flow - same pattern, different prefix + ability.
  */
 class ApiTokenController extends Controller
 {
@@ -46,7 +46,7 @@ class ApiTokenController extends Controller
             'label'        => $data['label'],
             'created_at'   => $token->accessToken->created_at,
             'last_used_at' => null,
-            // Plaintext token — only returned once, never persisted in cleartext.
+            // Plaintext token - only returned once, never persisted in cleartext.
             'plain_text_token' => $token->plainTextToken,
         ]);
     }

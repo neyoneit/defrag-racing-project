@@ -9,9 +9,9 @@ namespace App\Services;
  * Ported from DefragLive's src/filters.py to keep blocklist behaviour
  * consistent across the site, the live bot and the demo render pipeline.
  * Two main entry points:
- *   - filterAuthor()  — for nicknames; whole string is replaced with a
+ *   - filterAuthor()  - for nicknames; whole string is replaced with a
  *                        safe placeholder when any blocked term is detected
- *   - filterText()    — for free-form text (map names, descriptions); each
+ *   - filterText()    - for free-form text (map names, descriptions); each
  *                        blocked term is masked with asterisks in place
  *
  * Detection mirrors the Python version's leetspeak handling: numbers and
@@ -124,7 +124,7 @@ class ContentFilter
         // "coon" -> "con" would otherwise generate false positives like
         // ARTICON (matches "con") and bunbob (matches "bob"). Genuine
         // 3-char slurs in the blocklist (e.g. fag) are still detected
-        // via the exact match in filterText() — only the substring path
+        // via the exact match in filterText() - only the substring path
         // gets the length floor.
         $collapsedBlocklist = [];
         foreach (self::blocklist() as $w) {

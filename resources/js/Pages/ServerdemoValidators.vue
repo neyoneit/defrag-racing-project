@@ -136,7 +136,7 @@ const submit = () => {
                         <div>
                             <div class="font-semibold text-white">{{ $t('You apply here') }}</div>
                             <p class="text-gray-400 text-sm mt-1">
-                                {{ $t('Tell us who you are and why you want to do this. Applying costs nothing and commits you to nothing.') }}
+                                {{ $t('Tell me who you are and why you want to do this. Applying costs nothing and commits you to nothing.') }}
                             </p>
                         </div>
                     </div>
@@ -357,7 +357,7 @@ const submit = () => {
                             <p v-if="form.errors.availability" class="text-red-400 text-sm mt-1">{{ form.errors.availability }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Where can we reach you?') }}</label>
+                            <label class="block text-sm font-semibold text-gray-300 mb-2">{{ $t('Where can I reach you?') }}</label>
                             <input
                                 v-model="form.contact"
                                 type="text"

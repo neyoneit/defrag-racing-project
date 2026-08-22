@@ -37,7 +37,7 @@ class ViewUserActivity extends Page implements HasTable
     public function getTitle(): string
     {
         $name = $this->userModel?->plain_name ?? $this->userModel?->username ?? "user #{$this->user}";
-        return "API activity — {$name}";
+        return "API activity - {$name}";
     }
 
     public function getBreadcrumbs(): array
@@ -86,7 +86,7 @@ class ViewUserActivity extends Page implements HasTable
                     ->color(fn ($state) => $state > 0 ? 'warning' : 'gray'),
                 Tables\Columns\TextColumn::make('avg_ms')
                     ->label('Avg ms')
-                    ->formatStateUsing(fn ($state) => $state !== null ? round((float) $state) : '—')
+                    ->formatStateUsing(fn ($state) => $state !== null ? round((float) $state) : '-')
                     ->color(fn ($state) => $state !== null && (float) $state > 1000 ? 'warning' : 'gray'),
                 Tables\Columns\TextColumn::make('last_call')
                     ->label('Last call')

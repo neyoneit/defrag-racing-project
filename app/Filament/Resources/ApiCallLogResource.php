@@ -43,7 +43,7 @@ class ApiCallLogResource extends Resource
     }
 
     /**
-     * The main list page aggregates one row per user — total calls in
+     * The main list page aggregates one row per user - total calls in
      * the visible window, last activity. Clicking the user drills into
      * the per-endpoint breakdown for that user.
      */

@@ -1551,7 +1551,7 @@ export class MD3Loader {
 
                                     // Handle both basic materials and custom shader materials
                                     if (child.material.uniforms && child.material.uniforms.tStage0) {
-                                        // Custom Q3 multi-stage shader material — swap stage 0 texture
+                                        // Custom Q3 multi-stage shader material - swap stage 0 texture
                                         if (child.material.uniforms.tStage0.value) {
                                             child.material.uniforms.tStage0.value.dispose();
                                         }
@@ -2649,7 +2649,7 @@ export class MD3Loader {
                 const flash = weaponGroup.getObjectByName('flash');
                 if (flash) {
                     flash.visible = true;
-                    // Q3: angles[ROLL] = crandom() * 10 — subtle ±10° roll variation
+                    // Q3: angles[ROLL] = crandom() * 10 - subtle ±10° roll variation
                     flash.rotation.z = (Math.random() * 2 - 1) * 10 * (Math.PI / 180);
                 }
 
@@ -3447,7 +3447,7 @@ export class MD3Loader {
 
         // First pass: count animation lines to detect non-standard (mod) configs
         // Standard Q3 has exactly 25 animations. Mods like BFP have more and use
-        // different animation order — for those we use comment-based naming.
+        // different animation order - for those we use comment-based naming.
         let totalAnimLines = 0;
         for (const line of lines) {
             const trimmed = line.trim();

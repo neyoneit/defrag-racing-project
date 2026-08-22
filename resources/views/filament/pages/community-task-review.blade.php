@@ -44,7 +44,7 @@
                     <div class="grid flex-1 grid-cols-2 gap-4 text-xs md:grid-cols-5">
                         <div>
                             <div class="mb-0.5 uppercase tracking-wide opacity-60">Map</div>
-                            <div class="font-mono text-sm">{{ $this->demo->map_name ?: '—' }}</div>
+                            <div class="font-mono text-sm">{{ $this->demo->map_name ?: '-' }}</div>
                         </div>
                         <div>
                             <div class="mb-0.5 uppercase tracking-wide opacity-60">Physics</div>
@@ -56,11 +56,11 @@
                         </div>
                         <div>
                             <div class="mb-0.5 uppercase tracking-wide opacity-60">Name in the demo</div>
-                            <div class="font-mono text-sm">{!! $this->demo->player_name ? \App\Filament\Resources\UserResource::q3tohtml($this->demo->player_name) : '—' !!}</div>
+                            <div class="font-mono text-sm">{!! $this->demo->player_name ? \App\Filament\Resources\UserResource::q3tohtml($this->demo->player_name) : '-' !!}</div>
                         </div>
                         <div>
                             <div class="mb-0.5 uppercase tracking-wide opacity-60">Uploaded by</div>
-                            <div class="font-mono text-sm">{!! $this->demo->user ? \App\Filament\Resources\UserResource::q3tohtml($this->demo->user->name) : '—' !!}</div>
+                            <div class="font-mono text-sm">{!! $this->demo->user ? \App\Filament\Resources\UserResource::q3tohtml($this->demo->user->name) : '-' !!}</div>
                         </div>
                     </div>
 

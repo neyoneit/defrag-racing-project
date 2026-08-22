@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
  * hashmap up front turns each of those into an O(1) array access,
  * eliminating the dominant DB cost of the batch.
  *
- * Only passed explicitly in the batch path — live upload (ProcessDemoJob)
+ * Only passed explicitly in the batch path - live upload (ProcessDemoJob)
  * processes one demo at a time where ad-hoc queries are perfectly fine
  * and loading ~650k records into memory would be wasteful.
  */
@@ -40,7 +40,7 @@ class DemoAutoAssignContext
     public static function build(): self
     {
         $index = [];
-        // Exclude soft-deleted records — they're hidden from the frontend
+        // Exclude soft-deleted records - they're hidden from the frontend
         // (Record uses SoftDeletes), so attaching demos to them just makes
         // the demo invisible in the UI. The Eloquent path in
         // DemoAutoAssigner::findRecordId already respects this via the

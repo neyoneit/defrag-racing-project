@@ -142,10 +142,10 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                 </svg>
-                {{ $t('Token ":label" created — copy it now', { label: freshToken.label }) }}
+                {{ $t('Token ":label" created - copy it now', { label: freshToken.label }) }}
             </div>
             <p class="text-xs text-gray-400">
-                {{ $t('This is the only time we will show the token in plaintext. Paste it into the launcher\'s settings. If you lose it, revoke this one and generate a new one.') }}
+                {{ $t('This is the only time I will show the token in plaintext. Paste it into the launcher\'s settings. If you lose it, revoke this one and generate a new one.') }}
             </p>
             <div class="flex gap-2">
                 <input

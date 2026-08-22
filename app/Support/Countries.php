@@ -8,7 +8,7 @@ class Countries
 {
     /**
      * ISO-2 codes for which we ship a flag PNG in /public/images/flags.
-     * Source of truth — keep this list aligned with the flag assets so
+     * Source of truth - keep this list aligned with the flag assets so
      * the dropdown can't offer a code whose flag image would 404.
      */
     public const CODES = [

@@ -666,7 +666,7 @@ class DemoProcessorService
         // time. The service already updated user_id + name fields; we just
         // need the offline_record so the run appears on that user's
         // leaderboard. Re-fetch because service called refresh().
-        // NONE: no match — fall back to offline_record so the run still
+        // NONE: no match - fall back to offline_record so the run still
         // shows up in Demos Top (player_name attribution).
         if ($outcome === DemoAutoAssigner::OUTCOME_PROFILE) {
             $demo = $demo->fresh();

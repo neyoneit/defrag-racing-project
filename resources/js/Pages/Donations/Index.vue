@@ -205,24 +205,51 @@ const availableCurrencies = computed(() => {
     return [...popular, ...others];
 });
 
-// Selected currency (default to USD if available, otherwise first currency)
-const selectedCurrency = ref(availableCurrencies.value.includes('USD') ? 'USD' : availableCurrencies.value[0]);
+// EUR by default. The goal, the bills and the comps prize pool are all
+// denominated in EUR, and the progress bar in the header shows EUR, so opening
+// this page in dollars meant the same money carried two different numbers
+// depending on where you read it.
+const selectedCurrency = ref(availableCurrencies.value.includes('EUR') ? 'EUR' : availableCurrencies.value[0]);
 
 // Dropdown state
 const isDropdownOpen = ref(false);
 const dropdownButton = ref(null);
 const dropdownPosition = ref({ top: 0, left: 0, width: 0 });
 
-// Update dropdown position
+// Where to put the dropdown.
+//
+// The panel is position:fixed, so it wants viewport coordinates, and
+// getBoundingClientRect already gives them. Adding the scroll offset turned
+// them into document coordinates: the further down the page you were, the
+// further below the button the panel opened.
+const DROPDOWN_WIDTH = 320;
+const DROPDOWN_MAX_HEIGHT = 384;
+
 const updateDropdownPosition = () => {
-    if (dropdownButton.value) {
-        const rect = dropdownButton.value.getBoundingClientRect();
-        dropdownPosition.value = {
-            top: rect.bottom + window.scrollY + 8,
-            left: rect.left + window.scrollX,
-            width: rect.width
-        };
-    }
+    if (!dropdownButton.value) return;
+
+    const rect = dropdownButton.value.getBoundingClientRect();
+    const margin = 8;
+
+    // The button sits on the right of its panel and the list is wider than
+    // the button, so aligning the left edges pushes it off the screen. Hang it
+    // off the right edge instead, then keep it on screen either way.
+    let left = rect.right - DROPDOWN_WIDTH;
+    left = Math.min(left, window.innerWidth - DROPDOWN_WIDTH - margin);
+    left = Math.max(margin, left);
+
+    // Below the button, unless there is no room below and more room above.
+    const below = window.innerHeight - rect.bottom - margin;
+    const above = rect.top - margin;
+    const dropUp = below < Math.min(DROPDOWN_MAX_HEIGHT, above) && above > below;
+
+    dropdownPosition.value = {
+        top: dropUp
+            ? Math.max(margin, rect.top - Math.min(DROPDOWN_MAX_HEIGHT, above) - margin)
+            : rect.bottom + margin,
+        left,
+        width: rect.width,
+    };
 };
 
 // Toggle dropdown and update position
@@ -612,6 +639,27 @@ const getYearProgress = (year, yearTotal) => {
                            v-html="$t('Not sure, or forgot to write it? Message <a href=/profile/8>the admin</a> on <a href=https://discordapp.com/users/248530770754625536 target=_blank>Discord</a> and it gets sorted.')"></p>
                     </div>
 
+                    <!-- The one thing a donation buys outright. Every demo
+                         downloaded is bandwidth that is paid for, which is why
+                         there is a limit at all and why this is a high ceiling
+                         rather than none. Said here because the demos page
+                         points at this page and used to promise something the
+                         site did not deliver. -->
+                    <div class="mt-4 p-4 rounded-lg bg-blue-950/30 border border-blue-500/20 w-full text-left">
+                        <div class="flex items-center gap-1.5 mb-1">
+                            <svg class="w-6 h-6 flex-shrink-0 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                            </svg>
+                            <Link :href="route('demos.index')" class="text-base font-bold text-blue-300 hover:text-blue-200">{{ $t('More demo downloads') }}</Link>
+                        </div>
+                        <p class="text-sm leading-relaxed text-gray-300">
+                            {{ $t('An account downloads :member demos a day. Donate :amount or more, all donations counted together, and that becomes :donor a day.', { member: 50, amount: '€10', donor: 500 }) }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-400 mt-2">
+                            {{ $t('Every demo downloaded is bandwidth I pay for, which is why there is a limit at all and why this is a high ceiling rather than none. It applies as soon as the donation is linked to your account.') }}
+                        </p>
+                    </div>
+
                     <div class="mt-4 p-4 rounded-lg bg-pink-950/30 border border-pink-500/20 w-full text-left">
                         <div class="flex items-center gap-2 mb-1">
                             <img src="/images/svg/badge-donor.svg" class="w-6 h-6" :alt="$t('Supporter')">
@@ -634,6 +682,42 @@ const getYearProgress = (year, yearTotal) => {
                         </p>
                         <p class="text-sm leading-relaxed text-gray-400">
                             {{ $t('Any future excess donations would go towards tournament prizepools, new servers in underserved locations, and other community-driven initiatives.') }}
+                        </p>
+                    </div>
+
+                    <!-- Said plainly and said first. It was in the history
+                         below, halfway through a paragraph about developers who
+                         left in 2024, where it read as background rather than
+                         as the thing to know before asking for something. -->
+                    <div class="rounded-xl bg-white/[0.07] border border-white/25 ring-1 ring-white/10 p-5 shadow-2xl">
+                        <h3 class="text-xl font-bold text-white mb-3 flex items-center gap-2">
+                            <svg class="w-6 h-6 flex-shrink-0 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                            </svg>
+                            {{ $t('One person does all of this, for free') }}
+                        </h3>
+                        <p class="text-sm leading-relaxed text-gray-300">
+                            {{ $t('The site, the launcher, DemoMe and this page were built by me and by nobody else. So was DefragLive, apart from its early parts, which frog wrote. Nobody is paid and there is no team.') }}
+                        </p>
+                        <!-- The bit people never ask about and always wonder.
+                             Said in the brightest text in the block, because a
+                             page asking for money owes the answer plainly. -->
+                        <!-- The question that follows "why would anybody do
+                             that", asked and answered before it is asked. -->
+                        <p class="text-sm leading-relaxed text-gray-300 mt-2">
+                            {{ $t('Why? Because I want defrag to get better, and easier to pick up for anyone new to it.') }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-100 font-semibold mt-2">
+                            {{ $t('No donation goes into my pocket. Not a cent of it. It pays the running costs and nothing else.') }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-400 mt-2">
+                            {{ $t('It goes the other way as well: things like the DefragLive contest prizes come out of my own pocket.') }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-400 mt-2">
+                            {{ $t('Almost every public defrag server is maintained by me too, but their owners pay for them - the 10 Gbit servers are the ones I pay for.') }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-400 mt-2">
+                            {{ $t('So please be patient with anything you ask for. It gets done when I get to it, and your donation pays the bills rather than buying a place in the queue.') }}
                         </p>
                     </div>
 
@@ -665,7 +749,7 @@ const getYearProgress = (year, yearTotal) => {
                             </li>
                             <li class="flex gap-2">
                                 <span class="text-blue-400">•</span>
-                                <span v-html="$t('<strong>Spread the word about DefragLegends YouTube channel</strong> - We\'re missing 1,600 yearly watch hours to get it monetized. Playing it in the background could help!')"></span>
+                                <span v-html="$t('<strong>Spread the word about DefragLegends YouTube channel</strong> - The channel is missing 1,600 yearly watch hours to get it monetized. Playing it in the background could help!')"></span>
                             </li>
                         </ul>
                     </div>

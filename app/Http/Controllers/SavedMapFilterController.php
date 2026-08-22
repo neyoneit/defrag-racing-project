@@ -31,7 +31,7 @@ class SavedMapFilterController extends Controller
                 Rule::unique('saved_map_filters')->where(fn ($q) => $q->where('user_id', $userId)),
             ],
             // filter_state is the raw queries object from the sidebar form.
-            // We don't validate its shape — MapFilters on the read side
+            // We don't validate its shape - MapFilters on the read side
             // tolerates missing/unknown keys, and filters drift over time.
             'filter_state' => ['required', 'array'],
         ]);

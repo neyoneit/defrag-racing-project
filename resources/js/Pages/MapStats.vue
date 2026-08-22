@@ -9,7 +9,7 @@ const props = defineProps({
 
 // Plotly is ~3 MB; loading it from a CDN keeps the main app bundle lean
 // and the browser caches it across pages. The page is graceful while
-// Plotly is in flight — empty containers are placeholders.
+// Plotly is in flight - empty containers are placeholders.
 const plotlyReady = ref(false);
 const plotlyError = ref(null);
 
@@ -52,7 +52,7 @@ const fetchStats = () => {
     const finishLoading = () => {
         // Backend returns { __rebuilding: true } when the cache is
         // cold and a background job is regenerating it. Don't try
-        // to render charts on that payload — keep the skeleton up
+        // to render charts on that payload - keep the skeleton up
         // and poll again in a few seconds.
         if (props.stats && props.stats.__rebuilding) {
             setTimeout(fetchStats, 5000);
@@ -106,7 +106,7 @@ const DARK = {
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
     font: { color: '#cbd5e1', family: 'ui-sans-serif, system-ui' },
-    // Tight margins — defaults reserve generous padding for axis titles
+    // Tight margins - defaults reserve generous padding for axis titles
     // & legend that left huge dead bands around every chart. Pulling
     // them in claws back ~30% of vertical space for actual data.
     xaxis: { gridcolor: 'rgba(148,163,184,0.12)', zerolinecolor: 'rgba(148,163,184,0.2)', automargin: true },
@@ -119,12 +119,12 @@ const DARK = {
 const CFG = { responsive: true, displaylogo: false, modeBarButtonsToRemove: ['lasso2d', 'select2d'] };
 
 // Plotly's default log-axis labelling shows minor ticks (2, 5) between
-// powers of ten, but it strips the decade context — so a "2" between
+// powers of ten, but it strips the decade context - so a "2" between
 // "10" and "100" actually means 20, "5" means 500. Confusing as hell.
 // `dtick: 1` (one log10 step per major tick) plus a `,d` integer format
 // gives clean 1 / 10 / 100 / 1000 labels with no minor noise.
 //
-// Minor gridlines fill in the "empty" space between 1–10 — without them
+// Minor gridlines fill in the "empty" space between 1–10 - without them
 // the eye reads the gap as missing data, when in fact the log curve is
 // just compressing 2/3/.../9 into a small visual band near the top of
 // each decade. Subtle gridlines let the user see *where* those ticks
@@ -167,7 +167,7 @@ const renderAll = async () => {
         })
     );
 
-    // 1. Histogram WR per physics — pre-bucket in JS rather than letting
+    // 1. Histogram WR per physics - pre-bucket in JS rather than letting
     // Plotly histogram + log X handle it. Plotly bins in linear space
     // before applying the log transform, which produces empty bars when
     // the data spans 0.5s–1200s. Build log-spaced buckets ourselves.
@@ -288,7 +288,7 @@ const renderAll = async () => {
     ], { ...DARK, xaxis: { ...DARK.xaxis, title: t('records per player') },
          yaxis: { ...DARK.yaxis, title: t('players (log)'), ...LOG_AXIS } }, CFG);
 
-    // 9. Weapons per year — line chart (not stacked, since a single
+    // 9. Weapons per year - line chart (not stacked, since a single
     // map can carry multiple weapons; stacking would double-count).
     // Each line shows the % of that year's new maps that include
     // the given weapon.
@@ -321,7 +321,7 @@ const renderAll = async () => {
         CFG
     );
 
-    // 10. Scatter: release date × WR time (the big one — webgl-backed).
+    // 10. Scatter: release date × WR time (the big one - webgl-backed).
     //
     // Floor at 1s (sub-second WRs are demo/scoreboard bugs) AND cap
     // at the 99th percentile to keep the meaningful 1–100s mass from
@@ -349,7 +349,7 @@ const renderAll = async () => {
     // 11. Scatter: release × #finishers
     //
     // Finisher counts are integers, so plain log scale draws hard
-    // bands at 1, 2, 3, ... — sharp horizontal stripes that mask
+    // bands at 1, 2, 3, ... - sharp horizontal stripes that mask
     // overplot density. Solve it with a multiplicative jitter that's
     // constant-width in log space (±0.18 log10), so a "1" smears to
     // [1.0, 1.51], a "2" to [1.32, 3.02], etc., with the next
@@ -394,7 +394,7 @@ const renderAll = async () => {
 };
 
 // Plotly's choropleth wants ISO-3 codes; the records table has ISO-2.
-// This is a tiny stub for the most common Defrag countries — anything
+// This is a tiny stub for the most common Defrag countries - anything
 // missing falls through and is silently skipped from the map (it'll
 // still show in the country leaderboard if present).
 const ISO_MAP = {
@@ -409,7 +409,7 @@ const iso2to3 = (c) => ISO_MAP[c] || c;
 
 onMounted(() => {
     // First-page load returns stats=null. Trigger a partial Inertia
-    // reload to actually fetch the payload — that XHR is what may
+    // reload to actually fetch the payload - that XHR is what may
     // pay the cold-rebuild cost (up to ~14s), but the page is
     // already painted by then so the user sees a loading state
     // instead of a blank stalled navigation.
@@ -465,7 +465,7 @@ onMounted(() => {
                  final layout so the page doesn't visibly reflow
                  once data lands. -->
             <template v-if="statsLoading">
-                <!-- Status banner with spinner — gives the user a
+                <!-- Status banner with spinner - gives the user a
                      reason to wait instead of leaving the tab. -->
                 <div class="bg-black/40 backdrop-blur-sm border border-purple-500/30 rounded-xl px-4 py-3 mb-6 flex items-center gap-3">
                     <svg class="w-5 h-5 animate-spin text-purple-400 shrink-0" fill="none" viewBox="0 0 24 24">
@@ -486,7 +486,7 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- Chart card skeletons — same grid + sizes as the
+                <!-- Chart card skeletons - same grid + sizes as the
                      real charts so the page doesn't jump when data
                      arrives. -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -535,7 +535,7 @@ onMounted(() => {
 
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <h2 class="text-base font-bold text-white mb-1">{{ $t('Records per player') }}</h2>
-                    <p class="text-xs text-gray-500 mb-2">{{ $t('Long-tail distribution — most players have a handful, a few have thousands.') }}</p>
+                    <p class="text-xs text-gray-500 mb-2">{{ $t('Long-tail distribution - most players have a handful, a few have thousands.') }}</p>
                     <div id="chart-records-per-player" style="height: 360px"></div>
                 </div>
 
@@ -565,7 +565,7 @@ onMounted(() => {
 
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
                     <h2 class="text-base font-bold text-white mb-1">{{ $t('Activity heatmap') }}</h2>
-                    <p class="text-xs text-gray-500 mb-2">{{ $t('Records set per month, per year. GitHub-style — the brighter the busier.') }}</p>
+                    <p class="text-xs text-gray-500 mb-2">{{ $t('Records set per month, per year. GitHub-style - the brighter the busier.') }}</p>
                     <div id="chart-heatmap"></div>
                 </div>
 
@@ -583,7 +583,7 @@ onMounted(() => {
 
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
                     <h2 class="text-base font-bold text-white mb-1">{{ $t('Map release date × WR set date') }}</h2>
-                    <p class="text-xs text-gray-500 mb-2">{{ $t('Diagonal-ish — outliers above the line are late discoveries (WR set years after release).') }}</p>
+                    <p class="text-xs text-gray-500 mb-2">{{ $t('Diagonal-ish - outliers above the line are late discoveries (WR set years after release).') }}</p>
                     <div id="chart-release-vs-wrdate" style="height: 540px"></div>
                 </div>
             </div>

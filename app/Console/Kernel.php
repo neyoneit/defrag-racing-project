@@ -71,7 +71,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('mapstats:rebuild')->withoutOverlapping()->dailyAt('04:00');
 
         // Auto-prune api_call_log rows older than 30 days. The retention
-        // policy lives on the App\Models\ApiCallLog::prunable() scope —
+        // policy lives on the App\Models\ApiCallLog::prunable() scope -
         // model:prune calls that and deletes whatever matches.
         $schedule->command('model:prune', ['--model' => [\App\Models\ApiCallLog::class]])
             ->withoutOverlapping()

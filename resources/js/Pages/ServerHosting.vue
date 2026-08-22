@@ -27,7 +27,7 @@ const page = usePage();
 const successMsg = computed(() => page.props.success);
 const dangerMsg = computed(() => page.props.danger);
 
-// Per-credential UI state, keyed by credential id — a user can hold
+// Per-credential UI state, keyed by credential id - a user can hold
 // several credentials (one per VPS), each with its own pending password.
 const passwordRevealed = ref({});
 const passwordCopied = ref({});
@@ -36,7 +36,7 @@ const ackForm = useForm({ credential_id: null });
 const resetForm = useForm({ credential_id: null });
 
 // Single styled confirm modal, driven by state. Replaces native
-// browser confirm() — same blocking semantics via the .onConfirm cb.
+// browser confirm() - same blocking semantics via the .onConfirm cb.
 const modal = ref({
     open: false,
     title: '',
@@ -78,7 +78,7 @@ const credentialTitle = (cred) => cred.label || cred.sftp_username;
 const requestReset = (cred) => {
     openConfirm({
         title: t('Generate a new password for ":name"?', { name: credentialTitle(cred) }),
-        body: t('The current one will stop working immediately. The new password is shown only once on this page — make sure you can save it. Your other credentials are not affected.'),
+        body: t('The current one will stop working immediately. The new password is shown only once on this page - make sure you can save it. Your other credentials are not affected.'),
         confirmLabel: t('Generate new password'),
         confirmTone: 'amber',
         onConfirm: () => {
@@ -106,7 +106,7 @@ const copyPassword = async (cred) => {
 const acknowledgePassword = (cred) => {
     openConfirm({
         title: t('Wipe the password from this page?'),
-        body: t("Make sure you've saved it somewhere safe — after confirming, it cannot be shown again. You'd need to generate a new one (or ask an admin to rotate)."),
+        body: t("Make sure you've saved it somewhere safe - after confirming, it cannot be shown again. You'd need to generate a new one (or ask an admin to rotate)."),
         confirmLabel: t("Yes, I've saved it"),
         confirmTone: 'emerald',
         onConfirm: () => {
@@ -159,7 +159,7 @@ const state = computed(() => {
     return props.application.status;
 });
 
-// server_info on the API side is cast to array — render defensively in
+// server_info on the API side is cast to array - render defensively in
 // case an older record still has a plain string in there.
 const submittedServers = computed(() => {
     const raw = props.application?.server_info;
@@ -177,7 +177,7 @@ const gametypeLabel = (value) => GAMETYPES.value.find(g => g.value === value)?.l
 // Add-server form (one shared form; addServerOpenId tracks which
 // credential's card has it open). Pre-fills IP, rcon and country from
 // that credential's most-recent declared server so the common "another
-// port on the same box" case is one click — they only tweak port + gametype.
+// port on the same box" case is one click - they only tweak port + gametype.
 const addServerOpenId = ref(null);
 
 const existingIpsFor = (cred) =>
@@ -212,7 +212,7 @@ const submitAddServer = () => {
     });
 };
 
-// Additional-credential form — approved owners provision one SFTP account
+// Additional-credential form - approved owners provision one SFTP account
 // per VPS so every box gets its own password.
 const newCredOpen = ref(false);
 
@@ -237,7 +237,7 @@ const submitNewCred = () => {
     <div class="container mx-auto max-w-3xl px-4 py-10">
         <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">{{ $t('Server hosting access') }}</h1>
         <p class="text-sm text-gray-400 mb-3"
-           v-html="$t('If you host (or plan to host) a public defrag server, apply here for an SFTP account on our storage VPS. Approved server owners get a chroot-isolated drop-box where the server bundle can ship <code>.dm_68</code> demos for indexing on defrag.racing.')"></p>
+           v-html="$t('If you host (or plan to host) a public defrag server, apply here for an SFTP account on the storage VPS. Approved server owners get a chroot-isolated drop-box where the server bundle can ship <code>.dm_68</code> demos for indexing on defrag.racing.')"></p>
         <p class="text-sm text-gray-400 mb-3">
             {{ $t('Bundles:') }}
             <a href="https://github.com/Defrag-racing/defrag-server-bundle"
@@ -254,7 +254,7 @@ const submitNewCred = () => {
             {{ $t('for Windows.') }}
         </p>
         <p class="text-xs text-gray-500 mb-8"
-           v-html="$t('Install the bundle on your defrag host first, then plug your SFTP credentials into <code>sv.conf</code> - we\'ll give them to you after approval. Running servers on several machines? Add one credential per VPS so each box has its own login.')"></p>
+           v-html="$t('Install the bundle on your defrag host first, then plug your SFTP credentials into <code>sv.conf</code> - I\'ll give them to you after approval. Running servers on several machines? Add one credential per VPS so each box has its own login.')"></p>
 
         <!-- SERVER HOSTING RULES - open for applicants, collapsed for active owners -->
         <details :open="state !== 'active'"
@@ -286,7 +286,7 @@ const submitNewCred = () => {
                     <li>
                         <div class="font-semibold text-gray-100 mb-1">{{ $t('5. Your engine must answer with the whole player list, and say when cheats are on') }}</div>
                         <p class="text-gray-400"
-                           v-html="$t('A <code>getdfstatus</code> reply is one 1400 byte packet. The server info takes 550-700 of it and each player line another 57-74, so the reply fills up at around ten players and everyone after that is <strong>missing from it with nothing to say they exist</strong> - on servers configured for 32 slots. We would be listing your server with a third of its players and matching records against a scoreboard that is not the real one.')"></p>
+                           v-html="$t('A <code>getdfstatus</code> reply is one 1400 byte packet. The server info takes 550-700 of it and each player line another 57-74, so the reply fills up at around ten players and everyone after that is <strong>missing from it with nothing to say they exist</strong> - on servers configured for 32 slots. The site would list your server with a third of its players and match records against a scoreboard that is not the real one.')"></p>
                         <p class="text-gray-400 mt-2">{{ $t("A bigger packet is not the answer - past the network's MTU it gets split in transit, and losing one piece loses the whole reply instead of just the end of a list. Neither is a shorter line. As it stands a line cannot go below 25 bytes with every text field empty (nine spaces, a newline, five pairs of quotes, and five numbers of at least one digit), and 32 of those on top of a 700 byte server info is already over the limit before the first character of the first nickname.") }}</p>
                         <p class="text-gray-400 mt-2"
                            v-html="$t('Even throwing the format away entirely does not get there. With <strong>nothing but a slot and a name</strong> - no ping, no score, no country, no MDD id, no model - 32 players leave about 15 bytes each for the name on a typical server. Measured against the nicknames online right now, a quarter of them are already too long for that, and colour codes count (<code>^8</code> is two bytes). So the reply gets asked for in parts instead.')"></p>
@@ -331,9 +331,9 @@ Info_SetValueForKey( infostring, "clientsFrom", va( "%i", firstClient ) );
 for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                         <p class="text-gray-400 mt-2">{{ $t('Page by the client slot, not by how many lines you have already sent. If somebody disconnects between two requests everyone behind them moves down a place, and a count would step straight over whoever landed on the boundary. The asker continues from one past the last slot it received, which is the same answer whatever happened in between.') }}</p>
                         <p class="text-gray-400 mt-2"
-                           v-html="$t('<strong>Both parts or neither.</strong> A server that sends <code>clientsFrom</code> is telling us its engine is new enough to report cheats, so a missing <code>sv_cheats</code> is read as cheats being off. Take the paging and leave the cheat line out and your server will be listed as clean whether it is or not.')"></p>
+                           v-html="$t('<strong>Both parts or neither.</strong> A server that sends <code>clientsFrom</code> is telling the site its engine is new enough to report cheats, so a missing <code>sv_cheats</code> is read as cheats being off. Take the paging and leave the cheat line out and your server will be listed as clean whether it is or not.')"></p>
                         <p class="text-gray-400 mt-2"
-                           v-html="$t('It breaks nothing. An engine without any of it ignores the extra argument and replies as it always did, and one request is still one reply, so the existing rate limit bounds it exactly as before. We can see which servers have it - the reply either carries <code>clients</code> or it does not - and a server that never sends it will be delisted once its player list starts getting cut off.')"></p>
+                           v-html="$t('It breaks nothing. An engine without any of it ignores the extra argument and replies as it always did, and one request is still one reply, so the existing rate limit bounds it exactly as before. I can see which servers have it - the reply either carries <code>clients</code> or it does not - and a server that never sends it will be delisted once its player list starts getting cut off.')"></p>
                     </li>
                     <li>
                         <div class="font-semibold text-gray-100 mb-1">{{ $t('6. Stability and fair play') }}</div>
@@ -347,7 +347,7 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                         <div class="font-semibold text-gray-100 mb-1">{{ $t('8. Support') }}</div>
                         <p class="text-gray-400">{{ $t('If you have trouble setting up the bundle or the SFTP connection, contact') }} <a href="/profile/8"
                                    class="text-emerald-300 hover:text-emerald-200 underline decoration-dotted">neyo</a>
-                        {{ $t('- via his defrag.racing profile or on Discord in the server-hosting section. We would rather help you get compliant than delist you.') }}</p>
+                        {{ $t('- via his defrag.racing profile or on Discord in the server-hosting section. I would rather help you get compliant than delist you.') }}</p>
                     </li>
                 </ol>
                 <p class="text-xs text-gray-500 pt-2 border-t border-white/5">
@@ -382,7 +382,7 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                 </div>
 
                 <p class="text-sm text-gray-400 mb-4 [&_strong]:text-emerald-300"
-                   v-html="$t('Use these in the <code>sv.conf</code> on this VPS. The password is shown <strong>only once</strong> — copy it now, or generate a new one later if you lose it.')"></p>
+                   v-html="$t('Use these in the <code>sv.conf</code> on this VPS. The password is shown <strong>only once</strong> - copy it now, or generate a new one later if you lose it.')"></p>
 
                 <!-- One-time password reveal box (only when pending) -->
                 <div v-if="cred.pending_password"
@@ -392,7 +392,7 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                         <div class="flex-1 min-w-0">
                             <div class="text-sm font-semibold text-yellow-200 mb-1">{{ $t('Save your password now') }}</div>
                             <p class="text-xs text-gray-400 mb-3">
-                                {{ $t("This is the only time you'll see it. After clicking \"I've saved it\", we wipe it from our DB — it lives only on the storage VPS in hashed form. If you lose it, generate a new one below.") }}
+                                {{ $t("This is the only time you'll see it. After clicking \"I've saved it\", I wipe it from the database - it lives only on the storage VPS in hashed form. If you lose it, generate a new one below.") }}
                             </p>
 
                             <div class="flex items-center gap-2 mb-3">
@@ -416,7 +416,7 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                                     @click="acknowledgePassword(cred)"
                                     :disabled="ackForm.processing"
                                     class="px-3 py-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-xs text-emerald-200 transition disabled:opacity-50">
-                                {{ $t("✓ I've saved it — wipe from this page") }}
+                                {{ $t("✓ I've saved it - wipe from this page") }}
                             </button>
                         </div>
                     </div>
@@ -449,7 +449,7 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                                     class="px-3 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-xs text-amber-200 transition disabled:opacity-50">
                                 {{ resetForm.processing && resetForm.credential_id === cred.id ? $t('Resetting…') : $t('Generate new password') }}
                             </button>
-                            <span class="text-xs text-gray-500">{{ $t('(rate-limited — max 6/hour)') }}</span>
+                            <span class="text-xs text-gray-500">{{ $t('(rate-limited - max 6/hour)') }}</span>
                         </dd>
                     </div>
                 </dl>
@@ -491,7 +491,7 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                            v-html="$t('Put each RS code into <code>sv.conf</code> as <code>rs\x26lt;PORT\x26gt;=\x26lt;rs_code\x26gt;</code> (set <code>MDD_ENABLED=1</code> too).')"></p>
                     </div>
                     <p v-else class="text-xs text-gray-500">
-                        {{ $t('No servers declared on this credential yet — add the ones running on this VPS below.') }}
+                        {{ $t('No servers declared on this credential yet - add the ones running on this VPS below.') }}
                     </p>
 
                     <!-- Add another server (reuses this credential) -->
@@ -508,7 +508,7 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                               class="rounded-lg border border-emerald-500/20 bg-black/30 p-4 space-y-3">
                             <div class="flex items-center justify-between">
                                 <h4 class="text-sm font-semibold text-emerald-200">{{ $t('Register another server') }}</h4>
-                                <p class="text-xs text-gray-500">{{ $t('Reuses this credential — no new password.') }}</p>
+                                <p class="text-xs text-gray-500">{{ $t('Reuses this credential - no new password.') }}</p>
                             </div>
 
                             <div class="grid grid-cols-12 gap-2 items-start">
@@ -553,7 +553,7 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                                             class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 focus:border-blue-500 focus:ring-0 transition appearance-none cursor-pointer
                                                    bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%23a1a1aa%22><path d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22/></svg>')]
                                                    bg-no-repeat bg-[right_0.5rem_center] bg-[length:1rem] pr-8">
-                                        <option value="" class="bg-slate-900 text-gray-400">{{ $t('— flag —') }}</option>
+                                        <option value="" class="bg-slate-900 text-gray-400">{{ $t('- flag -') }}</option>
                                         <option v-for="c in countryOptions" :key="c.code" :value="c.code"
                                                 class="bg-slate-900 text-gray-200">{{ c.label }}</option>
                                     </select>
@@ -602,7 +602,7 @@ DEMO_SFTP_REMOTEDIR={{ cred.remote_path }}</code></pre>
                     <span class="text-base leading-none">+</span> {{ $t('Add another VPS credential') }}
                 </button>
                 <p v-if="!newCredOpen" class="text-xs text-gray-500 mt-2">
-                    {{ $t('Hosting on more than one machine? Provision a separate SFTP account per VPS — each gets its own username and password, so rotating or revoking one never breaks the others.') }}
+                    {{ $t('Hosting on more than one machine? Provision a separate SFTP account per VPS - each gets its own username and password, so rotating or revoking one never breaks the others.') }}
                 </p>
 
                 <form v-if="newCredOpen"
@@ -644,7 +644,7 @@ DEMO_SFTP_REMOTEDIR={{ cred.remote_path }}</code></pre>
                 <h2 class="text-lg font-semibold text-yellow-300">{{ $t('Application pending review') }}</h2>
             </div>
             <p class="text-sm text-gray-400 mb-4">
-                {{ $t("Submitted :date. An admin will be in touch — you don't need to resubmit.", { date: new Date(application.created_at).toLocaleString($page.props.locale) }) }}
+                {{ $t("Submitted :date. An admin will be in touch - you don't need to resubmit.", { date: new Date(application.created_at).toLocaleString($page.props.locale) }) }}
             </p>
             <blockquote class="text-sm text-gray-300 border-l-2 border-yellow-500/30 pl-3 whitespace-pre-line">{{ application.message }}</blockquote>
 
@@ -663,7 +663,7 @@ DEMO_SFTP_REMOTEDIR={{ cred.remote_path }}</code></pre>
             </div>
         </section>
 
-        <!-- STATE: REJECTED — banner only; form is re-rendered below ------ -->
+        <!-- STATE: REJECTED - banner only; form is re-rendered below ------ -->
         <section v-if="state === 'rejected'"
                  class="rounded-xl border border-red-500/30 bg-black/40 backdrop-blur-sm p-6 mb-6 shadow-2xl">
             <div class="flex items-center gap-2 mb-2">
@@ -692,7 +692,7 @@ DEMO_SFTP_REMOTEDIR={{ cred.remote_path }}</code></pre>
                     <textarea v-model="form.message"
                               rows="4"
                               maxlength="2000"
-                              :placeholder="$t('Briefly describe your defrag.racing history, why you want to host, anything we should know.')"
+                              :placeholder="$t('Briefly describe your defrag.racing history, why you want to host, anything I should know.')"
                               class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 focus:border-blue-500 focus:ring-0 transition"></textarea>
                     <div class="text-xs text-gray-500 mt-1 flex justify-between">
                         <span :class="form.errors.message ? 'text-red-400' : ''">{{ form.errors.message || $t('Minimum 20 characters.') }}</span>
@@ -749,7 +749,7 @@ DEMO_SFTP_REMOTEDIR={{ cred.remote_path }}</code></pre>
                                         class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 focus:border-blue-500 focus:ring-0 transition appearance-none cursor-pointer
                                                bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%23a1a1aa%22><path d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22/></svg>')]
                                                bg-no-repeat bg-[right_0.5rem_center] bg-[length:1rem] pr-8">
-                                    <option value="" class="bg-slate-900 text-gray-400">{{ $t('— flag —') }}</option>
+                                    <option value="" class="bg-slate-900 text-gray-400">{{ $t('- flag -') }}</option>
                                     <option v-for="c in countryOptions" :key="c.code" :value="c.code"
                                             class="bg-slate-900 text-gray-200">{{ c.label }}</option>
                                 </select>
@@ -805,7 +805,7 @@ DEMO_SFTP_REMOTEDIR={{ cred.remote_path }}</code></pre>
 
     </div>
 
-    <!-- Styled confirm modal — replaces native window.confirm() -->
+    <!-- Styled confirm modal - replaces native window.confirm() -->
     <Teleport to="body">
         <transition
             enter-active-class="transition duration-150 ease-out"

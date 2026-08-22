@@ -250,7 +250,7 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
             <div class="rounded-2xl border border-amber-400/35 bg-amber-500/[0.08] p-5 mb-4">
                 <h2 class="text-amber-200 font-black text-lg mb-1">{{ $t('Nothing disappears the moment you send it') }}</h2>
                 <p class="text-gray-200 leading-relaxed">
-                    {{ $t('These requests are handled when the MDD databases are merged. That merge is planned but not done, and until it happens a run taken off this site still stands on q3df.org - we cannot reach that database yet. So you choose which you want: have it hidden here as soon as an admin approves it and accept that q3df still shows it for now, or leave it queued and have both handled together at the merge. Either way an admin approves the hide, and your run stays on the board until they do.') }}
+                    {{ $t('These requests are handled when the MDD databases are merged. That merge is planned but not done, and until it happens a run taken off this site still stands on q3df.org - I cannot reach that database yet. So you choose which you want: have it hidden here as soon as an admin approves it and accept that q3df still shows it for now, or leave it queued and have both handled together at the merge. Either way an admin approves the hide, and your run stays on the board until they do.') }}
                 </p>
             </div>
 

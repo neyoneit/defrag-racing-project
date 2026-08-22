@@ -99,7 +99,7 @@ return [
                 'throw'    => true,
             ],
 
-        // Serverdemo storage on the same VPS — read-only view of
+        // Serverdemo storage on the same VPS - read-only view of
         // /var/lib/serverdemos/<sftp_user>/ where the ingest daemon
         // parks .dm_68 uploads. Reuses the dlbrowser key + host since
         // dlbrowser is internal-sftp only (no shell) and we grant it

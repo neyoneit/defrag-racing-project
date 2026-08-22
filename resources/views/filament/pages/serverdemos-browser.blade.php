@@ -4,13 +4,13 @@
         $files = $this->files;
         $selected = $this->selectedUser;
         $fmtSize = function ($b) {
-            if ($b === null) return '—';
+            if ($b === null) return '-';
             $u = ['B','KB','MB','GB']; $i = 0;
             while ($b >= 1024 && $i < count($u)-1) { $b /= 1024; $i++; }
             return number_format($b, $b < 10 && $i > 0 ? 2 : ($b < 100 && $i > 0 ? 1 : 0)) . ' ' . $u[$i];
         };
         $fmtTime = function ($ts) {
-            if (!$ts) return '—';
+            if (!$ts) return '-';
             return date('Y-m-d H:i', $ts);
         };
         $fmtAgo = function ($ts) {
@@ -22,7 +22,7 @@
             return floor($d/86400) . 'd ago';
         };
         $fmtRunTime = function ($ms) {
-            if ($ms === null) return '—';
+            if ($ms === null) return '-';
             $totalSec = $ms / 1000;
             $m = floor($totalSec / 60);
             $s = $totalSec - $m * 60;
@@ -130,7 +130,7 @@
                                     onmouseover="this.style.backgroundColor='rgba(234,88,12,0.06)'"
                                     onmouseout="this.style.backgroundColor='transparent'">
                                     <td style="padding:8px 10px;color:#fafafa;font-family:ui-monospace,monospace;">{{ $f['name'] }}</td>
-                                    <td style="padding:8px 10px;color:#9ca3af;">{{ $f['map'] ?? '—' }}</td>
+                                    <td style="padding:8px 10px;color:#9ca3af;">{{ $f['map'] ?? '-' }}</td>
                                     <td style="padding:8px 10px;color:#9ca3af;font-family:ui-monospace,monospace;">{{ $fmtRunTime($f['time']) }}</td>
                                     <td style="padding:8px 10px;">
                                         @if ($f['player'] ?? null)
@@ -145,7 +145,7 @@
                                                 style="color:#fb923c;text-decoration:none;font-weight:600;">{{ $f['player_name'] ?? 'mdd '.$f['player'] }}</a>
                                             <span style="color:#71717a;font-size:10px;margin-left:4px;">mdd {{ $f['player'] }}</span>
                                         @else
-                                            <span style="color:#71717a;">—</span>
+                                            <span style="color:#71717a;">-</span>
                                         @endif
                                     </td>
                                     <td style="padding:8px 10px;color:#9ca3af;">{{ $fmtSize($f['size']) }}</td>

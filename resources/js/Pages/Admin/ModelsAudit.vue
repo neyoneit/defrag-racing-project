@@ -266,7 +266,7 @@ async function batchFixSkinNames() {
     showToast(`Fixed ${items.length} model names`);
 }
 
-// Validate Resolved state — persisted in localStorage
+// Validate Resolved state - persisted in localStorage
 const _storedValid = JSON.parse(localStorage.getItem('audit_validate_valid') || '{}');
 const _storedFP = JSON.parse(localStorage.getItem('audit_validate_fp') || '[]');
 const validateFalsePositives = ref(_storedFP);
@@ -293,7 +293,7 @@ const filteredValidateItems = computed(() => {
     return items;
 });
 
-// Core validation logic for a single item — returns {valid, reason} or null if valid
+// Core validation logic for a single item - returns {valid, reason} or null if valid
 async function validateSingleItem(item, cachedFiles) {
     // OK items (PK3 with local_path + MD5): fast local file check
     if (item.status === 'OK' && item.local_path) {
@@ -372,10 +372,10 @@ async function validateOne(item) {
                 validate_reason: result.reason,
                 validate_data: result.data || null,
             });
-            showToast(`FALSE POSITIVE: ${item.name} — ${result.reason}`, 'error');
+            showToast(`FALSE POSITIVE: ${item.name} - ${result.reason}`, 'error');
         } else {
             validateValid[key] = true;
-            showToast(`VALID: ${item.name} — resolved status confirmed`);
+            showToast(`VALID: ${item.name} - resolved status confirmed`);
         }
         persistValidateState();
     } finally {
@@ -416,7 +416,7 @@ async function validateResolved() {
         if (!validateRunning.value) break;
 
         done++;
-        validateProgress.value = `${done}/${resolved.length} — ${item.name || item.download_file}`;
+        validateProgress.value = `${done}/${resolved.length} - ${item.name || item.download_file}`;
 
         const result = await validateSingleItem(item, cachedFiles);
         if (result) {
@@ -457,7 +457,7 @@ async function unresolveItem(item) {
             delete sourceItem.resolution;
             delete sourceItem.resolution_note;
         }
-        showToast(`Unresolved "${item.download_file}" — ready for re-processing`);
+        showToast(`Unresolved "${item.download_file}" - ready for re-processing`);
     } catch (e) {
         showToast(t('Failed to unresolve: :error', { error: e.response?.data?.error || e.message }), 'error');
     }
@@ -1660,13 +1660,13 @@ const executeDryRun = async () => {
                                                             <span v-if="entry.type === 'archive'" class="text-yellow-400 font-semibold">{{ entry.name }}</span>
                                                             <span v-else class="text-gray-300">{{ entry.name }}</span>
                                                             <span class="text-gray-400">{{ entry.size_human }}</span>
-                                                            <span v-if="entry.type === 'archive' && entry.is_extra" class="text-purple-400 font-sans">{{ $t('— extra (bot/support PK3)') }}</span>
-                                                            <span v-else-if="entry.type === 'archive' && entry.models_found" class="text-green-400 font-sans">{{ $tc('— analyzed, :count model found|— analyzed, :count models found', entry.models_found.length) }}</span>
-                                                            <span v-else-if="entry.type === 'archive'" class="text-gray-400 font-sans">{{ $t('— analyzed') }}</span>
-                                                            <span v-else-if="entry.text_content" class="text-cyan-400 font-sans">{{ $t('— text file') }}</span>
-                                                            <span v-else-if="fileCategory(entry.name) === 'junk'" class="text-gray-400 font-sans">{{ $t('— ignored') }}</span>
-                                                            <span v-else-if="entry.is_extra" class="text-purple-400 font-sans">{{ $t('— extra file (not in PK3)') }}</span>
-                                                            <span v-else class="text-gray-400 font-sans">{{ $t('— not analyzed') }}</span>
+                                                            <span v-if="entry.type === 'archive' && entry.is_extra" class="text-purple-400 font-sans">{{ $t('- extra (bot/support PK3)') }}</span>
+                                                            <span v-else-if="entry.type === 'archive' && entry.models_found" class="text-green-400 font-sans">{{ $tc('- analyzed, :count model found|- analyzed, :count models found', entry.models_found.length) }}</span>
+                                                            <span v-else-if="entry.type === 'archive'" class="text-gray-400 font-sans">{{ $t('- analyzed') }}</span>
+                                                            <span v-else-if="entry.text_content" class="text-cyan-400 font-sans">{{ $t('- text file') }}</span>
+                                                            <span v-else-if="fileCategory(entry.name) === 'junk'" class="text-gray-400 font-sans">{{ $t('- ignored') }}</span>
+                                                            <span v-else-if="entry.is_extra" class="text-purple-400 font-sans">{{ $t('- extra file (not in PK3)') }}</span>
+                                                            <span v-else class="text-gray-400 font-sans">{{ $t('- not analyzed') }}</span>
                                                         </div>
                                                         <!-- Text file content preview -->
                                                         <div v-if="entry.text_content" class="ml-4 mt-1 mb-2 p-2 bg-black/40 rounded border border-cyan-500/20 max-h-40 overflow-y-auto">

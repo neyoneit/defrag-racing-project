@@ -114,7 +114,7 @@ class RenderQueuePreview extends Page
 
     public function getCurrentQueueStats(): array
     {
-        // Called from the blade on every render — without caching, every
+        // Called from the blade on every render - without caching, every
         // wire:click (loadPreview, queueDemo) ran 4 fresh COUNTs against
         // ~340k rendered_videos and could stack into a CDN-timeout.
         return Cache::remember('demome:render_queue_preview_stats', 60, function () {

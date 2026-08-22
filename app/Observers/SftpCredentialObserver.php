@@ -14,7 +14,7 @@ class SftpCredentialObserver
      * Dedupes by (ip, port): if a Server already exists at that address it's
      * linked and its rconpassword refreshed; otherwise a new Server row is
      * created with placeholders that the scraper will overwrite on first run.
-     * Rows that disappear from the JSON are left in place — admin handles
+     * Rows that disappear from the JSON are left in place - admin handles
      * removal manually from the Filament panel.
      */
     public function saved(SftpCredential $credential): void
@@ -37,7 +37,7 @@ class SftpCredentialObserver
 
             // Per-server location (set by owner in /server-hosting form or
             // by admin in Filament). Falls back to owner profile country
-            // when blank — at least gives a flag instead of "_404".
+            // when blank - at least gives a flag instead of "_404".
             $entryLocation = !empty($entry['location']) ? strtoupper($entry['location']) : $ownerCountry;
 
             // Optional manual coordinates (admin fills these for servers whose

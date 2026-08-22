@@ -140,7 +140,7 @@ class SftpCredentialResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('revoked_at')
                     ->dateTime()
-                    ->placeholder('—')
+                    ->placeholder('-')
                     ->toggleable(),
             ])
             ->filters([
@@ -157,7 +157,7 @@ class SftpCredentialResource extends Resource
                     ->icon('heroicon-o-list-bullet')
                     ->color('info')
                     ->modalHeading('Manage declared servers + RS codes')
-                    ->modalDescription("Each row is one of the user's defrag servers. Fill in the RS code we issued for that server (matches the rs<PORT>=<id> entry in their sv.conf).")
+                    ->modalDescription("Each row is one of the user's defrag servers. Fill in the RS code issued for that server (matches the rs<PORT>=<id> entry in their sv.conf).")
                     ->modalWidth('4xl')
                     ->fillForm(function ($record) {
                         // Prefill the coordinate fields from the live Server row
@@ -232,7 +232,7 @@ class SftpCredentialResource extends Resource
                                     ->helperText('Drives the visitor ping badge. Leave blank to keep it hidden for this server.'),
                                 \Filament\Forms\Components\Textarea::make('admin_note')
                                     ->label('Admin note')
-                                    ->placeholder('Engine, special config, things to remember — not shown to the user')
+                                    ->placeholder('Engine, special config, things to remember - not shown to the user')
                                     ->rows(2)
                                     ->columnSpan(12),
                             ])
@@ -317,7 +317,7 @@ class SftpCredentialResource extends Resource
                     ->color('danger')
                     ->visible(fn ($record) => $record->status === 'active')
                     ->requiresConfirmation()
-                    ->modalDescription('Removes the SFTP account from the storage VPS. Demos already uploaded are archived (not deleted). Cannot be undone — applicant would need to apply again.')
+                    ->modalDescription('Removes the SFTP account from the storage VPS. Demos already uploaded are archived (not deleted). Cannot be undone - applicant would need to apply again.')
                     ->action(function ($record) {
                         try {
                             app(StorageVpsProvisioner::class)

@@ -2,7 +2,7 @@
 
 // NOTE: This command is currently NOT usable for bulk fetching.
 // The q3df.org getRecords API does not support pagination (page 2+ returns 401).
-// Keeping this for future use — the API may be opened up later.
+// Keeping this for future use - the API may be opened up later.
 // For now, use scrape:records-fetch-new (HTML scraper) instead.
 
 namespace App\Console\Commands;

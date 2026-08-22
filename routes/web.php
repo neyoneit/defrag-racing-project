@@ -59,7 +59,7 @@ Route::get('/servers', [ServersController::class, 'index'])->name('servers');
 Route::get('/api/servers/live', [ServersController::class, 'apiServers'])->name('servers.api');
 Route::get('/servers/json', [EndpointController::class, 'index'])->name('servers.json');
 
-// Launcher auto-update manifest — primary endpoint for the desktop
+// Launcher auto-update manifest - primary endpoint for the desktop
 // launcher's tauri-plugin-updater (GH Releases is its fallback). Proxies
 // the latest signed `latest.json` from GH with a 5-minute cache so we
 // don't pound their CDN on every launcher startup. The mirror exists
@@ -262,6 +262,9 @@ Route::post('/models/batch-generate-still-thumbnails', [ModelsController::class,
 Route::get('/demos', [DemosController::class, 'index'])->name('demos.index');
 
 Route::get('/demos/search-uploaders', [DemosController::class, 'searchUploaders'])->name('demos.search-uploaders');
+// Pickers for the demo filter panel. They stay public because the filters do.
+Route::get('/demos/search-demo-players', [DemosController::class, 'searchDemoPlayers'])->name('demos.search-demo-players');
+Route::get('/demos/search-demo-maps', [DemosController::class, 'searchDemoMaps'])->name('demos.search-demo-maps');
 Route::get('/demos/{demo}/download', [DemosController::class, 'download'])->name('demos.download');
 
 // Demo upload routes (requires authentication)

@@ -171,7 +171,7 @@
             return;
         }
 
-        // Rivals/competitors are now gated behind auth — skip the fetch for
+        // Rivals/competitors are now gated behind auth - skip the fetch for
         // anon visitors. The matching template sections check the same flag
         // and won't render, so there's nothing to fill.
         if (!page.props.auth?.user) {
@@ -1032,7 +1032,7 @@
     const flagDemoId = ref(null);
 
     const getRenderedVideo = (record) => {
-        // Same status-priority pick as MapRecord.vue — a newer 'failed'
+        // Same status-priority pick as MapRecord.vue - a newer 'failed'
         // attempt must not hide an older 'completed' one in the badge.
         const videos = record.rendered_videos;
         if (videos && videos.length > 0) {

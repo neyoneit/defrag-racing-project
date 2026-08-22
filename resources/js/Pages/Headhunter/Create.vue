@@ -50,22 +50,22 @@ const modeOptions = computed(() => [
 const rewardType = ref('fiat');
 
 const fiatOptions = [
-    { value: 'USD', label: 'USD — US Dollar' },
-    { value: 'EUR', label: 'EUR — Euro' },
-    { value: 'GBP', label: 'GBP — British Pound' },
-    { value: 'RUB', label: 'RUB — Russian Ruble' },
-    { value: 'CAD', label: 'CAD — Canadian Dollar' },
-    { value: 'AUD', label: 'AUD — Australian Dollar' },
+    { value: 'USD', label: 'USD - US Dollar' },
+    { value: 'EUR', label: 'EUR - Euro' },
+    { value: 'GBP', label: 'GBP - British Pound' },
+    { value: 'RUB', label: 'RUB - Russian Ruble' },
+    { value: 'CAD', label: 'CAD - Canadian Dollar' },
+    { value: 'AUD', label: 'AUD - Australian Dollar' },
 ];
 
 const cryptoOptions = [
-    { value: 'BTC', label: 'BTC — Bitcoin' },
-    { value: 'ETH', label: 'ETH — Ethereum' },
-    { value: 'USDT', label: 'USDT — Tether' },
-    { value: 'USDC', label: 'USDC — USD Coin' },
-    { value: 'LTC', label: 'LTC — Litecoin' },
-    { value: 'SOL', label: 'SOL — Solana' },
-    { value: 'XMR', label: 'XMR — Monero' },
+    { value: 'BTC', label: 'BTC - Bitcoin' },
+    { value: 'ETH', label: 'ETH - Ethereum' },
+    { value: 'USDT', label: 'USDT - Tether' },
+    { value: 'USDC', label: 'USDC - USD Coin' },
+    { value: 'LTC', label: 'LTC - Litecoin' },
+    { value: 'SOL', label: 'SOL - Solana' },
+    { value: 'XMR', label: 'XMR - Monero' },
 ];
 
 const currencyOptions = computed(() => rewardType.value === 'crypto' ? cryptoOptions : fiatOptions);

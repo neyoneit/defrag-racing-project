@@ -49,7 +49,7 @@
                 </div>
                 <div class="flex justify-between gap-3">
                     <dt class="text-gray-500">IP</dt>
-                    <dd class="font-mono text-gray-700 dark:text-gray-200">{{ $c->ip ?? '—' }}</dd>
+                    <dd class="font-mono text-gray-700 dark:text-gray-200">{{ $c->ip ?? '-' }}</dd>
                 </div>
             </dl>
         </div>

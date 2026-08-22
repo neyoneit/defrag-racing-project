@@ -7,7 +7,7 @@
     // mechanism, but tokens are prefixed "api:" and carry the "api:read"
     // ability instead of "launcher:upload". Used to authenticate calls to
     // /api/records/search, /api/profile/*/extras, etc. from external
-    // scripts or third-party tools — the browser frontend continues to
+    // scripts or third-party tools - the browser frontend continues to
     // authenticate via session cookie automatically.
 
     const tokens = ref([]);
@@ -58,7 +58,7 @@
         }
     };
 
-    // Styled confirm modal state — replaces native window.confirm().
+    // Styled confirm modal state - replaces native window.confirm().
     const confirmModal = ref({
         open: false,
         tokenId: null,
@@ -117,7 +117,7 @@
             path: '/api/profile/{mddId}/extras',
             description: t('Similar-skill competitors + head-to-head rivals for a player. Mirrors the data shown on profile pages.'),
             params: [
-                { name: 'mddId', required: true, desc: t('Path parameter — the target player\'s MDD profile id.') },
+                { name: 'mddId', required: true, desc: t('Path parameter - the target player\'s MDD profile id.') },
             ],
             example: 'curl -H "Authorization: Bearer <token>" \\\n  "https://defrag.racing/api/profile/2640/extras"',
             response: `{
@@ -139,8 +139,8 @@
             path: '/api/profile/{userId}/compare/{rivalId}',
             description: t('Head-to-head map-by-map comparison between two users for one physics.'),
             params: [
-                { name: 'userId',  required: true, desc: t('Path — defrag.racing user id of the "me" side.') },
-                { name: 'rivalId', required: true, desc: t('Path — defrag.racing user id of the rival.') },
+                { name: 'userId',  required: true, desc: t('Path - defrag.racing user id of the "me" side.') },
+                { name: 'rivalId', required: true, desc: t('Path - defrag.racing user id of the rival.') },
                 { name: 'physics', required: false, desc: 'cpm | vq3 (default: cpm).' },
             ],
             example: 'curl -H "Authorization: Bearer <token>" \\\n  "https://defrag.racing/api/profile/8/compare/42?physics=vq3"',
@@ -194,7 +194,7 @@
     };
 
     const formatDate = (iso) => {
-        if (! iso) return '—';
+        if (! iso) return '-';
         return new Date(iso).toLocaleString(currentLocale());
     };
 </script>
@@ -256,10 +256,10 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                 </svg>
-                {{ $t('Token ":label" created — copy it now', { label: freshToken.label }) }}
+                {{ $t('Token ":label" created - copy it now', { label: freshToken.label }) }}
             </div>
             <p class="text-xs text-gray-400">
-                {{ $t('This is the only time we will show the token in plaintext. Paste it into your script or tool now. If you lose it, revoke this one and generate a new one.') }}
+                {{ $t('This is the only time I will show the token in plaintext. Paste it into your script or tool now. If you lose it, revoke this one and generate a new one.') }}
             </p>
             <div class="flex gap-2">
                 <input
@@ -300,7 +300,7 @@
         </div>
     </div>
 
-    <!-- Styled confirm modal — replaces native window.confirm() -->
+    <!-- Styled confirm modal - replaces native window.confirm() -->
     <Teleport to="body">
         <transition
             enter-active-class="transition duration-150 ease-out"
@@ -358,7 +358,7 @@
                         <div>
                             <h3 class="text-lg font-semibold text-white">defrag.racing API</h3>
                             <p class="text-xs text-gray-500 mt-0.5"
-                               v-html="$t('Authenticated endpoints — all require an API token in <code>Authorization: Bearer …</code> header.')"></p>
+                               v-html="$t('Authenticated endpoints - all require an API token in <code>Authorization: Bearer …</code> header.')"></p>
                         </div>
                         <button type="button" @click="docsOpen = false"
                                 class="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition">
@@ -376,7 +376,7 @@
                             </p>
                             <pre class="text-xs bg-black/60 border border-white/10 rounded-lg p-3 overflow-x-auto text-gray-300 font-mono">Authorization: Bearer 5|aB1cD2eF3gH4iJ5kL6mN7oP8…</pre>
                             <p class="text-xs text-gray-500 mt-2 [&_strong]:text-gray-400"
-                               v-html="$t('<strong>Rate limit:</strong> 60 requests per minute per user (shared across all your tokens). Hitting the limit returns <code>429 Too Many Requests</code>. All authenticated calls are logged — admins can see per-user / per-endpoint stats.')"></p>
+                               v-html="$t('<strong>Rate limit:</strong> 60 requests per minute per user (shared across all your tokens). Hitting the limit returns <code>429 Too Many Requests</code>. All authenticated calls are logged - admins can see per-user / per-endpoint stats.')"></p>
                         </div>
 
                         <!-- Endpoint cards -->

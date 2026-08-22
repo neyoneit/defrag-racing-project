@@ -18,7 +18,7 @@ const props = defineProps({
     modelValue: { type: String, default: '' },
     placeholder: { type: String, default: 'Start writing...' },
     minHeight: { type: String, default: '15rem' },
-    // Feature toggles — default matches full WikiEditor-like toolbar
+    // Feature toggles - default matches full WikiEditor-like toolbar
     enableImage: { type: Boolean, default: true },
     enableTable: { type: Boolean, default: true },
     enableHeadings: { type: Boolean, default: true },

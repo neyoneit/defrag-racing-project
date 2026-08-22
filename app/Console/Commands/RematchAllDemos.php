@@ -25,7 +25,7 @@ class RematchAllDemos extends Command
         $chunkSize = max(100, (int) $this->option('chunk'));
         $statusFilter = $this->option('status') ?: null;
 
-        // Single-demo mode bypasses chunking/preload entirely — one demo
+        // Single-demo mode bypasses chunking/preload entirely - one demo
         // doesn't justify loading ~650k Records into memory, and verbose
         // per-field output only makes sense for a targeted run.
         // Demos a player withdrew through the amnesty. Rematching one would
@@ -132,7 +132,7 @@ class RematchAllDemos extends Command
             // If the offline demo has a missing offline_record and we
             // have a 100% confident user match, create it. Rank cascade
             // mirrors DemoProcessorService::createOfflineRecord but
-            // simplified — rematch has no file-path / validity context.
+            // simplified - rematch has no file-path / validity context.
             if ($nameMatch['confidence'] === 100 && $nameMatch['user_id'] && $demo->status !== 'assigned' && $demo->file_path) {
                 if ($this->ensureOfflineRecord($demo, $verbose)) {
                     $assigned++;
@@ -192,7 +192,7 @@ class RematchAllDemos extends Command
             // user, create an offline_record so the run is attributed.
             // Without this branch demos that we just unpaired (e.g. via
             // demos:resolve-duplicate-assignments) would never reach the
-            // player's profile through rematch — they'd stay as plain
+            // player's profile through rematch - they'd stay as plain
             // 'processed' files invisible on the leaderboard.
             //
             // Threshold lowered from 100 to 80 so Levenshtein-fuzzy matches

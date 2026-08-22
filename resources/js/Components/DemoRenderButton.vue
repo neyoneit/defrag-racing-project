@@ -182,7 +182,7 @@
 
     <!-- No rendered video - request render.
          Idle state: YouTube icon is shown; on row hover it's swapped out
-         for the "render" text (exclusive toggle — both don't show together).
+         for the "render" text (exclusive toggle - both don't show together).
          Queued / error states keep the text visible regardless. -->
     <button
         v-else-if="canRequestRender"

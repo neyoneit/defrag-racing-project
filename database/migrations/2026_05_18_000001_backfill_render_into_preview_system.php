@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
  * preview without each user having to opt in manually through Settings.
  *
  * Also marks any render_completed notifications that already exist at
- * migration time as read=1 — when the feature deploys we don't want
+ * migration time as read=1 - when the feature deploys we don't want
  * a wall of unread notifications for renders that landed before the
  * user even knew this feature existed. Only renders completing AFTER
  * the migration should show up as unread.
@@ -51,7 +51,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Strip 'render' back out — used if we ever roll the feature
+        // Strip 'render' back out - used if we ever roll the feature
         // back and want preview_system arrays to look untouched.
         DB::table('users')
             ->whereNotNull('preview_system')

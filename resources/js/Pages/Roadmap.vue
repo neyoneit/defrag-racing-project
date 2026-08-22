@@ -70,12 +70,12 @@ const repoUrl = computed(() => REPOS[activeRepo.value]);
                 </div>
             </div>
 
-            <!-- DONE — Commits from git -->
+            <!-- DONE - Commits from git -->
             <div class="bg-black/40 rounded-xl p-8 shadow-2xl border border-white/5 mb-8">
                 <div>
                     <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
                         <h3 class="text-xl font-bold text-green-400 flex items-center gap-2">
-                            <span class="text-2xl">✅</span> {{ $tc('Done — :count Commit|Done — :count Commits', commitItems.length) }}
+                            <span class="text-2xl">✅</span> {{ $tc('Done - :count Commit|Done - :count Commits', commitItems.length) }}
                         </h3>
                         <!-- Repo tabs -->
                         <div class="flex bg-white/5 rounded-lg overflow-hidden text-sm">

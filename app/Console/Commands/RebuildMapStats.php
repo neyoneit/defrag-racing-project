@@ -20,7 +20,7 @@ class RebuildMapStats extends Command
         $start = microtime(true);
         $payload = $stats->all();
         $ms = (int) round((microtime(true) - $start) * 1000);
-        $this->info("Rebuilt in {$ms} ms — " . count($payload['cpm']) . ' CPM + ' . count($payload['vq3']) . ' VQ3 maps.');
+        $this->info("Rebuilt in {$ms} ms - " . count($payload['cpm']) . ' CPM + ' . count($payload['vq3']) . ' VQ3 maps.');
 
         if (!$this->option('export')) {
             return self::SUCCESS;
@@ -28,7 +28,7 @@ class RebuildMapStats extends Command
 
         // Wired but not scheduled. Snapshot lives under storage/app/public/exports/
         // so `php artisan storage:link` exposes it under /storage/exports/...
-        // — turn the cron back on once a public consumer needs it.
+        // - turn the cron back on once a public consumer needs it.
         $disk = Storage::disk('public');
         $disk->makeDirectory('exports');
 

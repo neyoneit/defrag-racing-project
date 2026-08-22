@@ -9,7 +9,7 @@ const props = defineProps({
     ratingSettings: { type: Object, default: () => ({}) },
 });
 
-// Display order — matches the rust service and ranking UI.
+// Display order - matches the rust service and ranking UI.
 const STATS_CATEGORIES = ['overall', 'strafe', 'lg', 'rocket', 'plasma', 'grenade', 'slick', 'tele', 'bfg'];
 const CTF_MODES = ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5', 'ctf6', 'ctf7'];
 
@@ -63,7 +63,7 @@ function formatAsOf(raw) {
 }
 
 // Live parameters from rating_settings DB (admin-editable via Filament).
-// Defaults are fallbacks only — the prop is the source of truth at runtime.
+// Defaults are fallbacks only - the prop is the source of truth at runtime.
 const s = computed(() => {
     const r = props.ratingSettings ?? {};
     const num = (key, fallback) => {
@@ -134,7 +134,7 @@ function calcPlayerRating(scores) {
     return rating;
 }
 
-// Median used in examples — prefer VQ3 Overall live data, fall back to 13.
+// Median used in examples - prefer VQ3 Overall live data, fall back to 13.
 const exampleMedian = computed(() => {
     const live = props.categoryStats?.run?.overall?.vq3?.median;
     return live && live > 0 ? Math.round(live) : 13;
@@ -183,7 +183,7 @@ const top200Share = computed(() => topNWeightShare(200));
                     <span class="text-white font-black text-lg sm:text-xl uppercase tracking-wide">{{ $t('Work in Progress') }}</span>
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
                 </div>
-                <p class="text-white/90 text-sm sm:text-base font-semibold">{{ $t('The ranking system is still under active development. Parameters are being tuned and formulas may change. Please give us time until the system is finalized.') }}</p>
+                <p class="text-white/90 text-sm sm:text-base font-semibold">{{ $t('The ranking system is still under active development. Parameters are being tuned and formulas may change. Please give me time until the system is finalized.') }}</p>
             </div>
 
             <h1 class="text-2xl md:text-3xl font-black text-gray-200 mb-2">{{ $t('How Rankings Work') }}</h1>
@@ -319,11 +319,11 @@ const top200Share = computed(() => topNWeightShare(200));
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
                     <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{{ $t('Parameters') }}</div>
                     <div class="space-y-1 text-xs">
-                        <div><span class="text-white font-mono">A = {{ fmt(s.cfg_a) }}</span> <span class="text-gray-500">— {{ $t('amplitude') }}</span></div>
-                        <div><span class="text-white font-mono">B = {{ fmt(s.cfg_b) }}</span> <span class="text-gray-500">— {{ $t('steepness') }}</span></div>
-                        <div><span class="text-white font-mono">M = {{ fmt(s.cfg_m) }}</span> <span class="text-gray-500">— {{ $t('midpoint shift') }}</span></div>
-                        <div><span class="text-white font-mono">V = {{ fmt(s.cfg_v) }}</span> <span class="text-gray-500">— {{ $t('curve shape') }}</span></div>
-                        <div><span class="text-white font-mono">Q = {{ fmt(s.cfg_q) }}</span> <span class="text-gray-500">— {{ $t('initial value') }}</span></div>
+                        <div><span class="text-white font-mono">A = {{ fmt(s.cfg_a) }}</span> <span class="text-gray-500">- {{ $t('amplitude') }}</span></div>
+                        <div><span class="text-white font-mono">B = {{ fmt(s.cfg_b) }}</span> <span class="text-gray-500">- {{ $t('steepness') }}</span></div>
+                        <div><span class="text-white font-mono">M = {{ fmt(s.cfg_m) }}</span> <span class="text-gray-500">- {{ $t('midpoint shift') }}</span></div>
+                        <div><span class="text-white font-mono">V = {{ fmt(s.cfg_v) }}</span> <span class="text-gray-500">- {{ $t('curve shape') }}</span></div>
+                        <div><span class="text-white font-mono">Q = {{ fmt(s.cfg_q) }}</span> <span class="text-gray-500">- {{ $t('initial value') }}</span></div>
                     </div>
                 </div>
 
@@ -373,10 +373,10 @@ const top200Share = computed(() => topNWeightShare(200));
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
                     <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{{ $t('Parameters') }}</div>
                     <div class="space-y-1 text-xs">
-                        <div><span class="text-white font-mono">x</span> <span class="text-gray-500">— {{ $t('number of unique players on the map') }}</span></div>
-                        <div><span class="text-white font-mono">k</span> <span class="text-gray-500">— {{ $t('median(players per map in category) / 2 (the halfway point)') }}</span></div>
-                        <div><span class="text-white font-mono">L = {{ fmt(s.mult_l) }}</span> <span class="text-gray-500">— {{ $t('maximum multiplier (100%)') }}</span></div>
-                        <div><span class="text-white font-mono">n = {{ fmt(s.mult_n) }}</span> <span class="text-gray-500">— {{ $t('steepness of the curve') }}</span></div>
+                        <div><span class="text-white font-mono">x</span> <span class="text-gray-500">- {{ $t('number of unique players on the map') }}</span></div>
+                        <div><span class="text-white font-mono">k</span> <span class="text-gray-500">- {{ $t('median(players per map in category) / 2 (the halfway point)') }}</span></div>
+                        <div><span class="text-white font-mono">L = {{ fmt(s.mult_l) }}</span> <span class="text-gray-500">- {{ $t('maximum multiplier (100%)') }}</span></div>
+                        <div><span class="text-white font-mono">n = {{ fmt(s.mult_n) }}</span> <span class="text-gray-500">- {{ $t('steepness of the curve') }}</span></div>
                     </div>
                 </div>
 
@@ -462,14 +462,14 @@ const top200Share = computed(() => topNWeightShare(200));
                                                 <span class="text-white">{{ statCell('run', cat, 'vq3').median.toFixed(1) }}</span>
                                                 <span class="text-gray-500 ml-1">({{ statCell('run', cat, 'vq3').k.toFixed(1) }})</span>
                                             </template>
-                                            <span v-else class="text-gray-700">—</span>
+                                            <span v-else class="text-gray-700">-</span>
                                         </td>
                                         <td class="py-1.5 pl-3 text-right font-mono">
                                             <template v-if="statCell('run', cat, 'cpm')">
                                                 <span class="text-white">{{ statCell('run', cat, 'cpm').median.toFixed(1) }}</span>
                                                 <span class="text-gray-500 ml-1">({{ statCell('run', cat, 'cpm').k.toFixed(1) }})</span>
                                             </template>
-                                            <span v-else class="text-gray-700">—</span>
+                                            <span v-else class="text-gray-700">-</span>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -497,14 +497,14 @@ const top200Share = computed(() => topNWeightShare(200));
                                                 <span class="text-white">{{ statCell(mode, 'overall', 'vq3').median.toFixed(1) }}</span>
                                                 <span class="text-gray-500 ml-1">({{ statCell(mode, 'overall', 'vq3').k.toFixed(1) }})</span>
                                             </template>
-                                            <span v-else class="text-gray-700">—</span>
+                                            <span v-else class="text-gray-700">-</span>
                                         </td>
                                         <td class="py-1.5 pl-3 text-right font-mono">
                                             <template v-if="statCell(mode, 'overall', 'cpm')">
                                                 <span class="text-white">{{ statCell(mode, 'overall', 'cpm').median.toFixed(1) }}</span>
                                                 <span class="text-gray-500 ml-1">({{ statCell(mode, 'overall', 'cpm').k.toFixed(1) }})</span>
                                             </template>
-                                            <span v-else class="text-gray-700">—</span>
+                                            <span v-else class="text-gray-700">-</span>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -530,11 +530,11 @@ const top200Share = computed(() => topNWeightShare(200));
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
                     <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{{ $t('Parameters') }}</div>
                     <div class="space-y-1 text-xs">
-                        <div><span class="text-white font-mono">total_players</span> <span class="text-gray-500">— {{ $t('number of unique players on the map') }}</span></div>
-                        <div><span class="text-white font-mono">your_rank</span> <span class="text-gray-500">— {{ $t('your position on the map leaderboard (1 = WR)') }}</span></div>
-                        <div><span class="text-white font-mono">k = {{ fmt(s.rank_k) }}</span> <span class="text-gray-500">— {{ $t('rank_mult value for the worst-ranked record on the map') }}</span></div>
-                        <div><span class="text-white font-mono">n = {{ fmt(s.rank_n) }}</span> <span class="text-gray-500">— {{ $t('overall curve steepness') }}</span></div>
-                        <div><span class="text-white font-mono">p = {{ fmt(s.rank_p) }}</span> <span class="text-gray-500">— {{ $t('position of the steep section along the curve') }}</span></div>
+                        <div><span class="text-white font-mono">total_players</span> <span class="text-gray-500">- {{ $t('number of unique players on the map') }}</span></div>
+                        <div><span class="text-white font-mono">your_rank</span> <span class="text-gray-500">- {{ $t('your position on the map leaderboard (1 = WR)') }}</span></div>
+                        <div><span class="text-white font-mono">k = {{ fmt(s.rank_k) }}</span> <span class="text-gray-500">- {{ $t('rank_mult value for the worst-ranked record on the map') }}</span></div>
+                        <div><span class="text-white font-mono">n = {{ fmt(s.rank_n) }}</span> <span class="text-gray-500">- {{ $t('overall curve steepness') }}</span></div>
+                        <div><span class="text-white font-mono">p = {{ fmt(s.rank_p) }}</span> <span class="text-gray-500">- {{ $t('position of the steep section along the curve') }}</span></div>
                     </div>
                 </div>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
@@ -593,7 +593,7 @@ const top200Share = computed(() => topNWeightShare(200));
                         <svg class="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
                         <div>
                             <div class="text-sm font-bold text-green-300 mb-1">{{ $t('Bad records do not lower your rating') }}</div>
-                            <div class="text-xs text-gray-300">{{ $t("Weak runs simply contribute very little weight — they don't subtract anything. Just play the maps you enjoy; you can't hurt your rating by adding a slow time on some map. Practically only your best scores move the number.") }}</div>
+                            <div class="text-xs text-gray-300">{{ $t("Weak runs simply contribute very little weight - they don't subtract anything. Just play the maps you enjoy; you can't hurt your rating by adding a slow time on some map. Practically only your best scores move the number.") }}</div>
                         </div>
                     </div>
                 </div>
@@ -601,9 +601,9 @@ const top200Share = computed(() => topNWeightShare(200));
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
                     <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{{ $t('Parameters') }}</div>
                     <div class="space-y-1 text-xs">
-                        <div><span class="text-white font-mono">i</span> <span class="text-gray-500">— {{ $t('rank position in your sorted map scores (1 = your best map)') }}</span></div>
-                        <div><span class="text-white font-mono">score_i</span> <span class="text-gray-500">— {{ $t('the final map score (after multipliers) on your i-th best map') }}</span></div>
-                        <div><span class="text-white font-mono">D = {{ fmt(s.cfg_d) }}</span> <span class="text-gray-500">— {{ $t('decay constant; smaller value means slower decay (more records contribute)') }}</span></div>
+                        <div><span class="text-white font-mono">i</span> <span class="text-gray-500">- {{ $t('rank position in your sorted map scores (1 = your best map)') }}</span></div>
+                        <div><span class="text-white font-mono">score_i</span> <span class="text-gray-500">- {{ $t('the final map score (after multipliers) on your i-th best map') }}</span></div>
+                        <div><span class="text-white font-mono">D = {{ fmt(s.cfg_d) }}</span> <span class="text-gray-500">- {{ $t('decay constant; smaller value means slower decay (more records contribute)') }}</span></div>
                     </div>
                 </div>
 
@@ -623,7 +623,7 @@ const top200Share = computed(() => topNWeightShare(200));
                         <div class="text-sm">
                             <div class="font-bold text-blue-300 mb-1">{{ $t('Which records actually matter?') }}</div>
                             <div class="text-xs text-gray-300">{{ $t('With') }} <span class="font-mono text-white">D = {{ fmt(s.cfg_d) }}</span>{{ $t(', your') }} <strong class="text-white">{{ $t('top 100 records carry ~:share%', { share: top100Share.toFixed(1) }) }}</strong> {{ $t('of the total weight in your rating, and your') }} <strong class="text-white">{{ $t('top 200 carry ~:share%', { share: top200Share.toFixed(1) }) }}</strong>{{ $t('. So pushing your best maps a little harder will move your number much more than adding a hundred more average runs.') }}</div>
-                            <div class="text-[10px] text-gray-500 mt-1">{{ $t('(Computed dynamically from D — if the decay constant changes, this number changes too.)') }}</div>
+                            <div class="text-[10px] text-gray-500 mt-1">{{ $t('(Computed dynamically from D - if the decay constant changes, this number changes too.)') }}</div>
                         </div>
                     </div>
                 </div>
@@ -704,7 +704,7 @@ const top200Share = computed(() => topNWeightShare(200));
                     </div>
                 </div>
                 <div class="mt-3 text-xs text-gray-500">
-                    {{ $t('Each category has its own median for the map multiplier calculation — see the live table in') }} <a href="#multiplier" class="text-blue-400 hover:text-blue-300">{{ $t('section 5') }}</a>{{ $t('. Different categories sit at very different player counts, which is why') }} <span class="font-mono">k</span> {{ $t('shifts per category.') }}
+                    {{ $t('Each category has its own median for the map multiplier calculation - see the live table in') }} <a href="#multiplier" class="text-blue-400 hover:text-blue-300">{{ $t('section 5') }}</a>{{ $t('. Different categories sit at very different player counts, which is why') }} <span class="font-mono">k</span> {{ $t('shifts per category.') }}
                 </div>
             </section>
 
@@ -738,7 +738,7 @@ const top200Share = computed(() => topNWeightShare(200));
                     </div>
                 </div>
                 <div class="mt-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 text-xs text-yellow-300">
-                    <strong>{{ $t('Why both?') }}</strong> {{ $t("The incremental update is an optimization — it touches only the map a new record landed on, not every map that record might secondarily affect (e.g. category-wide medians used in the map multiplier shift slightly when any map's player count changes). Over a day these small approximations can drift from the exact value. The nightly full recalculation re-derives everything from scratch and brings the rankings back to the ground truth.") }}
+                    <strong>{{ $t('Why both?') }}</strong> {{ $t("The incremental update is an optimization - it touches only the map a new record landed on, not every map that record might secondarily affect (e.g. category-wide medians used in the map multiplier shift slightly when any map's player count changes). Over a day these small approximations can drift from the exact value. The nightly full recalculation re-derives everything from scratch and brings the rankings back to the ground truth.") }}
                 </div>
             </section>
 

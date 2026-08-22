@@ -200,7 +200,7 @@
                                     <div class="w-7 h-7 rounded-full bg-green-500 text-white font-black text-sm flex items-center justify-center shrink-0">3</div>
                                     <div class="flex-1">
                                         <p class="text-sm font-bold text-white">{{ $t('Come back here and click Finalize') }}</p>
-                                        <p class="text-xs text-gray-400">{{ $t('We\'ll verify the image matches and link your account.') }}</p>
+                                        <p class="text-xs text-gray-400">{{ $t('I\'ll verify the image matches and link your account.') }}</p>
                                     </div>
                                 </div>
 
@@ -228,7 +228,7 @@
 
                         <div class="px-6 py-4 border-t border-white/5 text-center">
                             <p class="text-sm text-gray-400 [&_a]:text-blue-400 [&_a:hover]:text-blue-300 [&_a]:font-medium"
-                               v-html="$t('Having trouble? <a href=https://discord.defrag.racing target=_blank>Contact us on Discord</a> and we\'ll help you out.')"></p>
+                               v-html="$t('Having trouble? <a href=https://discord.defrag.racing target=_blank>Contact me on Discord</a> and I\'ll help you out.')"></p>
                         </div>
                     </div>
                 </div>

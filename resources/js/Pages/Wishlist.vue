@@ -191,27 +191,68 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(currentLocale())
              somewhere else. -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
-                <div class="flex justify-between items-center flex-wrap gap-4">
-                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">
+                <!-- One row: title, one panel, button. The panel takes
+                     every pixel between the other two rather than sitting at a
+                     fixed width with empty space beside it. What the page is
+                     and what to expect from it are the same message, so they
+                     are one panel and not two. -->
+                <div class="flex justify-between items-start flex-wrap gap-4">
+                    <!-- items-start: the heading sits at the top of the row,
+                         where it does on every other page. Centring it against
+                         the panel, which is the tall thing in this row, floated
+                         it down into the middle of the block and nowhere near
+                         where a reader expects to find a page title. -->
+                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 flex-shrink-0">
                         {{ $t('Wishlist') }}
                     </h1>
 
+                    <div class="flex-1 min-w-[20rem] bg-black/40 backdrop-blur-sm rounded-xl border border-white/10 px-4 py-3 shadow-2xl">
+                        <!-- Why the board exists, in the words of the person it
+                             exists for. It used to say "ask for something and
+                             vote on it", which is what any board does and says
+                             nothing about this one. -->
+                        <p class="text-sm leading-relaxed text-gray-300">
+                            {{ $t('Requests used to reach me as private messages on Discord and I often lost track of them. This is where they go now: ask here, it stays written down, and everybody can see what has already been asked for and vote on it.') }}
+                        </p>
+                        <!-- Said in the brightest text in the panel, because it
+                             is the thing that sets the expectation. -->
+                        <!-- Where the money goes is answered inside the
+                             sentence that raises the question, rather than in a
+                             paragraph of its own further down. Somebody told
+                             that one person runs all of this wonders about it
+                             right there.
+
+                             Same heading as the donations page uses for the
+                             same statement, so the two read as one voice. -->
+                        <p class="text-sm font-bold text-white mt-3">
+                            {{ $t('One person does all of this, for free') }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-100 font-semibold mt-1">
+                            {{ $t('The site, the launcher, DemoMe and this board were built by me and by nobody else. So was DefragLive, apart from its early parts, which frog wrote. Nobody is paid and there is no team (donations pay the running costs only, and not a cent of them reaches my pocket).') }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-300 mt-1.5">
+                            {{ $t('Why? Because I want defrag to get better, and easier to pick up for anyone new to it.') }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-400 mt-1.5">
+                            {{ $t('It goes the other way as well: things like the DefragLive contest prizes come out of my own pocket.') }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-400 mt-1.5">
+                            {{ $t('Votes decide the order, but everything on this list waits for the same pair of hands. So please be patient with anything you ask for.') }}
+                        </p>
+                        <p class="text-sm text-gray-500 italic mt-2">
+                            {{ $t('Yours truly,') }} <Link href="/profile/8" class="not-italic font-semibold hover:text-gray-300 transition-colors">neyo</Link>
+                        </p>
+                    </div>
+
                     <button v-if="user" @click="showForm = !showForm"
-                        class="px-5 py-2.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-bold transition-colors">
+                        class="px-5 py-2.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-bold transition-colors flex-shrink-0">
                         {{ showForm ? $t('Close') : $t('Add a wish') }}
                     </button>
                     <Link v-else href="/login"
-                        class="px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-200 font-bold transition-colors">
+                        class="px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-200 font-bold transition-colors flex-shrink-0">
                         {{ $t('Log in to add or vote') }}
                     </Link>
                 </div>
-
-                <p class="text-gray-400 mt-2 max-w-3xl">
-                    {{ $t('Ask for something to be added or changed, and vote on what other people asked for. The more votes a request has, the sooner it gets done.') }}
-                </p>
-                <p class="text-gray-500 text-sm italic mt-1">
-                    {{ $t('Yours truly,') }} <Link href="/profile/8" class="not-italic font-semibold hover:text-gray-300 transition-colors">neyo</Link>
-                </p>
             </div>
         </div>
 

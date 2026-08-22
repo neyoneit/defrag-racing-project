@@ -39,7 +39,7 @@ class ApiTopEndpoints extends BaseWidget
                     ->color(fn ($state) => $state > 5000 ? 'danger' : ($state > 1000 ? 'warning' : 'gray')),
                 Tables\Columns\TextColumn::make('avg_ms')
                     ->label('Avg ms')
-                    ->formatStateUsing(fn ($state) => $state !== null ? round((float) $state) : '—')
+                    ->formatStateUsing(fn ($state) => $state !== null ? round((float) $state) : '-')
                     ->color(fn ($state) => $state !== null && (float) $state > 1000 ? 'warning' : 'gray'),
             ])
             ->recordUrl(fn ($record) => "/defraghq/api-call-logs?tableFilters[route][value]=" . urlencode($record->route));

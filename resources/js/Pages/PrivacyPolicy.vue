@@ -14,7 +14,7 @@ defineProps({
             <!-- Header -->
             <div class="text-center mb-8">
                 <h1 class="text-2xl md:text-3xl font-black text-white mb-2">{{ $t('Privacy Policy') }}</h1>
-                <p class="text-gray-400">{{ $t('How we handle your data') }}</p>
+                <p class="text-gray-400">{{ $t('How I handle your data') }}</p>
             </div>
 
             <!-- Policy Content Card -->

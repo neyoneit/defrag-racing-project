@@ -146,13 +146,13 @@ class LauncherController extends Controller
      * falling back to the GH Releases URL is the second endpoint in the
      * launcher's config.
      *
-     * We cache the upstream response for 5 minutes — releases happen
+     * We cache the upstream response for 5 minutes - releases happen
      * rarely (manual tag push) and a freshly cut release stays fresh
      * within minutes either way. Caching also shields us from GH rate
      * limits if the launcher install base grows.
      *
      * Returns the upstream manifest verbatim. Do NOT rewrite signatures,
-     * platforms map, etc. — the launcher verifies the signature with the
+     * platforms map, etc. - the launcher verifies the signature with the
      * embedded pubkey, so any rewrite would invalidate it.
      */
     public function latestManifest(): JsonResponse

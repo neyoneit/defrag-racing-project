@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * One-shot backfill for the match_method column on demos that were
  * already assigned before match_method was introduced. Pure inference
- * from existing fields — no auto-assign pipeline rerun, so record_id,
+ * from existing fields - no auto-assign pipeline rerun, so record_id,
  * user_id, name_confidence, and matched_alias are not touched.
  *
  * Scope: status='assigned' AND record_id IS NOT NULL AND match_method
@@ -49,7 +49,7 @@ class BackfillMatchMethod extends Command
         $this->info(($dryRun ? '[DRY RUN] ' : '') . "Backfilling match_method on {$total} demos...");
 
         // Preload record_id -> user_id map so we don't hit records table
-        // once per demo. ~650k rows, ~10 MB, keyed by int — cheap.
+        // once per demo. ~650k rows, ~10 MB, keyed by int - cheap.
         $this->info('Preloading record owner map...');
         $t0 = microtime(true);
         $recordUser = [];
@@ -122,7 +122,7 @@ class BackfillMatchMethod extends Command
     protected function inferMatchMethod(UploadedDemo $demo, int $matchedUserId, NameMatcher $nameMatcher): string
     {
         // PASS 0: q3df login. Re-run matchByQ3dfLogin against current
-        // alias data — if it still resolves to the record owner, the tier
+        // alias data - if it still resolves to the record owner, the tier
         // (colored vs plain) tells us which variant to record.
         if ($demo->q3df_login_name || $demo->q3df_login_name_colored) {
             $loginMatch = $nameMatcher->matchByQ3dfLogin(
@@ -140,7 +140,7 @@ class BackfillMatchMethod extends Command
             return 'uploader_record';
         }
 
-        // PASS 2: by elimination — name-based match (we don't reverify
+        // PASS 2: by elimination - name-based match (we don't reverify
         // that the name still resolves to $matchedUserId because it may
         // have changed since the original match, but the Record is the
         // authoritative link and its owner is what the match produced).

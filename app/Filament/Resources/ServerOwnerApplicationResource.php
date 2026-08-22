@@ -63,7 +63,7 @@ class ServerOwnerApplicationResource extends Resource
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('credential.sftp_username')
                     ->label('SFTP user')
-                    ->placeholder('—')
+                    ->placeholder('-')
                     ->copyable(),
                 Tables\Columns\TextColumn::make('reviewer.name')
                     ->label('Reviewed by')
@@ -110,7 +110,7 @@ class ServerOwnerApplicationResource extends Resource
                         \Filament\Forms\Components\TextInput::make('label')
                             ->label('Credential label (optional)')
                             ->maxLength(40)
-                            ->helperText('Users can hold one credential per VPS — the label tells them apart, e.g. "USA VPS".'),
+                            ->helperText('Users can hold one credential per VPS - the label tells them apart, e.g. "USA VPS".'),
                         \Filament\Forms\Components\Textarea::make('review_note')
                             ->label('Note to applicant (optional)')
                             ->rows(2),

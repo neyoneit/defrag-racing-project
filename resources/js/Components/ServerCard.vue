@@ -119,7 +119,7 @@ hr{
 }
 .server-card-wrapper{
     width:100%;
-    /* Card body is fully transparent — the thumbnail behind it
+    /* Card body is fully transparent - the thumbnail behind it
      * (covered + alpha-ramped via .server-background-overlay)
      * provides the entire visual surface. No second dark slab
      * stacking on top of the gradient = no hard line under the
@@ -154,7 +154,7 @@ hr{
     height: 100%;
     /* No dark slab anywhere. Just a short gradient at the bottom
      * edge of the thumbnail itself fading the image into the
-     * transparent card body — so text below it sits directly on
+     * transparent card body - so text below it sits directly on
      * the page background, not on any dark veil. */
     background: linear-gradient(180deg,
         rgba(0,0,0,0) 0%,

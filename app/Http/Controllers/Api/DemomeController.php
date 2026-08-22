@@ -21,7 +21,7 @@ class DemomeController extends Controller
     {
         $paused = SiteSetting::getBool('demome:paused', false);
 
-        // Map a RenderedVideo row to the queue payload shape — shared
+        // Map a RenderedVideo row to the queue payload shape - shared
         // between the normal `items` list and the dedicated `force_render`
         // list so they both ship filtered video_title/description/tags.
         $mapItem = function ($item) {
@@ -70,7 +70,7 @@ class DemomeController extends Controller
 
         // Normal queue: when paused, falls back to the old behavior of
         // serving ONLY priority=-1 items via items[] too. This is
-        // intentional redundancy with force_render[] above — an old
+        // intentional redundancy with force_render[] above - an old
         // bot binary that doesn't know about force_render[] still sees
         // force-render rows here and processes them. Newer bots dedupe
         // by id so the row isn't rendered twice.
@@ -212,7 +212,7 @@ class DemomeController extends Controller
      * a render completes. No-op for auto-rendered rows (nobody asked
      * for them, no expectation of feedback) or rows with no linked
      * user_id (Discord renders by non-registered authors). Failures
-     * intentionally do NOT notify — the user can't act on a failure,
+     * intentionally do NOT notify - the user can't act on a failure,
      * admin will retry from Filament.
      */
     protected function notifyRenderResult(RenderedVideo $renderedVideo, bool $success): void
@@ -598,7 +598,7 @@ class DemomeController extends Controller
      * Return the one-shot "reprocess this single Discord message" marker set
      * by an admin in Filament, and clear it. Unlike discordRestartMarker
      * (which makes the bot rescan from a point forwards), this targets one
-     * specific message and only that message — the bot fetches it directly
+     * specific message and only that message - the bot fetches it directly
      * by ID and processes whatever demo attachment(s) it carries.
      *
      * The stored ID is returned verbatim, no -1 rewind, because the bot
@@ -964,7 +964,7 @@ class DemomeController extends Controller
         // Build a RenderedVideo-like instance for metadata generation. We use
         // an unsaved RenderedVideo (not stdClass) because VideoMetadataService
         // has a strict RenderedVideo type hint and crashes the request with a
-        // 500 if you hand it anything else — which is exactly how the bot's
+        // 500 if you hand it anything else - which is exactly how the bot's
         // dedup short-circuit silently fell through on 2026-05-19 and caused
         // duplicate renders/uploads.
         $metaItem = new RenderedVideo([
@@ -980,7 +980,7 @@ class DemomeController extends Controller
 
         // Defense in depth: even if VideoMetadataService blows up for some
         // edge case (missing demo metadata, content filter quirk, etc.), we
-        // must still return the existing_video block — that is what the bot
+        // must still return the existing_video block - that is what the bot
         // relies on for dedup. Title/description/tags are nice-to-have.
         $safeMeta = function (callable $fn, $default) {
             try {
@@ -1146,7 +1146,7 @@ class DemomeController extends Controller
      * Rolling N-hour upload count + when the oldest upload in the window expires.
      * Bot uses this for a proactive throttle that respects YouTube's rolling 24h
      * channel-level cap (uploadLimitExceeded), which `uploadCountsToday` doesn't
-     * catch — that one resets at local midnight, YouTube's cap doesn't.
+     * catch - that one resets at local midnight, YouTube's cap doesn't.
      */
     public function recentUploadCount(Request $request)
     {

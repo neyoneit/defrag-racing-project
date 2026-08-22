@@ -133,7 +133,7 @@ class VideoMetadataService
         // started hiding these videos and putting the channel at risk. The map
         // page below carries the same demo, one click further in.
         // Skip the map-page URL when the map name itself contains a blocked
-        // term — surfacing the raw name as a clickable URL would defeat the
+        // term - surfacing the raw name as a clickable URL would defeat the
         // censoring above.
         if ($mapNameClean) {
             $desc .= "Map page: https://defrag.racing/maps/{$rawMapName}\n";

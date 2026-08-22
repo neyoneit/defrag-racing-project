@@ -85,7 +85,7 @@
     }
 
     const removeOption = (id) => {
-        // Works for both multi and single — just yanks the id out of the
+        // Works for both multi and single - just yanks the id out of the
         // selection. (selectOption with a single-mode component would
         // re-set the same id rather than remove it.)
         const idx = selectedOptions.value.indexOf(id);

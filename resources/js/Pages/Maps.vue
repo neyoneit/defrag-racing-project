@@ -213,7 +213,7 @@
             } catch (e) {
                 randomMap.value.copied = null;
             }
-            // Stay visible longer than the 4s before — user wants to
+            // Stay visible longer than the 4s before - user wants to
             // click through / re-copy after the auto-copy fires.
             setTimeout(() => {
                 if (randomMap.value.name === name) {

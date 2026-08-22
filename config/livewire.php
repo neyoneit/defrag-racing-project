@@ -67,7 +67,7 @@ return [
         // Force local temp disk so Filament FileUpload (which uses Livewire
         // temp upload) doesn't try to push pre-signed direct-to-S3 uploads
         // from the browser. Backblaze CORS isn't set up for that pattern.
-        // Demo upload is unaffected — it uses a separate FormData POST
+        // Demo upload is unaffected - it uses a separate FormData POST
         // through Laravel, not Livewire.
         'disk' => 'local',     // Example: 'local', 's3'              | Default: 'default'
         'rules' => null,       // Example: ['file', 'mimes:png,jpg']  | Default: ['required', 'file', 'max:12288'] (12MB)

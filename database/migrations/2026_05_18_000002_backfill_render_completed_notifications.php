@@ -46,7 +46,7 @@ return new class extends Migration
 
                     if ($existing->exists()) {
                         // Older render_completed rows (pre-subheadline) may be
-                        // missing the map link — patch it in opportunistically.
+                        // missing the map link - patch it in opportunistically.
                         if ($mapUrl) {
                             (clone $existing)
                                 ->whereNull('subheadline')

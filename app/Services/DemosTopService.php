@@ -86,7 +86,7 @@ class DemosTopService
         }
         $onlineDemos = $onlineDemosQuery->get();
 
-        // Pool 3: MAIN-attached online demos — included only as cluster members
+        // Pool 3: MAIN-attached online demos - included only as cluster members
         // (flagged is_main_attached = true). They never become representatives
         // (main records already appear in the main leaderboard table above).
         // Keeping them in the cluster lets us (a) propagate their registered
@@ -284,7 +284,7 @@ class DemosTopService
         };
 
         // Flagged candidates (TAS, pmove cheat, no_finish, client_finish=false,
-        // etc.) stay as their own singleton clusters — they must not poison a
+        // etc.) stay as their own singleton clusters - they must not poison a
         // real player's cluster or act as a timehistory seed. E.g. a fake TAS
         // run uploaded under a legitimate player's name would otherwise steal
         // all their attempts into its cluster and show up as the canonical
@@ -306,7 +306,7 @@ class DemosTopService
         // match (colored priority, unique plain fallback). Using this as an
         // extra union key means two demos resolving to the same profile
         // cluster together even when their on-demo player_name / q3df_login
-        // values don't match each other — which is the whole point of
+        // values don't match each other - which is the whole point of
         // approving aliases from the admin panel.
         // A shared resolver can be injected (e.g. by the full backfill) so the
         // global user/alias buckets are preloaded once across many maps instead
@@ -334,7 +334,7 @@ class DemosTopService
             // profile key ("user:X" or "mdd:Y") is used as a cluster union
             // key so every demo of the same profile ends up together.
             // Main-attached demos already carry $c->user from their Record
-            // relation — use that as the cluster key so they merge with the
+            // relation - use that as the cluster key so they merge with the
             // alias-resolved demos for the same profile (critical for the
             // MDD-time filter to see them as one cluster).
             $resolvedKey = $profileResolver->resolve($c, $priorityProfileKeys);
@@ -373,7 +373,7 @@ class DemosTopService
             // demo's record.user); otherwise fall back to the profile key
             // resolved from aliases. A "user:<id>" key resolves to a real
             // User; "mdd:<id>" resolves to nothing (unclaimed q3df profile
-            // — no local user to attach), so offline reps for unclaimed
+            // - no local user to attach), so offline reps for unclaimed
             // players stay userless but still cluster via mdd_id.
             $canonicalUser = null;
             $canonicalCountry = null;
@@ -395,7 +395,7 @@ class DemosTopService
                 $canonicalUser = \App\Models\User::find((int) substr($clusterProfileKey, 5));
             }
             // When we have a registered user, their profile country trumps
-            // anything parsed from filenames — keeps both online and offline
+            // anything parsed from filenames - keeps both online and offline
             // reps visually consistent (same flag) and matches main-table.
             if ($canonicalUser && !empty($canonicalUser->country) && $canonicalUser->country !== '_404') {
                 $canonicalCountry = $canonicalUser->country;
@@ -501,7 +501,7 @@ class DemosTopService
             if ($offlineRep = $buildRep($offlineIndices)) $representatives[] = $offlineRep;
         }
 
-        // Hand back the raw reps — caller owns sort + rank + pagination.
+        // Hand back the raw reps - caller owns sort + rank + pagination.
         return collect($representatives);
     }
 }

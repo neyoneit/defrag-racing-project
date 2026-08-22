@@ -267,7 +267,7 @@ const filteredAndSortedServers = computed(() => {
             //
             // defrag_gametype used to be read as that signal, on the
             // basis that 5 means "run + teamrun at once". It is 5 on
-            // every single server we know of — 76 of 76 in production —
+            // every single server we know of - 76 of 76 in production -
             // so it said nothing, and being OR'd into both the run and
             // teamrun cases it made those two tabs return the entire
             // list. The name keyword and type='mixed' are the signals
@@ -275,9 +275,9 @@ const filteredAndSortedServers = computed(() => {
             const isMixed = serverType === 'mixed' || serverName.includes('mixed');
 
             // Detect effective type: DB type first, then name-based detection.
-            // The type column is not a clean vocabulary — it carries
+            // The type column is not a clean vocabulary - it carries
             // 'teamruns' as well as 'team', and physics values (cpm, vq3)
-            // where a gametype belongs — so it is normalised first. Without
+            // where a gametype belongs - so it is normalised first. Without
             // that, the twelve servers typed by physics matched no tab at
             // all and the two 'teamruns' ones were invisible to the team tab.
             const effectiveType = effectiveGametype(server);
@@ -720,7 +720,7 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
                              88% alpha with a 4px backdrop blur. Solid
                              enough to read like a panel, but with a
                              slight bleed of the map thumbnail under
-                             it. Every Q3 colour code stays legible —
+                             it. Every Q3 colour code stays legible -
                              black ^0 as a dark silhouette, white ^7
                              bright, brights (yellow/cyan/magenta)
                              punchy. -->
@@ -1128,7 +1128,7 @@ const serverCount = computed(() => filteredAndSortedServers.value.length);
 </template>
 
 <style scoped>
-/* Save to Maplist button — same bubble style as CopyButton */
+/* Save to Maplist button - same bubble style as CopyButton */
 .save-maplist-btn {
     display: inline-flex;
     align-items: center;

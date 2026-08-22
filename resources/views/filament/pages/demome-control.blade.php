@@ -253,7 +253,7 @@
         <x-slot name="heading">Reprocess Single Discord Message</x-slot>
         <x-slot name="description">
             Force demome to fetch <strong>exactly one</strong> Discord message by ID and re-process the demo it contains.
-            Use this when one specific render failed or needs a re-run — unlike the Restart Marker above, this does not
+            Use this when one specific render failed or needs a re-run - unlike the Restart Marker above, this does not
             touch any other messages around it. One-shot: consumed by demome on the next cycle and cleared automatically.
             <br><br>
             <strong>Dedup behavior:</strong> if the demo from this message is already in the system (matched by file

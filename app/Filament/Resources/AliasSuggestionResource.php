@@ -133,7 +133,7 @@ class AliasSuggestionResource extends Resource
                     ->requiresConfirmation()
                     ->modalHeading('Approve Alias on Behalf of User')
                     ->modalDescription(fn (AliasSuggestion $record) =>
-                        "Add alias '{$record->alias}' to {$record->user->name}'s profile? This bypasses their consent — the user did not approve it themselves."
+                        "Add alias '{$record->alias}' to {$record->user->name}'s profile? This bypasses their consent - the user did not approve it themselves."
                     )
                     ->action(function (AliasSuggestion $record) {
                         $targetUser = $record->user;

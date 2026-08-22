@@ -43,7 +43,7 @@ class ProcessDemoJob implements ShouldQueue, ShouldBeUnique
         $currentStatus = $this->demo->status;
 
         if (!in_array($currentStatus, ['queued', 'uploaded', 'failed'])) {
-            Log::warning("Skipping demo processing — already in final state", [
+            Log::warning("Skipping demo processing - already in final state", [
                 'demo_id' => $this->demo->id,
                 'status' => $currentStatus,
             ]);
@@ -72,7 +72,7 @@ class ProcessDemoJob implements ShouldQueue, ShouldBeUnique
             ]);
 
         } catch (Throwable $e) {
-            // Retry on deadlock/lock timeout — these are transient DB conflicts
+            // Retry on deadlock/lock timeout - these are transient DB conflicts
             $isDeadlock = str_contains($e->getMessage(), 'Deadlock found')
                 || str_contains($e->getMessage(), 'Lock wait timeout');
 
@@ -103,7 +103,7 @@ class ProcessDemoJob implements ShouldQueue, ShouldBeUnique
                 'processing_output' => '[' . now()->format('Y-m-d H:i:s') . '] Processing failed: ' . $e->getMessage()
             ]);
 
-            // Do NOT re-throw for non-deadlock errors — job completes as "DONE"
+            // Do NOT re-throw for non-deadlock errors - job completes as "DONE"
             // The demo status is already set to 'failed' in the database
         }
     }
