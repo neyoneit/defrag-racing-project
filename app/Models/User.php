@@ -454,11 +454,19 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         $notification->save();
     }
 
+    /**
+     * An announcement reaches everybody. There is no opt-out.
+     *
+     * These carry rules, deadlines and changes to how the site works, and
+     * somebody who muted them two years ago and forgot is exactly the person
+     * a rule change catches out. The header strip already refuses to let an
+     * announcement be removed from it - see SettingsController, which forces
+     * `announcement` back into preview_system - so this was the last switch
+     * that could hide one, and it was the wrong one to offer.
+     *
+     * Header Preview still decides how loudly it arrives.
+     */
     public function systemNotifyAnnouncement($type, $before, $headline, $after, $url) {
-        if (! $this->defrag_news) {
-            return;
-        }
-
         $notification = new Notification();
         $notification->user_id = $this->id;
         $notification->type = $type;

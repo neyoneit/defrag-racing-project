@@ -58,12 +58,14 @@ class SettingsController extends Controller
 
         $user = $request->user();
 
-        $defrag_news = $request->input('defrag_news', false);
         $tournament_news = $request->input('tournament_news', false);
         $map_news = $request->input('map_news', false);
         $clan_notifications = $request->input('clan_notifications', false);
 
-        $user->defrag_news = $defrag_news;
+        // `defrag_news` is deliberately not read here any more. Announcements
+        // reach everybody, so the form no longer offers the switch - and a
+        // missing checkbox posts nothing, which would have written 0 for every
+        // account that saved this form.
         $user->tournament_news = $tournament_news;
         $user->map_news = $map_news;
         $user->clan_notifications = $clan_notifications;
