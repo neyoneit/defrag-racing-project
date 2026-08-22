@@ -1306,7 +1306,10 @@ watch(selectedPhysics, () => {
                             <line x1="12" y1="15" x2="12" y2="3"/>
                         </svg>
                         <span class="font-bold text-white whitespace-nowrap">{{ $t('Get the launcher') }}</span>
-                        <span class="hidden lg:inline text-blue-200/80 font-semibold text-xs">{{ $t('connect in one click, and more') }}</span>
+                        <!-- Same shape as the servers page, different half of
+                             the launcher: there it is connecting, here it is
+                             the watcher that sends your runs in as you play. -->
+                        <span class="hidden lg:inline text-blue-200/80 font-semibold text-xs">{{ $t('auto-backup every run, and more') }}</span>
                     </Link>
 
                     <!-- Limits Info (Right Side) -->
