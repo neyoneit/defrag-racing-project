@@ -362,25 +362,31 @@ export default {
                                 {{ $t('Config') }}
                             </button>
 
-                            <!-- Green and separate, because this is the half
-                                 people are actually looking for. "Same rules as
-                                 the servers" is the boring half; whether an
-                                 overbounce costs you the run is the question
-                                 that gets asked in Discord every week, and the
-                                 answer should be findable without reading a
-                                 sentence to the end.
+                            <!-- The two questions that get asked in Discord
+                                 every week. "Same rules as the servers" is a
+                                 true answer to neither, so both are answered
+                                 by name and where they will be seen.
 
-                                 The two abbreviations carry the markup: they
-                                 are what somebody scanning the page is looking
-                                 for, and they are the same two letters in every
-                                 language, so the emphasis survives translation
-                                 wherever the clause lands in the sentence. -->
-                            <!-- Not green: green is money on this page - the
+                                 Not green: green is money on this page - the
                                  pool, the donors, the donate button - and a
-                                 rules note has nothing to do with any of it. -->
+                                 rules note has nothing to do with any of it.
+
+                                 Both are written short on purpose. They are
+                                 chips, not sentences: the pair has to sit on
+                                 one line beside the buttons before it, and a
+                                 full sentence wrapped the row. -->
                             <span class="inline-flex items-center gap-1.5 h-7 flex-shrink-0 rounded-lg px-2.5 text-xs leading-none transition-colors cursor-default bg-sky-500/10 text-sky-100/90">
                                 <svg class="w-3.5 h-3.5 flex-shrink-0 text-sky-400" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" /></svg>
-                                <span v-html="$t('Overbounces (<strong>OB</strong>) and time resets (<strong>TR</strong>) are allowed.')"></span>
+                                {{ $t('OverBounces & Time Resets are allowed.') }}
+                            </span>
+
+                            <!-- The second question after overbounces. Comps
+                                 reads nothing off the servers, so a run made
+                                 alone counts exactly as much as one made in
+                                 front of people. -->
+                            <span class="inline-flex items-center gap-1.5 h-7 flex-shrink-0 rounded-lg px-2.5 text-xs leading-none transition-colors cursor-default bg-sky-500/10 text-sky-100/90">
+                                <svg class="w-3.5 h-3.5 flex-shrink-0 text-sky-400" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" /></svg>
+                                {{ $t('Online & Offline demos allowed.') }}
                             </span>
                         </div>
                     </div>

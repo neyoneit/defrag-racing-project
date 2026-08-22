@@ -901,7 +901,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs.
 
         <!-- Header Section -->
         <div class="relative pt-6 pb-8" style="z-index: 10;">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div>
                     <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">{{ $t('Settings') }}</h1>
                     <p class="text-sm text-gray-400">{{ $t('Customize your profile and preferences') }}</p>
@@ -909,7 +909,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs.
             </div>
         </div>
 
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 relative" style="z-index: 10;">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-6 relative" style="z-index: 10;">
             <div class="flex gap-6">
                 <!-- Left Sidebar Navigation -->
                 <div class="hidden lg:block w-48 shrink-0 sticky top-[120px] self-start">
@@ -2287,7 +2287,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs.
                                         {{ $t('Announcements') }}
                                         <span class="text-amber-400 text-xs font-normal">{{ $t('(always on)') }}</span>
                                     </p>
-                                    <p class="text-xs text-gray-400">{{ $t('Site news, rules and changelog. These reach everybody - use Header Preview below to decide how loudly.') }}</p>
+                                    <p class="text-xs text-gray-400">{{ $t('Site news, rules and changelog. These reach everybody, and an unread one holds the header strip until you have read it.') }}</p>
                                 </div>
                             </div>
                             <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">

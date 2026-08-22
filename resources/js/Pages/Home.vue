@@ -11,6 +11,7 @@
     import { Head, usePage } from '@inertiajs/vue3';
     import { computed, ref } from 'vue';
     import DefragliveContestBanner from '@/Components/DefragliveContestBanner.vue';
+    import CompsBanner from '@/Components/CompsBanner.vue';
     import { t } from '@/utils/i18n';
 
     const props = defineProps({
@@ -186,10 +187,18 @@
                         </div>
                     </div>
 
-                    <!-- Active DefragLive contest: prize + live countdown; hides
-                         itself automatically when no contest is running -->
-                    <div class="mt-3 max-w-3xl mx-auto">
+                    <!-- What is running right now and pays money. Both hide
+                         themselves when nothing is on, so the row disappears
+                         entirely rather than leaving a gap.
+
+                         Comps sits under the contest: it runs every week and
+                         the contest does not, so the rarer one leads. They are
+                         the same shape in two colours on purpose - two cards
+                         side by side in different shapes read as one card and
+                         one advert. -->
+                    <div class="mt-3 max-w-3xl mx-auto flex flex-col gap-3">
                         <DefragliveContestBanner variant="hero" />
+                        <CompsBanner variant="hero" />
                     </div>
                 </div>
             </div>
