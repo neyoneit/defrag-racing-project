@@ -689,8 +689,13 @@ const getYearProgress = (year, yearTotal) => {
                          below, halfway through a paragraph about developers who
                          left in 2024, where it read as background rather than
                          as the thing to know before asking for something. -->
-                    <div class="rounded-lg bg-white/[0.04] border border-white/10 p-4">
-                        <h3 class="text-lg font-semibold text-white mb-2">{{ $t('One person does all of this') }}</h3>
+                    <div class="rounded-xl bg-white/[0.07] border border-white/25 ring-1 ring-white/10 p-5 shadow-2xl">
+                        <h3 class="text-xl font-bold text-white mb-3 flex items-center gap-2">
+                            <svg class="w-6 h-6 flex-shrink-0 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                            </svg>
+                            {{ $t('One person does all of this') }}
+                        </h3>
                         <p class="text-sm leading-relaxed text-gray-300">
                             {{ $t('The site, the launcher, DemoMe and this page were built by me and by nobody else. So was DefragLive, apart from its early parts, which frog wrote. Nobody is paid and there is no team.') }}
                         </p>

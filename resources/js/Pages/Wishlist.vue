@@ -216,18 +216,25 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(currentLocale())
                         </p>
                         <!-- Said in the brightest text in the panel, because it
                              is the thing that sets the expectation. -->
-                        <p class="text-sm leading-relaxed text-gray-100 font-semibold mt-2">
-                            {{ $t('The site, the launcher, DemoMe and this board were built by me and by nobody else. So was DefragLive, apart from its early parts, which frog wrote. Nobody is paid and there is no team.') }}
+                        <!-- Where the money goes is answered inside the
+                             sentence that raises the question, rather than in a
+                             paragraph of its own further down. Somebody told
+                             that one person runs all of this wonders about it
+                             right there.
+
+                             Same heading as the donations page uses for the
+                             same statement, so the two read as one voice. -->
+                        <p class="text-sm font-bold text-white mt-3">
+                            {{ $t('One person does all of this') }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-100 font-semibold mt-1">
+                            {{ $t('The site, the launcher, DemoMe and this board were built by me and by nobody else. So was DefragLive, apart from its early parts, which frog wrote. Nobody is paid and there is no team (donations pay the running costs only, and not a cent of them reaches my pocket).') }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-400 mt-1.5">
+                            {{ $t('It goes the other way as well: things like the DefragLive contest prizes come out of my own pocket.') }}
                         </p>
                         <p class="text-sm leading-relaxed text-gray-400 mt-1.5">
                             {{ $t('Votes decide the order, but everything on this list waits for the same pair of hands. So please be patient with anything you ask for.') }}
-                        </p>
-                        <!-- Same answer as the donations page gives, because
-                             the question follows anybody who is told one person
-                             runs the whole thing. -->
-                        <p class="text-sm leading-relaxed text-gray-400 mt-1.5">
-                            {{ $t('No donation goes into my pocket. Not a cent of it. It pays the running costs and nothing else.') }}
-                            {{ $t('It goes the other way as well: things like the DefragLive contest prizes come out of my own pocket.') }}
                         </p>
                         <p class="text-sm text-gray-500 italic mt-2">
                             {{ $t('Yours truly,') }} <Link href="/profile/8" class="not-italic font-semibold hover:text-gray-300 transition-colors">neyo</Link>
