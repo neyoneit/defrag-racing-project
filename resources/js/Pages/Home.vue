@@ -114,7 +114,7 @@
 
         <!-- Hero Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-2">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="text-center mb-4">
                     <h1 class="text-2xl md:text-3xl font-black text-white mb-4 leading-tight">
                         {{ $t('Push Your Speed') }} <span class="text-blue-500">{{ $t('To The Limit') }}</span>
@@ -196,7 +196,7 @@
         </div>
 
         <!-- Main Content Sections -->
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 pb-4">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 space-y-6 pb-4">
 
             <!-- Row 1: Active Servers + Recent World Records + Top Players + Tournaments -->
             <div class="grid grid-cols-1 lg:grid-cols-[1.2fr_1.5fr_1fr_1fr] gap-6">
