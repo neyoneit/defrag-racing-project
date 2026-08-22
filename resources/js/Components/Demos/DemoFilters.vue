@@ -270,11 +270,11 @@ const openDatePicker = (event) => {
 </script>
 
 <template>
-    <!-- relative z-50 on the panel itself. The tables below carry
-         backdrop-blur, which makes each of them a stacking context of its own,
-         so a z-index inside this panel could not reach over them. Raising the
-         panel raises everything it contains with it. -->
-    <div class="relative z-50 bg-black/40 backdrop-blur-sm rounded-xl p-3 mb-3 shadow-2xl border border-white/5 space-y-2">
+    <!-- No frame of its own: it lives inside the list panel, under the tabs.
+         relative z-50 stays, because the table below carries backdrop-blur and
+         makes a stacking context, so without it the suggestion lists paint
+         underneath the rows. -->
+    <div class="relative z-50 px-3 py-2.5 border-b border-white/5 space-y-2">
         <!-- Online / offline, then how far the demo got. -->
         <div class="flex flex-wrap gap-1.5 items-center">
             <button

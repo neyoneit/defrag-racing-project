@@ -1944,48 +1944,54 @@ watch(selectedPhysics, () => {
 
                 <!-- One panel for both lists. It used to be written out twice,
                      once above each table, and the two copies had drifted. -->
-                <DemoFilters
-                    v-if="!demosLoading"
-                    :filters="filterState"
-                    :counts="activeList === 'mine' ? demoCountsComputed : browseCountsComputed"
-                    :physics-options="physicsOptions || []"
-                    :countries="countries || { codes: [], other: 0, none: 0 }"
-                    :is-admin="isAdminUser"
-                    :list="activeList"
-                    @change="applyFilters"
-                />
+                <!-- Tabs, filters and table are one panel. The tabs used to
+                     float above it as a shape of their own, which read as a
+                     control belonging to the page rather than to the list
+                     underneath it. The active tab is the list's title now, so
+                     the headings that repeated it are gone. -->
+                <div v-if="!demosLoading" class="bg-black/40 backdrop-blur-sm rounded-xl shadow-2xl border border-white/5">
+                    <div class="flex flex-wrap items-end gap-1 px-3 pt-2 border-b border-white/5">
+                        <button
+                            type="button"
+                            @click="changeList('all')"
+                            class="inline-flex items-center gap-2 h-9 px-3 text-sm font-semibold rounded-t-lg border-b-2 -mb-px transition-colors"
+                            :class="activeList === 'all'
+                                ? 'bg-white/[0.05] text-white border-blue-500'
+                                : 'text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/[0.03]'"
+                        >
+                            {{ $t('All Demos') }}
+                            <span class="text-xs font-normal tabular-nums" :class="activeList === 'all' ? 'text-blue-300' : 'text-gray-500'">
+                                {{ browseCountsComputed.all.toLocaleString() }}
+                            </span>
+                        </button>
+                        <button
+                            v-if="$page.props.auth.user"
+                            type="button"
+                            @click="changeList('mine')"
+                            class="inline-flex items-center gap-2 h-9 px-3 text-sm font-semibold rounded-t-lg border-b-2 -mb-px transition-colors"
+                            :class="activeList === 'mine'
+                                ? 'bg-white/[0.05] text-white border-blue-500'
+                                : 'text-gray-400 border-transparent hover:text-gray-200 hover:bg-white/[0.03]'"
+                        >
+                            {{ $t('My Uploads') }}
+                            <span class="text-xs font-normal tabular-nums" :class="activeList === 'mine' ? 'text-blue-300' : 'text-gray-500'">
+                                {{ demoCountsComputed.all.toLocaleString() }}
+                            </span>
+                        </button>
+                    </div>
 
-                <!-- One list at a time. The page used to stack both, so a person
-                     who wanted to watch somebody else's demo had to scroll past
-                     their own upload history first. -->
-                <div v-if="!demosLoading" class="flex flex-wrap items-center gap-2 mb-3">
-                    <button
-                        type="button"
-                        @click="changeList('all')"
-                        class="inline-flex items-center gap-1.5 h-8 rounded-lg px-3 text-sm font-medium transition-colors"
-                        :class="activeList === 'all'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
-                    >
-                        {{ $t('All Demos') }}
-                        <span class="opacity-75 text-xs">{{ browseCountsComputed.all.toLocaleString() }}</span>
-                    </button>
-                    <button
-                        v-if="$page.props.auth.user"
-                        type="button"
-                        @click="changeList('mine')"
-                        class="inline-flex items-center gap-1.5 h-8 rounded-lg px-3 text-sm font-medium transition-colors"
-                        :class="activeList === 'mine'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
-                    >
-                        {{ $t('My Uploads') }}
-                        <span class="opacity-75 text-xs">{{ demoCountsComputed.all.toLocaleString() }}</span>
-                    </button>
-                </div>
+                    <DemoFilters
+                        :filters="filterState"
+                        :counts="activeList === 'mine' ? demoCountsComputed : browseCountsComputed"
+                        :physics-options="physicsOptions || []"
+                        :countries="countries || { codes: [], other: 0, none: 0 }"
+                        :is-admin="isAdminUser"
+                        :list="activeList"
+                        @change="applyFilters"
+                    />
 
-                <!-- Your Uploads Section (authenticated users only) -->
-                <div v-if="!demosLoading && activeList === 'mine' && $page.props.auth.user && userDemos" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5 mb-8">
+                <!-- Your Uploads -->
+                <div v-if="activeList === 'mine' && $page.props.auth.user && userDemos" class="p-4">
                     <!-- Show message when no demos uploaded at all -->
                     <div v-if="demoCountsComputed.all === 0" class="text-center py-12">
                         <svg class="w-16 h-16 mx-auto text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1994,12 +2000,7 @@ watch(selectedPhysics, () => {
                         <p class="text-gray-400 text-lg">{{ $t("You haven't uploaded any demos yet.") }}</p>
                     </div>
 
-                    <!-- Show title, filters and table when demos exist -->
                     <template v-else>
-                        <h3 class="text-xl font-semibold text-gray-200 mb-4">
-                            {{ $t('Your Uploaded Demos') }}
-                        </h3>
-
                         <div v-if="filteredDemos.length === 0" class="text-gray-400 text-center py-8">
                             {{ $t('No demos match the selected filters.') }}
                         </div>
@@ -2305,11 +2306,8 @@ watch(selectedPhysics, () => {
                     </template>
                 </div>
 
-                <!-- Browse All Demos Section (for everyone) -->
-                <div v-if="!demosLoading && activeList === 'all' && publicDemos" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5">
-                    <h3 class="text-xl font-semibold text-gray-200 mb-4">
-                        {{ $t('Browse All Demos') }}
-                    </h3>
+                <!-- All Demos -->
+                <div v-if="activeList === 'all' && publicDemos" class="p-4">
 
                     <div v-if="!publicDemos.data || publicDemos.data.length === 0" class="text-gray-400">
                         {{ $t('No demos available yet.') }}
@@ -2519,6 +2517,7 @@ watch(selectedPhysics, () => {
                             {{ $t('Next') }}
                         </button>
                     </div>
+                </div>
                 </div>
             </div>
         </div>
