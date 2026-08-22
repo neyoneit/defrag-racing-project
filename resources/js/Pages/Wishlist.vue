@@ -202,15 +202,19 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(currentLocale())
                     </h1>
 
                     <div class="flex-1 min-w-[20rem] bg-black/40 backdrop-blur-sm rounded-xl border border-white/10 px-4 py-3 shadow-2xl">
+                        <!-- Why the board exists, in the words of the person it
+                             exists for. It used to say "ask for something and
+                             vote on it", which is what any board does and says
+                             nothing about this one. -->
                         <p class="text-sm leading-relaxed text-gray-300">
-                            {{ $t('Ask for something to be added or changed, and vote on what other people asked for. The more votes a request has, the sooner it gets done.') }}
+                            {{ $t('Requests used to reach me as private messages on Discord and I often lost track of them. This is where they go now: ask here, it stays written down, and everybody can see what has already been asked for and vote on it.') }}
                         </p>
-                        <!-- The one thing to know before asking. Votes decide
-                             the order, but there is one pair of hands doing the
-                             work, and a board that does not say so sets an
-                             expectation it cannot meet. -->
+                        <!-- Said in the brightest text in the panel, because it
+                             is the thing that sets the expectation. -->
+                        <p class="text-sm leading-relaxed text-gray-100 font-semibold mt-2">
+                            {{ $t('Everything you see on this site was built by me and by nobody else. The site, the launcher, DefragLive, DemoMe and this board. Nobody is paid and there is no team.') }}
+                        </p>
                         <p class="text-sm leading-relaxed text-gray-400 mt-1.5">
-                            {{ $t('The site, the launcher, DefragLive, DemoMe and this board are built and run by me alone. Nobody is paid and there is no team behind it.') }}
                             {{ $t('Votes decide the order, but everything on this list waits for the same pair of hands. So please be patient with anything you ask for.') }}
                             <span class="text-gray-500 italic">
                                 {{ $t('Yours truly,') }} <Link href="/profile/8" class="not-italic font-semibold hover:text-gray-300 transition-colors">neyo</Link>
