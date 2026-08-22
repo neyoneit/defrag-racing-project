@@ -2287,7 +2287,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs.
                                         {{ $t('Announcements') }}
                                         <span class="text-amber-400 text-xs font-normal">{{ $t('(always on)') }}</span>
                                     </p>
-                                    <p class="text-xs text-gray-400">{{ $t('Site news, rules and changelog. These reach everybody - use Header Preview below to decide how loudly.') }}</p>
+                                    <p class="text-xs text-gray-400">{{ $t('Site news, rules and changelog. These reach everybody, and an unread one holds the header strip until you have read it.') }}</p>
                                 </div>
                             </div>
                             <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">
