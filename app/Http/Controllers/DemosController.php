@@ -319,7 +319,18 @@ class DemosController extends Controller
             $query->where($col('time_ms'), '<=', $f['time_max']);
         }
 
-        if ($f['country'] !== '') {
+        if ($f['country'] === self::COUNTRY_NONE) {
+            $query->where(function ($q) use ($col) {
+                $q->whereNull($col('country'))->orWhere($col('country'), '');
+            });
+        } elseif ($f['country'] === self::COUNTRY_OTHER) {
+            // Everything the site cannot name. 6 838 demos carry a country
+            // that is not a country, and dropping them from the list without
+            // this would have made them unreachable.
+            $query->whereNotNull($col('country'))
+                ->where($col('country'), '!=', '')
+                ->whereNotIn($col('country'), $this->demoCountries()['codes']);
+        } elseif ($f['country'] !== '') {
             $query->where($col('country'), $f['country']);
         }
 
@@ -567,27 +578,54 @@ class DemosController extends Controller
         );
     }
 
+    /** The country filter, for a demo whose country is not a country. */
+    private const COUNTRY_OTHER = '__other__';
+
+    /** The country filter, for a demo that names no country at all. */
+    private const COUNTRY_NONE = '__none__';
+
     /**
-     * Countries that appear on a demo, for the filter panel.
+     * Countries that appear on a demo, and how many demos fall outside them.
      *
-     * Two letters only. The column holds whatever the demo said, and 21 of the
-     * 240 distinct values are not countries at all - "-", "--", "-C", "R]",
-     * "'". Together they cover 285 demos out of 296 397, so nothing worth
-     * filtering by is lost and the list stops looking broken.
+     * The column holds whatever the demo said, and a lot of it is not a
+     * country. Of 240 distinct values, 135 are real countries covering 289 844
+     * demos; the other 105 - "AB", "WH", "R]", "--", "'" - cover 6 838. A
+     * further 72 709 demos name no country at all.
+     *
+     * intl decides what is real: getDisplayRegion hands the code straight back
+     * when it does not know it. Doing that here rather than in the panel keeps
+     * the list and the filter agreeing on the same 135 codes, which is what
+     * makes an "other" bucket possible at all.
      */
     private function demoCountries(): array
     {
-        return Cache::remember('demo_filter_countries_v2', 86400, fn () => UploadedDemo::query()
-            ->select('country')
-            ->whereNotNull('country')
-            ->whereRaw("country REGEXP '^[A-Za-z]{2}$'")
-            ->distinct()
-            ->orderBy('country')
-            ->pluck('country')
-            ->map(fn ($code) => strtoupper($code))
-            ->unique()
-            ->values()
-            ->all());
+        return Cache::remember('demo_filter_countries_v3', 86400, function () {
+            $codes = UploadedDemo::query()
+                ->select('country')
+                ->whereNotNull('country')
+                ->where('country', '!=', '')
+                ->distinct()
+                ->pluck('country')
+                ->map(fn ($code) => strtoupper(trim($code)))
+                ->unique();
+
+            $real = $codes
+                ->filter(fn ($code) => preg_match('/^[A-Z]{2}$/', $code)
+                    && \Locale::getDisplayRegion('-' . $code, 'en') !== $code)
+                ->sort()
+                ->values();
+
+            return [
+                'codes' => $real->all(),
+                'other' => UploadedDemo::whereNotNull('country')
+                    ->where('country', '!=', '')
+                    ->whereNotIn('country', $real->all())
+                    ->count(),
+                'none' => UploadedDemo::where(function ($q) {
+                    $q->whereNull('country')->orWhere('country', '');
+                })->count(),
+            ];
+        });
     }
 
     /** Physics values that appear on a demo, in alphabetical order. */

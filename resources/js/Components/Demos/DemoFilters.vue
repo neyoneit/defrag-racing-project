@@ -8,7 +8,8 @@ const props = defineProps({
     filters: { type: Object, required: true },
     counts: { type: Object, default: () => ({}) },
     physicsOptions: { type: Array, default: () => [] },
-    countries: { type: Array, default: () => [] },
+    // { codes: [...], other: n, none: n }
+    countries: { type: Object, default: () => ({ codes: [], other: 0, none: 0 }) },
     isAdmin: { type: Boolean, default: false },
     list: { type: String, default: 'all' },
 });
@@ -145,19 +146,27 @@ const applyTimes = () => set({
 
 // --- Country --------------------------------------------------------------
 
-// The column holds whatever the demo said, so codes like AB and AH turn up
-// that are not countries. Only the ones the shared list has a name for are
-// offered, which also gives them a flag and a name in the reader's language.
+// The server decides which codes are real countries, so that the list and the
+// filter agree. Everything it left out is still reachable through the two
+// buckets at the bottom: one for a country that is not a country, one for a
+// demo that names none.
+const COUNTRY_OTHER = '__other__';
+const COUNTRY_NONE = '__none__';
+
 const countryOpen = ref(false);
 const countrySearch = ref('');
 
 const countryOptions = computed(() => {
     const names = countryList();
-    return props.countries
-        .filter((code) => names[code])
-        .map((code) => ({ code, name: names[code] }))
+    return (props.countries.codes || [])
+        .map((code) => ({ code, name: names[code] || code }))
         .sort((a, b) => a.name.localeCompare(b.name));
 });
+
+const countryBuckets = computed(() => [
+    { code: COUNTRY_OTHER, name: t('Other country'), count: props.countries.other || 0 },
+    { code: COUNTRY_NONE, name: t('No country'), count: props.countries.none || 0 },
+].filter((bucket) => bucket.count > 0));
 
 const shownCountries = computed(() => {
     const needle = countrySearch.value.trim().toLowerCase();
@@ -167,8 +176,16 @@ const shownCountries = computed(() => {
     );
 });
 
-const chosenCountryName = computed(
-    () => countryOptions.value.find((c) => c.code === props.filters.country)?.name || ''
+const chosenCountryName = computed(() => {
+    const chosen = props.filters.country;
+    if (!chosen) return '';
+    return countryOptions.value.find((c) => c.code === chosen)?.name
+        || countryBuckets.value.find((b) => b.code === chosen)?.name
+        || chosen;
+});
+
+const isRealCountry = computed(
+    () => !!props.filters.country && props.filters.country !== COUNTRY_OTHER && props.filters.country !== COUNTRY_NONE
 );
 
 const chooseCountry = (code) => {
@@ -407,7 +424,7 @@ const openDatePicker = (event) => {
                     :class="fieldClass"
                 >
                     <img
-                        v-if="filters.country"
+                        v-if="isRealCountry"
                         :src="`/images/flags/${filters.country}.png`"
                         alt=""
                         class="w-4 h-3 rounded-sm flex-shrink-0"
@@ -456,6 +473,23 @@ const openDatePicker = (event) => {
                             />
                             <span class="truncate">{{ option.name }}</span>
                         </button>
+
+                        <!-- Everything the list above cannot name, still
+                             reachable rather than quietly dropped. -->
+                        <div v-if="!countrySearch && countryBuckets.length" class="border-t border-gray-700 mt-1 pt-1">
+                            <button
+                                v-for="bucket in countryBuckets"
+                                :key="bucket.code"
+                                type="button"
+                                @click="chooseCountry(bucket.code)"
+                                class="flex items-center gap-2 w-full text-left px-2.5 py-1.5 text-xs hover:bg-gray-700"
+                                :class="filters.country === bucket.code ? 'bg-blue-600/30 text-blue-100' : 'text-gray-300'"
+                            >
+                                <span class="w-4 h-3 flex-shrink-0 rounded-sm bg-gray-700/60"></span>
+                                <span class="truncate">{{ bucket.name }}</span>
+                                <span class="ml-auto text-gray-500">{{ bucket.count.toLocaleString() }}</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

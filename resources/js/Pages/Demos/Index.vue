@@ -28,7 +28,7 @@ const props = defineProps({
     // One filter set for both tabs, read and normalised by the controller.
     filters: Object,
     filtersNarrowed: Boolean,
-    countries: Array,
+    countries: Object,
     physicsOptions: Array,
 });
 const fileInput = ref(null);
@@ -1923,7 +1923,7 @@ watch(selectedPhysics, () => {
                     :filters="filterState"
                     :counts="activeList === 'mine' ? demoCountsComputed : browseCountsComputed"
                     :physics-options="physicsOptions || []"
-                    :countries="countries || []"
+                    :countries="countries || { codes: [], other: 0, none: 0 }"
                     :is-admin="isAdminUser"
                     :list="activeList"
                     @change="applyFilters"
