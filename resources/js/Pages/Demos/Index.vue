@@ -1305,7 +1305,7 @@ watch(selectedPhysics, () => {
                             <line x1="12" y1="15" x2="12" y2="3"/>
                         </svg>
                         <span class="font-bold text-white whitespace-nowrap">{{ $t('Get the launcher') }}</span>
-                        <span class="hidden sm:inline text-blue-200/80 font-semibold text-xs">{{ $t('auto backup demos + many more features') }}</span>
+                        <span class="hidden lg:inline text-blue-200/80 font-semibold text-xs">{{ $t('connect in one click, and more') }}</span>
                     </Link>
 
                     <!-- Limits Info (Right Side) -->
