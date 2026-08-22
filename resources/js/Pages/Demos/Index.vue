@@ -1277,11 +1277,11 @@ watch(selectedPhysics, () => {
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-8">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
-                <!-- items-start, not items-center. The limit cards on the right
-                     are two rows tall, and centring against them pushed the
-                     title down the page - so Demos sat lower than every other
-                     section, which all top-align their heading. -->
-                <div class="flex justify-between items-start flex-wrap gap-4">
+                <!-- Everything in the header is one line tall now - the two
+                     limit cards used to be two rows, which is why this used to
+                     top-align. It still wraps on its own when the window is too
+                     narrow to hold the lot. -->
+                <div class="flex justify-between items-center flex-wrap gap-3">
                     <!-- Title, what the page is for, and the credit, on one
                          line. They wrap onto the next line on their own when
                          the window is too narrow to hold them. Aligned on the
@@ -1310,9 +1310,17 @@ watch(selectedPhysics, () => {
                     </Link>
 
                     <!-- Limits Info (Right Side) -->
-                    <div class="flex flex-wrap gap-2 items-start">
+                    <!-- One line each. The long sentence that used to sit under
+                         the numbers is the hover text now, which is what made
+                         these two rows tall and pushed the whole header down. -->
+                    <div class="flex flex-wrap gap-2 items-center">
                         <!-- Download Limit -->
-                        <div v-if="localDownloadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border backdrop-blur-sm" :class="localDownloadLimitInfo.isGuest ? 'bg-blue-900/20 border-blue-500/30' : localDownloadLimitInfo.remaining === 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-white/[0.06] border-white/10'">
+                        <div
+                            v-if="localDownloadLimitInfo"
+                            class="rounded-lg px-3 py-2 shadow-xl border backdrop-blur-sm text-xs whitespace-nowrap"
+                            :class="localDownloadLimitInfo.isGuest ? 'bg-blue-900/20 border-blue-500/30' : localDownloadLimitInfo.remaining === 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-white/[0.06] border-white/10'"
+                            :title="localDownloadLimitInfo.isGuest ? $t('Unlock more downloads after') : $t('Downloads limited due to bandwidth costs.')"
+                        >
                             <div class="flex items-center gap-2">
                                 <svg v-if="localDownloadLimitInfo.isGuest" class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -1323,39 +1331,53 @@ watch(selectedPhysics, () => {
                                 <svg v-else class="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
-                                <div v-if="localDownloadLimitInfo.isGuest" class="text-xs">
+
+                                <template v-if="localDownloadLimitInfo.isGuest">
                                     <span class="text-blue-200 font-semibold">{{ localDownloadLimitInfo.remaining }}/{{ localDownloadLimitInfo.limit }}</span>
-                                    <span class="text-blue-300/80 ml-1">{{ $t('downloads left today') }}</span>
-                                    <div class="text-sm text-blue-200 font-semibold mt-1">{{ $t('Unlock more downloads after') }} <a href="/login" class="underline hover:text-white transition-colors">{{ $t('login') }}</a>/<a href="/register" class="underline hover:text-white transition-colors">{{ $t('register') }}</a>. <a href="/donations" class="underline hover:text-white transition-colors">{{ $t('Donate') }}</a> {{ $t('for unlimited.') }}</div>
-                                </div>
-                                <div v-else-if="localDownloadLimitInfo.remaining === 0" class="text-xs">
+                                    <span class="text-blue-300/80">{{ $t('downloads left today') }}</span>
+                                    <a href="/login" class="text-blue-200 font-semibold underline hover:text-white transition-colors">{{ $t('login') }}</a>
+                                    <span class="text-blue-300/50">/</span>
+                                    <a href="/register" class="text-blue-200 font-semibold underline hover:text-white transition-colors">{{ $t('register') }}</a>
+                                </template>
+
+                                <template v-else-if="localDownloadLimitInfo.remaining === 0">
                                     <span class="text-red-200 font-semibold">{{ $t('Limit reached') }}</span>
-                                </div>
-                                <div v-else class="text-xs">
+                                    <a href="/donations" class="text-red-200 underline hover:text-white transition-colors">{{ $t('Donate') }}</a>
+                                </template>
+
+                                <template v-else>
                                     <span class="text-green-400 font-semibold">{{ localDownloadLimitInfo.remaining }}</span>
-                                    <span class="text-gray-300 mx-1">/</span>
-                                    <span class="text-gray-300">{{ localDownloadLimitInfo.limit }}</span>
-                                    <span class="text-gray-400 ml-1">{{ $t('downloads left today') }}</span>
-                                    <div class="text-gray-400 mt-1">{{ $t('Downloads limited due to bandwidth costs.') }} <a href="/donations" class="underline hover:text-white transition-colors">{{ $t('Donate') }}</a> {{ $t('for unlimited.') }}</div>
-                                </div>
+                                    <span class="text-gray-300">/{{ localDownloadLimitInfo.limit }}</span>
+                                    <span class="text-gray-400">{{ $t('downloads left today') }}</span>
+                                    <a href="/donations" class="text-gray-300 underline hover:text-white transition-colors">{{ $t('Donate') }}</a>
+                                </template>
                             </div>
                         </div>
+
                         <!-- Upload Limit -->
-                        <div v-if="localUploadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border backdrop-blur-sm" :class="localUploadLimitInfo.isGuest ? 'bg-purple-900/20 border-purple-500/30' : 'bg-white/[0.06] border-white/10'">
+                        <div
+                            v-if="localUploadLimitInfo"
+                            class="rounded-lg px-3 py-2 shadow-xl border backdrop-blur-sm text-xs whitespace-nowrap"
+                            :class="localUploadLimitInfo.isGuest ? 'bg-purple-900/20 border-purple-500/30' : 'bg-white/[0.06] border-white/10'"
+                            :title="localUploadLimitInfo.isGuest ? $t('Unlock unlimited uploads after') : $t('Uploads are free, no bandwidth cost.')"
+                        >
                             <div class="flex items-center gap-2">
                                 <svg class="w-4 h-4 flex-shrink-0" :class="localUploadLimitInfo.isGuest ? 'text-purple-400' : 'text-green-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"></path>
                                 </svg>
-                                <div v-if="localUploadLimitInfo.isGuest" class="text-xs">
+
+                                <template v-if="localUploadLimitInfo.isGuest">
                                     <span class="text-purple-200 font-semibold">{{ localUploadLimitInfo.remaining }}/{{ localUploadLimitInfo.limit }}</span>
-                                    <span class="text-purple-300/80 ml-1">{{ $t('uploads left today') }}</span>
-                                    <div class="text-sm text-purple-200 font-semibold mt-1">{{ $t('Unlock unlimited uploads after') }} <a href="/login" class="underline hover:text-white transition-colors">{{ $t('login') }}</a>/<a href="/register" class="underline hover:text-white transition-colors">{{ $t('register') }}</a>.</div>
-                                </div>
-                                <div v-else class="text-xs">
+                                    <span class="text-purple-300/80">{{ $t('uploads left today') }}</span>
+                                    <a href="/login" class="text-purple-200 font-semibold underline hover:text-white transition-colors">{{ $t('login') }}</a>
+                                    <span class="text-purple-300/50">/</span>
+                                    <a href="/register" class="text-purple-200 font-semibold underline hover:text-white transition-colors">{{ $t('register') }}</a>
+                                </template>
+
+                                <template v-else>
                                     <span class="text-green-400 font-semibold">{{ $t('Unlimited') }}</span>
-                                    <span class="text-gray-400 ml-1">{{ $t('uploads') }}</span>
-                                    <div class="text-gray-500 mt-0.5">{{ $t('Uploads are free, no bandwidth cost.') }}</div>
-                                </div>
+                                    <span class="text-gray-400">{{ $t('uploads') }}</span>
+                                </template>
                             </div>
                         </div>
                     </div>
