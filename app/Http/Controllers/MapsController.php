@@ -188,7 +188,7 @@ class MapsController extends Controller
      * name/q3df_colored/q3df_plain (transitive OR match).
      *
      * Query params:
-     *   demo_id : int — UploadedDemo.id to use as seed
+     *   demo_id : int - UploadedDemo.id to use as seed
      *   physics : 'vq3' | 'cpm'
      */
     /**
@@ -571,7 +571,7 @@ class MapsController extends Controller
 
         // Profile mode: main record has no attached demo of its own. Use
         // the profile identity (registered user_id or unclaimed mdd_id) as
-        // the virtual seed — no real demo to exclude, so every online
+        // the virtual seed - no real demo to exclude, so every online
         // cluster member shows in the drawer.
         if (!$demoId && ($userId || $mddId)) {
             $profileKey = $userId ? ('user:' . $userId) : ('mdd:' . $mddId);
@@ -625,8 +625,8 @@ class MapsController extends Controller
         }
 
         // History filtering:
-        //   1. Exclude the seed demo itself — main row already shows it
-        //   2. Filter by is_online matching the seed — Demos Top shows
+        //   1. Exclude the seed demo itself - main row already shows it
+        //   2. Filter by is_online matching the seed - Demos Top shows
         //      online and offline reps as separate rows, each with its own
         //      time history drawer of the same origin type (so an offline
         //      rep's drawer doesn't pull in online attempts and vice versa)
@@ -635,7 +635,7 @@ class MapsController extends Controller
         //      record's row instead, which is the only row that can claim it
         //      without putting a faster time underneath a slower one.
         // Distinct demo IDs are all shown: two demos with identical time_ms
-        // or file_hash but different demo.id are intentionally kept — user
+        // or file_hash but different demo.id are intentionally kept - user
         // wants to see every attempt as long as it's a separate record.
         $seedId = (int) $seed->id;
         $seedIsOnline = $seed->gametype && str_starts_with($seed->gametype, 'm');
@@ -676,7 +676,7 @@ class MapsController extends Controller
             return response()->json(['history' => [], 'signals' => 0]);
         }
 
-        // Signal count against the seed — how confidently did we group this?
+        // Signal count against the seed - how confidently did we group this?
         $maxSignals = 0;
         foreach ($cluster as $d) {
             if ((int) $d->id === (int) $seed->id) continue;
@@ -685,7 +685,7 @@ class MapsController extends Controller
         }
 
         // The seed demo (the row the user clicked) acts as the canonical
-        // representation of the virtual player — all history rows inherit its
+        // representation of the virtual player - all history rows inherit its
         // avatar/country so the leaderboard tells a consistent story.
         //
         // Using the seed (not cluster->first) because we just filtered out the
@@ -693,7 +693,7 @@ class MapsController extends Controller
         // already has the authoritative identity we want to mirror.
         //
         // IMPORTANT: only promote record.user (registered q3df account), never
-        // uploaded_demo.user (the uploader — could be anyone, e.g. admin bulk
+        // uploaded_demo.user (the uploader - could be anyone, e.g. admin bulk
         // uploading someone else's demos).
         $canonicalUser = $seed->record?->user;
         $canonicalCountry = $seed->country
@@ -706,7 +706,7 @@ class MapsController extends Controller
 
         // Return MapRecord-compatible shape per entry so the frontend can reuse
         // the same <MapRecord> component (same chips: download, render, YouTube,
-        // report, flag — all for free).
+        // report, flag - all for free).
         $history = $cluster->map(function ($d) use ($canonicalUser, $canonicalCountry, $canonicalName, $validityFlags) {
             // Online-origin demos carry an 'm' prefix on gametype (mdf/mfs/mfc).
             // record_id alone is wrong: a legit mdf demo with no main-record
@@ -973,7 +973,7 @@ class MapsController extends Controller
         $allCpmFlaggedIds = RecordFlag::where('status', 'approved')->whereNotNull('record_id')
             ->whereIn('record_id', $allCpmRecordsByTime)->pluck('record_id')->unique()->toArray();
         // Also check flags via demos. Group by record_id so multiple demos
-        // pointing to the same record are all considered (defensive — the
+        // pointing to the same record are all considered (defensive - the
         // 1-record-1-demo guard in DemoAutoAssigner enforces uniqueness for
         // new assignments, but legacy duplicates may still exist).
         $cpmDemoFlaggedRecordIds = [];
@@ -1128,14 +1128,14 @@ class MapsController extends Controller
 
         // Attach map scores (map_score, reltime, base_score, rank_multiplier) from
         // player_map_scores. Done AFTER the unified-leaderboard swap so the
-        // replaced paginator gets scores too — otherwise demos top / oldtop
+        // replaced paginator gets scores too - otherwise demos top / oldtop
         // toggles wiped scores from the main MDD records they pushed into the
         // unified collection.
         $this->attachMapScores($cpmRecords, $map->name, 'cpm', $gametype);
         $this->attachMapScores($vq3Records, $map->name, 'vq3', $gametype);
 
         // Redirect clamps must respect every source that shares the page
-        // parameter — main records, oldtop, and Demos Top (grouped offline).
+        // parameter - main records, oldtop, and Demos Top (grouped offline).
         // Old logic compared against $cpmRecords->lastPage() only, so a map
         // with e.g. 50 main records (1 page) and 300 Demos Top reps (6 pages)
         // would silently bounce every Demos Top page > 1 back to page 1.
@@ -1163,11 +1163,11 @@ class MapsController extends Controller
 
         // Precompute time-history cluster metadata per demo for this map.
         // Frontend shows these counts/signal strengths on the leaderboard
-        // *without* having to open each drawer — mirrors what the time-history
+        // *without* having to open each drawer - mirrors what the time-history
         // endpoint computes so the numbers match before and after click.
         // Priority profile keys ("user:X" / "mdd:Y") that own a main record
         // on this map+physics. The cluster metadata uses them as a
-        // tiebreaker for ambiguous plain aliases — same heuristic as
+        // tiebreaker for ambiguous plain aliases - same heuristic as
         // buildGroupedDemosTop, so the badge counts stay consistent with
         // the Demos Top rep counts.
         $cpmMainKeys = \App\Models\Record::whereIn('id', $allCpmRecordsByTime)
@@ -1282,7 +1282,7 @@ class MapsController extends Controller
             return [];
         }
 
-        // Identify flagged demos — they must not cluster with legitimate
+        // Identify flagged demos - they must not cluster with legitimate
         // attempts. Community verdicts only, exactly what the drawer refuses,
         // or the badge would again promise a count the drawer will not serve.
         $demoIds = $demos->pluck('id')->all();
@@ -1350,7 +1350,7 @@ class MapsController extends Controller
             $clusters[$r][] = $d;
         }
 
-        // Count helper — same policy as /time-history: exclude the seed
+        // Count helper - same policy as /time-history: exclude the seed
         // (its own demo id) and count the rest. Distinct demo_ids with the
         // same file_hash or time_ms are intentionally kept; the drawer
         // shows every attempt that's a separate upload.
@@ -1365,7 +1365,7 @@ class MapsController extends Controller
             return [count($rest), $maxSignals];
         };
 
-        // Count without excluding any seed — used for user-keyed main record
+        // Count without excluding any seed - used for user-keyed main record
         // cluster meta where the record has no demo of its own to exclude.
         $dedupeAndCountAll = function (array $subMembers) {
             return count($subMembers);
@@ -1406,7 +1406,7 @@ class MapsController extends Controller
             }
 
             // Split by is_online (gametype starts with 'm' = online origin).
-            // Every demo's badge should only count members of its own type —
+            // Every demo's badge should only count members of its own type -
             // otherwise the count on a main record's row wouldn't match the
             // contents of its (online-filtered) time-history drawer.
             $onlineMembers = []; $offlineMembers = [];
@@ -1480,7 +1480,7 @@ class MapsController extends Controller
 
     /**
      * Build "Demos Top" paginator with server-side virtual-player grouping.
-     * Thin wrapper around buildDemosTopReps — keeps the legacy signature so
+     * Thin wrapper around buildDemosTopReps - keeps the legacy signature so
      * existing callers don't change. The real work (clustering + rep
      * selection + time-history metadata) lives in buildDemosTopReps so the
      * unified leaderboard can reuse the exact same grouping.
@@ -1576,7 +1576,7 @@ class MapsController extends Controller
      *
      * Scope: each SOURCE item becomes its own row (same player can appear
      * as a main record AND as a Demos Top rep). Within-source grouping for
-     * Demos Top still happens — that's where the time-history drawer's
+     * Demos Top still happens - that's where the time-history drawer's
      * cluster data comes from.
      */
     private function buildUnifiedLeaderboard(
@@ -1598,7 +1598,7 @@ class MapsController extends Controller
 
         // Community flags on main records drive their rank nulling.
         // attachCommunityFlags iterates directly over $records, so a plain
-        // Eloquent Collection works — no paginator wrapping needed.
+        // Eloquent Collection works - no paginator wrapping needed.
         $this->attachCommunityFlags($mainRecords);
 
         // Compute MDD rank map across ALL main records (sorted by time
@@ -1625,7 +1625,7 @@ class MapsController extends Controller
             $record->time_ms = $record->time; // mirror so sort/rank share one field
             $record->mdd_rank = $mddRankMap[$record->id] ?? null;
             $record->source_type = 'main';
-            // Don't stamp verification_type — the frontend decides
+            // Don't stamp verification_type - the frontend decides
             // verification from uploaded_demos.length > 0. Forcing
             // 'verified' here made every main record light up green even
             // when no demo was attached.
@@ -1642,7 +1642,7 @@ class MapsController extends Controller
                 $old->time_ms = $old->time;
                 $old->oldtop = true;
                 $old->source_type = 'oldtop';
-                // Same reasoning as main records — leave verification_type
+                // Same reasoning as main records - leave verification_type
                 // unset so the frontend's demo-attached check decides.
                 $unified->push($old);
             }
@@ -1708,7 +1708,7 @@ class MapsController extends Controller
                 $base = strtoupper($m[1]);
             }
 
-            // Demo physics: "CPM", "CPM.1", "VQ3.2", etc. — takes priority
+            // Demo physics: "CPM", "CPM.1", "VQ3.2", etc. - takes priority
             if ($physics) {
                 $parts = explode('.', strtoupper($physics));
                 $base = $parts[0] ?: $base;
@@ -1735,7 +1735,7 @@ class MapsController extends Controller
                 // If both have CTF numbers, they must match
                 if ($recordCtf !== null && $demoCtf !== null && $recordCtf !== $demoCtf) continue;
 
-                // Time must match exactly — without exact time match, assignment makes no sense
+                // Time must match exactly - without exact time match, assignment makes no sense
                 if (!$demo->time_ms || $demo->time_ms !== $record->time) continue;
 
                 $confidence = $nameMatcher->calculateConfidence($demo->player_name, $recordName);
@@ -1911,7 +1911,7 @@ class MapsController extends Controller
             $record->reltime = $score ? round($score->reltime, 4) : null;
             $record->multiplier = $score ? round($score->multiplier, 4) : null;
             $record->rank_multiplier = $score ? round($score->rank_multiplier ?? 1, 4) : null;
-            // base_score = map_score / (map_mult * rank_mult) — invariant of map/rank,
+            // base_score = map_score / (map_mult * rank_mult) - invariant of map/rank,
             // so the tooltip can show the algorithm breakdown: base × rank × map = score
             if ($score) {
                 $mapMult = $score->multiplier ?? 1;

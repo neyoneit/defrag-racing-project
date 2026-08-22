@@ -96,7 +96,7 @@ export class Q3ShaderMaterialSystem {
                     texture = await this.loadTexture(texturePath, this.loader.fallbackBaseUrl);
                 } catch (error) {
                     // Q3 engine skips stages with missing textures (pStage->active = qfalse).
-                    // We emulate this by using a transparent fallback — alpha-blended stages
+                    // We emulate this by using a transparent fallback - alpha-blended stages
                     // contribute nothing, and opaque stages show as transparent (invisible).
                     // For additive blending, black is the neutral element (adds nothing).
                     const isAdditive = stage.blendFunc === 'add' ||

@@ -43,7 +43,7 @@ class SearchController extends Controller
         // hit on User.plain_name / MddProfile.name will miss them. Pull any
         // matching alias and fold the owning User / MddProfile into the result
         // set, remembering the literal alias for `matched_alias` display.
-        // Approved-only — non-approved aliases are noise (auto-generated from
+        // Approved-only - non-approved aliases are noise (auto-generated from
         // log scrapes, may include impersonations).
         $aliasMatches = UserAlias::where('is_approved', true)
             ->where('alias', 'LIKE', $likeSearch)
@@ -75,7 +75,7 @@ class SearchController extends Controller
         }
 
         $existingMddIds = $profiles->pluck('id')->all();
-        // Only fetch mdd profiles whose alias has no user_id — when a
+        // Only fetch mdd profiles whose alias has no user_id - when a
         // user_id IS set on the alias, we surface the User instead (matches
         // the existing "linkedUserId → show user, not profile" branch below).
         $orphanMddIds = [];
@@ -133,7 +133,7 @@ class SearchController extends Controller
 
             // Prefer the alias the global lookup already found (already
             // matches the search term). Fall back to scanning the user's
-            // approved aliases for a substring match — covers edge cases
+            // approved aliases for a substring match - covers edge cases
             // where the alias lookup didn't hit due to leetspeak / colour
             // differences but the user's `aliases` relation has a stripped
             // version that does match.

@@ -694,7 +694,7 @@ class ModelsController extends Controller
             $zip->close();
 
             if (count($pk3FileNames) === 1) {
-                // Single PK3 in ZIP — extract directly
+                // Single PK3 in ZIP - extract directly
                 $pk3File = $tempExtract . '/' . $pk3FileNames[0];
                 if (file_exists($pk3File)) {
                     $pk3PathForDownload = 'models/pk3s/' . $slug . '.pk3';
@@ -708,7 +708,7 @@ class ModelsController extends Controller
                     $this->generateFileManifest($extractPath);
                 }
             } else {
-                // Multiple PK3s — extract each into its own subdirectory
+                // Multiple PK3s - extract each into its own subdirectory
                 // so they don't overwrite each other's files
                 foreach ($pk3FileNames as $idx => $pk3FileName) {
                     $pk3File = $tempExtract . '/' . $pk3FileName;
@@ -923,7 +923,7 @@ class ModelsController extends Controller
             }
 
             if (!empty($pk3FileNames)) {
-                // ZIP containing PK3 file(s) — extract all into shared directory
+                // ZIP containing PK3 file(s) - extract all into shared directory
                 $tempExtract = storage_path('app/models/temp/' . $slug . '_extract');
                 if (!file_exists($tempExtract)) {
                     mkdir($tempExtract, 0755, true);
@@ -1952,7 +1952,7 @@ class ModelsController extends Controller
 
         $timings['total'] = round((microtime(true) - $totalStart) * 1000, 2);
 
-        // Resolve bundled models — only from OTHER PK3s (same PK3 = siblings, not dependencies)
+        // Resolve bundled models - only from OTHER PK3s (same PK3 = siblings, not dependencies)
         $bundledModels = [];
         if ($model->bundle_uuid) {
             $bundledModels = PlayerModel::where('bundle_uuid', $model->bundle_uuid)

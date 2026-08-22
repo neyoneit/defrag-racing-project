@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
  *
  * Two sub-categories handled:
  *
- * (1) FALSE-POSITIVE PASS 1 — DemoAutoAssigner Pass 1 historically attached
+ * (1) FALSE-POSITIVE PASS 1 - DemoAutoAssigner Pass 1 historically attached
  *     a demo to its uploader's Record on the same (map, gametype, time)
  *     WITHOUT verifying that the demo's player_name actually resolves to
  *     that uploader. Bulk-uploader accounts (admin importing third-party
@@ -34,7 +34,7 @@ use Illuminate\Support\Facades\DB;
  *     next rematch doesn't crystalize the arbitrary pick. Demo lands as
  *     a plain 'processed' file for manual review.
  *
- * (2) SUPERSEDED RECORD — demo.record_id points at a Record row whose
+ * (2) SUPERSEDED RECORD - demo.record_id points at a Record row whose
  *     `deleted_at` is non-null. The record was soft-deleted because the
  *     same player set a faster time and the slower one was retired. The
  *     demo file is a legitimate older attempt; from the UI's perspective
@@ -57,7 +57,7 @@ class ResolveDuplicateDemoAssignments extends Command
         $limit = (int) $this->option('limit');
 
         if ($dryRun) {
-            $this->warn('DRY RUN — no changes will be written.');
+            $this->warn('DRY RUN - no changes will be written.');
             $this->line('');
         }
 
@@ -97,7 +97,7 @@ class ResolveDuplicateDemoAssignments extends Command
         }
         foreach ($matched as $c) {
             // Skip rows whose player_name was never extracted (legacy upload
-            // where parsing failed) — NameMatcher requires a string and we
+            // where parsing failed) - NameMatcher requires a string and we
             // can't reason about ownership without one.
             if (empty($c->player_name)) {
                 $unmatched++;
@@ -302,7 +302,7 @@ class ResolveDuplicateDemoAssignments extends Command
      * Create an offline_record for an unpaired false-positive demo so the
      * historical attempt surfaces under the correct player. Mirrors the rank
      * cascade in DemoProcessorService::createOfflineRecord but without the
-     * file_path / validity_flag plumbing — these demos already have a stored
+     * file_path / validity_flag plumbing - these demos already have a stored
      * file from the original (incorrect) processing.
      */
     protected function createOfflineRecordForDemo(UploadedDemo $demo, string $playerName): void

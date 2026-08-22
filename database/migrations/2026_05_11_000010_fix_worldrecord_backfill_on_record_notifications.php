@@ -7,7 +7,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Reset the previous over-eager backfill — earlier migration flagged
+        // Reset the previous over-eager backfill - earlier migration flagged
         // every notification whose *beater* is currently WR, which fires even
         // for users who never held rank 1 themselves.
         DB::statement("UPDATE record_notifications SET worldrecord = 0");
@@ -15,8 +15,8 @@ return new class extends Migration
         // Correct logic: this notification was a WR-beat iff the recipient
         // held rank 1 at the moment (their `my_time` is currently a rank-2
         // record) AND the beater is currently rank 1 with that exact time.
-        // Imperfect for cases where either party has improved since — we have
-        // no historical rank table — but accurate for the still-current
+        // Imperfect for cases where either party has improved since - we have
+        // no historical rank table - but accurate for the still-current
         // state of the leaderboard.
         DB::statement("
             UPDATE record_notifications rn

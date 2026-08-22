@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * Endpoints consumed by the desktop launcher (tauri app). All routes sit
  * behind a Sanctum personal access token issued at /user/launcher-tokens.
- * Two ability scopes: launcher:upload (write — demo uploads) and
+ * Two ability scopes: launcher:upload (write - demo uploads) and
  * launcher:read (server browser + notifications feed). Every request
  * carries `Authorization: Bearer <token>`.
  */
@@ -106,7 +106,7 @@ class LauncherController extends Controller
 
     /**
      * Single-file demo upload. The launcher calls /lookup-by-hash first, so
-     * duplicates are the exception, not the rule — we still defend against
+     * duplicates are the exception, not the rule - we still defend against
      * them because two launchers on different PCs could race on the same
      * demo.
      *
@@ -376,7 +376,7 @@ class LauncherController extends Controller
 
     /**
      * Server browser feed. Same payload the web /servers page consumes via
-     * /api/servers/live — per-user mytime / myrank fields are populated
+     * /api/servers/live - per-user mytime / myrank fields are populated
      * for the token's owner, so the launcher can show "your PB on this
      * map" the same way the website does. mapdata.thumbnail is already
      * included by the shared service.

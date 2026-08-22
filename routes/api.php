@@ -112,7 +112,7 @@ Route::prefix('launcher')
 // Profile + records AJAX endpoints used by the SPA frontend and (optionally)
 // by external clients via personal API tokens. `auth:sanctum,web` accepts
 // either a Bearer token in the Authorization header OR a session cookie
-// from a logged-in browser. Anonymous requests get a 401 — the frontend
+// from a logged-in browser. Anonymous requests get a 401 - the frontend
 // hides the matching panels client-side so anon profile pages stay clean.
 //
 // Per-user rate-limit kicks in automatically because `throttle:api` keys

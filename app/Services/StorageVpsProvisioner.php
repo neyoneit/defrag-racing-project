@@ -14,7 +14,7 @@ use Symfony\Component\Process\Process;
  * here is whatever the wrapper itself accepts. The wrapper rejects any
  * subcommand outside `create|reset-password|revoke|info|list|stats|check`
  * and any argument that isn't `[a-zA-Z0-9_-]+`, but we still validate
- * client-side — defense in depth.
+ * client-side - defense in depth.
  *
  * All methods return the decoded JSON array from the remote command.
  * On any failure (non-zero exit, malformed JSON, SSH timeout) they
@@ -145,7 +145,7 @@ class StorageVpsProvisioner
         }
 
         // The remote CLI emits human log lines to stderr and a single
-        // JSON line to stdout — we only consume stdout.
+        // JSON line to stdout - we only consume stdout.
         $stdout = trim($process->getOutput());
         if ($stdout === '') {
             throw new RuntimeException("storage VPS call '$command' returned empty stdout");

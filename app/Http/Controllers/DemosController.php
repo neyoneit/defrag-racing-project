@@ -1128,7 +1128,7 @@ class DemosController extends Controller
      */
     public function download(UploadedDemo $demo)
     {
-        // All uploaded demos are public by default — there's no integrity argument
+        // All uploaded demos are public by default - there's no integrity argument
         // for blocking unlinked freestyle/trick demos, and metadata is already
         // exposed in listings. Future serverdemos (separate feature) will gate
         // their own visibility via per-player approval. Owner + admin still get
@@ -1520,7 +1520,7 @@ class DemosController extends Controller
             'user_processing' => $isAdmin ? UploadedDemo::where('status', 'processing')->count() : UploadedDemo::where('user_id', $userId)->where('status', 'processing')->count(),
         ];
 
-        // Return recently completed demos (last 5 min) — no frontend tracking needed
+        // Return recently completed demos (last 5 min) - no frontend tracking needed
         $recentCutoff = now()->subMinutes(5);
         $completedQuery = UploadedDemo::whereNotIn('status', ['uploaded', 'pending', 'processing'])
             ->where('updated_at', '>=', $recentCutoff)
@@ -1744,7 +1744,7 @@ class DemosController extends Controller
             ], 400);
         }
 
-        // Intentionally no B2 file deletion — the app must never delete files
+        // Intentionally no B2 file deletion - the app must never delete files
         // from Backblaze. The DB row is removed so the demo disappears from
         // the UI; the blob remains on B2 until the operator purges it manually.
         $demo->delete();

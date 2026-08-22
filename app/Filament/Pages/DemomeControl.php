@@ -82,7 +82,7 @@ class DemomeControl extends Page
             }),
             // Filament re-renders the whole page on every wire:click action,
             // and the rendered_videos table is several hundred thousand rows
-            // on prod — every uncached COUNT/SELECT here piled up to a
+            // on prod - every uncached COUNT/SELECT here piled up to a
             // multi-minute Livewire round-trip + Cloudflare 504s on 2026-05-19.
             // Cache the global aggregates with a short TTL and invalidate from
             // the handful of action methods that actually mutate this data.
@@ -292,7 +292,7 @@ class DemomeControl extends Page
     /**
      * Drop every cache key the view layer relies on for rendered_videos
      * aggregates. Call this from any action that mutates publish_approved,
-     * status, or other columns that feed the counts on screen — without it
+     * status, or other columns that feed the counts on screen - without it
      * the new state is invisible until the per-key TTL elapses, which makes
      * the panel look broken even though the change went through.
      */
@@ -306,7 +306,7 @@ class DemomeControl extends Page
         Cache::forget('demome:control_bulk_tier_buttons');
         // unlisted_videos / unlisted_total_pages are keyed by tier+page; we
         // can't enumerate cheaply, so we let them expire on their short TTL
-        // (30s/60s). The list view is the least state-sensitive piece — a
+        // (30s/60s). The list view is the least state-sensitive piece - a
         // 30s lag on tier/page transitions is acceptable.
     }
 

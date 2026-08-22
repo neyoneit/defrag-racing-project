@@ -199,7 +199,7 @@ class NameMatcher
             return ['user_id' => null, 'matched_alias' => null, 'tier' => null];
         }
 
-        // Tier 1: colored exact match — colored codes make this effectively unique
+        // Tier 1: colored exact match - colored codes make this effectively unique
         if ($colored) {
             $coloredMatch = UserAlias::where('alias_colored', $colored)
                 ->where('is_approved', true)
@@ -216,7 +216,7 @@ class NameMatcher
             }
         }
 
-        // Tier 2: plain exact match — only accept when exactly ONE user owns it
+        // Tier 2: plain exact match - only accept when exactly ONE user owns it
         if ($plain) {
             $plainMatches = UserAlias::where('alias', $plain)
                 ->where('is_approved', true)

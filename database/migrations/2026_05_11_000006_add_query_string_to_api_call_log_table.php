@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('api_call_log', function (Blueprint $table) {
             // Stored separately from `route` so the route dropdown filter
-            // stays useful — only the path goes in the indexable `route`
+            // stays useful - only the path goes in the indexable `route`
             // column, and the noisy per-request query string lives here
             // for display only.
             $table->text('query_string')->nullable()->after('route');

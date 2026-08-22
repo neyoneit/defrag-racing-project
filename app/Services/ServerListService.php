@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
  * Builds the server-browser payload shared by the public web AJAX
  * endpoint (/api/servers/live) and the token-locked launcher endpoint
  * (/api/launcher/servers). Same data shape, same per-user enrichment
- * (mytime / myrank / besttime) — only the auth surface differs.
+ * (mytime / myrank / besttime) - only the auth surface differs.
  *
  * Extracted from ServersController so any caller that has a Request
  * (web session or launcher Sanctum token both put a User on the

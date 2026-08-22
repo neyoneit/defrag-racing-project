@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Builder;
  * rows so the admin can see every individual query (?q=xyz etc) and
  * click through to a single-call detail.
  *
- * No GROUP BY here — rows have real primary keys, so standard Filament
+ * No GROUP BY here - rows have real primary keys, so standard Filament
  * row actions / URLs work without the headache.
  */
 class ViewUserEndpointActivity extends Page implements HasTable
@@ -71,7 +71,7 @@ class ViewUserEndpointActivity extends Page implements HasTable
                     ->sortable(),
                 Tables\Columns\TextColumn::make('query_string')
                     ->label('Query')
-                    ->formatStateUsing(fn (?string $state) => $state ? '?' . $state : '—')
+                    ->formatStateUsing(fn (?string $state) => $state ? '?' . $state : '-')
                     ->wrap()
                     ->fontFamily('mono'),
                 Tables\Columns\TextColumn::make('response_status')

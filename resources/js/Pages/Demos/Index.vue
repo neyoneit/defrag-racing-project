@@ -1164,7 +1164,7 @@ const openAssignModal = (demo) => {
     }
 };
 
-// Suggested matches — records sorted by time distance to demo's time
+// Suggested matches - records sorted by time distance to demo's time
 const suggestedRecords = computed(() => {
     if (!assigningDemo.value || availableRecords.value.length === 0) return [];
     const demoTime = assigningDemo.value.time_ms;
@@ -1867,7 +1867,7 @@ watch(selectedPhysics, () => {
                                         <div class="min-w-0 flex-1">
                                             <span class="text-xs text-gray-300">{{ demo.processed_filename || demo.original_filename }}</span>
                                             <span v-if="demo.map_name" class="text-[10px] text-gray-500 ml-1">{{ demo.map_name }}</span>
-                                            <span v-if="demo.processing_output" class="text-[10px] text-gray-500 ml-1">— {{ demo.processing_output }}</span>
+                                            <span v-if="demo.processing_output" class="text-[10px] text-gray-500 ml-1">- {{ demo.processing_output }}</span>
                                         </div>
                                     </div>
                                 </div>

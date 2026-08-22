@@ -234,7 +234,7 @@ class ModelsAuditController extends Controller
                     'contents' => $localContents,
                 ];
 
-                // For direct PK3 files, wsContents is wrapped — use inner contents for diff
+                // For direct PK3 files, wsContents is wrapped - use inner contents for diff
                 $wsForDiff = ($ext === 'pk3' && !empty($wsContents[0]['contents']))
                     ? $wsContents[0]['contents']
                     : $wsContents;
@@ -303,7 +303,7 @@ class ModelsAuditController extends Controller
             // Skip entries marked as extras (e.g. bot PK3s without models)
             if (!empty($entry['is_extra'])) continue;
 
-            // Nested PK3s that are identical copies of their parent — count as found but skip checking
+            // Nested PK3s that are identical copies of their parent - count as found but skip checking
             if (!empty($entry['nested_in_pk3']) && !empty($entry['nested_comparison']['identical'])) {
                 if (!empty($entry['models_found'])) $foundPk3 = true;
                 continue;
@@ -1420,7 +1420,7 @@ class ModelsAuditController extends Controller
         $modelNames = $scraper->detectAllModelNames($tempExtract);
 
         if (empty($modelNames)) {
-            // Check if this PK3 contains nested PK3s — if so, don't report error,
+            // Check if this PK3 contains nested PK3s - if so, don't report error,
             // those nested PK3s will be analyzed separately by inspectArchive
             $hasNestedPk3 = false;
             $zip2 = new ZipArchive();
@@ -1436,7 +1436,7 @@ class ModelsAuditController extends Controller
 
             $this->removeDir($tempExtract);
             if ($hasNestedPk3) {
-                // Wrapper PK3 — models are in nested PK3s, return empty (no error)
+                // Wrapper PK3 - models are in nested PK3s, return empty (no error)
                 return ['models' => [], 'pk3_files' => [], 'pk3_summary' => [], 'total_files' => 0];
             }
             return [['info' => 'No model folders found (no models/players/*/)', 'in_db' => false]];
@@ -1610,7 +1610,7 @@ class ModelsAuditController extends Controller
     private function compareModelFiles(array $pk3Files, string $tempExtract, PlayerModel $dbModel): array
     {
         // file_path is like "models/extracted/{slug}/models/players/niria"
-        // Extract root is "models/extracted/{slug}/" — contains ALL extracted PK3 files
+        // Extract root is "models/extracted/{slug}/" - contains ALL extracted PK3 files
         $parts = explode('/', $dbModel->file_path);
         $slug = $parts[2] ?? null;
         if (!$slug) {
@@ -1644,7 +1644,7 @@ class ModelsAuditController extends Controller
         $allMatch = true;
 
         foreach ($pk3Files as $lowerPath => $pk3Info) {
-            // Skip nested PK3/ZIP files — they're not model assets
+            // Skip nested PK3/ZIP files - they're not model assets
             $fileExt = strtolower(pathinfo($lowerPath, PATHINFO_EXTENSION));
             if (in_array($fileExt, ['pk3', 'zip'])) continue;
 
@@ -1797,7 +1797,7 @@ class ModelsAuditController extends Controller
                 continue;
             }
 
-            // Multiple dirs with same lowercase name — merge into the first one
+            // Multiple dirs with same lowercase name - merge into the first one
             $target = $variants[0];
             for ($i = 1; $i < count($variants); $i++) {
                 $source = $dir . '/' . $variants[$i];

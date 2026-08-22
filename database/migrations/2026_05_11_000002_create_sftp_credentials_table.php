@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('application_id')->nullable()->constrained('server_owner_applications')->nullOnDelete();
-            $table->string('sftp_username')->unique()->comment('Unix username on storage VPS — also chroot dir name');
+            $table->string('sftp_username')->unique()->comment('Unix username on storage VPS - also chroot dir name');
             $table->string('host');
             $table->unsignedSmallInteger('port');
             $table->string('remote_path')->default('/demos');

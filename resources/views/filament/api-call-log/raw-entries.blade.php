@@ -31,7 +31,7 @@
                     @endphp
                     <tr class="hover:bg-blue-500/5 cursor-pointer transition-colors" onclick="window.location.href='{{ $detailUrl }}'">
                         <td class="px-3 py-1.5 whitespace-nowrap font-mono text-xs text-gray-600 dark:text-gray-300">{{ $e->created_at?->format('Y-m-d H:i:s') }}</td>
-                        <td class="px-3 py-1.5 font-mono text-xs text-gray-700 dark:text-gray-200 break-all">{{ $e->query_string ? '?' . $e->query_string : '—' }}</td>
+                        <td class="px-3 py-1.5 font-mono text-xs text-gray-700 dark:text-gray-200 break-all">{{ $e->query_string ? '?' . $e->query_string : '-' }}</td>
                         <td class="px-3 py-1.5 text-right font-mono text-xs {{ $statusColor }}">{{ $e->response_status }}</td>
                         <td class="px-3 py-1.5 text-right font-mono text-xs {{ $msColor }}">{{ $e->response_ms }}</td>
                         <td class="px-3 py-1.5 font-mono text-xs text-gray-500">{{ $e->ip }}</td>

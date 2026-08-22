@@ -15,11 +15,11 @@ use RuntimeException;
 
 class ServerHostingController extends Controller
 {
-    /** Hard cap of active credentials per user — one per VPS is the intent. */
+    /** Hard cap of active credentials per user - one per VPS is the intent. */
     private const MAX_CREDENTIALS = 8;
 
     /**
-     * Show the applicant's current state — one of:
+     * Show the applicant's current state - one of:
      *   - no application yet (show form)
      *   - latest application pending / rejected
      *   - one or more active credentials issued (show each host/user/path)
@@ -33,7 +33,7 @@ class ServerHostingController extends Controller
             ->latest()
             ->first();
 
-        // A user can hold several credentials — typically one per VPS —
+        // A user can hold several credentials - typically one per VPS -
         // each with its own SFTP account, password and declared servers.
         $credentials = SftpCredential::where('user_id', $user->id)
             ->active()
@@ -47,13 +47,13 @@ class ServerHostingController extends Controller
                     $payload['servers'] ?? []
                 );
                 // 'encrypted' cast auto-decrypts on read. Surface to the
-                // page once — the front-end will POST to acknowledge once
+                // page once - the front-end will POST to acknowledge once
                 // the user confirms they've copied it, which nulls the DB.
                 try {
                     $payload['pending_password'] = $credential->password_pending;
                 } catch (DecryptException) {
                     // Row encrypted under a different APP_KEY (key rotation,
-                    // prod dump in local dev) — treat as "no pending password"
+                    // prod dump in local dev) - treat as "no pending password"
                     // instead of 500ing the whole page.
                     $payload['pending_password'] = null;
                 }
@@ -114,7 +114,7 @@ class ServerHostingController extends Controller
                 'password_pending' => $response['password'],
             ]);
 
-            return back()->with('success', 'Password rotated. Copy the new one from the box above — it is shown only once.');
+            return back()->with('success', 'Password rotated. Copy the new one from the box above - it is shown only once.');
         } catch (RuntimeException $e) {
             Log::error('User-initiated SFTP password reset failed', [
                 'credential_id' => $credential->id,
@@ -146,7 +146,7 @@ class ServerHostingController extends Controller
 
         $user = $request->user();
 
-        // One open application at a time — block resubmission if the
+        // One open application at a time - block resubmission if the
         // most recent is still pending OR already approved & active.
         $existing = ServerOwnerApplication::where('user_id', $user->id)
             ->whereIn('status', ['pending', 'approved'])
@@ -197,7 +197,7 @@ class ServerHostingController extends Controller
 
     /**
      * Append a new server entry to one of an approved user's credentials.
-     * Does NOT touch SFTP provisioning — the user reuses that credential's
+     * Does NOT touch SFTP provisioning - the user reuses that credential's
      * account on the storage VPS. Only the per-server metadata
      * (gametype/ip/port/rcon/location) grows. rs_code is left null and
      * admins fill it in from Filament after light review.
@@ -240,7 +240,7 @@ class ServerHostingController extends Controller
             ]);
         }
 
-        // A server can only ship demos through one credential — dedupe
+        // A server can only ship demos through one credential - dedupe
         // across ALL of the user's active credentials, not just this one.
         $siblings = SftpCredential::where('user_id', $user->id)->active()->get();
         foreach ($siblings as $sibling) {
@@ -301,7 +301,7 @@ class ServerHostingController extends Controller
 
     /**
      * Self-service provisioning of an ADDITIONAL credential for an already
-     * approved server owner — one per VPS, so each box gets its own SFTP
+     * approved server owner - one per VPS, so each box gets its own SFTP
      * login and a compromise/rotation on one doesn't touch the others.
      * The first credential still comes from admin approval; this only
      * works when at least one active credential already exists.
@@ -317,7 +317,7 @@ class ServerHostingController extends Controller
         $active = SftpCredential::where('user_id', $user->id)->active()->get();
 
         if ($active->isEmpty()) {
-            return back()->with('danger', 'No active credential — you must be an approved server owner before adding more.');
+            return back()->with('danger', 'No active credential - you must be an approved server owner before adding more.');
         }
 
         if ($active->count() >= self::MAX_CREDENTIALS) {
@@ -359,7 +359,7 @@ class ServerHostingController extends Controller
             // still gets their password either way.
             app(\App\Services\SftpCredentialChecker::class)->check($credential);
 
-            return back()->with('success', "New SFTP account \"{$label}\" provisioned. Copy its password now — it is shown only once.");
+            return back()->with('success', "New SFTP account \"{$label}\" provisioned. Copy its password now - it is shown only once.");
         } catch (RuntimeException $e) {
             Log::error('Self-service SFTP credential provisioning failed', [
                 'user_id' => $user->id,
@@ -376,7 +376,7 @@ class ServerHostingController extends Controller
 
     /**
      * Resolve the credential_id from the request to a credential that is
-     * active AND owned by the requesting user — 404s otherwise so users
+     * active AND owned by the requesting user - 404s otherwise so users
      * can never act on someone else's credential.
      */
     private function ownedActiveCredential(Request $request): SftpCredential

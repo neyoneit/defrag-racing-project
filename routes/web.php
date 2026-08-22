@@ -59,7 +59,7 @@ Route::get('/servers', [ServersController::class, 'index'])->name('servers');
 Route::get('/api/servers/live', [ServersController::class, 'apiServers'])->name('servers.api');
 Route::get('/servers/json', [EndpointController::class, 'index'])->name('servers.json');
 
-// Launcher auto-update manifest — primary endpoint for the desktop
+// Launcher auto-update manifest - primary endpoint for the desktop
 // launcher's tauri-plugin-updater (GH Releases is its fallback). Proxies
 // the latest signed `latest.json` from GH with a 5-minute cache so we
 // don't pound their CDN on every launcher startup. The mirror exists

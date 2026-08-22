@@ -356,7 +356,7 @@ async function generateAnimationGif(legsAnim, torsoAnim, label, isLoop = false) 
     animManager.legsFrame = 0;
     animManager.torsoFrame = 0;
 
-    // Initialize mesh vertices to frame 0 — playLegsAnimation/playTorsoAnimation
+    // Initialize mesh vertices to frame 0 - playLegsAnimation/playTorsoAnimation
     // only set internal state but don't update mesh geometry. Without this,
     // frame 0 in the GIF shows stale vertex data from the previous animation state.
     animManager.update(0);

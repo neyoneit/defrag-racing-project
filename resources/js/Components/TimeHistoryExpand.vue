@@ -13,7 +13,7 @@
         userId: { type: [Number, String], default: null },
         mddId: { type: [Number, String], default: null },
         physics: { type: String, required: true }, // 'vq3' | 'cpm'
-        // Hint of how many attempts will appear — used for the header count
+        // Hint of how many attempts will appear - used for the header count
         // before the request resolves.
         attemptsCount: { type: Number, default: null },
         signalsCount: { type: Number, default: 0 },
@@ -59,7 +59,7 @@
 <template>
     <div class="bg-black/25 border-l-2 border-blue-500/30">
         <!-- Inline explanation header so the match source is obvious without
-             hovering anywhere. Used to be a floating tooltip — now it's
+             hovering anywhere. Used to be a floating tooltip - now it's
              always visible inside the opened drawer. -->
         <div class="px-3 py-2 border-b border-white/[0.04] flex flex-wrap items-center gap-2 text-[10px] text-gray-400">
             <svg class="w-3.5 h-3.5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -68,7 +68,7 @@
             <span class="font-bold text-white uppercase tracking-wider">{{ $t('Time History') }}</span>
 
             <!-- Match source badge + description are only meaningful once
-                 the API response is in — initial prop values can disagree
+                 the API response is in - initial prop values can disagree
                  with what the server actually returns (e.g. badge would
                  flash 1/3 and then settle on ALIAS). Keep the header quiet
                  during load, so nothing misleading is ever shown. -->

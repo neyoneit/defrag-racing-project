@@ -11,7 +11,7 @@ class MapStatsController extends Controller
     public function __construct(private MapStatsService $stats) {}
 
     /**
-     * Public stats dashboard — Plotly-rendered charts on the client.
+     * Public stats dashboard - Plotly-rendered charts on the client.
      *
      * The full payload is ~14s to build cold and ~25ms warm. We don't
      * want the visitor's first request to block on the cold rebuild
@@ -24,7 +24,7 @@ class MapStatsController extends Controller
      *    payload and return it.
      *
      * If the partial reload happens to land on a cold cache, the
-     * client is the one that pays the wait — but it's an async XHR,
+     * client is the one that pays the wait - but it's an async XHR,
      * so the page is already interactive and the spinner stays
      * visible instead of the browser hanging on the navigation.
      */
@@ -36,7 +36,7 @@ class MapStatsController extends Controller
             return Inertia::render('MapStats', ['stats' => null]);
         }
 
-        // Read straight from Redis — never block a web request on the
+        // Read straight from Redis - never block a web request on the
         // cold rebuild (~100s on production, well past the upstream
         // timeout). If the key is missing, kick off a background
         // rebuild via the queue and return a "still warming" payload
@@ -60,7 +60,7 @@ class MapStatsController extends Controller
     }
 
     /**
-     * Raw JSON dump of the cached payload. NOT routed — bandwidth
+     * Raw JSON dump of the cached payload. NOT routed - bandwidth
      * amplification risk on a 4 MB response with no auth. Wire it up in
      * routes/web.php with throttle:30,60 if a public consumer needs it:
      *

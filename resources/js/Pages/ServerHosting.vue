@@ -27,7 +27,7 @@ const page = usePage();
 const successMsg = computed(() => page.props.success);
 const dangerMsg = computed(() => page.props.danger);
 
-// Per-credential UI state, keyed by credential id — a user can hold
+// Per-credential UI state, keyed by credential id - a user can hold
 // several credentials (one per VPS), each with its own pending password.
 const passwordRevealed = ref({});
 const passwordCopied = ref({});
@@ -36,7 +36,7 @@ const ackForm = useForm({ credential_id: null });
 const resetForm = useForm({ credential_id: null });
 
 // Single styled confirm modal, driven by state. Replaces native
-// browser confirm() — same blocking semantics via the .onConfirm cb.
+// browser confirm() - same blocking semantics via the .onConfirm cb.
 const modal = ref({
     open: false,
     title: '',
@@ -78,7 +78,7 @@ const credentialTitle = (cred) => cred.label || cred.sftp_username;
 const requestReset = (cred) => {
     openConfirm({
         title: t('Generate a new password for ":name"?', { name: credentialTitle(cred) }),
-        body: t('The current one will stop working immediately. The new password is shown only once on this page — make sure you can save it. Your other credentials are not affected.'),
+        body: t('The current one will stop working immediately. The new password is shown only once on this page - make sure you can save it. Your other credentials are not affected.'),
         confirmLabel: t('Generate new password'),
         confirmTone: 'amber',
         onConfirm: () => {
@@ -106,7 +106,7 @@ const copyPassword = async (cred) => {
 const acknowledgePassword = (cred) => {
     openConfirm({
         title: t('Wipe the password from this page?'),
-        body: t("Make sure you've saved it somewhere safe — after confirming, it cannot be shown again. You'd need to generate a new one (or ask an admin to rotate)."),
+        body: t("Make sure you've saved it somewhere safe - after confirming, it cannot be shown again. You'd need to generate a new one (or ask an admin to rotate)."),
         confirmLabel: t("Yes, I've saved it"),
         confirmTone: 'emerald',
         onConfirm: () => {
@@ -159,7 +159,7 @@ const state = computed(() => {
     return props.application.status;
 });
 
-// server_info on the API side is cast to array — render defensively in
+// server_info on the API side is cast to array - render defensively in
 // case an older record still has a plain string in there.
 const submittedServers = computed(() => {
     const raw = props.application?.server_info;
@@ -177,7 +177,7 @@ const gametypeLabel = (value) => GAMETYPES.value.find(g => g.value === value)?.l
 // Add-server form (one shared form; addServerOpenId tracks which
 // credential's card has it open). Pre-fills IP, rcon and country from
 // that credential's most-recent declared server so the common "another
-// port on the same box" case is one click — they only tweak port + gametype.
+// port on the same box" case is one click - they only tweak port + gametype.
 const addServerOpenId = ref(null);
 
 const existingIpsFor = (cred) =>
@@ -212,7 +212,7 @@ const submitAddServer = () => {
     });
 };
 
-// Additional-credential form — approved owners provision one SFTP account
+// Additional-credential form - approved owners provision one SFTP account
 // per VPS so every box gets its own password.
 const newCredOpen = ref(false);
 
@@ -382,7 +382,7 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                 </div>
 
                 <p class="text-sm text-gray-400 mb-4 [&_strong]:text-emerald-300"
-                   v-html="$t('Use these in the <code>sv.conf</code> on this VPS. The password is shown <strong>only once</strong> — copy it now, or generate a new one later if you lose it.')"></p>
+                   v-html="$t('Use these in the <code>sv.conf</code> on this VPS. The password is shown <strong>only once</strong> - copy it now, or generate a new one later if you lose it.')"></p>
 
                 <!-- One-time password reveal box (only when pending) -->
                 <div v-if="cred.pending_password"
@@ -392,7 +392,7 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                         <div class="flex-1 min-w-0">
                             <div class="text-sm font-semibold text-yellow-200 mb-1">{{ $t('Save your password now') }}</div>
                             <p class="text-xs text-gray-400 mb-3">
-                                {{ $t("This is the only time you'll see it. After clicking \"I've saved it\", I wipe it from the database — it lives only on the storage VPS in hashed form. If you lose it, generate a new one below.") }}
+                                {{ $t("This is the only time you'll see it. After clicking \"I've saved it\", I wipe it from the database - it lives only on the storage VPS in hashed form. If you lose it, generate a new one below.") }}
                             </p>
 
                             <div class="flex items-center gap-2 mb-3">
@@ -416,7 +416,7 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                                     @click="acknowledgePassword(cred)"
                                     :disabled="ackForm.processing"
                                     class="px-3 py-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-xs text-emerald-200 transition disabled:opacity-50">
-                                {{ $t("✓ I've saved it — wipe from this page") }}
+                                {{ $t("✓ I've saved it - wipe from this page") }}
                             </button>
                         </div>
                     </div>
@@ -449,7 +449,7 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                                     class="px-3 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-xs text-amber-200 transition disabled:opacity-50">
                                 {{ resetForm.processing && resetForm.credential_id === cred.id ? $t('Resetting…') : $t('Generate new password') }}
                             </button>
-                            <span class="text-xs text-gray-500">{{ $t('(rate-limited — max 6/hour)') }}</span>
+                            <span class="text-xs text-gray-500">{{ $t('(rate-limited - max 6/hour)') }}</span>
                         </dd>
                     </div>
                 </dl>
@@ -491,7 +491,7 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                            v-html="$t('Put each RS code into <code>sv.conf</code> as <code>rs\x26lt;PORT\x26gt;=\x26lt;rs_code\x26gt;</code> (set <code>MDD_ENABLED=1</code> too).')"></p>
                     </div>
                     <p v-else class="text-xs text-gray-500">
-                        {{ $t('No servers declared on this credential yet — add the ones running on this VPS below.') }}
+                        {{ $t('No servers declared on this credential yet - add the ones running on this VPS below.') }}
                     </p>
 
                     <!-- Add another server (reuses this credential) -->
@@ -508,7 +508,7 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                               class="rounded-lg border border-emerald-500/20 bg-black/30 p-4 space-y-3">
                             <div class="flex items-center justify-between">
                                 <h4 class="text-sm font-semibold text-emerald-200">{{ $t('Register another server') }}</h4>
-                                <p class="text-xs text-gray-500">{{ $t('Reuses this credential — no new password.') }}</p>
+                                <p class="text-xs text-gray-500">{{ $t('Reuses this credential - no new password.') }}</p>
                             </div>
 
                             <div class="grid grid-cols-12 gap-2 items-start">
@@ -553,7 +553,7 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                                             class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 focus:border-blue-500 focus:ring-0 transition appearance-none cursor-pointer
                                                    bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%23a1a1aa%22><path d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22/></svg>')]
                                                    bg-no-repeat bg-[right_0.5rem_center] bg-[length:1rem] pr-8">
-                                        <option value="" class="bg-slate-900 text-gray-400">{{ $t('— flag —') }}</option>
+                                        <option value="" class="bg-slate-900 text-gray-400">{{ $t('- flag -') }}</option>
                                         <option v-for="c in countryOptions" :key="c.code" :value="c.code"
                                                 class="bg-slate-900 text-gray-200">{{ c.label }}</option>
                                     </select>
@@ -602,7 +602,7 @@ DEMO_SFTP_REMOTEDIR={{ cred.remote_path }}</code></pre>
                     <span class="text-base leading-none">+</span> {{ $t('Add another VPS credential') }}
                 </button>
                 <p v-if="!newCredOpen" class="text-xs text-gray-500 mt-2">
-                    {{ $t('Hosting on more than one machine? Provision a separate SFTP account per VPS — each gets its own username and password, so rotating or revoking one never breaks the others.') }}
+                    {{ $t('Hosting on more than one machine? Provision a separate SFTP account per VPS - each gets its own username and password, so rotating or revoking one never breaks the others.') }}
                 </p>
 
                 <form v-if="newCredOpen"
@@ -644,7 +644,7 @@ DEMO_SFTP_REMOTEDIR={{ cred.remote_path }}</code></pre>
                 <h2 class="text-lg font-semibold text-yellow-300">{{ $t('Application pending review') }}</h2>
             </div>
             <p class="text-sm text-gray-400 mb-4">
-                {{ $t("Submitted :date. An admin will be in touch — you don't need to resubmit.", { date: new Date(application.created_at).toLocaleString($page.props.locale) }) }}
+                {{ $t("Submitted :date. An admin will be in touch - you don't need to resubmit.", { date: new Date(application.created_at).toLocaleString($page.props.locale) }) }}
             </p>
             <blockquote class="text-sm text-gray-300 border-l-2 border-yellow-500/30 pl-3 whitespace-pre-line">{{ application.message }}</blockquote>
 
@@ -663,7 +663,7 @@ DEMO_SFTP_REMOTEDIR={{ cred.remote_path }}</code></pre>
             </div>
         </section>
 
-        <!-- STATE: REJECTED — banner only; form is re-rendered below ------ -->
+        <!-- STATE: REJECTED - banner only; form is re-rendered below ------ -->
         <section v-if="state === 'rejected'"
                  class="rounded-xl border border-red-500/30 bg-black/40 backdrop-blur-sm p-6 mb-6 shadow-2xl">
             <div class="flex items-center gap-2 mb-2">
@@ -749,7 +749,7 @@ DEMO_SFTP_REMOTEDIR={{ cred.remote_path }}</code></pre>
                                         class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 focus:border-blue-500 focus:ring-0 transition appearance-none cursor-pointer
                                                bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%23a1a1aa%22><path d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22/></svg>')]
                                                bg-no-repeat bg-[right_0.5rem_center] bg-[length:1rem] pr-8">
-                                    <option value="" class="bg-slate-900 text-gray-400">{{ $t('— flag —') }}</option>
+                                    <option value="" class="bg-slate-900 text-gray-400">{{ $t('- flag -') }}</option>
                                     <option v-for="c in countryOptions" :key="c.code" :value="c.code"
                                             class="bg-slate-900 text-gray-200">{{ c.label }}</option>
                                 </select>
@@ -805,7 +805,7 @@ DEMO_SFTP_REMOTEDIR={{ cred.remote_path }}</code></pre>
 
     </div>
 
-    <!-- Styled confirm modal — replaces native window.confirm() -->
+    <!-- Styled confirm modal - replaces native window.confirm() -->
     <Teleport to="body">
         <transition
             enter-active-class="transition duration-150 ease-out"

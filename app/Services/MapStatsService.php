@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Aggregates for the public /maps/stats page and the nightly snapshot
  * export. Every method that touches `records` (646k rows) or runs a JOIN
- * with `maps` (15k) is wrapped in Cache::remember — once a key is warm,
+ * with `maps` (15k) is wrapped in Cache::remember - once a key is warm,
  * the page renders in <50ms regardless of DB load.
  *
  * Cache TTL is 6 hours: a single new top-1 record per day moves the
@@ -18,10 +18,10 @@ use Illuminate\Support\Facades\DB;
  */
 class MapStatsService
 {
-    // 25h TTL paired with the daily 04:00 cron `mapstats:rebuild` —
+    // 25h TTL paired with the daily 04:00 cron `mapstats:rebuild` -
     // the cron always refreshes the keys before they can expire, so
     // a visitor never lands on an empty cache that would force a
-    // ~100s synchronous DB rebuild (production timing — local is
+    // ~100s synchronous DB rebuild (production timing - local is
     // ~14s but production sees 7× slower aggregates on 646k rows).
     // 6h was the original TTL, but with rebuild taking that long any
     // mid-day expiry meant the next visitor stalled / 504'd from the
@@ -80,7 +80,7 @@ class MapStatsService
 
     /**
      * Distinct mdd_id finisher count per map for the given physics. Counts
-     * how many unique players have at least one record on that map —
+     * how many unique players have at least one record on that map -
      * better signal of popularity than total record count (which would
      * inflate when one player spams resubmissions).
      *
@@ -103,7 +103,7 @@ class MapStatsService
 
     /**
      * Map releases per year. Anything before 1999 is folded into "1999"
-     * — early Q3 maps occasionally have nonsense dates from filesystem
+     * - early Q3 maps occasionally have nonsense dates from filesystem
      * mtime guessing.
      *
      * @return array<int, array{year:int,count:int}>
@@ -125,7 +125,7 @@ class MapStatsService
     }
 
     /**
-     * Author productivity — top N most prolific mappers by visible map
+     * Author productivity - top N most prolific mappers by visible map
      * count. Authors with empty/null names are dropped (legacy imports).
      *
      * @return array<int, array{author:string,count:int}>
@@ -185,7 +185,7 @@ class MapStatsService
     }
 
     /**
-     * Pareto-style WR concentration — what share of all WRs is held by
+     * Pareto-style WR concentration - what share of all WRs is held by
      * the top N players (by mdd_id). Useful for "is the scene healthy or
      * dominated by a handful of monsters".
      *
@@ -235,7 +235,7 @@ class MapStatsService
     }
 
     /**
-     * GitHub-style activity heatmap — count of records set per month
+     * GitHub-style activity heatmap - count of records set per month
      * across the whole DB. Used for the calendar-style heatmap on the
      * page.
      *
@@ -257,7 +257,7 @@ class MapStatsService
     }
 
     /**
-     * Distinct active players per year — players who set at least one
+     * Distinct active players per year - players who set at least one
      * record in that calendar year. Tracks community health.
      *
      * @return array<int, array{year:int,players:int}>
@@ -282,7 +282,7 @@ class MapStatsService
 
     /**
      * Weapon presence in maps over time. For each year, what fraction
-     * of new maps include each weapon — counts a map once per weapon
+     * of new maps include each weapon - counts a map once per weapon
      * present, so a `gl,pg,rl` map increments grenade + plasma +
      * rocket all by 1.
      *
@@ -290,7 +290,7 @@ class MapStatsService
      * (`rl,pg,gl,lg,rg,sg,bfg,hook,gauntlet,mg`), not full names. Split
      * on commas and match exact tokens to avoid false positives like
      * `gauntlet` matching "g" or `pg` matching "p". Token list mirrors
-     * the actual data: rare tokens (`ng`, `cg`, `pml`, `ga` — under
+     * the actual data: rare tokens (`ng`, `cg`, `pml`, `ga` - under
      * 30 maps each across the entire 15k library) are dropped from
      * the chart but still counted toward `total` so percentages are
      * accurate.
@@ -340,7 +340,7 @@ class MapStatsService
     }
 
     /**
-     * Records-per-player distribution — how skewed is the player base.
+     * Records-per-player distribution - how skewed is the player base.
      * Returns histogram buckets (1, 2-5, 6-10, 11-50, 51-100, 100+).
      *
      * @return array<int, array{bucket:string,players:int}>
@@ -408,7 +408,7 @@ class MapStatsService
     /**
      * Bundle every chart into a single payload for the front-end.
      * `generated_at` is stamped once and stored alongside the payload so
-     * the value is stable between requests within a cache window — this
+     * the value is stable between requests within a cache window - this
      * lets the API endpoint emit a stable ETag for 304 short-circuiting.
      */
     public function all(): array

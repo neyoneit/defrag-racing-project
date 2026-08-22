@@ -151,7 +151,7 @@
                                     @endif
                                 </td>
                                 <td style="padding:10px 14px;color:#22d3ee;font-size:11px;font-family:monospace;word-break:break-all;max-width:300px;">
-                                    {{ $bundle->url ?: ($bundle->file ? '/storage/' . $bundle->file : '—') }}
+                                    {{ $bundle->url ?: ($bundle->file ? '/storage/' . $bundle->file : '-') }}
                                 </td>
                                 <td style="padding:10px 14px;">
                                     <div style="display:flex;justify-content:flex-end;gap:4px;">

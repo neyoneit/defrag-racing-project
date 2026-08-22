@@ -35,7 +35,7 @@ class SftpCredential extends Model
         // Encrypted-at-rest; written by Approve / Reset, nulled by the
         // user's "I've copied it" acknowledgement.
         'password_pending' => 'encrypted',
-        // Mutable working set of declared servers — admin fills rs_code
+        // Mutable working set of declared servers - admin fills rs_code
         // per row from Filament after approval.
         'servers'          => 'array',
     ];

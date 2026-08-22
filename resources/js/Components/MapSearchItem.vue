@@ -14,7 +14,7 @@
     // When `isRoute` is true (header search) we render a real <a href>
     // via Inertia's <Link>. That makes middle-click / Ctrl-click /
     // right-click "Open in new tab" work the same as it does for
-    // PlayerSearchItem and ModelSearchItem — the previous implementation
+    // PlayerSearchItem and ModelSearchItem - the previous implementation
     // used a programmatic router.get() inside @click on a <div>, which
     // browsers can't middle-click open.
     //

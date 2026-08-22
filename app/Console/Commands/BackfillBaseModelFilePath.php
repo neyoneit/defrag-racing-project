@@ -56,7 +56,7 @@ class BackfillBaseModelFilePath extends Command
                     $this->line("  ✓ #{$model->id} {$model->name} → {$baseModel->file_path}");
                     $fixed++;
                 } else {
-                    $this->warn("  ✗ #{$model->id} {$model->name} — no complete '{$model->base_model}' model found");
+                    $this->warn("  ✗ #{$model->id} {$model->name} - no complete '{$model->base_model}' model found");
                     $skipped++;
                 }
             }

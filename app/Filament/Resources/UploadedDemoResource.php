@@ -55,7 +55,7 @@ class UploadedDemoResource extends Resource
                         return $query->whereHas('user', fn ($q) => $q->where('name', 'like', "%{$search}%"));
                     })
                     ->formatStateUsing(fn ($state) => strip_tags(preg_replace('/\^[0-9]/', '', $state ?? '')))
-                    ->placeholder('—'),
+                    ->placeholder('-'),
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
@@ -76,17 +76,17 @@ class UploadedDemoResource extends Resource
                     ->label('Map')
                     ->searchable()
                     ->limit(25)
-                    ->placeholder('—'),
+                    ->placeholder('-'),
 
                 Tables\Columns\TextColumn::make('physics')
                     ->badge()
                     ->color(fn (?string $state) => str_contains($state ?? '', 'cpm') ? 'purple' : 'info')
-                    ->placeholder('—'),
+                    ->placeholder('-'),
 
                 Tables\Columns\TextColumn::make('time_ms')
                     ->label('Time')
                     ->formatStateUsing(function ($state) {
-                        if (! $state) return '—';
+                        if (! $state) return '-';
                         $m = floor($state / 60000);
                         $s = floor(($state % 60000) / 1000);
                         $ms = $state % 1000;
@@ -96,7 +96,7 @@ class UploadedDemoResource extends Resource
 
                 Tables\Columns\TextColumn::make('record_id')
                     ->label('Record')
-                    ->placeholder('—')
+                    ->placeholder('-')
                     ->url(fn ($record) => $record->record_id
                         ? url("/profile/mdd/" . ($record->record?->mdd_id ?? 0))
                         : null)
@@ -104,7 +104,7 @@ class UploadedDemoResource extends Resource
 
                 Tables\Columns\TextColumn::make('file_size')
                     ->label('Size')
-                    ->formatStateUsing(fn ($state) => $state ? round($state / 1024, 1) . ' KB' : '—')
+                    ->formatStateUsing(fn ($state) => $state ? round($state / 1024, 1) . ' KB' : '-')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
 

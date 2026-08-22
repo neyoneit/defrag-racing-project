@@ -1262,7 +1262,7 @@ class ProfileController extends Controller {
             $record->is_outlier = $score ? $score->is_outlier : false;
             $record->score_rank = $scoreRanks[$record->mapname] ?? null;
             $record->score_rank_total = $totalMaps;
-            // Weight for this rank position — weight = exp(-D * (rank - 1))
+            // Weight for this rank position - weight = exp(-D * (rank - 1))
             // so the best record (rank 1) gets weight 1.0
             if (isset($scoreRanks[$record->mapname])) {
                 $record->score_weight = round(exp(-0.02 * ($scoreRanks[$record->mapname] - 1)), 4);
@@ -1356,7 +1356,7 @@ class ProfileController extends Controller {
 
             $mapMult = $score->multiplier ?? 1;
             $rankMult = $score->rank_multiplier ?? 1;
-            // base = map_score / (map_mult * rank_mult) — so that score = base * rank_mult * map_mult
+            // base = map_score / (map_mult * rank_mult) - so that score = base * rank_mult * map_mult
             $divisor = $mapMult * $rankMult;
             $baseScore = ($divisor > 0) ? $score->map_score / $divisor : $score->map_score;
 

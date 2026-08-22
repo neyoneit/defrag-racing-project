@@ -67,7 +67,7 @@
         }
     };
 
-    // Suggested matches — records sorted by time distance to demo's time
+    // Suggested matches - records sorted by time distance to demo's time
     const suggestedRecords = computed(() => {
         if (!assigningRecord.value || availableRecords.value.length === 0) return [];
         const demoTime = assigningRecord.value.time_ms || assigningRecord.value.time;
@@ -809,7 +809,7 @@
 
     // Unique-per-row key for tracking which time-history drawer is open.
     // A row can be either an offline/online demo (has `demo.id`) or a main
-    // record (no attached demo — fall back to record.id). Physics-scoped so
+    // record (no attached demo - fall back to record.id). Physics-scoped so
     // the same user's VQ3 and CPM rows don't share state.
     const timeHistoryRowKey = (record, physics) => {
         const id = record.demo?.id || record.uploaded_demos?.[0]?.id || record.id;
@@ -830,8 +830,8 @@
     // via the TimeHistoryExpand drawer.
     //
     // Items that participate in grouping:
-    //   1. Offline records / inline assigned demos — signals come from `demo`
-    //   2. Main MDD online records — signals come from `uploaded_demos[0]`
+    //   1. Offline records / inline assigned demos - signals come from `demo`
+    //   2. Main MDD online records - signals come from `uploaded_demos[0]`
     //      (if attached) + fallback on record.name / record.user.name
     // This means a main q3df record and its owner's slower offline uploads
     // collapse into a single row (with the MDD record as representative if
@@ -859,7 +859,7 @@
                     plain: ((d.q3df_login_name || '').trim().toLowerCase()) || null,
                 };
             }
-            // Main MDD record without attached demo — fall back to the record's
+            // Main MDD record without attached demo - fall back to the record's
             // own player name so it can still cluster with that player's demos.
             const fallbackName = stripColors(item.name || item.player_name || item.user?.name);
             if (fallbackName) {
@@ -897,7 +897,7 @@
             counts.set(root, (counts.get(root) || 0) + 1);
         }
 
-        // Precompute max signal strength (0..3) for each cluster — so the
+        // Precompute max signal strength (0..3) for each cluster - so the
         // time-history badge can show 1/3, 2/3, 3/3 before the drawer is
         // even opened. We compare each non-representative member back to
         // its cluster root.
@@ -927,7 +927,7 @@
         }
 
         // Items are already sorted by time asc before this call, so the first
-        // index we see per root is the fastest attempt — that becomes the
+        // index we see per root is the fastest attempt - that becomes the
         // representative row for the virtual player.
         const kept = new Set();
         const result = [];
@@ -970,7 +970,7 @@
         combined.sort((a, b) => (a.time || a.time_ms) - (b.time || b.time_ms));
         combined = groupByVirtualPlayer(combined);
 
-        // DON'T reassign ranks per page — each server-side paginator (main
+        // DON'T reassign ranks per page - each server-side paginator (main
         // records, Demos Top, oldtop) ranks its own data, and reassigning
         // here from 1 on every page made ranks reset whenever the user
         // clicks Next. We lose cross-source rank unification (main rank 5
@@ -980,7 +980,7 @@
         // The offline paginator is already grouped server-side (one rep per
         // virtual player), so its last_page is correct. Main records and
         // oldtop have no collisions worth worrying about. Use max of the
-        // three server paginators — that's the real last page.
+        // three server paginators - that's the real last page.
         const perPage = onlineRecords.per_page || 20;
         const lastPage = Math.max(
             onlineRecords.last_page || 1,

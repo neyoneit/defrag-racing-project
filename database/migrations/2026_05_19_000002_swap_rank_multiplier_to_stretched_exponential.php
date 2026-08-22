@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
  *
  * Three new params drive the new curve (k = floor for the worst rank,
  * n = overall steepness, p = position of the steep section). The two
- * old params (rank_exponent, rank_v) are dropped — they have no meaning
+ * old params (rank_exponent, rank_v) are dropped - they have no meaning
  * under the new formula.
  *
  * Filament admin and the rust service are updated in the same change
@@ -26,9 +26,9 @@ return new class extends Migration
 
         $now = now();
         $rows = [
-            ['key' => 'rank_k', 'value' => '0.80', 'description' => 'Rank multiplier — value for the worst-ranked record on the map (k in k^(t^(n+p(1-t)))).'],
-            ['key' => 'rank_n', 'value' => '0.95', 'description' => 'Rank multiplier — controls overall curve steepness.'],
-            ['key' => 'rank_p', 'value' => '0.05', 'description' => 'Rank multiplier — controls where the steep section sits along the curve.'],
+            ['key' => 'rank_k', 'value' => '0.80', 'description' => 'Rank multiplier - value for the worst-ranked record on the map (k in k^(t^(n+p(1-t)))).'],
+            ['key' => 'rank_n', 'value' => '0.95', 'description' => 'Rank multiplier - controls overall curve steepness.'],
+            ['key' => 'rank_p', 'value' => '0.05', 'description' => 'Rank multiplier - controls where the steep section sits along the curve.'],
         ];
         foreach ($rows as $row) {
             DB::table('rating_settings')->updateOrInsert(

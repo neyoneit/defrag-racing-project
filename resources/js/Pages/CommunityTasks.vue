@@ -211,10 +211,10 @@ async function submitVote(demoId, voteType, taskType, selectedRecordId = null) {
 function selectRecord(task, record) {
     // In verification flow the same demo already has an assigned record
     // (shown as MATCHED). Clicking that record as the "better match"
-    // target is meaningless — server rejects it with 422. Block at the
+    // target is meaningless - server rejects it with 422. Block at the
     // click level so the user gets immediate feedback instead.
     if (task.current_record?.id === record.id) {
-        assignHints.value[task.demo.id] = 'This record is already matched — use "Correct" to confirm, or pick a different rival.';
+        assignHints.value[task.demo.id] = 'This record is already matched - use "Correct" to confirm, or pick a different rival.';
         return;
     }
 
@@ -1159,7 +1159,7 @@ onUnmounted(() => {
                             </div>
                             <div class="flex items-start gap-2">
                                 <span class="text-indigo-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                <p>{{ $t('Not sure? Just') }} <strong class="text-yellow-400">{{ $t('Skip') }}</strong> {{ $t("— no points, but the same map won't come back to you for a week.") }}</p>
+                                <p>{{ $t('Not sure? Just') }} <strong class="text-yellow-400">{{ $t('Skip') }}</strong> {{ $t("- no points, but the same map won't come back to you for a week.") }}</p>
                             </div>
                         </div>
                     </div>
@@ -1633,7 +1633,7 @@ onUnmounted(() => {
                                 </div>
                                 <div class="flex items-start gap-2">
                                     <span class="text-purple-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                    <p>{{ $t('When in doubt,') }} <strong class="text-white">{{ $t('Skip') }}</strong> {{ $t("is always fine — no points, but it still helps. The same map won't come back for a week.") }}</p>
+                                    <p>{{ $t('When in doubt,') }} <strong class="text-white">{{ $t('Skip') }}</strong> {{ $t("is always fine - no points, but it still helps. The same map won't come back for a week.") }}</p>
                                 </div>
                             </div>
                         </div>
@@ -1776,7 +1776,7 @@ onUnmounted(() => {
                                 </div>
                                 <div class="flex items-start gap-2">
                                     <span class="text-amber-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                    <p>{{ $t('When in doubt,') }} <strong class="text-white">{{ $t('Skip') }}</strong> {{ $t("is always fine — no points, but it still helps. The same map won't come back for a week.") }}</p>
+                                    <p>{{ $t('When in doubt,') }} <strong class="text-white">{{ $t('Skip') }}</strong> {{ $t("is always fine - no points, but it still helps. The same map won't come back for a week.") }}</p>
                                 </div>
                             </div>
                         </div>

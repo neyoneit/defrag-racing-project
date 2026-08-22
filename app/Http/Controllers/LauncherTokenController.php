@@ -44,7 +44,7 @@ class LauncherTokenController extends Controller
         // notification feed) from the write-side upload endpoint without
         // making every read require write privilege. Tokens minted before
         // this change carry only launcher:upload and will get 403 on the
-        // read endpoints — user just regenerates from /user/launcher-tokens.
+        // read endpoints - user just regenerates from /user/launcher-tokens.
         $token = $user->createToken('launcher:'.$data['label'], ['launcher:upload', 'launcher:read']);
 
         return response()->json([
@@ -52,7 +52,7 @@ class LauncherTokenController extends Controller
             'label' => $data['label'],
             'created_at' => $token->accessToken->created_at,
             'last_used_at' => null,
-            // Plaintext token — only returned once, never persisted in cleartext.
+            // Plaintext token - only returned once, never persisted in cleartext.
             'plain_text_token' => $token->plainTextToken,
         ]);
     }

@@ -36,7 +36,7 @@ class LogApiCalls
                     ? $user->currentAccessToken()
                     : null;
                 // currentAccessToken returns TransientToken when the user
-                // authenticated via session cookie — TransientToken has
+                // authenticated via session cookie - TransientToken has
                 // no id. Only PersonalAccessToken is a real PAT row.
                 $tokenId = $token instanceof \Laravel\Sanctum\PersonalAccessToken
                     ? $token->id
@@ -70,7 +70,7 @@ class LogApiCalls
                 ]);
             }
         } catch (Throwable $e) {
-            // Logging the logger going wrong — keep response flowing.
+            // Logging the logger going wrong - keep response flowing.
             Log::warning('LogApiCalls write failed', ['error' => $e->getMessage()]);
         }
 

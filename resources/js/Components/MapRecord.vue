@@ -118,7 +118,7 @@
         // A record can have several rendered_videos (re-render attempts,
         // updated metadata, server-then-uploader demos that both got rendered).
         // Picking videos[0] from the latest()-ordered backend list means a
-        // newer 'failed' attempt hides an older 'completed' one — the user
+        // newer 'failed' attempt hides an older 'completed' one - the user
         // sees a "render failed" badge on a record whose YouTube video is
         // perfectly fine. Pick the most useful status instead.
         const priority = { completed: 0, uploading: 1, rendering: 2, pending: 3, failed: 4 };
@@ -384,7 +384,7 @@
     });
 
     // A row that resolved to a registered profile (via its cluster's alias
-    // match) shows that PROFILE's name — even for an offline demo. The demo
+    // match) shows that PROFILE's name - even for an offline demo. The demo
     // file's nick is just one of the player's aliases, so once we know whose
     // profile it is we display the profile, consistent with the avatar +
     // profile link (getRoute) which already use record.user. Only fall back
@@ -423,7 +423,7 @@
     });
 
     const getRoute = computed(() => {
-        // Linked users with full profiles — works for online records AND for
+        // Linked users with full profiles - works for online records AND for
         // offline/Demos-Top reps that inherited a canonical user from their
         // cluster (e.g. NOOB's fastest offline demo links to NOOB's profile
         // when the cluster matched his alias).
@@ -431,7 +431,7 @@
             return route('profile.index', props.record.user.id);
         }
 
-        // Unmatched offline row — no profile link available.
+        // Unmatched offline row - no profile link available.
         if (isOfflineRecord.value) {
             return null;
         }

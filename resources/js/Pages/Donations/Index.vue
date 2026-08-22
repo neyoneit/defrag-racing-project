@@ -216,16 +216,40 @@ const isDropdownOpen = ref(false);
 const dropdownButton = ref(null);
 const dropdownPosition = ref({ top: 0, left: 0, width: 0 });
 
-// Update dropdown position
+// Where to put the dropdown.
+//
+// The panel is position:fixed, so it wants viewport coordinates, and
+// getBoundingClientRect already gives them. Adding the scroll offset turned
+// them into document coordinates: the further down the page you were, the
+// further below the button the panel opened.
+const DROPDOWN_WIDTH = 320;
+const DROPDOWN_MAX_HEIGHT = 384;
+
 const updateDropdownPosition = () => {
-    if (dropdownButton.value) {
-        const rect = dropdownButton.value.getBoundingClientRect();
-        dropdownPosition.value = {
-            top: rect.bottom + window.scrollY + 8,
-            left: rect.left + window.scrollX,
-            width: rect.width
-        };
-    }
+    if (!dropdownButton.value) return;
+
+    const rect = dropdownButton.value.getBoundingClientRect();
+    const margin = 8;
+
+    // The button sits on the right of its panel and the list is wider than
+    // the button, so aligning the left edges pushes it off the screen. Hang it
+    // off the right edge instead, then keep it on screen either way.
+    let left = rect.right - DROPDOWN_WIDTH;
+    left = Math.min(left, window.innerWidth - DROPDOWN_WIDTH - margin);
+    left = Math.max(margin, left);
+
+    // Below the button, unless there is no room below and more room above.
+    const below = window.innerHeight - rect.bottom - margin;
+    const above = rect.top - margin;
+    const dropUp = below < Math.min(DROPDOWN_MAX_HEIGHT, above) && above > below;
+
+    dropdownPosition.value = {
+        top: dropUp
+            ? Math.max(margin, rect.top - Math.min(DROPDOWN_MAX_HEIGHT, above) - margin)
+            : rect.bottom + margin,
+        left,
+        width: rect.width,
+    };
 };
 
 // Toggle dropdown and update position

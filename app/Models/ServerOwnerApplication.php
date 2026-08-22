@@ -21,7 +21,7 @@ class ServerOwnerApplication extends Model
         'reviewed_at'       => 'datetime',
         'rules_accepted_at' => 'datetime',
         // server_info stores a structured list of the applicant's defrag
-        // servers — see ServerHostingController::apply() for the shape.
+        // servers - see ServerHostingController::apply() for the shape.
         'server_info' => 'array',
     ];
 

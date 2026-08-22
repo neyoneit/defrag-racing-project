@@ -11,7 +11,7 @@ return new class extends Migration
         // each notification to its source record (same map/physics/mode/player/time)
         // and copying rank==1 over as worldrecord=true.
         // Records may have been re-ranked since the notification was created,
-        // so the historical accuracy isn't perfect — this reflects current rank.
+        // so the historical accuracy isn't perfect - this reflects current rank.
         DB::statement("
             UPDATE record_notifications rn
             INNER JOIN records r
@@ -33,7 +33,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Not reversible — we can't tell which notifications were originally
+        // Not reversible - we can't tell which notifications were originally
         // read vs. marked read by this migration. Leave as-is.
     }
 };

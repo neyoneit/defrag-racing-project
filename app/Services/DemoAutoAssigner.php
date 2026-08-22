@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Log;
  *
  * Extracted from DemoProcessorService::autoAssignToRecord so that both the
  * live upload path (DemoProcessorService) and the nightly batch rematch
- * (RematchAllDemos) run the same matching logic — PASS 0 (q3df login),
- * PASS 1 (uploader record), PASS 2 (fuzzy nick) — and write the same
+ * (RematchAllDemos) run the same matching logic - PASS 0 (q3df login),
+ * PASS 1 (uploader record), PASS 2 (fuzzy nick) - and write the same
  * match_method values.
  *
  * Does NOT create offline records. Caller is responsible for fall-through
@@ -62,7 +62,7 @@ class DemoAutoAssigner
         $physics = str_replace('.tr', '', strtolower($demo->physics));
         $gametype = 'run_' . $physics;
 
-        // PASS 0: q3df login — server-side authoritative identifier from
+        // PASS 0: q3df login - server-side authoritative identifier from
         // console messages ("Enter(Enter), you are now rank..."). Colored
         // variant is effectively unique; plain variant is accepted only
         // when exactly one user owns it.
@@ -168,7 +168,7 @@ class DemoAutoAssigner
                     'name_match_confidence' => $nameMatch['confidence'] ?? null,
                     'candidate_record_id' => $uploaderRecordId,
                 ]);
-                // Fall through to Pass 2 (fuzzy nick) — that path will
+                // Fall through to Pass 2 (fuzzy nick) - that path will
                 // attribute the demo to the actual player.
             }
         }
@@ -274,7 +274,7 @@ class DemoAutoAssigner
      * If the demo already has an offline_record (from a prior
      * fallback-assignment), delete it and decrement ranks of any slower
      * offline records for the same map/physics/gametype. No-op when no
-     * offline_record exists — safe to call from the live processor path
+     * offline_record exists - safe to call from the live processor path
      * where there's never a pre-existing offline_record for a demo.
      */
     protected function upgradeOfflineRecordToOnline(UploadedDemo $demo): void

@@ -2,13 +2,13 @@
     // $record, $serverdemo, $history, $uploads come from the action's
     // modalContent(). Times are milliseconds everywhere in this project.
     $fmtTime = function ($ms) {
-        if ($ms === null) return '—';
+        if ($ms === null) return '-';
         $sec = $ms / 1000;
         $min = floor($sec / 60);
         return sprintf('%d:%06.3f', $min, $sec - $min * 60);
     };
     $fmtSize = function ($b) {
-        if (! $b) return '—';
+        if (! $b) return '-';
         return $b >= 1048576 ? round($b / 1048576, 1) . ' MB' : round($b / 1024) . ' kB';
     };
 @endphp
@@ -35,8 +35,8 @@
                     <div class="font-mono text-xs text-gray-300">{{ $serverdemo->filename }}</div>
                     <div class="text-xs text-gray-500 mt-1">
                         {{ $fmtSize($serverdemo->size) }} ·
-                        recorded {{ $serverdemo->recorded_at?->format('Y-m-d H:i') ?? '—' }} ·
-                        server {{ $serverdemo->rs_server_id ?? '—' }}
+                        recorded {{ $serverdemo->recorded_at?->format('Y-m-d H:i') ?? '-' }} ·
+                        server {{ $serverdemo->rs_server_id ?? '-' }}
                         @unless ($serverdemo->on_contabo) · from the B2 mirror @endunless
                     </div>
                 </div>
@@ -100,7 +100,7 @@
                         <div class="flex items-center gap-3">
                             <span class="font-mono text-gray-200 w-24">{{ $fmtTime($demo->time_ms) }}</span>
                             <span class="text-xs text-gray-500">
-                                {{ $demo->recorded_at?->format('Y-m-d H:i') ?? '—' }}
+                                {{ $demo->recorded_at?->format('Y-m-d H:i') ?? '-' }}
                             </span>
                         </div>
                         <a href="{{ \App\Services\RecordEvidence::downloadUrl($demo) }}"

@@ -84,7 +84,7 @@ class CommunityTasksController extends Controller
         $demo = UploadedDemo::find($demoId);
 
         // Reject "better match" votes that re-select the currently-assigned
-        // record — that's a no-op gaming the +3 point reward (user clicks
+        // record - that's a no-op gaming the +3 point reward (user clicks
         // "better match" without actually picking a different rival).
         if ($voteType === 'better_match') {
             if (!$request->selected_record_id) {
@@ -145,7 +145,7 @@ class CommunityTasksController extends Controller
                         ->whereNull('consensus_status')
                         ->update(['consensus_status' => 'needs_review']);
                 }
-                // Skips don't earn points — they only feed cooldown and
+                // Skips don't earn points - they only feed cooldown and
                 // the 3×-trigger consensus logic above.
                 $points = 0;
                 break;
@@ -252,7 +252,7 @@ class CommunityTasksController extends Controller
 
     /**
      * Map names this user has signalled "no idea about" in the cooldown
-     * window — covers not_sure votes (community_task_votes) AND rating/
+     * window - covers not_sure votes (community_task_votes) AND rating/
      * tag skips (community_task_map_skips). Both task generators exclude
      * demos on these maps so the reviewer doesn't see the same map
      * repeatedly with different demos.
@@ -280,7 +280,7 @@ class CommunityTasksController extends Controller
 
     /**
      * Records a rating/tag skip server-side so the map enters the user's
-     * cooldown. Returns 0 points — skips are no-effort and we only
+     * cooldown. Returns 0 points - skips are no-effort and we only
      * reward actual decisions (rating submitted, tag added, etc.).
      */
     public function skip(Request $request)
