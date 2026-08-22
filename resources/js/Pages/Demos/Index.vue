@@ -1282,19 +1282,20 @@ watch(selectedPhysics, () => {
                      title down the page - so Demos sat lower than every other
                      section, which all top-align their heading. -->
                 <div class="flex justify-between items-start flex-wrap gap-4">
-                    <div>
-                        <div class="flex items-center gap-3 mb-1">
-                            <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('Demos') }}</h1>
-                        </div>
+                    <!-- Title, what the page is for, and the credit, on one
+                         line. They wrap onto the next line on their own when
+                         the window is too narrow to hold them. Aligned on the
+                         baseline so the small text sits on the same line as the
+                         letters of the heading rather than its box. -->
+                    <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('Demos') }}</h1>
                         <p class="text-sm text-gray-400">{{ $t('Upload and manage demo files') }}</p>
-                        <p class="text-xs text-gray-500 mt-1">
-                            <span class="relative group inline-block">
-                                <span class="cursor-help border-b border-dotted border-gray-600 text-gray-400">{{ $t('Special thanks') }}</span>
-                                <span class="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-opacity absolute left-0 top-full z-30 w-64 rounded-lg bg-gray-900 border border-white/10 px-3 py-2 text-xs text-gray-300 shadow-xl leading-snug">
-                                    {{ $t('Special thanks to') }} <Link href="/profile/549" class="text-gray-200 hover:text-white underline transition-colors">Enter</Link> {{ $t('for his demo collection that helped populate this database.') }}
-                                </span>
+                        <span class="relative group inline-block text-xs">
+                            <span class="cursor-help border-b border-dotted border-gray-600 text-gray-400">{{ $t('Special thanks') }}</span>
+                            <span class="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-opacity absolute left-0 top-full z-30 w-64 rounded-lg bg-gray-900 border border-white/10 px-3 py-2 text-xs text-gray-300 shadow-xl leading-snug">
+                                {{ $t('Special thanks to') }} <Link href="/profile/549" class="text-gray-200 hover:text-white underline transition-colors">Enter</Link> {{ $t('for his demo collection that helped populate this database.') }}
                             </span>
-                        </p>
+                        </span>
                     </div>
 
                     <Link :href="route('launcher')"
