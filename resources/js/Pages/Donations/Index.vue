@@ -694,7 +694,7 @@ const getYearProgress = (year, yearTotal) => {
                             <svg class="w-6 h-6 flex-shrink-0 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                             </svg>
-                            {{ $t('One person does all of this') }}
+                            {{ $t('One person does all of this, for free') }}
                         </h3>
                         <p class="text-sm leading-relaxed text-gray-300">
                             {{ $t('The site, the launcher, DemoMe and this page were built by me and by nobody else. So was DefragLive, apart from its early parts, which frog wrote. Nobody is paid and there is no team.') }}
@@ -702,6 +702,11 @@ const getYearProgress = (year, yearTotal) => {
                         <!-- The bit people never ask about and always wonder.
                              Said in the brightest text in the block, because a
                              page asking for money owes the answer plainly. -->
+                        <!-- The question that follows "why would anybody do
+                             that", asked and answered before it is asked. -->
+                        <p class="text-sm leading-relaxed text-gray-300 mt-2">
+                            {{ $t('Why? Because I want defrag to get better, and easier to pick up for anyone new to it.') }}
+                        </p>
                         <p class="text-sm leading-relaxed text-gray-100 font-semibold mt-2">
                             {{ $t('No donation goes into my pocket. Not a cent of it. It pays the running costs and nothing else.') }}
                         </p>

@@ -225,10 +225,13 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(currentLocale())
                              Same heading as the donations page uses for the
                              same statement, so the two read as one voice. -->
                         <p class="text-sm font-bold text-white mt-3">
-                            {{ $t('One person does all of this') }}
+                            {{ $t('One person does all of this, for free') }}
                         </p>
                         <p class="text-sm leading-relaxed text-gray-100 font-semibold mt-1">
                             {{ $t('The site, the launcher, DemoMe and this board were built by me and by nobody else. So was DefragLive, apart from its early parts, which frog wrote. Nobody is paid and there is no team (donations pay the running costs only, and not a cent of them reaches my pocket).') }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-300 mt-1.5">
+                            {{ $t('Why? Because I want defrag to get better, and easier to pick up for anyone new to it.') }}
                         </p>
                         <p class="text-sm leading-relaxed text-gray-400 mt-1.5">
                             {{ $t('It goes the other way as well: things like the DefragLive contest prizes come out of my own pocket.') }}
