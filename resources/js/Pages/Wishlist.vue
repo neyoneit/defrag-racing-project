@@ -196,7 +196,12 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(currentLocale())
                      fixed width with empty space beside it. What the page is
                      and what to expect from it are the same message, so they
                      are one panel and not two. -->
-                <div class="flex justify-between items-center flex-wrap gap-4">
+                <div class="flex justify-between items-start flex-wrap gap-4">
+                    <!-- items-start: the heading sits at the top of the row,
+                         where it does on every other page. Centring it against
+                         the panel, which is the tall thing in this row, floated
+                         it down into the middle of the block and nowhere near
+                         where a reader expects to find a page title. -->
                     <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 flex-shrink-0">
                         {{ $t('Wishlist') }}
                     </h1>
