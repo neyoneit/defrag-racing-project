@@ -274,7 +274,8 @@ const changeList = (list) => {
 const DEFAULT_FILTERS = {
     tab: 'all', status: 'all', search: '', map: '', players: [], physics: [],
     time_min: null, time_max: null, country: '', date_from: '', date_to: '',
-    uploaded_by: '', confidence: '', other_user_matches: false,
+    uploaded_by: '', rank_min: null, rank_max: null,
+    confidence: '', other_user_matches: false,
     sort: 'created_at', order: 'desc',
 };
 
@@ -1290,7 +1291,7 @@ watch(selectedPhysics, () => {
                     </Link>
 
                     <!-- Limits Info (Right Side) -->
-                    <div class="flex flex-col gap-2">
+                    <div class="flex flex-wrap gap-2 items-start">
                         <!-- Download Limit -->
                         <div v-if="localDownloadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border backdrop-blur-sm" :class="localDownloadLimitInfo.isGuest ? 'bg-blue-900/20 border-blue-500/30' : localDownloadLimitInfo.remaining === 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-white/[0.06] border-white/10'">
                             <div class="flex items-center gap-2">

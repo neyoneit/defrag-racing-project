@@ -88,12 +88,22 @@ const makePicker = (routeName) => {
 
 const mapPicker = makePicker('demos.search-demo-maps');
 const playerPicker = makePicker('demos.search-demo-players');
+const uploaderPicker = makePicker('demos.search-uploaders');
 
-mapPicker.query.value = props.filters.map || '';
+// take(), not a plain assignment. Writing to the box triggers its own search,
+// so a saved link that already carries a map would fire a request and pop the
+// suggestion list open before anybody had typed anything.
+mapPicker.take(props.filters.map || '');
+uploaderPicker.take(props.filters.uploaded_by || '');
 
 const chooseMap = (value) => {
     mapPicker.take(value);
     set({ map: value });
+};
+
+const chooseUploader = (value) => {
+    uploaderPicker.take(value);
+    set({ uploaded_by: value });
 };
 
 const players = computed(() => props.filters.players || []);
@@ -132,6 +142,16 @@ const applyTimes = () => set({
     time_max: timeMax.value === '' ? null : Number(timeMax.value),
 });
 
+// --- Rank -----------------------------------------------------------------
+
+const rankMin = ref(props.filters.rank_min ?? '');
+const rankMax = ref(props.filters.rank_max ?? '');
+
+const applyRanks = () => set({
+    rank_min: rankMin.value === '' ? null : Number(rankMin.value),
+    rank_max: rankMax.value === '' ? null : Number(rankMax.value),
+});
+
 // --- Panel state ----------------------------------------------------------
 
 const activeCount = computed(() => {
@@ -145,22 +165,25 @@ const activeCount = computed(() => {
     if (f.country) n++;
     if (f.date_from || f.date_to) n++;
     if (f.uploaded_by) n++;
+    if (f.rank_min != null || f.rank_max != null) n++;
     if (f.confidence) n++;
     if (f.other_user_matches) n++;
     return n;
 });
 
-const detailsOpen = ref(activeCount.value > 0);
-
 const clearAll = () => {
     mapPicker.take('');
     playerPicker.take('');
+    uploaderPicker.take('');
     timeMin.value = '';
     timeMax.value = '';
+    rankMin.value = '';
+    rankMax.value = '';
     set({
         search: '', map: '', players: [], physics: [],
         time_min: null, time_max: null, country: '',
         date_from: '', date_to: '', uploaded_by: '',
+        rank_min: null, rank_max: null,
         confidence: '', other_user_matches: false,
     });
 };
@@ -170,6 +193,7 @@ const closeDropdowns = (event) => {
         physicsOpen.value = false;
         mapPicker.open.value = false;
         playerPicker.open.value = false;
+        uploaderPicker.open.value = false;
     }
 };
 
@@ -177,10 +201,27 @@ onMounted(() => document.addEventListener('click', closeDropdowns));
 onUnmounted(() => document.removeEventListener('click', closeDropdowns));
 
 const fieldClass = 'px-2.5 py-1.5 bg-gray-700/50 border border-gray-600/50 rounded-lg text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent';
+
+// A date box only opened its calendar if you hit the small icon, and the icon
+// itself was almost invisible on a dark background. This opens it from
+// anywhere in the box. showPicker throws if the browser will not allow it
+// without a gesture, and a click is a gesture, so the guard is for the
+// browsers that do not have the method at all.
+const openDatePicker = (event) => {
+    try {
+        event.target.showPicker?.();
+    } catch {
+        // The box still types, which is the fallback.
+    }
+};
 </script>
 
 <template>
-    <div class="bg-black/40 backdrop-blur-sm rounded-xl p-3 mb-3 shadow-2xl border border-white/5 space-y-2">
+    <!-- relative z-50 on the panel itself. The tables below carry
+         backdrop-blur, which makes each of them a stacking context of its own,
+         so a z-index inside this panel could not reach over them. Raising the
+         panel raises everything it contains with it. -->
+    <div class="relative z-50 bg-black/40 backdrop-blur-sm rounded-xl p-3 mb-3 shadow-2xl border border-white/5 space-y-2">
         <!-- Online / offline, then how far the demo got. -->
         <div class="flex flex-wrap gap-1.5 items-center">
             <button
@@ -210,22 +251,18 @@ const fieldClass = 'px-2.5 py-1.5 bg-gray-700/50 border border-gray-600/50 round
             </button>
 
             <button
+                v-if="activeCount > 0"
                 type="button"
-                @click="detailsOpen = !detailsOpen"
-                class="ml-auto px-2.5 py-1 rounded text-xs font-medium transition-all inline-flex items-center gap-1.5"
-                :class="activeCount > 0 ? 'bg-blue-600/80 text-white' : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
+                @click="clearAll"
+                class="ml-auto px-2.5 py-1 rounded text-xs font-medium bg-gray-700/50 border border-gray-600/50 text-gray-300 hover:bg-gray-700 transition-colors inline-flex items-center gap-1.5"
             >
-                {{ $t('Filters') }}
-                <span v-if="activeCount > 0" class="bg-white/20 rounded px-1">{{ activeCount }}</span>
-                <svg class="w-3 h-3 transition-transform" :class="detailsOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
+                {{ $t('Clear filters') }}
+                <span class="bg-white/20 rounded px-1">{{ activeCount }}</span>
             </button>
         </div>
 
-        <!-- Everything else. Folded until somebody wants it, open on its own
-             when a saved link already carries a filter. -->
-        <div v-show="detailsOpen" class="flex flex-wrap gap-2 items-start pt-1">
+        <!-- Always on screen. It wraps on its own at any window width. -->
+        <div class="flex flex-wrap gap-2 items-start pt-1">
             <!-- Map -->
             <div class="relative" data-demo-filter-dropdown>
                 <input
@@ -236,14 +273,24 @@ const fieldClass = 'px-2.5 py-1.5 bg-gray-700/50 border border-gray-600/50 round
                     :class="fieldClass"
                     @keyup.enter="chooseMap(mapPicker.query.value)"
                 />
-                <div v-if="mapPicker.open.value" class="absolute z-30 mt-1 w-56 max-h-60 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-2xl">
+                <div v-if="mapPicker.open.value" class="absolute z-50 mt-1 w-64 max-h-72 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-2xl">
                     <button
-                        v-for="name in mapPicker.options.value"
-                        :key="name"
+                        v-for="option in mapPicker.options.value"
+                        :key="option.name"
                         type="button"
-                        @click="chooseMap(name)"
-                        class="block w-full text-left px-3 py-1.5 text-xs text-gray-200 hover:bg-gray-700"
-                    >{{ name }}</button>
+                        @click="chooseMap(option.name)"
+                        class="flex items-center gap-2 w-full text-left px-2 py-1.5 text-xs text-gray-200 hover:bg-gray-700"
+                    >
+                        <img
+                            v-if="option.thumbnail"
+                            :src="'/storage/' + option.thumbnail"
+                            alt=""
+                            loading="lazy"
+                            class="w-10 h-7 object-cover rounded flex-shrink-0 bg-gray-900"
+                        />
+                        <span v-else class="w-10 h-7 rounded flex-shrink-0 bg-gray-900/80 border border-gray-700"></span>
+                        <span class="truncate">{{ option.name }}</span>
+                    </button>
                 </div>
             </div>
 
@@ -266,7 +313,7 @@ const fieldClass = 'px-2.5 py-1.5 bg-gray-700/50 border border-gray-600/50 round
                         :class="fieldClass"
                     />
                 </div>
-                <div v-if="playerPicker.open.value" class="absolute z-30 mt-1 w-56 max-h-60 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-2xl">
+                <div v-if="playerPicker.open.value" class="absolute z-50 mt-1 w-56 max-h-60 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-2xl">
                     <button
                         v-for="name in playerPicker.options.value"
                         :key="name"
@@ -287,7 +334,7 @@ const fieldClass = 'px-2.5 py-1.5 bg-gray-700/50 border border-gray-600/50 round
                 >
                     {{ chosenPhysics.length ? chosenPhysics.join(', ') : $t('Physics') }}
                 </button>
-                <div v-if="physicsOpen" class="absolute z-30 mt-1 w-40 max-h-60 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-2xl p-1">
+                <div v-if="physicsOpen" class="absolute z-50 mt-1 w-40 max-h-60 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-2xl p-1">
                     <label
                         v-for="value in physicsOptions"
                         :key="value"
@@ -306,6 +353,15 @@ const fieldClass = 'px-2.5 py-1.5 bg-gray-700/50 border border-gray-600/50 round
                 <input v-model="timeMax" type="number" min="0" step="0.1" :placeholder="$t('to s')" class="w-20" :class="fieldClass" @change="applyTimes" @keyup.enter="applyTimes" />
             </div>
 
+            <!-- Rank on the map. Only a demo tied to a record has one, so
+                 this narrows to those; the label says so. -->
+            <div class="flex items-center gap-1" :title="$t('Only demos linked to a record have a rank.')">
+                <span class="text-xs text-gray-500">#</span>
+                <input v-model="rankMin" type="number" min="1" step="1" :placeholder="$t('rank from')" class="w-24" :class="fieldClass" @change="applyRanks" @keyup.enter="applyRanks" />
+                <span class="text-gray-500 text-xs">-</span>
+                <input v-model="rankMax" type="number" min="1" step="1" :placeholder="$t('rank to')" class="w-24" :class="fieldClass" @change="applyRanks" @keyup.enter="applyRanks" />
+            </div>
+
             <!-- Country -->
             <select :value="filters.country" @change="set({ country: $event.target.value })" class="w-28" :class="fieldClass">
                 <option value="">{{ $t('Country') }}</option>
@@ -314,9 +370,23 @@ const fieldClass = 'px-2.5 py-1.5 bg-gray-700/50 border border-gray-600/50 round
 
             <!-- When it was uploaded -->
             <div class="flex items-center gap-1">
-                <input :value="filters.date_from" type="date" class="w-36" :class="fieldClass" @change="set({ date_from: $event.target.value })" />
+                <input
+                    :value="filters.date_from"
+                    type="date"
+                    class="w-36 cursor-pointer [color-scheme:dark]"
+                    :class="fieldClass"
+                    @click="openDatePicker"
+                    @change="set({ date_from: $event.target.value })"
+                />
                 <span class="text-gray-500 text-xs">-</span>
-                <input :value="filters.date_to" type="date" class="w-36" :class="fieldClass" @change="set({ date_to: $event.target.value })" />
+                <input
+                    :value="filters.date_to"
+                    type="date"
+                    class="w-36 cursor-pointer [color-scheme:dark]"
+                    :class="fieldClass"
+                    @click="openDatePicker"
+                    @change="set({ date_to: $event.target.value })"
+                />
             </div>
 
             <!-- Filename -->
@@ -331,15 +401,25 @@ const fieldClass = 'px-2.5 py-1.5 bg-gray-700/50 border border-gray-600/50 round
             />
 
             <!-- Who sent it in -->
-            <input
-                :value="filters.uploaded_by"
-                type="text"
-                :placeholder="$t('Uploaded by...')"
-                class="w-36"
-                :class="fieldClass"
-                @keyup.enter="set({ uploaded_by: $event.target.value })"
-                @change="set({ uploaded_by: $event.target.value })"
-            />
+            <div class="relative" data-demo-filter-dropdown>
+                <input
+                    v-model="uploaderPicker.query.value"
+                    type="text"
+                    :placeholder="$t('Uploaded by...')"
+                    class="w-36"
+                    :class="fieldClass"
+                    @keyup.enter="chooseUploader(uploaderPicker.query.value)"
+                />
+                <div v-if="uploaderPicker.open.value" class="absolute z-50 mt-1 w-56 max-h-60 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-2xl">
+                    <button
+                        v-for="name in uploaderPicker.options.value"
+                        :key="name"
+                        type="button"
+                        @click="chooseUploader(name)"
+                        class="block w-full text-left px-3 py-1.5 text-xs text-gray-200 hover:bg-gray-700 truncate"
+                    >{{ name }}</button>
+                </div>
+            </div>
 
             <!-- Staff, and only on your own list. -->
             <template v-if="isAdmin && list === 'mine'">
@@ -357,15 +437,6 @@ const fieldClass = 'px-2.5 py-1.5 bg-gray-700/50 border border-gray-600/50 round
                     {{ $t('100% match on another account') }}
                 </label>
             </template>
-
-            <button
-                v-if="activeCount > 0"
-                type="button"
-                @click="clearAll"
-                class="px-2.5 py-1.5 rounded-lg text-xs text-gray-300 bg-gray-700/50 border border-gray-600/50 hover:bg-gray-700 transition-colors"
-            >
-                {{ $t('Clear filters') }}
-            </button>
         </div>
     </div>
 </template>

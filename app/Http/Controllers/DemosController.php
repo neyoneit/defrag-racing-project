@@ -25,7 +25,7 @@ class DemosController extends Controller
         // Also exempt the main upload action so the demos page can accept
         // anonymous uploads directly.
         // The filter pickers are open because the filter panel is open.
-        $except = ['index', 'download', 'upload', 'searchDemoPlayers', 'searchDemoMaps'];
+        $except = ['index', 'download', 'upload', 'searchDemoPlayers', 'searchDemoMaps', 'searchUploaders'];
         if (app()->environment('local')) {
             $except = array_merge($except, ['debugDetect', 'debugUpload']);
         }
@@ -189,6 +189,13 @@ class DemosController extends Controller
             return array_values(array_filter(array_map('trim', $parts), fn ($v) => $v !== ''));
         };
 
+        $whole_number = function ($value): ?int {
+            if ($value === null || $value === '' || !is_numeric($value)) {
+                return null;
+            }
+            return max(1, (int) $value);
+        };
+
         $seconds_to_ms = function ($value): ?int {
             if ($value === null || $value === '' || !is_numeric($value)) {
                 return null;
@@ -210,6 +217,8 @@ class DemosController extends Controller
             'date_from' => (string) $pick('date_from', ''),
             'date_to' => (string) $pick('date_to', ''),
             'uploaded_by' => (string) $pick('uploaded_by', ''),
+            'rank_min' => $whole_number($pick('rank_min')),
+            'rank_max' => $whole_number($pick('rank_max')),
 
             // Only on your own list, and only for staff. Dropped otherwise so
             // switching tabs cannot leave an invisible filter behind.
@@ -240,6 +249,8 @@ class DemosController extends Controller
             || $f['date_from'] !== ''
             || $f['date_to'] !== ''
             || $f['uploaded_by'] !== ''
+            || $f['rank_min'] !== null
+            || $f['rank_max'] !== null
             || $f['confidence'] !== ''
             || $f['other_user_matches'];
     }
@@ -251,31 +262,37 @@ class DemosController extends Controller
      */
     private function applyFilters($query, array $f)
     {
+        // Every column is written out in full. The rank filter joins `records`,
+        // and the two tables share country, physics, gametype, user_id and
+        // created_at - so an unqualified name would be ambiguous the moment
+        // that join appears.
+        $col = fn (string $name) => 'uploaded_demos.' . $name;
+
         if ($f['tab'] === 'online') {
-            $query->where('gametype', 'LIKE', 'm%');
+            $query->where($col('gametype'), 'LIKE', 'm%');
         } elseif ($f['tab'] === 'offline') {
-            $query->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype');
+            $query->where($col('gametype'), 'NOT LIKE', 'm%')->whereNotNull($col('gametype'));
         }
 
         if ($f['status'] === 'assigned') {
-            $query->whereIn('status', ['assigned', 'fallback-assigned']);
+            $query->whereIn($col('status'), ['assigned', 'fallback-assigned']);
         } elseif ($f['status'] === 'uploaded') {
-            $query->whereIn('status', ['uploaded', 'pending', 'processing']);
+            $query->whereIn($col('status'), ['uploaded', 'pending', 'processing']);
         } elseif ($f['status'] !== 'all' && $f['status'] !== '') {
-            $query->where('status', $f['status']);
+            $query->where($col('status'), $f['status']);
         }
 
         if ($f['search'] !== '') {
-            $query->where(function ($q) use ($f) {
-                $q->where('original_filename', 'LIKE', '%' . $f['search'] . '%')
-                  ->orWhere('processed_filename', 'LIKE', '%' . $f['search'] . '%');
+            $query->where(function ($q) use ($f, $col) {
+                $q->where($col('original_filename'), 'LIKE', '%' . $f['search'] . '%')
+                  ->orWhere($col('processed_filename'), 'LIKE', '%' . $f['search'] . '%');
             });
         }
 
         // Anchored at the start where possible. map_name carries an index, and
         // a leading wildcard throws it away.
         if ($f['map'] !== '') {
-            $query->where('map_name', 'LIKE', $f['map'] . '%');
+            $query->where($col('map_name'), 'LIKE', $f['map'] . '%');
         }
 
         // player_name, not q3df_login_name. There are two name columns on a
@@ -287,31 +304,34 @@ class DemosController extends Controller
         // so the value that arrives here is always a name that exists and the
         // index answers it.
         if ($f['players'] !== []) {
-            $query->whereIn('player_name', $f['players']);
+            $query->whereIn($col('player_name'), $f['players']);
         }
 
         if ($f['physics'] !== []) {
-            $query->whereIn('physics', $f['physics']);
+            $query->whereIn($col('physics'), $f['physics']);
         }
 
         if ($f['time_min'] !== null) {
-            $query->where('time_ms', '>=', $f['time_min']);
+            $query->where($col('time_ms'), '>=', $f['time_min']);
         }
 
         if ($f['time_max'] !== null) {
-            $query->where('time_ms', '<=', $f['time_max']);
+            $query->where($col('time_ms'), '<=', $f['time_max']);
         }
 
         if ($f['country'] !== '') {
-            $query->where('country', $f['country']);
+            $query->where($col('country'), $f['country']);
         }
 
+        // Plain comparisons against a timestamp, not whereDate(). whereDate
+        // wraps the column in DATE(), which throws the index away: the same
+        // filter took 1 086 ms that way and 16 ms this way.
         if ($f['date_from'] !== '') {
-            $query->whereDate('created_at', '>=', $f['date_from']);
+            $query->where($col('created_at'), '>=', $f['date_from'] . ' 00:00:00');
         }
 
         if ($f['date_to'] !== '') {
-            $query->whereDate('created_at', '<=', $f['date_to']);
+            $query->where($col('created_at'), '<=', $f['date_to'] . ' 23:59:59');
         }
 
         if ($f['uploaded_by'] !== '') {
@@ -319,7 +339,33 @@ class DemosController extends Controller
                 ->orWhere('name', $f['uploaded_by'])
                 ->first();
 
-            $uploader ? $query->where('user_id', $uploader->id) : $query->whereRaw('1 = 0');
+            $uploader ? $query->where($col('user_id'), $uploader->id) : $query->whereRaw('1 = 0');
+        }
+
+        // Rank lives on the record a demo is attached to, so this only ever
+        // returns the 42 958 demos that have one. A demo nobody has tied to a
+        // record has no rank to filter by; the panel says so next to the boxes.
+        if ($f['rank_min'] !== null || $f['rank_max'] !== null) {
+            // A record is an online run, so an offline demo never has one and
+            // these two filters can only ever be empty together. Saying so
+            // outright costs nothing; letting the database work it out meant
+            // walking all 369 391 rows to return none, 2 347 ms.
+            if ($f['tab'] === 'offline') {
+                return $query->whereRaw('1 = 0');
+            }
+
+            // A join rather than a row-by-row exists check. With the exists
+            // form the plan flipped between indexes and the same query
+            // measured 42 ms once and 1 031 ms the next time.
+            $query->select('uploaded_demos.*')
+                ->join('records', 'records.id', '=', 'uploaded_demos.record_id');
+
+            if ($f['rank_min'] !== null) {
+                $query->where('records.rank', '>=', $f['rank_min']);
+            }
+            if ($f['rank_max'] !== null) {
+                $query->where('records.rank', '<=', $f['rank_max']);
+            }
         }
 
         if ($f['confidence'] !== '') {
@@ -328,16 +374,16 @@ class DemosController extends Controller
                 '60-69' => [60, 69], '50-59' => [50, 59],
             ];
             if (isset($ranges[$f['confidence']])) {
-                $query->whereBetween('name_confidence', $ranges[$f['confidence']]);
+                $query->whereBetween($col('name_confidence'), $ranges[$f['confidence']]);
             } elseif ($f['confidence'] === 'below-50') {
-                $query->where('name_confidence', '<', 50);
+                $query->where($col('name_confidence'), '<', 50);
             }
         }
 
         if ($f['other_user_matches']) {
-            $query->where('name_confidence', 100)
-                  ->whereNotNull('suggested_user_id')
-                  ->where('suggested_user_id', '!=', Auth::id());
+            $query->where($col('name_confidence'), 100)
+                  ->whereNotNull($col('suggested_user_id'))
+                  ->where($col('suggested_user_id'), '!=', Auth::id());
         }
 
         if ($f['sort'] === 'status') {
@@ -346,11 +392,11 @@ class DemosController extends Controller
             // header arrow flips on every click, and without this the rows
             // underneath it never moved.
             $query->orderByRaw(
-                "FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed-validity', 'failed') "
+                "FIELD(uploaded_demos.status, 'assigned', 'fallback-assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed-validity', 'failed') "
                 . ($f['order'] === 'asc' ? 'asc' : 'desc')
             );
         } else {
-            $query->orderBy($f['sort'], $f['order']);
+            $query->orderBy($col($f['sort']), $f['order']);
         }
 
         return $query;
@@ -487,7 +533,13 @@ class DemosController extends Controller
         return response()->json($names->values());
     }
 
-    /** Map names to offer in the map filter. */
+    /**
+     * Map names to offer in the map filter, with a picture where there is one.
+     *
+     * The names come from the demos, not from the map table, so the list only
+     * offers maps somebody has actually uploaded a run on. The picture is
+     * looked up afterwards, and a map with no picture simply has none.
+     */
     public function searchDemoMaps(Request $request)
     {
         $q = trim((string) $request->input('q', ''));
@@ -496,13 +548,22 @@ class DemosController extends Controller
             return response()->json([]);
         }
 
+        $names = UploadedDemo::query()
+            ->where('map_name', 'LIKE', $q . '%')
+            ->distinct()
+            ->orderBy('map_name')
+            ->limit(10)
+            ->pluck('map_name');
+
+        $thumbs = \App\Models\Map::whereIn('name', $names)
+            ->whereNotNull('thumbnail')
+            ->pluck('thumbnail', 'name');
+
         return response()->json(
-            UploadedDemo::query()
-                ->where('map_name', 'LIKE', $q . '%')
-                ->distinct()
-                ->orderBy('map_name')
-                ->limit(10)
-                ->pluck('map_name')
+            $names->map(fn ($name) => [
+                'name' => $name,
+                'thumbnail' => $thumbs[$name] ?? null,
+            ])->values()
         );
     }
 
