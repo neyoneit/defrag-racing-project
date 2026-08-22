@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 import { t } from '@/utils/i18n';
+import { countryList } from '@/Components/stubs/countries';
 
 const props = defineProps({
     filters: { type: Object, required: true },
@@ -142,6 +143,40 @@ const applyTimes = () => set({
     time_max: timeMax.value === '' ? null : Number(timeMax.value),
 });
 
+// --- Country --------------------------------------------------------------
+
+// The column holds whatever the demo said, so codes like AB and AH turn up
+// that are not countries. Only the ones the shared list has a name for are
+// offered, which also gives them a flag and a name in the reader's language.
+const countryOpen = ref(false);
+const countrySearch = ref('');
+
+const countryOptions = computed(() => {
+    const names = countryList();
+    return props.countries
+        .filter((code) => names[code])
+        .map((code) => ({ code, name: names[code] }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+});
+
+const shownCountries = computed(() => {
+    const needle = countrySearch.value.trim().toLowerCase();
+    if (!needle) return countryOptions.value;
+    return countryOptions.value.filter(
+        (c) => c.name.toLowerCase().includes(needle) || c.code.toLowerCase().includes(needle)
+    );
+});
+
+const chosenCountryName = computed(
+    () => countryOptions.value.find((c) => c.code === props.filters.country)?.name || ''
+);
+
+const chooseCountry = (code) => {
+    countryOpen.value = false;
+    countrySearch.value = '';
+    set({ country: code });
+};
+
 // --- Rank -----------------------------------------------------------------
 
 const rankMin = ref(props.filters.rank_min ?? '');
@@ -191,6 +226,7 @@ const clearAll = () => {
 const closeDropdowns = (event) => {
     if (!event.target.closest('[data-demo-filter-dropdown]')) {
         physicsOpen.value = false;
+        countryOpen.value = false;
         mapPicker.open.value = false;
         playerPicker.open.value = false;
         uploaderPicker.open.value = false;
@@ -363,10 +399,66 @@ const openDatePicker = (event) => {
             </div>
 
             <!-- Country -->
-            <select :value="filters.country" @change="set({ country: $event.target.value })" class="w-28" :class="fieldClass">
-                <option value="">{{ $t('Country') }}</option>
-                <option v-for="code in countries" :key="code" :value="code">{{ code }}</option>
-            </select>
+            <div class="relative" data-demo-filter-dropdown>
+                <button
+                    type="button"
+                    @click="countryOpen = !countryOpen"
+                    class="w-40 text-left flex items-center gap-2"
+                    :class="fieldClass"
+                >
+                    <img
+                        v-if="filters.country"
+                        :src="`/images/flags/${filters.country}.png`"
+                        alt=""
+                        class="w-4 h-3 rounded-sm flex-shrink-0"
+                        onerror="this.style.visibility='hidden'"
+                    />
+                    <span class="truncate">{{ chosenCountryName || $t('Country') }}</span>
+                    <svg class="w-3 h-3 ml-auto flex-shrink-0 text-gray-400 transition-transform" :class="countryOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div v-if="countryOpen" class="absolute z-50 mt-1 w-56 bg-gray-800 border border-gray-600 rounded-lg shadow-2xl overflow-hidden">
+                    <div class="p-1.5 border-b border-gray-700">
+                        <input
+                            v-model="countrySearch"
+                            type="text"
+                            :placeholder="$t('Search...')"
+                            class="w-full"
+                            :class="fieldClass"
+                            @click.stop
+                        />
+                    </div>
+                    <div class="max-h-60 overflow-y-auto">
+                        <button
+                            type="button"
+                            @click="chooseCountry('')"
+                            class="flex items-center gap-2 w-full text-left px-2.5 py-1.5 text-xs hover:bg-gray-700"
+                            :class="filters.country ? 'text-gray-400' : 'text-blue-300'"
+                        >
+                            <span class="w-4 h-3 flex-shrink-0"></span>
+                            {{ $t('Any country') }}
+                        </button>
+                        <button
+                            v-for="option in shownCountries"
+                            :key="option.code"
+                            type="button"
+                            @click="chooseCountry(option.code)"
+                            class="flex items-center gap-2 w-full text-left px-2.5 py-1.5 text-xs hover:bg-gray-700"
+                            :class="filters.country === option.code ? 'bg-blue-600/30 text-blue-100' : 'text-gray-200'"
+                        >
+                            <img
+                                :src="`/images/flags/${option.code}.png`"
+                                alt=""
+                                loading="lazy"
+                                class="w-4 h-3 rounded-sm flex-shrink-0"
+                                onerror="this.style.visibility='hidden'"
+                            />
+                            <span class="truncate">{{ option.name }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <!-- When it was uploaded -->
             <div class="flex items-center gap-1">

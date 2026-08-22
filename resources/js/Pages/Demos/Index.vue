@@ -335,6 +335,24 @@ const sortOrder = computed(() => filterState.order);
 const browseSortBy = computed(() => filterState.sort);
 const browseSortOrder = computed(() => filterState.order);
 
+// Why a demo failed, in a sentence.
+//
+// `processing_output` is a log line written for us, not for the player, and
+// two of its shapes carry a path on the server. This turns the four shapes
+// that actually occur into something readable, and the raw line stays for
+// staff. Counted on the 2 921 failed demos that recorded anything: 2 908
+// could not be parsed, 10 timed out, 3 broke while being packed away.
+const failureReason = (demo) => {
+    const output = demo?.processing_output || '';
+
+    if (!output) return t('No reason was recorded for this one.');
+    if (output.includes('Could not parse demo file')) return t('The file could not be read as a demo.');
+    if (output.includes('timed out')) return t('The demo took too long to read and was given up on.');
+    if (output.includes('7z') || output.includes('rmdir')) return t('The demo was read, but storing it failed.');
+
+    return t('Processing failed.');
+};
+
 // Tooltip state
 const hoveredDemo = ref(null);
 const tooltipPosition = ref({ x: 0, y: 0 });
@@ -2100,7 +2118,7 @@ watch(selectedPhysics, () => {
                                                         'bg-red-500/20 text-red-300 hover:bg-red-500/30 cursor-help': demo.status === 'failed',
                                                         'bg-gray-500/20 text-gray-300': !['uploaded', 'processing', 'processed', 'assigned', 'fallback-assigned', 'failed-validity', 'failed', 'unsupported-version'].includes(demo.status)
                                                     }"
-                                                    @mouseenter="(demo.status === 'failed' && demo.processing_output) || (demo.status === 'failed-validity' && demo.validity) || (demo.status === 'unsupported-version' && demo.processing_output) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) || (demo.status === 'fallback-assigned' && demo.offline_record) ? showTooltip(demo, $event) : null"
+                                                    @mouseenter="demo.status === 'failed' || (demo.status === 'failed-validity' && demo.validity) || (demo.status === 'unsupported-version' && demo.processing_output) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) || (demo.status === 'fallback-assigned' && demo.offline_record) ? showTooltip(demo, $event) : null"
                                                     @mouseleave="hideTooltip"
                                                     @mousemove="hoveredDemo?.id === demo.id ? updateTooltipPosition($event) : null"
                                                 >
@@ -2108,7 +2126,7 @@ watch(selectedPhysics, () => {
                                                     <svg v-if="demo.status === 'unsupported-version' && demo.processing_output" class="w-3 h-3 ml-1 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
-                                                    <svg v-if="demo.status === 'failed' && demo.processing_output" class="w-3 h-3 ml-1 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <svg v-if="demo.status === 'failed'" class="w-3 h-3 ml-1 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
                                                     <svg v-if="demo.status === 'assigned' && (demo.record || demo.offline_record)" class="w-3 h-3 ml-1 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2378,7 +2396,7 @@ watch(selectedPhysics, () => {
                                                 'bg-red-500/20 text-red-300 hover:bg-red-500/30 cursor-help': demo.status === 'failed',
                                                 'bg-gray-500/20 text-gray-300': !['uploaded', 'processing', 'processed', 'assigned', 'fallback-assigned', 'failed-validity', 'failed', 'unsupported-version'].includes(demo.status)
                                             }"
-                                            @mouseenter="(demo.status === 'failed' && demo.processing_output) || (demo.status === 'failed-validity' && demo.validity) || (demo.status === 'unsupported-version' && demo.processing_output) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) || (demo.status === 'fallback-assigned' && demo.offline_record) ? showTooltip(demo, $event) : null"
+                                            @mouseenter="demo.status === 'failed' || (demo.status === 'failed-validity' && demo.validity) || (demo.status === 'unsupported-version' && demo.processing_output) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) || (demo.status === 'fallback-assigned' && demo.offline_record) ? showTooltip(demo, $event) : null"
                                             @mouseleave="hideTooltip"
                                             @mousemove="hoveredDemo?.id === demo.id ? updateTooltipPosition($event) : null"
                                         >
@@ -2386,7 +2404,7 @@ watch(selectedPhysics, () => {
                                             <svg v-if="demo.status === 'unsupported-version' && demo.processing_output" class="w-3 h-3 ml-1 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                             </svg>
-                                            <svg v-if="demo.status === 'failed' && demo.processing_output" class="w-3 h-3 ml-1 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg v-if="demo.status === 'failed'" class="w-3 h-3 ml-1 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                             </svg>
                                             <svg v-if="demo.status === 'assigned' && (demo.record || demo.offline_record)" class="w-3 h-3 ml-1 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2685,7 +2703,7 @@ watch(selectedPhysics, () => {
 
         <!-- Failed Demo Tooltip -->
         <div
-            v-if="hoveredDemo && hoveredDemo.status === 'failed' && hoveredDemo.processing_output"
+            v-if="hoveredDemo && hoveredDemo.status === 'failed'"
             class="fixed z-50 pointer-events-none"
             :style="{
                 left: tooltipPosition.x + 15 + 'px',
@@ -2700,7 +2718,11 @@ watch(selectedPhysics, () => {
                     </svg>
                     {{ $t('Error Details:') }}
                 </div>
-                <div class="font-mono text-[11px] text-red-200 whitespace-pre-wrap break-words max-h-60 overflow-y-auto">{{ hoveredDemo.processing_output }}</div>
+                <div class="text-[11px] text-red-100 leading-snug">{{ failureReason(hoveredDemo) }}</div>
+                <div
+                    v-if="isAdminUser && hoveredDemo.processing_output"
+                    class="mt-2 pt-2 border-t border-red-600/30 font-mono text-[10px] text-red-200/70 whitespace-pre-wrap break-words max-h-48 overflow-y-auto"
+                >{{ hoveredDemo.processing_output }}</div>
             </div>
         </div>
 

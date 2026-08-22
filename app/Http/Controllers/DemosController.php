@@ -567,28 +567,38 @@ class DemosController extends Controller
         );
     }
 
-    /** Distinct countries that actually appear on a demo, for the filter panel. */
+    /**
+     * Countries that appear on a demo, for the filter panel.
+     *
+     * Two letters only. The column holds whatever the demo said, and 21 of the
+     * 240 distinct values are not countries at all - "-", "--", "-C", "R]",
+     * "'". Together they cover 285 demos out of 296 397, so nothing worth
+     * filtering by is lost and the list stops looking broken.
+     */
     private function demoCountries(): array
     {
-        return Cache::remember('demo_filter_countries', 86400, fn () => UploadedDemo::query()
+        return Cache::remember('demo_filter_countries_v2', 86400, fn () => UploadedDemo::query()
             ->select('country')
             ->whereNotNull('country')
-            ->where('country', '!=', '')
+            ->whereRaw("country REGEXP '^[A-Za-z]{2}$'")
             ->distinct()
             ->orderBy('country')
             ->pluck('country')
+            ->map(fn ($code) => strtoupper($code))
+            ->unique()
+            ->values()
             ->all());
     }
 
-    /** Physics values that actually appear on a demo, commonest first. */
+    /** Physics values that appear on a demo, in alphabetical order. */
     private function demoPhysicsOptions(): array
     {
-        return Cache::remember('demo_filter_physics', 86400, fn () => UploadedDemo::query()
-            ->select('physics', DB::raw('COUNT(*) as total'))
+        return Cache::remember('demo_filter_physics_v2', 86400, fn () => UploadedDemo::query()
+            ->select('physics')
             ->whereNotNull('physics')
             ->where('physics', '!=', '')
-            ->groupBy('physics')
-            ->orderByDesc('total')
+            ->distinct()
+            ->orderBy('physics')
             ->pluck('physics')
             ->all());
     }
