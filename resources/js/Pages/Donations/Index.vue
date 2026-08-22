@@ -694,6 +694,15 @@ const getYearProgress = (year, yearTotal) => {
                         <p class="text-sm leading-relaxed text-gray-300">
                             {{ $t('The site, the launcher, DemoMe and this page were built by me and by nobody else. So was DefragLive, apart from its early parts, which frog wrote. Nobody is paid and there is no team.') }}
                         </p>
+                        <!-- The bit people never ask about and always wonder.
+                             Said in the brightest text in the block, because a
+                             page asking for money owes the answer plainly. -->
+                        <p class="text-sm leading-relaxed text-gray-100 font-semibold mt-2">
+                            {{ $t('No donation goes into my pocket. Not a cent of it. It pays the running costs and nothing else.') }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-400 mt-2">
+                            {{ $t('It goes the other way as well: things like the DefragLive contest prizes come out of my own pocket.') }}
+                        </p>
                         <p class="text-sm leading-relaxed text-gray-400 mt-2">
                             {{ $t('Almost every public defrag server is maintained by me too, but their owners pay for them - the 10 Gbit servers are the ones I pay for.') }}
                         </p>

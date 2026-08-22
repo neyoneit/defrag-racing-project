@@ -222,6 +222,13 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(currentLocale())
                         <p class="text-sm leading-relaxed text-gray-400 mt-1.5">
                             {{ $t('Votes decide the order, but everything on this list waits for the same pair of hands. So please be patient with anything you ask for.') }}
                         </p>
+                        <!-- Same answer as the donations page gives, because
+                             the question follows anybody who is told one person
+                             runs the whole thing. -->
+                        <p class="text-sm leading-relaxed text-gray-400 mt-1.5">
+                            {{ $t('No donation goes into my pocket. Not a cent of it. It pays the running costs and nothing else.') }}
+                            {{ $t('It goes the other way as well: things like the DefragLive contest prizes come out of my own pocket.') }}
+                        </p>
                         <p class="text-sm text-gray-500 italic mt-2">
                             {{ $t('Yours truly,') }} <Link href="/profile/8" class="not-italic font-semibold hover:text-gray-300 transition-colors">neyo</Link>
                         </p>
