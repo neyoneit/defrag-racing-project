@@ -221,9 +221,9 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(currentLocale())
                         </p>
                         <p class="text-sm leading-relaxed text-gray-400 mt-1.5">
                             {{ $t('Votes decide the order, but everything on this list waits for the same pair of hands. So please be patient with anything you ask for.') }}
-                            <span class="text-gray-500 italic">
-                                {{ $t('Yours truly,') }} <Link href="/profile/8" class="not-italic font-semibold hover:text-gray-300 transition-colors">neyo</Link>
-                            </span>
+                        </p>
+                        <p class="text-sm text-gray-500 italic mt-2">
+                            {{ $t('Yours truly,') }} <Link href="/profile/8" class="not-italic font-semibold hover:text-gray-300 transition-colors">neyo</Link>
                         </p>
                     </div>
 
