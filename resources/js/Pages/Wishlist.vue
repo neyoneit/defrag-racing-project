@@ -209,16 +209,27 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(currentLocale())
                 <p class="text-gray-400 mt-2 max-w-3xl">
                     {{ $t('Ask for something to be added or changed, and vote on what other people asked for. The more votes a request has, the sooner it gets done.') }}
                 </p>
+
                 <!-- The one thing to know before asking. Votes decide the
                      order, but there is one pair of hands doing the work, and
                      a board that does not say so sets an expectation it cannot
-                     meet. -->
-                <p class="text-gray-400 text-sm mt-2 max-w-3xl">
-                    {{ $t('The site, the launcher, DefragLive, DemoMe and this board are built and run by me alone. Nobody is paid and there is no team behind it, so please be patient with anything you ask for - votes decide the order, but everything on this list waits for the same pair of hands.') }}
-                </p>
-                <p class="text-gray-500 text-sm italic mt-1">
-                    {{ $t('Yours truly,') }} <Link href="/profile/8" class="not-italic font-semibold hover:text-gray-300 transition-colors">neyo</Link>
-                </p>
+                     meet.
+
+                     In a panel like everything else on the site: as loose text
+                     on the gradient it was one long line of low-contrast grey
+                     that nobody would read. Two sentences instead of one, and
+                     the signature belongs with them. -->
+                <div class="mt-4 max-w-2xl bg-black/40 backdrop-blur-sm rounded-xl border border-white/10 px-4 py-3 shadow-2xl">
+                    <p class="text-sm leading-relaxed text-gray-200">
+                        {{ $t('The site, the launcher, DefragLive, DemoMe and this board are built and run by me alone. Nobody is paid and there is no team behind it.') }}
+                    </p>
+                    <p class="text-sm leading-relaxed text-gray-400 mt-2">
+                        {{ $t('Votes decide the order, but everything on this list waits for the same pair of hands. So please be patient with anything you ask for.') }}
+                    </p>
+                    <p class="text-gray-500 text-sm italic mt-3">
+                        {{ $t('Yours truly,') }} <Link href="/profile/8" class="not-italic font-semibold hover:text-gray-300 transition-colors">neyo</Link>
+                    </p>
+                </div>
             </div>
         </div>
 
