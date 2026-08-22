@@ -191,43 +191,31 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(currentLocale())
              somewhere else. -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
-                <!-- Title on the left, the button on the right, and what
-                     the page is plus what to expect from it in between. It all
-                     wraps onto its own lines when the window is too narrow to
-                     hold the three side by side.
-
-                     items-start, not items-center: the middle column is the
-                     tall one, and centring against it would drop the heading
-                     into the middle of the block. -->
-                <div class="flex justify-between items-start flex-wrap gap-4">
-                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">
+                <!-- One row: title, one panel, button. The panel takes
+                     every pixel between the other two rather than sitting at a
+                     fixed width with empty space beside it. What the page is
+                     and what to expect from it are the same message, so they
+                     are one panel and not two. -->
+                <div class="flex justify-between items-center flex-wrap gap-4">
+                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 flex-shrink-0">
                         {{ $t('Wishlist') }}
                     </h1>
 
-                    <div class="flex-1 min-w-[20rem] max-w-2xl">
-                        <p class="text-gray-400 text-sm">
+                    <div class="flex-1 min-w-[20rem] bg-black/40 backdrop-blur-sm rounded-xl border border-white/10 px-4 py-3 shadow-2xl">
+                        <p class="text-sm leading-relaxed text-gray-300">
                             {{ $t('Ask for something to be added or changed, and vote on what other people asked for. The more votes a request has, the sooner it gets done.') }}
                         </p>
-
                         <!-- The one thing to know before asking. Votes decide
                              the order, but there is one pair of hands doing the
                              work, and a board that does not say so sets an
-                             expectation it cannot meet.
-
-                             In a panel like everything else on the site: as
-                             loose text on the gradient it was one long line of
-                             low-contrast grey that nobody would read. -->
-                        <div class="mt-3 bg-black/40 backdrop-blur-sm rounded-xl border border-white/10 px-4 py-3 shadow-2xl">
-                            <p class="text-sm leading-relaxed text-gray-200">
-                                {{ $t('The site, the launcher, DefragLive, DemoMe and this board are built and run by me alone. Nobody is paid and there is no team behind it.') }}
-                            </p>
-                            <p class="text-sm leading-relaxed text-gray-400 mt-2">
-                                {{ $t('Votes decide the order, but everything on this list waits for the same pair of hands. So please be patient with anything you ask for.') }}
-                            </p>
-                            <p class="text-gray-500 text-sm italic mt-3">
+                             expectation it cannot meet. -->
+                        <p class="text-sm leading-relaxed text-gray-400 mt-1.5">
+                            {{ $t('The site, the launcher, DefragLive, DemoMe and this board are built and run by me alone. Nobody is paid and there is no team behind it.') }}
+                            {{ $t('Votes decide the order, but everything on this list waits for the same pair of hands. So please be patient with anything you ask for.') }}
+                            <span class="text-gray-500 italic">
                                 {{ $t('Yours truly,') }} <Link href="/profile/8" class="not-italic font-semibold hover:text-gray-300 transition-colors">neyo</Link>
-                            </p>
-                        </div>
+                            </span>
+                        </p>
                     </div>
 
                     <button v-if="user" @click="showForm = !showForm"
