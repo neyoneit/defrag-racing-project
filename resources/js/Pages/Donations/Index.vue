@@ -671,7 +671,7 @@ const getYearProgress = (year, yearTotal) => {
                             {{ $t('The site, the launcher, DefragLive, DemoMe and this page are built and run by me alone. Nobody is paid and there is no team behind it.') }}
                         </p>
                         <p class="text-sm leading-relaxed text-gray-400 mt-2">
-                            {{ $t('Almost every public defrag server is maintained by me too, but their owners pay for them - the 10 Gbit machines are the ones I pay for.') }}
+                            {{ $t('Almost every public defrag server is maintained by me too, but their owners pay for them - the 10 Gbit servers are the ones I pay for.') }}
                         </p>
                         <p class="text-sm leading-relaxed text-gray-400 mt-2">
                             {{ $t('So please be patient with anything you ask for. It gets done when I get to it, and your donation pays the bills rather than buying a place in the queue.') }}
