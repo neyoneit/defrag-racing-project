@@ -515,12 +515,15 @@ const openDatePicker = (event) => {
                 />
             </div>
 
-            <!-- Filename -->
+            <!-- Filename. It takes whatever room is left on its line, because
+                 a demo filename is long and a fixed box showed a third of it.
+                 min-w keeps it usable when there is little room left, and it
+                 wraps to its own line rather than squashing. -->
             <input
                 :value="filters.search"
                 type="text"
                 :placeholder="$t('Filename...')"
-                class="w-40"
+                class="flex-1 min-w-[16rem]"
                 :class="fieldClass"
                 @keyup.enter="set({ search: $event.target.value })"
                 @change="set({ search: $event.target.value })"
