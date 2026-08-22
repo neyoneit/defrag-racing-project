@@ -212,7 +212,7 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(currentLocale())
                         <!-- Said in the brightest text in the panel, because it
                              is the thing that sets the expectation. -->
                         <p class="text-sm leading-relaxed text-gray-100 font-semibold mt-2">
-                            {{ $t('Everything you see on this site was built by me and by nobody else. The site, the launcher, DefragLive, DemoMe and this board. Nobody is paid and there is no team.') }}
+                            {{ $t('The site, the launcher, DemoMe and this board were built by me and by nobody else. So was DefragLive, apart from its early parts, which frog wrote. Nobody is paid and there is no team.') }}
                         </p>
                         <p class="text-sm leading-relaxed text-gray-400 mt-1.5">
                             {{ $t('Votes decide the order, but everything on this list waits for the same pair of hands. So please be patient with anything you ask for.') }}
