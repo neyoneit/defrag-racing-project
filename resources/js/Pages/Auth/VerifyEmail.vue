@@ -33,7 +33,7 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
             <div class="w-full max-w-md">
                 <div class="bg-black/40 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-white/10">
                     <div class="mb-4 text-sm text-gray-400">
-                        {{ $t('Before continuing, could you verify your email address by clicking on the link we just emailed to you? If you didn\'t receive the email, we will gladly send you another.') }}
+                        {{ $t('Before continuing, could you verify your email address by clicking on the link I just emailed to you? If you didn\'t receive the email, I will gladly send you another.') }}
                     </div>
 
                     <div v-if="verificationLinkSent" class="mb-4 p-4 rounded-lg bg-green-500/10 border border-green-500/30">

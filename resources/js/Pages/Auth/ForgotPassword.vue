@@ -23,7 +23,7 @@ const submit = () => {
             <div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center">
                     <h1 class="text-2xl md:text-3xl font-black text-white mb-2">{{ $t('Forgot Password') }}</h1>
-                    <p class="text-gray-400">{{ $t('We\'ll send you a reset link') }}</p>
+                    <p class="text-gray-400">{{ $t('I\'ll send you a reset link') }}</p>
                 </div>
             </div>
         </div>
@@ -34,7 +34,7 @@ const submit = () => {
             <!-- Card -->
             <div class="bg-black/40 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-white/10">
                 <p class="text-sm text-gray-400 mb-6">
-                    {{ $t('Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.') }}
+                    {{ $t('Forgot your password? No problem. Just let me know your email address and I will email you a password reset link that will allow you to choose a new one.') }}
                 </p>
 
                 <!-- Status Message -->

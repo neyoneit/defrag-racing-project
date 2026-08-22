@@ -237,7 +237,7 @@ const submitNewCred = () => {
     <div class="container mx-auto max-w-3xl px-4 py-10">
         <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">{{ $t('Server hosting access') }}</h1>
         <p class="text-sm text-gray-400 mb-3"
-           v-html="$t('If you host (or plan to host) a public defrag server, apply here for an SFTP account on our storage VPS. Approved server owners get a chroot-isolated drop-box where the server bundle can ship <code>.dm_68</code> demos for indexing on defrag.racing.')"></p>
+           v-html="$t('If you host (or plan to host) a public defrag server, apply here for an SFTP account on the storage VPS. Approved server owners get a chroot-isolated drop-box where the server bundle can ship <code>.dm_68</code> demos for indexing on defrag.racing.')"></p>
         <p class="text-sm text-gray-400 mb-3">
             {{ $t('Bundles:') }}
             <a href="https://github.com/Defrag-racing/defrag-server-bundle"
@@ -254,7 +254,7 @@ const submitNewCred = () => {
             {{ $t('for Windows.') }}
         </p>
         <p class="text-xs text-gray-500 mb-8"
-           v-html="$t('Install the bundle on your defrag host first, then plug your SFTP credentials into <code>sv.conf</code> - we\'ll give them to you after approval. Running servers on several machines? Add one credential per VPS so each box has its own login.')"></p>
+           v-html="$t('Install the bundle on your defrag host first, then plug your SFTP credentials into <code>sv.conf</code> - I\'ll give them to you after approval. Running servers on several machines? Add one credential per VPS so each box has its own login.')"></p>
 
         <!-- SERVER HOSTING RULES - open for applicants, collapsed for active owners -->
         <details :open="state !== 'active'"
@@ -286,7 +286,7 @@ const submitNewCred = () => {
                     <li>
                         <div class="font-semibold text-gray-100 mb-1">{{ $t('5. Your engine must answer with the whole player list, and say when cheats are on') }}</div>
                         <p class="text-gray-400"
-                           v-html="$t('A <code>getdfstatus</code> reply is one 1400 byte packet. The server info takes 550-700 of it and each player line another 57-74, so the reply fills up at around ten players and everyone after that is <strong>missing from it with nothing to say they exist</strong> - on servers configured for 32 slots. We would be listing your server with a third of its players and matching records against a scoreboard that is not the real one.')"></p>
+                           v-html="$t('A <code>getdfstatus</code> reply is one 1400 byte packet. The server info takes 550-700 of it and each player line another 57-74, so the reply fills up at around ten players and everyone after that is <strong>missing from it with nothing to say they exist</strong> - on servers configured for 32 slots. The site would list your server with a third of its players and match records against a scoreboard that is not the real one.')"></p>
                         <p class="text-gray-400 mt-2">{{ $t("A bigger packet is not the answer - past the network's MTU it gets split in transit, and losing one piece loses the whole reply instead of just the end of a list. Neither is a shorter line. As it stands a line cannot go below 25 bytes with every text field empty (nine spaces, a newline, five pairs of quotes, and five numbers of at least one digit), and 32 of those on top of a 700 byte server info is already over the limit before the first character of the first nickname.") }}</p>
                         <p class="text-gray-400 mt-2"
                            v-html="$t('Even throwing the format away entirely does not get there. With <strong>nothing but a slot and a name</strong> - no ping, no score, no country, no MDD id, no model - 32 players leave about 15 bytes each for the name on a typical server. Measured against the nicknames online right now, a quarter of them are already too long for that, and colour codes count (<code>^8</code> is two bytes). So the reply gets asked for in parts instead.')"></p>
@@ -331,9 +331,9 @@ Info_SetValueForKey( infostring, "clientsFrom", va( "%i", firstClient ) );
 for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                         <p class="text-gray-400 mt-2">{{ $t('Page by the client slot, not by how many lines you have already sent. If somebody disconnects between two requests everyone behind them moves down a place, and a count would step straight over whoever landed on the boundary. The asker continues from one past the last slot it received, which is the same answer whatever happened in between.') }}</p>
                         <p class="text-gray-400 mt-2"
-                           v-html="$t('<strong>Both parts or neither.</strong> A server that sends <code>clientsFrom</code> is telling us its engine is new enough to report cheats, so a missing <code>sv_cheats</code> is read as cheats being off. Take the paging and leave the cheat line out and your server will be listed as clean whether it is or not.')"></p>
+                           v-html="$t('<strong>Both parts or neither.</strong> A server that sends <code>clientsFrom</code> is telling the site its engine is new enough to report cheats, so a missing <code>sv_cheats</code> is read as cheats being off. Take the paging and leave the cheat line out and your server will be listed as clean whether it is or not.')"></p>
                         <p class="text-gray-400 mt-2"
-                           v-html="$t('It breaks nothing. An engine without any of it ignores the extra argument and replies as it always did, and one request is still one reply, so the existing rate limit bounds it exactly as before. We can see which servers have it - the reply either carries <code>clients</code> or it does not - and a server that never sends it will be delisted once its player list starts getting cut off.')"></p>
+                           v-html="$t('It breaks nothing. An engine without any of it ignores the extra argument and replies as it always did, and one request is still one reply, so the existing rate limit bounds it exactly as before. I can see which servers have it - the reply either carries <code>clients</code> or it does not - and a server that never sends it will be delisted once its player list starts getting cut off.')"></p>
                     </li>
                     <li>
                         <div class="font-semibold text-gray-100 mb-1">{{ $t('6. Stability and fair play') }}</div>
@@ -347,7 +347,7 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                         <div class="font-semibold text-gray-100 mb-1">{{ $t('8. Support') }}</div>
                         <p class="text-gray-400">{{ $t('If you have trouble setting up the bundle or the SFTP connection, contact') }} <a href="/profile/8"
                                    class="text-emerald-300 hover:text-emerald-200 underline decoration-dotted">neyo</a>
-                        {{ $t('- via his defrag.racing profile or on Discord in the server-hosting section. We would rather help you get compliant than delist you.') }}</p>
+                        {{ $t('- via his defrag.racing profile or on Discord in the server-hosting section. I would rather help you get compliant than delist you.') }}</p>
                     </li>
                 </ol>
                 <p class="text-xs text-gray-500 pt-2 border-t border-white/5">
@@ -392,7 +392,7 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                         <div class="flex-1 min-w-0">
                             <div class="text-sm font-semibold text-yellow-200 mb-1">{{ $t('Save your password now') }}</div>
                             <p class="text-xs text-gray-400 mb-3">
-                                {{ $t("This is the only time you'll see it. After clicking \"I've saved it\", we wipe it from our DB — it lives only on the storage VPS in hashed form. If you lose it, generate a new one below.") }}
+                                {{ $t("This is the only time you'll see it. After clicking \"I've saved it\", I wipe it from the database — it lives only on the storage VPS in hashed form. If you lose it, generate a new one below.") }}
                             </p>
 
                             <div class="flex items-center gap-2 mb-3">
@@ -692,7 +692,7 @@ DEMO_SFTP_REMOTEDIR={{ cred.remote_path }}</code></pre>
                     <textarea v-model="form.message"
                               rows="4"
                               maxlength="2000"
-                              :placeholder="$t('Briefly describe your defrag.racing history, why you want to host, anything we should know.')"
+                              :placeholder="$t('Briefly describe your defrag.racing history, why you want to host, anything I should know.')"
                               class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 focus:border-blue-500 focus:ring-0 transition"></textarea>
                     <div class="text-xs text-gray-500 mt-1 flex justify-between">
                         <span :class="form.errors.message ? 'text-red-400' : ''">{{ form.errors.message || $t('Minimum 20 characters.') }}</span>

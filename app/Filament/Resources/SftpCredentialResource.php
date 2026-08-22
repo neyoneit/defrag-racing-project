@@ -157,7 +157,7 @@ class SftpCredentialResource extends Resource
                     ->icon('heroicon-o-list-bullet')
                     ->color('info')
                     ->modalHeading('Manage declared servers + RS codes')
-                    ->modalDescription("Each row is one of the user's defrag servers. Fill in the RS code we issued for that server (matches the rs<PORT>=<id> entry in their sv.conf).")
+                    ->modalDescription("Each row is one of the user's defrag servers. Fill in the RS code issued for that server (matches the rs<PORT>=<id> entry in their sv.conf).")
                     ->modalWidth('4xl')
                     ->fillForm(function ($record) {
                         // Prefill the coordinate fields from the live Server row

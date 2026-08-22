@@ -183,7 +183,7 @@ const top200Share = computed(() => topNWeightShare(200));
                     <span class="text-white font-black text-lg sm:text-xl uppercase tracking-wide">{{ $t('Work in Progress') }}</span>
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
                 </div>
-                <p class="text-white/90 text-sm sm:text-base font-semibold">{{ $t('The ranking system is still under active development. Parameters are being tuned and formulas may change. Please give us time until the system is finalized.') }}</p>
+                <p class="text-white/90 text-sm sm:text-base font-semibold">{{ $t('The ranking system is still under active development. Parameters are being tuned and formulas may change. Please give me time until the system is finalized.') }}</p>
             </div>
 
             <h1 class="text-2xl md:text-3xl font-black text-gray-200 mb-2">{{ $t('How Rankings Work') }}</h1>

@@ -629,7 +629,7 @@ const getYearProgress = (year, yearTotal) => {
                             {{ $t('An account downloads :member demos a day. Donate :amount or more, all donations counted together, and that becomes :donor a day.', { member: 50, amount: '€10', donor: 500 }) }}
                         </p>
                         <p class="text-sm leading-relaxed text-gray-400 mt-2">
-                            {{ $t('Every demo downloaded is bandwidth we pay for, which is why there is a limit at all and why this is a high ceiling rather than none. It applies as soon as the donation is linked to your account.') }}
+                            {{ $t('Every demo downloaded is bandwidth I pay for, which is why there is a limit at all and why this is a high ceiling rather than none. It applies as soon as the donation is linked to your account.') }}
                         </p>
                     </div>
 
@@ -686,7 +686,7 @@ const getYearProgress = (year, yearTotal) => {
                             </li>
                             <li class="flex gap-2">
                                 <span class="text-blue-400">•</span>
-                                <span v-html="$t('<strong>Spread the word about DefragLegends YouTube channel</strong> - We\'re missing 1,600 yearly watch hours to get it monetized. Playing it in the background could help!')"></span>
+                                <span v-html="$t('<strong>Spread the word about DefragLegends YouTube channel</strong> - The channel is missing 1,600 yearly watch hours to get it monetized. Playing it in the background could help!')"></span>
                             </li>
                         </ul>
                     </div>

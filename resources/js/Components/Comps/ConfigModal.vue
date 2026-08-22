@@ -55,7 +55,7 @@ const CONFIG_URL = '/configs/defrag-racing-rules.cfg';
                                 <div>
                                     <div class="font-bold text-emerald-200">{{ $t('Online you do not have to do anything') }}</div>
                                     <p class="mt-1 text-sm text-emerald-100/70">
-                                        {{ $t('The server sets the physics, not you. Our servers already run the correct values, so every run on them counts.') }}
+                                        {{ $t('The server sets the physics, not you. The defrag.racing servers already run the correct values, so every run on them counts.') }}
                                     </p>
                                 </div>
                             </div>
@@ -127,7 +127,7 @@ const CONFIG_URL = '/configs/defrag-racing-rules.cfg';
                                 <div class="min-w-0 flex-1">
                                     <div class="font-bold text-white">{{ $t('Take the defrag.racing config') }}</div>
                                     <p class="mt-1 text-sm text-gray-400">
-                                        {{ $t('It is example 1 above, the DFWC 2021 ruleset. It sets the same physics our servers run, so what you practise offline is what you get online. Example 2, the dfcomps ruleset, is just as legal - if you already use it, you do not have to change anything.') }}
+                                        {{ $t('It is example 1 above, the DFWC 2021 ruleset. It sets the same physics the defrag.racing servers run, so what you practise offline is what you get online. Example 2, the dfcomps ruleset, is just as legal - if you already use it, you do not have to change anything.') }}
                                     </p>
                                 </div>
 

@@ -145,7 +145,7 @@
                 {{ $t('Token ":label" created — copy it now', { label: freshToken.label }) }}
             </div>
             <p class="text-xs text-gray-400">
-                {{ $t('This is the only time we will show the token in plaintext. Paste it into the launcher\'s settings. If you lose it, revoke this one and generate a new one.') }}
+                {{ $t('This is the only time I will show the token in plaintext. Paste it into the launcher\'s settings. If you lose it, revoke this one and generate a new one.') }}
             </p>
             <div class="flex gap-2">
                 <input
