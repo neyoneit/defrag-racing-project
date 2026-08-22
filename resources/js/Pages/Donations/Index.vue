@@ -205,8 +205,11 @@ const availableCurrencies = computed(() => {
     return [...popular, ...others];
 });
 
-// Selected currency (default to USD if available, otherwise first currency)
-const selectedCurrency = ref(availableCurrencies.value.includes('USD') ? 'USD' : availableCurrencies.value[0]);
+// EUR by default. The goal, the bills and the comps prize pool are all
+// denominated in EUR, and the progress bar in the header shows EUR, so opening
+// this page in dollars meant the same money carried two different numbers
+// depending on where you read it.
+const selectedCurrency = ref(availableCurrencies.value.includes('EUR') ? 'EUR' : availableCurrencies.value[0]);
 
 // Dropdown state
 const isDropdownOpen = ref(false);
@@ -655,6 +658,23 @@ const getYearProgress = (year, yearTotal) => {
                         </p>
                         <p class="text-sm leading-relaxed text-gray-400">
                             {{ $t('Any future excess donations would go towards tournament prizepools, new servers in underserved locations, and other community-driven initiatives.') }}
+                        </p>
+                    </div>
+
+                    <!-- Said plainly and said first. It was in the history
+                         below, halfway through a paragraph about developers who
+                         left in 2024, where it read as background rather than
+                         as the thing to know before asking for something. -->
+                    <div class="rounded-lg bg-white/[0.04] border border-white/10 p-4">
+                        <h3 class="text-lg font-semibold text-white mb-2">{{ $t('One person does all of this') }}</h3>
+                        <p class="text-sm leading-relaxed text-gray-300">
+                            {{ $t('The site, the launcher, DefragLive, DemoMe and this page are built and run by me alone. Nobody is paid and there is no team behind it.') }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-400 mt-2">
+                            {{ $t('Almost every public defrag server is maintained by me too, but their owners pay for them - the 10 Gbit machines are the ones I pay for.') }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-400 mt-2">
+                            {{ $t('So please be patient with anything you ask for. It gets done when I get to it, and your donation pays the bills rather than buying a place in the queue.') }}
                         </p>
                     </div>
 
