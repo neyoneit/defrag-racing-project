@@ -646,7 +646,9 @@ class DemosController extends Controller
         $key = $currentUser
             ? "demo_download_user_{$currentUser->id}"
             : 'demo_download_ip_' . request()->ip();
-        $limit = $currentUser ? 50 : 1;
+        $limit = $currentUser
+            ? $currentUser->demoDownloadLimit()
+            : \App\Models\User::DEMO_DOWNLOADS_GUEST;
         $used = Cache::get($key, 0);
 
         return [
@@ -654,6 +656,9 @@ class DemosController extends Controller
             'limit' => $limit,
             'remaining' => max(0, $limit - $used),
             'isGuest' => !$currentUser,
+            // Whether saying "donate to raise it" would tell them anything
+            // they do not already have.
+            'raised' => $currentUser ? $currentUser->raisedDemoDownloads() : false,
         ];
     }
 
@@ -1149,7 +1154,9 @@ class DemosController extends Controller
                 : "demo_download_ip_" . request()->ip();
 
             $downloadsToday = Cache::get($rateLimitKey, 0);
-            $maxDownloads = $currentUser ? 50 : 1; // Authenticated: 50/day, Guest: 1/day
+            $maxDownloads = $currentUser
+                ? $currentUser->demoDownloadLimit()
+                : \App\Models\User::DEMO_DOWNLOADS_GUEST;
 
             if ($downloadsToday >= $maxDownloads) {
                 // Return a JSON response for AJAX requests, or redirect with error for direct links
@@ -1158,7 +1165,7 @@ class DemosController extends Controller
                         'error' => 'Download limit reached',
                         'message' => $currentUser
                             ? "You've reached your download limit of {$maxDownloads} demos per day. Limit resets at midnight."
-                            : "You've reached the guest download limit (1 demo per day). Please create an account to download up to 50 demos per day!",
+                            : "You've reached the guest download limit (" . \App\Models\User::DEMO_DOWNLOADS_GUEST . " demo per day). Please create an account to download up to " . \App\Models\User::DEMO_DOWNLOADS_MEMBER . " demos per day!",
                         'isGuest' => !$currentUser,
                         'limit' => $maxDownloads,
                     ], 429);
@@ -1166,7 +1173,7 @@ class DemosController extends Controller
                     // For direct download links, redirect back with error message
                     return back()->with('danger', $currentUser
                         ? "Download limit reached. You can download maximum {$maxDownloads} demo" . ($maxDownloads > 1 ? 's' : '') . " per day."
-                        : "You've reached the guest download limit (1 demo per day). Please create an account to download up to 50 demos per day!");
+                        : "You've reached the guest download limit (" . \App\Models\User::DEMO_DOWNLOADS_GUEST . " demo per day). Please create an account to download up to " . \App\Models\User::DEMO_DOWNLOADS_MEMBER . " demos per day!");
                 }
             }
 

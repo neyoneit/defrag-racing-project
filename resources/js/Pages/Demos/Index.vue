@@ -1322,7 +1322,11 @@ watch(selectedPhysics, () => {
                             v-if="localDownloadLimitInfo"
                             class="rounded-lg px-3 py-2 shadow-xl border backdrop-blur-sm text-xs whitespace-nowrap"
                             :class="localDownloadLimitInfo.isGuest ? 'bg-blue-900/20 border-blue-500/30' : localDownloadLimitInfo.remaining === 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-white/[0.06] border-white/10'"
-                            :title="localDownloadLimitInfo.isGuest ? $t('Unlock more downloads after') : $t('Downloads limited due to bandwidth costs.')"
+                            :title="localDownloadLimitInfo.isGuest
+                                ? $t('Unlock more downloads after')
+                                : localDownloadLimitInfo.raised
+                                    ? $t('Raised because you donated. Thank you.')
+                                    : $t('Downloads limited due to bandwidth costs.')"
                         >
                             <div class="flex items-center gap-2">
                                 <svg v-if="localDownloadLimitInfo.isGuest" class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1352,7 +1356,11 @@ watch(selectedPhysics, () => {
                                     <span class="text-green-400 font-semibold">{{ localDownloadLimitInfo.remaining }}</span>
                                     <span class="text-gray-300">/{{ localDownloadLimitInfo.limit }}</span>
                                     <span class="text-gray-400">{{ $t('downloads left today') }}</span>
-                                    <a href="/donations" class="text-gray-300 underline hover:text-white transition-colors">{{ $t('Donate') }}</a>
+                                    <a
+                                        v-if="!localDownloadLimitInfo.raised"
+                                        href="/donations"
+                                        class="text-gray-300 underline hover:text-white transition-colors"
+                                    >{{ $t('Donate to raise it') }}</a>
                                 </template>
                             </div>
                         </div>

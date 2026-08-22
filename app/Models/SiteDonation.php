@@ -14,13 +14,27 @@ class SiteDonation extends Model
     {
         parent::boot();
 
-        static::saved(function () {
+        // The donor's raised download limit is cached per account, so it has
+        // to be dropped here. Without this a donation approved in the admin
+        // would not take effect for up to an hour, and the person who just
+        // paid would still be told they have 50.
+        $forget = function (SiteDonation $donation) {
             Cache::forget('donations:progress');
-        });
 
-        static::deleted(function () {
-            Cache::forget('donations:progress');
-        });
+            if ($donation->user_id) {
+                Cache::forget(User::demoDownloadPerkKey($donation->user_id));
+            }
+
+            if ($donation->donor_email) {
+                User::where('email', $donation->donor_email)
+                    ->orWhereJsonContains('donation_emails', $donation->donor_email)
+                    ->pluck('id')
+                    ->each(fn ($id) => Cache::forget(User::demoDownloadPerkKey($id)));
+            }
+        };
+
+        static::saved($forget);
+        static::deleted($forget);
     }
 
     protected $fillable = [

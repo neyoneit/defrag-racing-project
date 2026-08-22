@@ -278,6 +278,50 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         return round($eur, 2);
     }
 
+    /** Demos a guest may download in a day. */
+    public const DEMO_DOWNLOADS_GUEST = 1;
+
+    /** Demos an account may download in a day. */
+    public const DEMO_DOWNLOADS_MEMBER = 50;
+
+    /** Demos a donor may download in a day. */
+    public const DEMO_DOWNLOADS_DONOR = 500;
+
+    /**
+     * What a donation has to add up to, in EUR, before the download limit
+     * goes up. Total across every approved donation, not one payment.
+     */
+    public const DEMO_DOWNLOADS_DONOR_EUR = 10;
+
+    /**
+     * How many demos this person may download today.
+     *
+     * The limit exists because every download is bandwidth we pay for, which
+     * is also why the donor figure is a high ceiling rather than no limit at
+     * all. Cached, because it is asked on every page load and every download,
+     * and cleared whenever a donation is saved.
+     */
+    public function demoDownloadLimit(): int
+    {
+        return $this->raisedDemoDownloads()
+            ? self::DEMO_DOWNLOADS_DONOR
+            : self::DEMO_DOWNLOADS_MEMBER;
+    }
+
+    public function raisedDemoDownloads(): bool
+    {
+        return \Cache::remember(
+            self::demoDownloadPerkKey($this->id),
+            3600,
+            fn () => $this->getDonationTotalEur() >= self::DEMO_DOWNLOADS_DONOR_EUR
+        );
+    }
+
+    public static function demoDownloadPerkKey(int $userId): string
+    {
+        return "user:{$userId}:demo_download_perk";
+    }
+
     public function getDonorTier(): ?string {
         if (!$this->isDonor()) return null;
         $eur = $this->getDonationTotalEur();

@@ -612,6 +612,27 @@ const getYearProgress = (year, yearTotal) => {
                            v-html="$t('Not sure, or forgot to write it? Message <a href=/profile/8>the admin</a> on <a href=https://discordapp.com/users/248530770754625536 target=_blank>Discord</a> and it gets sorted.')"></p>
                     </div>
 
+                    <!-- The one thing a donation buys outright. Every demo
+                         downloaded is bandwidth that is paid for, which is why
+                         there is a limit at all and why this is a high ceiling
+                         rather than none. Said here because the demos page
+                         points at this page and used to promise something the
+                         site did not deliver. -->
+                    <div class="mt-4 p-4 rounded-lg bg-blue-950/30 border border-blue-500/20 w-full text-left">
+                        <div class="flex items-center gap-1.5 mb-1">
+                            <svg class="w-6 h-6 flex-shrink-0 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                            </svg>
+                            <Link :href="route('demos.index')" class="text-base font-bold text-blue-300 hover:text-blue-200">{{ $t('More demo downloads') }}</Link>
+                        </div>
+                        <p class="text-sm leading-relaxed text-gray-300">
+                            {{ $t('An account downloads :member demos a day. Donate :amount or more, all donations counted together, and that becomes :donor a day.', { member: 50, amount: '€10', donor: 500 }) }}
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-400 mt-2">
+                            {{ $t('Every demo downloaded is bandwidth we pay for, which is why there is a limit at all and why this is a high ceiling rather than none. It applies as soon as the donation is linked to your account.') }}
+                        </p>
+                    </div>
+
                     <div class="mt-4 p-4 rounded-lg bg-pink-950/30 border border-pink-500/20 w-full text-left">
                         <div class="flex items-center gap-2 mb-1">
                             <img src="/images/svg/badge-donor.svg" class="w-6 h-6" :alt="$t('Supporter')">
