@@ -793,6 +793,7 @@
     "Choropleth of map-best-time holders.": "Choroplethenkarte der Besitzer von Map-Bestzeiten.",
     "Chosen by vote": "Per Abstimmung gewählt",
     "Chosen with a wildcard": "Mit einer Wildcard gewählt",
+    "Won the vote, :votes of :total": "Hat die Abstimmung gewonnen, :votes von :total",
     "Chroma Green": "Chroma Grün",
     "Claim your mapper names in Settings to display your maps here": "Beanspruche deine Mapper-Namen in den Einstellungen, um deine Maps hier anzuzeigen",
     "Claim your model author names in Settings to display your models here": "Beanspruche deine Modellautor-Namen in den Einstellungen, um deine Modelle hier anzuzeigen",

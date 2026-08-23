@@ -428,6 +428,44 @@ class CompsController extends Controller
         ];
     }
 
+    /**
+     * The ballot that chose this round's maps, per physics, as it finished.
+     *
+     * A map barred from a physics was never on that ballot and is left out
+     * rather than shown with a zero it never had a chance to beat - the same
+     * rule the history page follows.
+     *
+     * @return array<string, array{total:int, rows:array<int, array{map:?string, votes:int, won:bool}>}>
+     */
+    private function settledBallot(CompRound $round): array
+    {
+        $round->loadMissing('candidates.map', 'maps');
+
+        $out = [];
+
+        foreach (BallotResolver::PHYSICS as $physics) {
+            $winner = $round->maps->firstWhere('physics', $physics)?->map_id;
+
+            $rows = $round->candidates
+                ->filter(fn (CompCandidate $c) => $c->blocked_physics !== $physics)
+                ->map(fn (CompCandidate $c) => [
+                    'map' => $c->map?->name,
+                    'votes' => (int) $c->{$this->voteColumn($physics)},
+                    'won' => $c->map_id === $winner,
+                ])
+                ->sortByDesc('votes')
+                ->values()
+                ->all();
+
+            $out[$physics] = [
+                'total' => array_sum(array_column($rows, 'votes')),
+                'rows' => $rows,
+            ];
+        }
+
+        return $out;
+    }
+
     private function playingPayload(CompRound $round, Request $request): array
     {
         $user = $request->user();
@@ -448,6 +486,14 @@ class CompsController extends Controller
                 'author' => $m->map?->author,
                 'decided_by' => $m->decided_by,
             ]]),
+            // How each map got here. It used to be visible only while the
+            // round sat locked between the ballot closing and play starting,
+            // so whoever missed that window never learned what the vote said
+            // - and with no lead configured that window does not exist at
+            // all. It belongs on the map being played: that is where somebody
+            // asks why this map, and voting is long over, so the count gives
+            // nothing away.
+            'ballot' => $this->settledBallot($round),
             // Times stay hidden until the round closes, so this is who has
             // entered rather than who is winning.
             'entrants' => $this->entrants($round),

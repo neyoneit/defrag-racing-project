@@ -102,6 +102,24 @@ export default {
         return out;
     });
 
+    // The ballot that chose the map being played, opened one physics at a time.
+    const openBallot = ref(null);
+
+    // Null when the round carries no ballot - an admin-made round, or one whose
+    // candidates are gone - so the whole line stays off rather than printing
+    // "won the vote, 0 of 0".
+    const ballotFor = (physics) => {
+        const b = props.playing?.ballot?.[physics];
+        return b && b.rows?.length ? b : null;
+    };
+
+    const winningVotes = (physics) => ballotFor(physics)?.rows.find((r) => r.won)?.votes ?? 0;
+
+    const ballotShare = (physics, row) => {
+        const total = ballotFor(physics)?.total ?? 0;
+        return total ? Math.round((row.votes / total) * 100) : 0;
+    };
+
     const castVote = ({ candidate, physics }) => {
         router.post(route('comps.vote', props.voting.round_id), {
             candidate_id: candidate,
@@ -845,6 +863,43 @@ export default {
                             <div v-if="playing.maps[physics].decided_by === 'wildcard'" class="mt-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-300">
                                 <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4-6.2-4.6-6.2 4.6 2.4-7.4L2 9.4h7.6z" /></svg>
                                 {{ $t('Chosen with a wildcard') }}
+                            </div>
+
+                            <!-- How this map got here. It used to be readable
+                                 only in the window between the ballot closing
+                                 and play starting, so whoever missed it never
+                                 found out - and with no lead set there is no
+                                 window. Voting is long over by now, so the
+                                 count gives nothing away. -->
+                            <button
+                                v-else-if="ballotFor(physics)"
+                                type="button"
+                                @click="openBallot = openBallot === physics ? null : physics"
+                                class="mt-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-gray-200 transition-colors"
+                            >
+                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                </svg>
+                                <template v-if="playing.maps[physics].decided_by === 'random'">{{ $t('Nobody voted at all, so it was drawn at random') }}</template>
+                                <template v-else-if="playing.maps[physics].decided_by === 'carried'">{{ $t('Nobody voted in this physics, so it took the other one\'s map') }}</template>
+                                <template v-else>{{ $t('Won the vote, :votes of :total', { votes: winningVotes(physics), total: ballotFor(physics).total }) }}</template>
+                                <svg class="w-3 h-3 transition-transform" :class="openBallot === physics ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                </svg>
+                            </button>
+
+                            <div v-if="openBallot === physics && ballotFor(physics)" class="mt-2 space-y-1">
+                                <div v-for="row in ballotFor(physics).rows" :key="row.map"
+                                     class="flex items-center gap-2 text-[11px] min-w-0">
+                                    <span class="flex-1 truncate" :class="row.won ? 'text-white font-bold' : 'text-gray-400'">{{ row.map }}</span>
+                                    <span class="w-16 h-1.5 rounded-full bg-black/50 overflow-hidden flex-shrink-0">
+                                        <span class="block h-full rounded-full"
+                                              :class="row.won ? 'bg-blue-400' : 'bg-gray-600'"
+                                              :style="{ width: ballotShare(physics, row) + '%' }"></span>
+                                    </span>
+                                    <span class="w-5 text-right tabular-nums font-bold flex-shrink-0"
+                                          :class="row.won ? 'text-white' : 'text-gray-500'">{{ row.votes }}</span>
+                                </div>
                             </div>
 
                             <!-- Who has entered. Deliberately not how fast: a
