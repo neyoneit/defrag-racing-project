@@ -49,7 +49,7 @@
                             <div class="flex-1 min-w-0 text-sm text-gray-300">
                                 <span>{{ notification.before }}</span>
                                 <Link class="text-blue-400 hover:text-blue-300 font-bold transition-colors mx-1" :href="notification.url">
-                                    {{ notification.headline }}
+                                    {{ notification.headline_localized }}
                                 </Link>
                                 <span>{{ notification.after }}</span>
                             </div>

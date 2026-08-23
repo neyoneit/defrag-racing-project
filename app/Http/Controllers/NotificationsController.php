@@ -68,6 +68,9 @@ class NotificationsController extends Controller
 
         $systemNotificationsPage = Notification::query()
             ->where('user_id', $userId)
+            // The translated headline is read back through the announcement,
+            // so the page loads them together rather than one per row.
+            ->when(app()->getLocale() !== 'en', fn ($q) => $q->with('announcement.translations'))
             ->orderBy('created_at', 'DESC')
             ->paginate(20, ['*'], 'system_page');
 

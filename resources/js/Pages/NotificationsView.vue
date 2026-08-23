@@ -731,7 +731,7 @@
                                 <div class="flex-1 min-w-0 text-sm text-gray-300">
                                     <template v-if="notification.type === 'announcement'">
                                         <span class="text-gray-400">{{ $t('Announcement:') }}</span>
-                                        <span class="ml-1.5 text-blue-400 group-hover:text-blue-300 group-hover:underline font-bold transition-colors" v-html="q3tohtml(notification.headline)"></span>
+                                        <span class="ml-1.5 text-blue-400 group-hover:text-blue-300 group-hover:underline font-bold transition-colors" v-html="q3tohtml(notification.headline_localized)"></span>
                                     </template>
                                     <template v-else-if="notification.type === 'render_completed'">
                                         <span class="text-gray-400">{{ $t('Render:') }}</span>
@@ -747,17 +747,17 @@
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 shrink-0 text-red-500">
                                                 <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
                                             </svg>
-                                            <span v-html="q3tohtml(notification.headline)"></span>
+                                            <span v-html="q3tohtml(notification.headline_localized)"></span>
                                         </a>
                                     </template>
                                     <template v-else-if="notification.type === 'wish_done'">
                                         <span class="text-gray-400">{{ $t('Your wish is done:') }}</span>
-                                        <span class="ml-1.5 text-fuchsia-300 group-hover:text-fuchsia-200 group-hover:underline font-bold transition-colors" v-html="q3tohtml(notification.headline)"></span>
+                                        <span class="ml-1.5 text-fuchsia-300 group-hover:text-fuchsia-200 group-hover:underline font-bold transition-colors" v-html="q3tohtml(notification.headline_localized)"></span>
                                     </template>
                                     <template v-else>
                                         <span v-if="getNotificationPrefix(notification.type)" class="text-gray-400 mr-1.5">{{ getNotificationPrefix(notification.type) }}</span>
                                         <span v-if="notification.before" class="text-gray-400" v-html="q3tohtml(notification.before)"></span>
-                                        <span class="mx-1.5 text-blue-400 group-hover:text-blue-300 group-hover:underline font-bold transition-colors" v-html="q3tohtml(notification.headline)"></span>
+                                        <span class="mx-1.5 text-blue-400 group-hover:text-blue-300 group-hover:underline font-bold transition-colors" v-html="q3tohtml(notification.headline_localized)"></span>
                                         <span v-if="notification.after" class="text-gray-400" v-html="q3tohtml(notification.after)"></span>
                                         <template v-if="notification.type === 'alias_suggestion'">
                                             <Link @click.stop="markSystemRead(notification)" class="ml-1.5 inline-flex items-center gap-1 align-middle text-yellow-400 hover:text-yellow-300 hover:underline transition-colors" :href="notification.url">

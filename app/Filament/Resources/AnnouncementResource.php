@@ -39,9 +39,11 @@ class AnnouncementResource extends Resource
                     ->required()
                     ->profile('default')
                     ->columnSpanFull(),
-                Forms\Components\TextInput::make('type')
-                    ->required()
-                    ->maxLength(255),
+                // No `type` box. An announcement goes on the home page and
+                // nowhere else, so the model fills the column in. It used to be
+                // a required free-text field with nothing saying what belonged
+                // in it, and anything but "home" made the announcement vanish
+                // from the whole site without a word.
 
                 // English above is the source. A blank field below falls back
                 // to it, one field at a time.
@@ -63,8 +65,6 @@ class AnnouncementResource extends Resource
             ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('title')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('type')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()

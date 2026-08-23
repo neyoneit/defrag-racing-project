@@ -756,7 +756,7 @@
                                             <span class="font-bold text-blue-400 truncate">{{ $t('ready') }}</span>
                                         </template>
                                         <template v-else>
-                                            <span class="font-bold truncate" :class="systemBannerTone.title" v-html="q3tohtml(currentSystemNotification.headline || '')"></span>
+                                            <span class="font-bold truncate" :class="systemBannerTone.title" v-html="q3tohtml(currentSystemNotification.headline_localized || '')"></span>
                                         </template>
                                     </div>
                                     <div class="shrink-0 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-white text-xs font-bold rounded" :class="systemBannerTone.badge">

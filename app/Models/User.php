@@ -466,7 +466,12 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
      *
      * Header Preview still decides how loudly it arrives.
      */
-    public function systemNotifyAnnouncement($type, $before, $headline, $after, $url) {
+    /**
+     * The headline is a copy of the announcement's English title, kept so the
+     * row reads on its own. $announcementId is what makes it translatable: it
+     * points back at the record the nine languages live on.
+     */
+    public function systemNotifyAnnouncement($type, $before, $headline, $after, $url, $announcementId = null) {
         $notification = new Notification();
         $notification->user_id = $this->id;
         $notification->type = $type;
@@ -474,6 +479,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         $notification->headline = $headline;
         $notification->after = $after;
         $notification->url = $url;
+        $notification->announcement_id = $announcementId;
         $notification->save();
     }
 
