@@ -128,6 +128,12 @@ Route::post('/wishlist/{wish}/vote', [\App\Http\Controllers\WishlistController::
     ->name('wishlist.vote');
 // Authors ask, they do not delete: by the time a wish is on the list other
 // people have voted on it. Removal itself is an admin action in the panel.
+// Only the author and an admin may write here. Anybody else who wants the
+// same thing files their own wish, which is what keeps the board a list of
+// asks rather than a forum.
+Route::post('/wishlist/{wish}/reply', [\App\Http\Controllers\WishlistController::class, 'reply'])
+    ->middleware(['auth', 'verified'])
+    ->name('wishlist.reply');
 Route::post('/wishlist/{wish}/request-removal', [\App\Http\Controllers\WishlistController::class, 'requestRemoval'])
     ->middleware(['auth', 'verified', 'throttle:20,60'])
     ->name('wishlist.request-removal');

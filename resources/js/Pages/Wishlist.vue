@@ -4,12 +4,36 @@ import MainLayout from '@/Layouts/MainLayout.vue';
 export default {
     layout: MainLayout,
 };
+// The reply thread. One wish open at a time: two textareas on a board of
+// three hundred is a way to lose what you were writing.
+const replyOpen = ref(null);
+const replyBody = ref('');
+const replySending = ref(false);
+
+const openReply = (wishId) => {
+    replyOpen.value = wishId;
+    replyBody.value = '';
+};
+
+const submitReply = (wishId) => {
+    const body = replyBody.value.trim();
+    if (! body || replySending.value) return;
+
+    replySending.value = true;
+    router.post(route('wishlist.reply', wishId), { body }, {
+        preserveScroll: true,
+        onSuccess: () => { replyOpen.value = null; replyBody.value = ''; },
+        onFinish: () => { replySending.value = false; },
+    });
+};
+
 </script>
 
 <script setup>
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { currentLocale, t } from '@/utils/i18n';
+import { timeAgo } from '@/utils/time';
 
 import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
 const props = defineProps({
@@ -489,8 +513,81 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(currentLocale())
                             </button>
                         </div>
 
-                        <div v-if="wish.status_note" class="mt-3 border-l-2 border-purple-400/40 pl-3 text-sm text-purple-200 whitespace-pre-line">
-                            {{ wish.status_note }}
+                        <!-- The answer, and the conversation under it. Only
+                             the person who asked and an admin can write here:
+                             anybody else who wants the same thing files their
+                             own wish, which keeps a vote cast on one request
+                             rather than on a discussion that moved on. -->
+                        <div v-if="wish.status_note" class="mt-3 border-l-2 border-purple-400/40 pl-3">
+                            <div class="text-[10px] font-black uppercase tracking-wider text-purple-400/70 mb-1">
+                                {{ $t('Answer from neyo') }}
+                            </div>
+                            <div class="text-sm text-purple-200 whitespace-pre-line">{{ wish.status_note }}</div>
+                        </div>
+
+                        <div v-if="wish.replies?.length" class="mt-3 space-y-2">
+                            <div v-for="r in wish.replies" :key="r.id"
+                                 class="rounded-lg border-l-2 px-3 py-2"
+                                 :class="r.by_admin
+                                     ? 'border-purple-400/40 bg-purple-500/[0.06]'
+                                     : 'border-white/15 bg-white/[0.03]'">
+                                <div class="flex items-center gap-2 mb-1 text-[11px]">
+                                    <Link v-if="r.author" :href="`/profile/${r.author.id}`"
+                                          class="font-bold hover:underline"
+                                          :class="r.by_admin ? 'text-purple-300' : 'text-gray-300'">
+                                        {{ r.author.name }}
+                                    </Link>
+                                    <span v-else class="text-gray-500">{{ $t('deleted account') }}</span>
+                                    <span v-if="r.by_admin"
+                                          class="rounded bg-purple-500/20 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-purple-300">
+                                        {{ $t('Admin') }}
+                                    </span>
+                                    <span class="ml-auto text-gray-600">{{ timeAgo(r.created_at) }}</span>
+                                </div>
+                                <div class="text-sm whitespace-pre-line"
+                                     :class="r.by_admin ? 'text-purple-200' : 'text-gray-300'">{{ r.body }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Append only: there is no edit and no delete, so a
+                             wish people have voted on cannot quietly become a
+                             different one. -->
+                        <div v-if="wish.can_reply && (wish.status_note || wish.replies?.length)" class="mt-3">
+                            <button
+                                v-if="replyOpen !== wish.id"
+                                type="button"
+                                @click="openReply(wish.id)"
+                                class="text-xs font-bold text-purple-300 hover:text-purple-200 transition-colors"
+                            >
+                                {{ $t('Reply') }}
+                            </button>
+
+                            <form v-else @submit.prevent="submitReply(wish.id)">
+                                <textarea
+                                    v-model="replyBody"
+                                    rows="3"
+                                    :maxlength="2000"
+                                    :placeholder="$t('Add to your wish. You cannot change what you already wrote.')"
+                                    class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 resize-none"
+                                ></textarea>
+                                <div class="mt-2 flex items-center gap-2">
+                                    <button
+                                        type="submit"
+                                        :disabled="replySending || !replyBody.trim()"
+                                        class="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:text-gray-500 text-white text-xs font-bold transition-colors"
+                                    >
+                                        {{ replySending ? $t('Submitting...') : $t('Reply') }}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="replyOpen = null"
+                                        class="px-3 py-1.5 text-xs font-bold text-gray-400 hover:text-white transition-colors"
+                                    >
+                                        {{ $t('Cancel') }}
+                                    </button>
+                                    <span class="ml-auto text-[11px] tabular-nums text-gray-600">{{ replyBody.length }} / 2000</span>
+                                </div>
+                            </form>
                         </div>
 
                         <div class="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">

@@ -25,6 +25,17 @@ class Wish extends Model
      */
     protected static function booted(): void
     {
+        // An answer is written for the person who asked, and they will not see
+        // it unless something goes and tells them. Fires on the note changing,
+        // not on the wish being saved: an admin editing the status of ten
+        // wishes must not send ten people a message about an answer that has
+        // been sitting there for a month.
+        static::updated(function (Wish $wish) {
+            if ($wish->wasChanged('status_note') && trim((string) $wish->status_note) !== '') {
+                $wish->notifyAuthorAnswered();
+            }
+        });
+
         static::updated(function (Wish $wish) {
             if ($wish->status !== 'done' || ! $wish->wasChanged('status')) {
                 return;
@@ -90,6 +101,75 @@ class Wish extends Model
         ]);
 
         return true;
+    }
+
+    /**
+     * Tell the author their wish has been answered and it is their turn.
+     *
+     * Unlike the "done" notification this one is allowed to repeat: an answer
+     * can be rewritten, and a second question deserves to be seen. It is only
+     * ever sent to the person who asked, because nobody else is being asked
+     * anything.
+     */
+    public function notifyAuthorAnswered(): bool
+    {
+        if (! $this->user_id) {
+            return false;
+        }
+
+        Notification::create([
+            'user_id' => $this->user_id,
+            'type' => 'wish_answer',
+            // The title carries the whole message: the list is one line per
+            // row, and "your wish was answered" without saying which wish is a
+            // notification you have to go and decode.
+            'headline' => Str::limit($this->title, 90),
+            // Both columns are NOT NULL with no default, so leaving them out
+            // is an insert that fails on a strict MySQL - which is production.
+            // Empty rather than filled: the page wraps its own translated
+            // sentence around the headline, so anything put here would be
+            // English frozen into the row.
+            'before' => '',
+            'after' => '',
+            'url' => route('wishlist.show', $this),
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Tell the admins the author has written back. Sent to every admin rather
+     * than to whoever wrote the answer: the answer may have been left by one
+     * person and picked up by another, and a reply nobody is told about is a
+     * conversation that stops.
+     */
+    public function notifyAdminsOfReply(WishReply $reply): int
+    {
+        $sent = 0;
+
+        foreach (User::where('admin', true)->get(['id']) as $admin) {
+            if ($admin->id === $reply->user_id) {
+                continue;
+            }
+
+            Notification::create([
+                'user_id' => $admin->id,
+                'type' => 'wish_reply',
+                'headline' => Str::limit($this->title, 90),
+                'before' => '',
+                'after' => '',
+                'url' => route('wishlist.show', $this),
+            ]);
+
+            $sent++;
+        }
+
+        return $sent;
+    }
+
+    public function replies()
+    {
+        return $this->hasMany(WishReply::class)->orderBy('created_at');
     }
 
     /**

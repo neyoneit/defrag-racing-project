@@ -423,6 +423,10 @@
         // labelled "Announcement:" - which is exactly what the comment above
         // is about.
         if (type === 'wish_done') return t('Your wish is done:');
+        // An answer is a question waiting on the person who asked. The label
+        // has to say that, or it reads as news rather than as your turn.
+        if (type === 'wish_answer') return t('Your wish needs an answer:');
+        if (type === 'wish_reply') return t('Reply on a wish:');
         if (type === 'alias_suggestion') return t('Alias:');
         if (type === 'marketplace') return t('Marketplace:');
         if (type.startsWith('clan_')) return t('Clan:');
