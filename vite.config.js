@@ -26,6 +26,16 @@ export default defineConfig({
         hmr: {
             host: 'localhost',
         },
+        // Vite runs inside the container and the sources are bind-mounted in,
+        // so a file written on the host raises no filesystem event the
+        // container ever hears. Without polling vite serves the new file the
+        // moment a browser asks for it - which is why a hard refresh worked -
+        // but never learns it changed, so it never tells the browser to. Hot
+        // reload looked broken while everything was in fact up to date.
+        watch: {
+            usePolling: true,
+            interval: 300,
+        },
     },
     css: {
         preprocessorOptions: {
