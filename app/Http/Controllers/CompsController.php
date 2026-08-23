@@ -377,6 +377,8 @@ class CompsController extends Controller
             $wildcardsHeld[$physics] = $holdsWildcard;
         }
 
+        $isOpen = $round->isVoting() && $round->voting_closes_at->isFuture();
+
         return [
             'round_id' => $round->id,
             'comp_title' => $round->comp->title,
@@ -398,7 +400,7 @@ class CompsController extends Controller
             // it.
             'next_category' => app(CandidateSelector::class)
                 ->categoryForWeekly((int) $round->comp->number + 1),
-            'is_open' => $round->isVoting() && $round->voting_closes_at->isFuture(),
+            'is_open' => $isOpen,
             'decided' => $round->maps->mapWithKeys(fn ($m) => [$m->physics => [
                 'map' => $m->map?->name,
                 'decided_by' => $m->decided_by,
@@ -410,13 +412,80 @@ class CompsController extends Controller
                 'thumbnail' => $c->map?->thumbnail,
                 'author' => $c->map?->author,
                 'blocked_physics' => $c->blocked_physics,
-                'votes' => ['cpm' => $c->votes_cpm, 'vq3' => $c->votes_vq3],
+                // Not while the ballot is open, and absent rather than zero.
+                // A running count says which map is going to win, and a week
+                // is long enough to grind it before it is even chosen. They
+                // come back the moment voting closes, which is when they stop
+                // being a head start and become the result. Left out of the
+                // payload rather than hidden in the page, because a number
+                // that is sent is a number anybody can read.
+                'votes' => $isOpen ? null : ['cpm' => $c->votes_cpm, 'vq3' => $c->votes_vq3],
                 'preview' => $previews[$c->map_id] ?? null,
             ])->values(),
             'my_votes' => $myVotes,
             'wildcards_held' => $wildcardsHeld,
             'may_vote' => $this->mayVote($request),
         ];
+    }
+
+    /**
+     * The ballot that chose this round's maps, as it finished.
+     *
+     * The same shape the ballot itself has - every map with what it got in
+     * both physics - rather than one list per physics. It is the one picture
+     * of the week's vote and it reads as one: a map that lost cpm by two and
+     * won vq3 by eight says something neither half says alone.
+     *
+     * A map barred from a physics gets null there rather than a zero it never
+     * had a chance to beat, which is the rule the history page follows.
+     *
+     * @return array{totals:array<string,int>, rows:array<int, array<string, mixed>>}
+     */
+    private function settledBallot(CompRound $round): array
+    {
+        $round->loadMissing('candidates.map', 'maps');
+
+        $winners = [];
+        $totals = [];
+
+        foreach (BallotResolver::PHYSICS as $physics) {
+            $winners[$physics] = $round->maps->firstWhere('physics', $physics)?->map_id;
+            $totals[$physics] = 0;
+        }
+
+        $rows = $round->candidates->map(function (CompCandidate $c) use ($winners, &$totals) {
+            $votes = [];
+            $won = [];
+
+            foreach (BallotResolver::PHYSICS as $physics) {
+                if ($c->blocked_physics === $physics) {
+                    $votes[$physics] = null;
+                    $won[$physics] = false;
+
+                    continue;
+                }
+
+                $votes[$physics] = (int) $c->{$this->voteColumn($physics)};
+                $won[$physics] = $c->map_id === $winners[$physics];
+                $totals[$physics] += $votes[$physics];
+            }
+
+            return [
+                'map' => $c->map?->name,
+                'thumbnail' => $c->map?->thumbnail,
+                'author' => $c->map?->author,
+                'blocked_physics' => $c->blocked_physics,
+                'votes' => $votes,
+                'won' => $won,
+            ];
+        })
+            // Most voted first, counting both physics: the ballot is one
+            // picture and the map that carried the week leads it.
+            ->sortByDesc(fn ($r) => array_sum(array_map(fn ($v) => $v ?? 0, $r['votes'])))
+            ->values()
+            ->all();
+
+        return ['totals' => $totals, 'rows' => $rows];
     }
 
     private function playingPayload(CompRound $round, Request $request): array
@@ -439,6 +508,14 @@ class CompsController extends Controller
                 'author' => $m->map?->author,
                 'decided_by' => $m->decided_by,
             ]]),
+            // How each map got here. It used to be visible only while the
+            // round sat locked between the ballot closing and play starting,
+            // so whoever missed that window never learned what the vote said
+            // - and with no lead configured that window does not exist at
+            // all. It belongs on the map being played: that is where somebody
+            // asks why this map, and voting is long over, so the count gives
+            // nothing away.
+            'ballot' => $this->settledBallot($round),
             // Times stay hidden until the round closes, so this is who has
             // entered rather than who is winning.
             'entrants' => $this->entrants($round),

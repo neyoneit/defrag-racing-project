@@ -270,6 +270,14 @@ class CompPreviewService
             'source' => self::SOURCE,
             'status' => 'pending',
             'priority' => self::PRIORITY,
+            // Where the bot fetches the demo, and what to call it. Every other
+            // caller sets these; this one did not, so the queue handed the bot
+            // an empty url and it died on the download with "expected str,
+            // bytes or os.PathLike object, not NoneType". Every comps preview
+            // ever queued failed that way, which is why a ballot has never
+            // shown one.
+            'demo_url' => config('app.url') . '/api/demome/download-demo/' . $demo->id,
+            'demo_filename' => $demo->original_filename,
         ]);
     }
 }

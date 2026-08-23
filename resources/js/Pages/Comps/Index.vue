@@ -89,14 +89,41 @@ export default {
     );
 
     // Totals per ballot, so each bar can show a share rather than a bare count.
+    // A candidate carries no counts while the ballot is open - the server
+    // leaves them out so nobody can read off the map that is going to win -
+    // and there is nothing to total until it closes.
     const totals = computed(() => {
         const out = { cpm: 0, vq3: 0 };
         for (const c of props.voting?.candidates ?? []) {
+            if (! c.votes) continue;
             out.cpm += c.votes.cpm;
             out.vq3 += c.votes.vq3;
         }
         return out;
     });
+
+    // The ballot that chose the maps being played. One panel for the week
+    // rather than one per physics: it is a single vote and it reads as one.
+    const showBallot = ref(false);
+
+    // Null when the round carries no ballot - an admin-made round, or one whose
+    // candidates are gone - so the whole line stays off rather than printing
+    // "won the vote, 0 of 0".
+    const playedBallot = computed(() => {
+        const b = props.playing?.ballot;
+        return b && b.rows?.length ? b : null;
+    });
+
+    const winningVotes = (physics) =>
+        playedBallot.value?.rows.find((r) => r.won?.[physics])?.votes?.[physics] ?? 0;
+
+    const ballotTotal = (physics) => playedBallot.value?.totals?.[physics] ?? 0;
+
+    const ballotShare = (physics, row) => {
+        const total = ballotTotal(physics);
+        const votes = row.votes?.[physics];
+        return total && votes ? Math.round((votes / total) * 100) : 0;
+    };
 
     const castVote = ({ candidate, physics }) => {
         router.post(route('comps.vote', props.voting.round_id), {
@@ -805,48 +832,97 @@ export default {
                 </div>
             </div>
 
-            <div class="grid gap-5 p-5 md:grid-cols-2">
-                <div v-for="physics in PHYSICS" :key="physics" class="rounded-xl border border-white/10 bg-black/30 backdrop-blur-sm overflow-hidden">
-                    <div class="flex items-center justify-between border-b border-white/10 px-4 py-2">
-                        <span class="text-xs font-black uppercase tracking-widest text-gray-300">{{ physics }}</span>
-                        <span v-if="bestOf(physics) !== null" class="text-xs text-gray-400">
-                            {{ $t('Your best') }}
-                            <span class="font-bold text-white tabular-nums ml-1">{{ formatTime(bestOf(physics)) }}</span>
-                        </span>
-                    </div>
+            <!-- One box, split down the middle, rather than two cards with
+                 a gap. The two halves are the same week and the ballot below
+                 them chose both, so a border around each said they were
+                 separate things.
 
-                    <!-- Thumbnail on the left, everything else beside it. The
-                         entrants used to sit under the picture with the whole
-                         width of the card empty to its right, which made a
-                         round with two names in it look like a card that had
-                         failed to load. -->
-                    <div v-if="playing.maps?.[physics]" class="flex gap-4 p-4">
-                        <img
-                            v-if="playing.maps[physics].thumbnail"
-                            :src="`/storage/${playing.maps[physics].thumbnail}`"
-                            :alt="playing.maps[physics].name"
-                            class="w-32 h-24 rounded-lg object-cover flex-shrink-0"
-                        />
-
-                        <div class="min-w-0 flex-1">
-                            <Link
-                                :href="route('maps.map', playing.maps[physics].name)"
-                                class="block font-bold text-white hover:text-blue-300 transition-colors truncate"
-                            >
-                                {{ playing.maps[physics].name }}
-                            </Link>
-                            <div v-if="playing.maps[physics].author" class="text-xs text-gray-500 truncate">
-                                {{ playing.maps[physics].author }}
+                 The line about times staying hidden used to be printed inside
+                 each half, so it was on screen twice saying the same thing. It
+                 is the footer of the box now. -->
+            <div class="p-5">
+                <div class="rounded-xl border border-white/10 bg-black/30 backdrop-blur-sm overflow-hidden">
+                    <div class="grid md:grid-cols-2 md:divide-x md:divide-white/10">
+                        <div v-for="physics in PHYSICS" :key="physics" class="p-4">
+                            <div class="flex items-center justify-between gap-3 mb-3">
+                                <span class="rounded-md bg-white/[0.07] px-2 py-0.5 text-[11px] font-black uppercase tracking-widest text-gray-300">
+                                    {{ physics }}
+                                </span>
+                                <span v-if="bestOf(physics) !== null" class="text-xs text-gray-400">
+                                    {{ $t('Your best') }}
+                                    <span class="font-bold text-white tabular-nums ml-1">{{ formatTime(bestOf(physics)) }}</span>
+                                </span>
                             </div>
-                            <div v-if="playing.maps[physics].decided_by === 'wildcard'" class="mt-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-300">
-                                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4-6.2-4.6-6.2 4.6 2.4-7.4L2 9.4h7.6z" /></svg>
-                                {{ $t('Chosen with a wildcard') }}
+
+                            <!-- Thumbnail on the left, everything else beside
+                                 it. The entrants used to sit under the picture
+                                 with the whole width of the card empty to its
+                                 right, which made a round with two names in it
+                                 look like a card that had failed to load. -->
+                            <div v-if="playing.maps?.[physics]" class="flex gap-3.5">
+                                <Link
+                                    :href="route('maps.map', playing.maps[physics].name)"
+                                    class="group flex-shrink-0 block w-36 h-[6.5rem] rounded-lg overflow-hidden border border-white/10 hover:border-blue-400/50 transition-colors"
+                                >
+                                    <img
+                                        v-if="playing.maps[physics].thumbnail"
+                                        :src="`/storage/${playing.maps[physics].thumbnail}`"
+                                        :alt="playing.maps[physics].name"
+                                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                    />
+                                    <span v-else class="block w-full h-full bg-white/[0.03]"></span>
+                                </Link>
+
+                                <div class="min-w-0 flex-1">
+                                    <Link
+                                        :href="route('maps.map', playing.maps[physics].name)"
+                                        class="block font-bold text-white hover:text-blue-300 transition-colors truncate"
+                                    >
+                                        {{ playing.maps[physics].name }}
+                                    </Link>
+                                    <div v-if="playing.maps[physics].author" class="text-xs text-gray-500 truncate">
+                                        {{ playing.maps[physics].author }}
+                                    </div>
+
+                                    <div v-if="playing.maps[physics].decided_by === 'wildcard'" class="mt-1.5 inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                                        <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4-6.2-4.6-6.2 4.6 2.4-7.4L2 9.4h7.6z" /></svg>
+                                        {{ $t('Chosen with a wildcard') }}
+                                    </div>
+
+                                    <!-- How this map got here. It used to be
+                                         readable only in the window between the
+                                         ballot closing and play starting, so
+                                         whoever missed it never found out - and
+                                         with no lead set there is no window.
+                                         Voting is long over by now, so the count
+                                         gives nothing away. Both halves open the
+                                         same panel: it was one ballot. -->
+                                    <button
+                                        v-else-if="playedBallot"
+                                        type="button"
+                                        @click="showBallot = !showBallot"
+                                        class="mt-1.5 inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors"
+                                        :class="showBallot
+                                            ? 'border-blue-400/40 bg-blue-500/15 text-blue-200'
+                                            : 'border-white/10 bg-white/[0.04] text-gray-400 hover:text-gray-200 hover:border-white/25'"
+                                    >
+                                        <svg class="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                        </svg>
+                                        <template v-if="playing.maps[physics].decided_by === 'random'">{{ $t('Nobody voted at all, so it was drawn at random') }}</template>
+                                        <template v-else-if="playing.maps[physics].decided_by === 'carried'">{{ $t('Nobody voted in this physics, so it took the other one\'s map') }}</template>
+                                        <template v-else>{{ $t('Won the vote, :votes of :total', { votes: winningVotes(physics), total: ballotTotal(physics) }) }}</template>
+                                        <svg class="w-3 h-3 flex-shrink-0 transition-transform" :class="showBallot ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
 
                             <!-- Who has entered. Deliberately not how fast: a
                                  live leaderboard would hand everyone else the
                                  answer. -->
-                            <div class="mt-2.5 pt-2.5 border-t border-white/10">
+                            <div class="mt-3.5 pt-3 border-t border-white/10">
                                 <div class="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-500">
                                     {{ $t('Already uploaded a run') }} ({{ playing.entrants?.[physics]?.length ?? 0 }})
                                 </div>
@@ -879,12 +955,81 @@ export default {
                                         />
                                     </div>
                                 </div>
-
-                                <p class="mt-2 text-[11px] text-gray-400 leading-snug">
-                                    {{ $t('Times stay hidden until the round closes, so nobody can be handed the time to beat.') }}
-                                </p>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- The whole ballot, in the shape it was voted on. Small,
+                         because it is a record rather than a thing to act on,
+                         and the counts sit over the picture the way they sat
+                         under it while voting - one card per map, both physics
+                         on each, so a map that lost one and won the other says
+                         so in one place.
+
+                         In the same box as the maps it chose, spanning both
+                         halves, because one ballot decided both. -->
+                    <div v-if="showBallot && playedBallot" class="border-t border-white/10 bg-black/25 px-4 py-3">
+                        <div class="mb-2.5 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                            {{ $t('Final votes') }}
+                        </div>
+
+                        <div class="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+                            <Link
+                                v-for="row in playedBallot.rows"
+                                :key="row.map"
+                                :href="route('maps.map', row.map)"
+                                class="group relative block overflow-hidden rounded-lg border transition-colors"
+                                :class="(row.won?.cpm || row.won?.vq3)
+                                    ? 'border-blue-400/50 hover:border-blue-300/70'
+                                    : 'border-white/10 hover:border-white/25'"
+                            >
+                                <img
+                                    v-if="row.thumbnail"
+                                    :src="`/storage/${row.thumbnail}`"
+                                    :alt="row.map"
+                                    class="w-full h-24 object-cover"
+                                />
+                                <div v-else class="w-full h-24 bg-white/[0.03]"></div>
+
+                                <div class="absolute inset-x-0 top-0 px-2 py-1 bg-gradient-to-b from-black/85 to-transparent">
+                                    <div class="truncate text-[11px] font-bold text-white group-hover:text-blue-200 transition-colors">
+                                        {{ row.map }}
+                                    </div>
+                                </div>
+
+                                <!-- Over the bottom half of the picture, both physics. -->
+                                <div class="absolute inset-x-0 bottom-0 h-1/2 flex flex-col justify-end gap-1 px-2 pb-1.5 pt-4 bg-gradient-to-t from-black/90 via-black/70 to-transparent">
+                                    <div v-for="physics in ['vq3', 'cpm']" :key="physics"
+                                         class="flex items-center gap-1.5">
+                                        <span class="w-6 flex-shrink-0 text-[9px] font-black uppercase tracking-wider"
+                                              :class="row.won?.[physics] ? 'text-blue-300' : 'text-gray-500'">
+                                            {{ physics }}
+                                        </span>
+
+                                        <template v-if="row.votes?.[physics] === null">
+                                            <span class="flex-1 text-[9px] text-gray-600 truncate">{{ $t('Not on this ballot') }}</span>
+                                        </template>
+                                        <template v-else>
+                                            <span class="flex-1 h-1 rounded-full bg-white/15 overflow-hidden">
+                                                <span class="block h-full rounded-full"
+                                                      :class="row.won?.[physics] ? 'bg-blue-400' : 'bg-gray-400'"
+                                                      :style="{ width: ballotShare(physics, row) + '%' }"></span>
+                                            </span>
+                                            <span class="w-4 flex-shrink-0 text-right text-[10px] font-black tabular-nums"
+                                                  :class="row.won?.[physics] ? 'text-white' : 'text-gray-400'">
+                                                {{ row.votes[physics] }}
+                                            </span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </Link>
+                        </div>
+                    </div>
+
+                    <!-- Said once for the box. It was printed inside each half,
+                         which put the same sentence on screen twice. -->
+                    <div class="border-t border-white/10 px-4 py-2.5 text-[11px] text-gray-400 leading-snug">
+                        {{ $t('Times stay hidden until the round closes, so nobody can be handed the time to beat.') }}
                     </div>
                 </div>
             </div>

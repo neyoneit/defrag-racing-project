@@ -213,6 +213,8 @@ class CompsApiPayload
         // count next to whichever map won.
         $candidates = $round->candidates()->with('map:id,name,author,thumbnail')->get();
 
+        $isOpen = $round->isVoting() && $round->voting_closes_at?->isFuture();
+
         return [
             'round_id' => $round->id,
             'comp_number' => (int) $round->comp->number,
@@ -221,7 +223,7 @@ class CompsApiPayload
             'closes_at' => $round->voting_closes_at?->toIso8601String(),
             'starts_at' => $round->starts_at?->toIso8601String(),
             'ends_at' => $round->ends_at?->toIso8601String(),
-            'is_open' => $round->isVoting() && $round->voting_closes_at?->isFuture(),
+            'is_open' => $isOpen,
             // What won, per physics, and whether it won by the count or by
             // somebody spending a wildcard on it. Empty while the ballot is
             // open - a map decided early by a wildcard is not announced before
@@ -251,13 +253,14 @@ class CompsApiPayload
             // objects would print [object Object] on somebody's screen.
             'candidates' => $candidates->map(fn ($c) => $c->map?->name)->filter()->values()->all(),
             // The same ballot with everything worth seeing on it. Vote counts
-            // included: they are on the site's own ballot while it runs and
-            // stay there as the final count afterwards, so there is nothing
-            // here the launcher would be giving away.
+            // only once the ballot has closed, and null rather than zero while
+            // it is open: the site hides them for the same reason, and a
+            // launcher printing the running count would hand back exactly the
+            // head start the site just stopped giving.
             'candidate_maps' => $candidates
                 ->filter(fn ($c) => $c->map !== null)
                 ->map(fn ($c) => $this->mapCard($c->map) + [
-                    'votes' => ['cpm' => (int) $c->votes_cpm, 'vq3' => (int) $c->votes_vq3],
+                    'votes' => $isOpen ? null : ['cpm' => (int) $c->votes_cpm, 'vq3' => (int) $c->votes_vq3],
                     // A map can be barred from one physics - it has been
                     // played there recently, or it is not ranked for it - and
                     // a vote count under a physics it cannot win reads as a

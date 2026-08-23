@@ -47,9 +47,14 @@
 
     const votedIn = (physics) => props.myVotes?.[physics] === props.candidate.id;
 
+    // Null while the ballot is open. The server leaves the counts out rather
+    // than sending zeros, so this is the one place that decides whether there
+    // is a tally to draw at all.
+    const hasCounts = computed(() => props.candidate.votes != null);
+
     const share = (physics) => {
         const total = props.totals?.[physics] ?? 0;
-        if (!total) return 0;
+        if (!total || !hasCounts.value) return 0;
         return Math.round((props.candidate.votes[physics] / total) * 100);
     };
 </script>
@@ -162,18 +167,34 @@
                                 {{ physics }}
                             </span>
 
-                            <span class="flex-1 h-1.5 rounded-full bg-black/50 overflow-hidden">
-                                <span
-                                    class="block h-full rounded-full transition-all duration-500"
-                                    :class="votedIn(physics) ? 'bg-blue-400' : 'bg-gray-500'"
-                                    :style="{ width: share(physics) + '%' }"
-                                ></span>
-                            </span>
+                            <!-- While the ballot is open there is no tally to
+                                 draw. The row keeps its shape so the card does
+                                 not jump when the counts arrive, and your own
+                                 vote is still marked - you have to be able to
+                                 see where it sits to move it. -->
+                            <template v-if="hasCounts">
+                                <span class="flex-1 h-1.5 rounded-full bg-black/50 overflow-hidden">
+                                    <span
+                                        class="block h-full rounded-full transition-all duration-500"
+                                        :class="votedIn(physics) ? 'bg-blue-400' : 'bg-gray-500'"
+                                        :style="{ width: share(physics) + '%' }"
+                                    ></span>
+                                </span>
 
-                            <span class="text-xs font-bold tabular-nums w-6 text-right"
-                                  :class="votedIn(physics) ? 'text-white' : 'text-gray-300'">
-                                {{ candidate.votes[physics] }}
-                            </span>
+                                <span class="text-xs font-bold tabular-nums w-6 text-right"
+                                      :class="votedIn(physics) ? 'text-white' : 'text-gray-300'">
+                                    {{ candidate.votes[physics] }}
+                                </span>
+                            </template>
+
+                            <template v-else>
+                                <span class="flex-1 h-1.5 rounded-full bg-black/40"></span>
+
+                                <span class="w-6 text-right text-xs font-bold"
+                                      :class="votedIn(physics) ? 'text-blue-200' : 'text-gray-600'">
+                                    {{ votedIn(physics) ? '&check;' : '&middot;' }}
+                                </span>
+                            </template>
                         </button>
 
                         <!-- Only rendered for somebody actually holding one. -->
