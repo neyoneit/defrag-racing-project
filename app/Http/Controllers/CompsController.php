@@ -429,41 +429,63 @@ class CompsController extends Controller
     }
 
     /**
-     * The ballot that chose this round's maps, per physics, as it finished.
+     * The ballot that chose this round's maps, as it finished.
      *
-     * A map barred from a physics was never on that ballot and is left out
-     * rather than shown with a zero it never had a chance to beat - the same
-     * rule the history page follows.
+     * The same shape the ballot itself has - every map with what it got in
+     * both physics - rather than one list per physics. It is the one picture
+     * of the week's vote and it reads as one: a map that lost cpm by two and
+     * won vq3 by eight says something neither half says alone.
      *
-     * @return array<string, array{total:int, rows:array<int, array{map:?string, votes:int, won:bool}>}>
+     * A map barred from a physics gets null there rather than a zero it never
+     * had a chance to beat, which is the rule the history page follows.
+     *
+     * @return array{totals:array<string,int>, rows:array<int, array<string, mixed>>}
      */
     private function settledBallot(CompRound $round): array
     {
         $round->loadMissing('candidates.map', 'maps');
 
-        $out = [];
+        $winners = [];
+        $totals = [];
 
         foreach (BallotResolver::PHYSICS as $physics) {
-            $winner = $round->maps->firstWhere('physics', $physics)?->map_id;
-
-            $rows = $round->candidates
-                ->filter(fn (CompCandidate $c) => $c->blocked_physics !== $physics)
-                ->map(fn (CompCandidate $c) => [
-                    'map' => $c->map?->name,
-                    'votes' => (int) $c->{$this->voteColumn($physics)},
-                    'won' => $c->map_id === $winner,
-                ])
-                ->sortByDesc('votes')
-                ->values()
-                ->all();
-
-            $out[$physics] = [
-                'total' => array_sum(array_column($rows, 'votes')),
-                'rows' => $rows,
-            ];
+            $winners[$physics] = $round->maps->firstWhere('physics', $physics)?->map_id;
+            $totals[$physics] = 0;
         }
 
-        return $out;
+        $rows = $round->candidates->map(function (CompCandidate $c) use ($winners, &$totals) {
+            $votes = [];
+            $won = [];
+
+            foreach (BallotResolver::PHYSICS as $physics) {
+                if ($c->blocked_physics === $physics) {
+                    $votes[$physics] = null;
+                    $won[$physics] = false;
+
+                    continue;
+                }
+
+                $votes[$physics] = (int) $c->{$this->voteColumn($physics)};
+                $won[$physics] = $c->map_id === $winners[$physics];
+                $totals[$physics] += $votes[$physics];
+            }
+
+            return [
+                'map' => $c->map?->name,
+                'thumbnail' => $c->map?->thumbnail,
+                'author' => $c->map?->author,
+                'blocked_physics' => $c->blocked_physics,
+                'votes' => $votes,
+                'won' => $won,
+            ];
+        })
+            // Most voted first, counting both physics: the ballot is one
+            // picture and the map that carried the week leads it.
+            ->sortByDesc(fn ($r) => array_sum(array_map(fn ($v) => $v ?? 0, $r['votes'])))
+            ->values()
+            ->all();
+
+        return ['totals' => $totals, 'rows' => $rows];
     }
 
     private function playingPayload(CompRound $round, Request $request): array

@@ -102,22 +102,27 @@ export default {
         return out;
     });
 
-    // The ballot that chose the map being played, opened one physics at a time.
-    const openBallot = ref(null);
+    // The ballot that chose the maps being played. One panel for the week
+    // rather than one per physics: it is a single vote and it reads as one.
+    const showBallot = ref(false);
 
     // Null when the round carries no ballot - an admin-made round, or one whose
     // candidates are gone - so the whole line stays off rather than printing
     // "won the vote, 0 of 0".
-    const ballotFor = (physics) => {
-        const b = props.playing?.ballot?.[physics];
+    const playedBallot = computed(() => {
+        const b = props.playing?.ballot;
         return b && b.rows?.length ? b : null;
-    };
+    });
 
-    const winningVotes = (physics) => ballotFor(physics)?.rows.find((r) => r.won)?.votes ?? 0;
+    const winningVotes = (physics) =>
+        playedBallot.value?.rows.find((r) => r.won?.[physics])?.votes?.[physics] ?? 0;
+
+    const ballotTotal = (physics) => playedBallot.value?.totals?.[physics] ?? 0;
 
     const ballotShare = (physics, row) => {
-        const total = ballotFor(physics)?.total ?? 0;
-        return total ? Math.round((row.votes / total) * 100) : 0;
+        const total = ballotTotal(physics);
+        const votes = row.votes?.[physics];
+        return total && votes ? Math.round((votes / total) * 100) : 0;
     };
 
     const castVote = ({ candidate, physics }) => {
@@ -870,11 +875,12 @@ export default {
                                  and play starting, so whoever missed it never
                                  found out - and with no lead set there is no
                                  window. Voting is long over by now, so the
-                                 count gives nothing away. -->
+                                 count gives nothing away. Both cards open the
+                                 same panel: it was one ballot. -->
                             <button
-                                v-else-if="ballotFor(physics)"
+                                v-else-if="playedBallot"
                                 type="button"
-                                @click="openBallot = openBallot === physics ? null : physics"
+                                @click="showBallot = !showBallot"
                                 class="mt-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-gray-200 transition-colors"
                             >
                                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
@@ -882,25 +888,11 @@ export default {
                                 </svg>
                                 <template v-if="playing.maps[physics].decided_by === 'random'">{{ $t('Nobody voted at all, so it was drawn at random') }}</template>
                                 <template v-else-if="playing.maps[physics].decided_by === 'carried'">{{ $t('Nobody voted in this physics, so it took the other one\'s map') }}</template>
-                                <template v-else>{{ $t('Won the vote, :votes of :total', { votes: winningVotes(physics), total: ballotFor(physics).total }) }}</template>
-                                <svg class="w-3 h-3 transition-transform" :class="openBallot === physics ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                <template v-else>{{ $t('Won the vote, :votes of :total', { votes: winningVotes(physics), total: ballotTotal(physics) }) }}</template>
+                                <svg class="w-3 h-3 transition-transform" :class="showBallot ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                                 </svg>
                             </button>
-
-                            <div v-if="openBallot === physics && ballotFor(physics)" class="mt-2 space-y-1">
-                                <div v-for="row in ballotFor(physics).rows" :key="row.map"
-                                     class="flex items-center gap-2 text-[11px] min-w-0">
-                                    <span class="flex-1 truncate" :class="row.won ? 'text-white font-bold' : 'text-gray-400'">{{ row.map }}</span>
-                                    <span class="w-16 h-1.5 rounded-full bg-black/50 overflow-hidden flex-shrink-0">
-                                        <span class="block h-full rounded-full"
-                                              :class="row.won ? 'bg-blue-400' : 'bg-gray-600'"
-                                              :style="{ width: ballotShare(physics, row) + '%' }"></span>
-                                    </span>
-                                    <span class="w-5 text-right tabular-nums font-bold flex-shrink-0"
-                                          :class="row.won ? 'text-white' : 'text-gray-500'">{{ row.votes }}</span>
-                                </div>
-                            </div>
 
                             <!-- Who has entered. Deliberately not how fast: a
                                  live leaderboard would hand everyone else the
@@ -945,6 +937,69 @@ export default {
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- The whole ballot, in the shape it was voted on. Small, because
+                 it is a record rather than a thing to act on, and the counts
+                 sit over the picture the way they sat under it on the ballot
+                 - one card per map, both physics on each, so a map that lost
+                 one and won the other says so in one place. -->
+            <div v-if="showBallot && playedBallot" class="border-t border-white/10 bg-black/25 px-4 py-4">
+                <div class="mb-2.5 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                    {{ $t('Final votes') }}
+                </div>
+
+                <div class="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+                    <Link
+                        v-for="row in playedBallot.rows"
+                        :key="row.map"
+                        :href="route('maps.map', row.map)"
+                        class="group relative block overflow-hidden rounded-lg border transition-colors"
+                        :class="(row.won?.cpm || row.won?.vq3)
+                            ? 'border-blue-400/50 hover:border-blue-300/70'
+                            : 'border-white/10 hover:border-white/25'"
+                    >
+                        <img
+                            v-if="row.thumbnail"
+                            :src="`/storage/${row.thumbnail}`"
+                            :alt="row.map"
+                            class="w-full h-24 object-cover"
+                        />
+                        <div v-else class="w-full h-24 bg-white/[0.03]"></div>
+
+                        <div class="absolute inset-x-0 top-0 px-2 py-1 bg-gradient-to-b from-black/85 to-transparent">
+                            <div class="truncate text-[11px] font-bold text-white group-hover:text-blue-200 transition-colors">
+                                {{ row.map }}
+                            </div>
+                        </div>
+
+                        <!-- Over the bottom half of the picture, both physics. -->
+                        <div class="absolute inset-x-0 bottom-0 h-1/2 flex flex-col justify-end gap-1 px-2 pb-1.5 pt-4 bg-gradient-to-t from-black/90 via-black/70 to-transparent">
+                            <div v-for="physics in ['vq3', 'cpm']" :key="physics"
+                                 class="flex items-center gap-1.5">
+                                <span class="w-6 flex-shrink-0 text-[9px] font-black uppercase tracking-wider"
+                                      :class="row.won?.[physics] ? 'text-blue-300' : 'text-gray-500'">
+                                    {{ physics }}
+                                </span>
+
+                                <template v-if="row.votes?.[physics] === null">
+                                    <span class="flex-1 text-[9px] text-gray-600 truncate">{{ $t('Not on this ballot') }}</span>
+                                </template>
+                                <template v-else>
+                                    <span class="flex-1 h-1 rounded-full bg-white/15 overflow-hidden">
+                                        <span class="block h-full rounded-full"
+                                              :class="row.won?.[physics] ? 'bg-blue-400' : 'bg-gray-400'"
+                                              :style="{ width: ballotShare(physics, row) + '%' }"></span>
+                                    </span>
+                                    <span class="w-4 flex-shrink-0 text-right text-[10px] font-black tabular-nums"
+                                          :class="row.won?.[physics] ? 'text-white' : 'text-gray-400'">
+                                        {{ row.votes[physics] }}
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+                    </Link>
                 </div>
             </div>
 
