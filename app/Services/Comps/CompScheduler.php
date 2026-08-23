@@ -205,7 +205,7 @@ class CompScheduler
     {
         $number = (int) Comp::weekly()->max('number') + 1;
 
-        $starts = $this->nextStartAfter($this->latestWeeklyEnd() ?? now());
+        $starts = $this->startAfterPrevious();
         $ends = $starts->copy()->addWeek();
         $votingCloses = $starts->copy()->subHours($this->settings->votingLeadHours());
 
@@ -264,6 +264,42 @@ class CompScheduler
 
             return $comp;
         });
+    }
+
+    /**
+     * Where the next weekly starts.
+     *
+     * Weeks abut: one starts the moment the last one ends. Asking
+     * nextStartAfter() for that moment used to skip a whole week, because it
+     * looks for a start STRICTLY after what it is given and the previous end
+     * is itself a start moment - so equal counted as "already gone". A week
+     * ending Sunday 20:00 handed back the Sunday after, and nothing was
+     * played in between.
+     *
+     * The weekday snap is still the answer when there is nothing to abut
+     * (a fresh install) or when the last week no longer ends on one (an admin
+     * moved it), because then there is no start moment to inherit.
+     */
+    private function startAfterPrevious(): Carbon
+    {
+        $previousEnd = $this->latestWeeklyEnd();
+
+        if ($previousEnd && $this->isStartMoment($previousEnd)) {
+            return $previousEnd;
+        }
+
+        return $this->nextStartAfter($previousEnd ?? now());
+    }
+
+    /** Does this land on the configured weekday and time? */
+    private function isStartMoment(Carbon $at): bool
+    {
+        $local = $at->copy()->setTimezone($this->settings->timezone());
+        [$hour, $minute] = array_pad(explode(':', $this->settings->startTime()), 2, '0');
+
+        return $local->dayOfWeek === $this->settings->startDayOfWeek()
+            && $local->hour === (int) $hour
+            && $local->minute === (int) $minute;
     }
 
     /** The end of the last weekly we know about, so the next one abuts it. */

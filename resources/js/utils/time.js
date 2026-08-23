@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import { t, currentLocale } from '@/utils/i18n';
 
 /**
  * How a run time is written, site-wide.
@@ -44,4 +45,25 @@ export const formatTime = (milliseconds) => {
     const head = minutes > 0 ? `${padZero(minutes)}:` : '';
 
     return `${head}${padZero(seconds)}${separator.value}${milliseconds.toString().padStart(3, '0')}`;
+};
+
+/**
+ * How long ago something happened, in the reader's language.
+ *
+ * Anything older than a month is a date rather than a count: "47d ago" is not
+ * how anybody reads a date that far back, and the locale's own date format
+ * says it better than a number of days does.
+ */
+export const timeAgo = (date) => {
+    if (!date) return '';
+
+    const then = new Date(date);
+    const seconds = Math.floor((Date.now() - then.getTime()) / 1000);
+
+    if (seconds < 60) return t('just now');
+    if (seconds < 3600) return t(':count m ago', { count: Math.floor(seconds / 60) });
+    if (seconds < 86400) return t(':count h ago', { count: Math.floor(seconds / 3600) });
+    if (seconds < 2592000) return t(':count d ago', { count: Math.floor(seconds / 86400) });
+
+    return then.toLocaleDateString(currentLocale(), { year: 'numeric', month: 'short', day: 'numeric' });
 };

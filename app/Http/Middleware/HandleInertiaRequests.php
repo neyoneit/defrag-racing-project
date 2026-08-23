@@ -138,6 +138,13 @@ class HandleInertiaRequests extends Middleware
                 $systemQuery->whereNotIn('type', $muted);
             }
 
+            // Announcement headlines are read back through the announcement
+            // they came from, which is two queries for the whole list instead
+            // of one per row. English reads the stored copy and needs neither.
+            if (app()->getLocale() !== 'en') {
+                $systemQuery->with('announcement.translations');
+            }
+
             $systemNotifications = $systemQuery->orderBy('created_at', 'DESC')->get();
         }
 

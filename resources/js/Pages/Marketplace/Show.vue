@@ -46,11 +46,6 @@ const formatDate = (date) => {
     if (!date) return '';
     return new Date(date).toLocaleDateString(currentLocale(), { year: 'numeric', month: 'short', day: 'numeric' });
 };
-
-const renderStars = (rating) => {
-    if (!rating) return '';
-    return rating;
-};
 </script>
 
 <template>
