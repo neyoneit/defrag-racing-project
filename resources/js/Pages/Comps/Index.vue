@@ -89,9 +89,13 @@ export default {
     );
 
     // Totals per ballot, so each bar can show a share rather than a bare count.
+    // A candidate carries no counts while the ballot is open - the server
+    // leaves them out so nobody can read off the map that is going to win -
+    // and there is nothing to total until it closes.
     const totals = computed(() => {
         const out = { cpm: 0, vq3: 0 };
         for (const c of props.voting?.candidates ?? []) {
+            if (! c.votes) continue;
             out.cpm += c.votes.cpm;
             out.vq3 += c.votes.vq3;
         }

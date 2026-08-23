@@ -377,6 +377,8 @@ class CompsController extends Controller
             $wildcardsHeld[$physics] = $holdsWildcard;
         }
 
+        $isOpen = $round->isVoting() && $round->voting_closes_at->isFuture();
+
         return [
             'round_id' => $round->id,
             'comp_title' => $round->comp->title,
@@ -398,7 +400,7 @@ class CompsController extends Controller
             // it.
             'next_category' => app(CandidateSelector::class)
                 ->categoryForWeekly((int) $round->comp->number + 1),
-            'is_open' => $round->isVoting() && $round->voting_closes_at->isFuture(),
+            'is_open' => $isOpen,
             'decided' => $round->maps->mapWithKeys(fn ($m) => [$m->physics => [
                 'map' => $m->map?->name,
                 'decided_by' => $m->decided_by,
@@ -410,7 +412,14 @@ class CompsController extends Controller
                 'thumbnail' => $c->map?->thumbnail,
                 'author' => $c->map?->author,
                 'blocked_physics' => $c->blocked_physics,
-                'votes' => ['cpm' => $c->votes_cpm, 'vq3' => $c->votes_vq3],
+                // Not while the ballot is open, and absent rather than zero.
+                // A running count says which map is going to win, and a week
+                // is long enough to grind it before it is even chosen. They
+                // come back the moment voting closes, which is when they stop
+                // being a head start and become the result. Left out of the
+                // payload rather than hidden in the page, because a number
+                // that is sent is a number anybody can read.
+                'votes' => $isOpen ? null : ['cpm' => $c->votes_cpm, 'vq3' => $c->votes_vq3],
                 'preview' => $previews[$c->map_id] ?? null,
             ])->values(),
             'my_votes' => $myVotes,
