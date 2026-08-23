@@ -167,9 +167,30 @@ class Wish extends Model
         return $sent;
     }
 
+    /**
+     * Oldest first, with the id as the tiebreaker. Two replies written in the
+     * same second sort by nothing at all on the timestamp alone, and "who
+     * wrote last" then comes out as a coin toss.
+     */
     public function replies()
     {
-        return $this->hasMany(WishReply::class)->orderBy('created_at');
+        return $this->hasMany(WishReply::class)->orderBy('created_at')->orderBy('id');
+    }
+
+    /**
+     * Is the last word in the thread the author's?
+     *
+     * That is the one state that needs a reply rather than a read, and it is
+     * not visible from the wish itself - an answered wish and an answered wish
+     * somebody has written back to look identical in a list.
+     */
+    public function awaitingAdmin(): bool
+    {
+        $last = $this->relationLoaded('replies')
+            ? $this->replies->last()
+            : $this->replies()->reorder()->orderByDesc('id')->first();
+
+        return $last !== null && ! $last->by_admin;
     }
 
     /**

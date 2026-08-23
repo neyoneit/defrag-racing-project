@@ -75,8 +75,61 @@ class WishResource extends Resource
 
             Forms\Components\Textarea::make('status_note')
                 ->label('Your answer (shown publicly under the wish)')
+                ->helperText('Changing this tells the author their wish needs an answer from them.')
                 ->rows(3),
+
+            // The thread lived only on the public page, so answering somebody
+            // here meant opening the site in another tab to read what they
+            // had said back.
+            Forms\Components\Section::make('Conversation')
+                ->description('Only you and the author can write here. Nothing can be edited or taken back.')
+                ->schema([
+                    Forms\Components\Placeholder::make('thread')
+                        ->hiddenLabel()
+                        ->content(fn (?Wish $record) => static::threadHtml($record)),
+
+                    Forms\Components\Textarea::make('new_reply')
+                        ->label('Write a reply')
+                        ->helperText('Posted as you, marked as admin, and the author is told about it. Left empty, nothing is posted.')
+                        ->rows(3)
+                        ->maxLength(\App\Models\WishReply::MAX_LENGTH)
+                        // Not a column on the wish. EditWish::afterSave turns it
+                        // into a reply and then clears the box.
+                        ->dehydrated(false),
+                ])
+                ->collapsible(),
         ]);
+    }
+
+    /** The thread as it reads on the public page, for the panel to show. */
+    public static function threadHtml(?Wish $record): HtmlString
+    {
+        if (! $record) {
+            return new HtmlString('<span class="text-sm text-gray-500">Save the wish first.</span>');
+        }
+
+        $replies = $record->replies()->with('user:id,name,plain_name')->get();
+
+        if ($replies->isEmpty()) {
+            return new HtmlString('<span class="text-sm text-gray-500">Nothing said yet.</span>');
+        }
+
+        $rows = $replies->map(function (\App\Models\WishReply $r) {
+            $who = e($r->user?->plain_name ?: $r->user?->name ?: 'deleted account');
+            $when = e($r->created_at?->format('j M Y, H:i') ?? '');
+            $body = nl2br(e($r->body));
+            $tag = $r->by_admin
+                ? '<span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#c084fc">admin</span>'
+                : '';
+            $edge = $r->by_admin ? '#a855f7' : 'rgba(255,255,255,.25)';
+
+            return '<div style="border-left:2px solid ' . $edge . ';padding-left:.75rem;margin-bottom:.75rem">'
+                . '<div style="display:flex;gap:.5rem;align-items:center;font-size:11px;color:#9ca3af;margin-bottom:.25rem">'
+                . '<strong>' . $who . '</strong>' . $tag . '<span style="margin-left:auto">' . $when . '</span>'
+                . '</div><div style="font-size:13px;line-height:1.5">' . $body . '</div></div>';
+        })->implode('');
+
+        return new HtmlString($rows);
     }
 
     public static function table(Table $table): Table
@@ -213,6 +266,19 @@ class WishResource extends Resource
                         'rejected' => 'danger',
                         default => 'gray',
                     }),
+
+                // Whether anybody is waiting on you. Highlighted when the last
+                // word in the thread is the author's, which is the one case
+                // that needs a reply rather than a read.
+                Tables\Columns\TextColumn::make('replies_count')
+                    ->label('Thread')
+                    ->counts('replies')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => $state > 0 ? $state : '-')
+                    ->color(fn (?Wish $record) => $record?->awaitingAdmin() ? 'warning' : 'gray')
+                    ->tooltip(fn (?Wish $record) => $record?->awaitingAdmin()
+                        ? 'The author wrote last'
+                        : null),
 
                 // "3 days ago" in a column, the full stamp in the tooltip: the
                 // date only matters as "how old is this", and spelled out it
