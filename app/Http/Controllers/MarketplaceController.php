@@ -18,45 +18,85 @@ class MarketplaceController extends Controller
 
     private const MAX_PENDING_SUGGESTIONS = 3;
 
+    /**
+     * What `status=` may say. `active` is the default and the only one that
+     * covers more than one state: it is what somebody comes here to find, and
+     * a board led by cancelled work reads as a dead board.
+     */
+    private const STATUS_SETS = [
+        'active' => ['open', 'in_progress'],
+        'open' => ['open'],
+        'in_progress' => ['in_progress'],
+        'completed' => ['completed'],
+        'cancelled' => ['cancelled'],
+        'all' => ['open', 'in_progress', 'completed', 'cancelled'],
+    ];
+
+    private const DEFAULT_STATUS = 'active';
+
     public function index(Request $request)
     {
-        $isPartial = $request->header('X-Inertia-Partial-Data') !== null;
+        $tab = $request->input('tab') === 'offers' ? 'offers' : 'requests';
+        $status = array_key_exists((string) $request->input('status'), self::STATUS_SETS)
+            ? (string) $request->input('status')
+            : self::DEFAULT_STATUS;
 
-        $canPost = auth()->check() && auth()->user()->mdd_id;
+        $filters = [
+            'tab' => $tab,
+            'work_type' => (string) $request->input('work_type', ''),
+            'status' => $status,
+            'search' => trim((string) $request->input('search', '')),
+        ];
 
-        if (!$isPartial) {
-            return Inertia::render('Marketplace/Index', [
-                'listings' => null,
-                'filters' => $request->only(['tab', 'work_type', 'status', 'search']),
-                'canPost' => $canPost,
-                'workTypes' => MarketplaceWorkType::options(),
-                'openCreate' => $request->boolean('create'),
-            ]);
-        }
-
-        $tab = $request->input('tab', 'requests');
-
-        $query = MarketplaceListing::with(['user', 'assignedTo'])
-            ->withCount('reviews')
-            ->when($request->work_type, fn($q) => $q->where('work_type', $request->work_type))
-            ->when($request->status, fn($q) => $q->where('status', $request->status))
-            ->when($request->search, fn($q) => $q->where('title', 'like', "%{$request->search}%"));
-
-        if ($tab === 'offers') {
-            $query->offers();
-        } else {
-            $query->requests();
-        }
-
-        $listings = $query->latest()->paginate(20)->withQueryString();
+        // The page used to render with no listings at all and fetch them in a
+        // second request the moment it mounted. Switching a tab is not a
+        // mount, so it left the board blank until somebody pressed F5 - and
+        // every page of the pagination did the same. There are twenty rows on
+        // a page and the query is a couple of milliseconds, so they are simply
+        // part of the page now.
+        $listings = $this->listingsQuery($filters)->paginate(20)->withQueryString();
 
         return Inertia::render('Marketplace/Index', [
             'listings' => $listings,
-            'filters' => $request->only(['tab', 'work_type', 'status', 'search']),
-            'canPost' => $canPost,
+            // What is on the other tab, so the tabs say it rather than making
+            // somebody click to find out. Both counts follow the filters, so
+            // they agree with what a click actually shows.
+            'counts' => $this->tabCounts($filters),
+            'filters' => $filters,
+            'canPost' => auth()->check() && auth()->user()->mdd_id,
             'workTypes' => MarketplaceWorkType::options(),
             'openCreate' => $request->boolean('create'),
         ]);
+    }
+
+    /** One place the tab, the type, the status and the search are applied. */
+    private function listingsQuery(array $filters)
+    {
+        $query = MarketplaceListing::with(['user', 'assignedTo'])
+            ->withCount('reviews')
+            ->whereIn('status', self::STATUS_SETS[$filters['status']])
+            ->when($filters['work_type'] !== '', fn($q) => $q->where('work_type', $filters['work_type']))
+            // Title and description both, because a request is often named
+            // after the map and described by what is wanted.
+            ->when($filters['search'] !== '', fn($q) => $q->where(function ($q) use ($filters) {
+                $q->where('title', 'like', "%{$filters['search']}%")
+                  ->orWhere('description', 'like', "%{$filters['search']}%");
+            }))
+            ->latest();
+
+        return $filters['tab'] === 'offers' ? $query->offers() : $query->requests();
+    }
+
+    /**
+     * How many listings each tab holds under the current filters, so the tab
+     * you are not on still says what is waiting there.
+     */
+    private function tabCounts(array $filters): array
+    {
+        return [
+            'requests' => $this->listingsQuery(['tab' => 'requests'] + $filters)->count(),
+            'offers' => $this->listingsQuery(['tab' => 'offers'] + $filters)->count(),
+        ];
     }
 
     public function show(MarketplaceListing $listing)
@@ -299,6 +339,7 @@ class MarketplaceController extends Controller
     public function creators(Request $request)
     {
         $creators = MarketplaceCreatorProfile::where('is_listed', true)
+            ->withSomethingToShow()
             ->with('user')
             ->when($request->specialty, function ($q) use ($request) {
                 $q->whereJsonContains('specialties', $request->specialty);

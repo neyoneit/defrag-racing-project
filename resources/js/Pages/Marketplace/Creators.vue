@@ -144,6 +144,13 @@ const selectSort = (value) => {
                 </svg>
                 <h3 class="text-xl font-bold text-white mb-2">{{ $t('No Creators Listed Yet') }}</h3>
                 <p class="text-gray-400">{{ $t('Creators can list themselves in their profile settings.') }}</p>
+                <!-- A directory nobody is in should say where to get in.
+                     Everybody who links a q3df login gets a profile, so this
+                     is one filled-in field away for most people reading it. -->
+                <Link v-if="$page.props.auth.user" :href="route('settings.show')"
+                    class="mt-4 inline-block px-4 py-2 text-sm font-bold text-blue-300 hover:text-blue-200 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 transition-colors">
+                    {{ $t('Open settings') }}
+                </Link>
             </div>
         </div>
     </div>

@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 
 import EnglishOnlyNotice from '@/Components/EnglishOnlyNotice.vue';
+import { timeAgo } from '@/utils/time';
 const props = defineProps({
     listingId: Number,
     reviews: Array,
@@ -30,16 +31,6 @@ const submitReview = () => {
     });
 };
 
-const timeAgo = (date) => {
-    const now = new Date();
-    const d = new Date(date);
-    const diff = Math.floor((now - d) / 1000);
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-    if (diff < 2592000) return Math.floor(diff / 86400) + 'd ago';
-    return d.toLocaleDateString();
-};
 </script>
 
 <template>
@@ -85,7 +76,7 @@ const timeAgo = (date) => {
                 :disabled="rating < 1 || submitting"
                 class="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-500 text-white text-sm font-semibold rounded-lg transition"
             >
-                {{ submitting ? 'Submitting...' : 'Submit Review' }}
+                {{ submitting ? $t('Submitting...') : $t('Submit Review') }}
             </button>
         </div>
 
@@ -104,7 +95,7 @@ const timeAgo = (date) => {
 
         <!-- Reviews List -->
         <div v-if="reviews && reviews.length > 0" class="space-y-3">
-            <h4 class="text-sm font-bold text-white">Reviews ({{ reviews.length }})</h4>
+            <h4 class="text-sm font-bold text-white">{{ $t('Reviews (:count)', { count: reviews.length }) }}</h4>
             <div
                 v-for="review in reviews"
                 :key="review.id"
