@@ -90,9 +90,34 @@
         web: 'https://github.com/defrag-racing/defrag-racing-project',
         launcher: 'https://github.com/Defrag-racing/defrag-racing-launcher',
     };
+    // Each column carries its own colours as whole class names. Tailwind reads
+    // the source for literals, so a class glued together at runtime is one it
+    // never generates. Website keeps the green the commit list has always had;
+    // the launcher takes the blue it wears everywhere else on the site.
+    const CHANGELOG_THEME = {
+        web: {
+            bar: 'bg-emerald-500/10 border-emerald-400/20',
+            title: 'text-emerald-300',
+            line: 'border-emerald-500/30',
+            tick: 'bg-emerald-500/30',
+            dot: 'bg-emerald-400',
+            hash: 'text-emerald-400/80',
+            row: 'from-emerald-500/10 hover:from-emerald-500/20',
+        },
+        launcher: {
+            bar: 'bg-blue-500/10 border-blue-400/20',
+            title: 'text-blue-300',
+            line: 'border-blue-500/30',
+            tick: 'bg-blue-500/30',
+            dot: 'bg-blue-400',
+            hash: 'text-blue-400/80',
+            row: 'from-blue-500/10 hover:from-blue-500/20',
+        },
+    };
+
     const changelogColumns = computed(() => [
-        { key: 'web', label: t('Website'), repo: CHANGES_REPOS.web, items: props.recentChangelog || [] },
-        { key: 'launcher', label: t('Launcher'), repo: CHANGES_REPOS.launcher, items: props.recentChangelogLauncher || [] },
+        { key: 'web', label: t('Website'), repo: CHANGES_REPOS.web, items: props.recentChangelog || [], c: CHANGELOG_THEME.web },
+        { key: 'launcher', label: t('Launcher'), repo: CHANGES_REPOS.launcher, items: props.recentChangelogLauncher || [], c: CHANGELOG_THEME.launcher },
     ]);
 
     const timeAgo = (dateStr) => {
@@ -408,22 +433,26 @@
                          to learn whether the other one had moved at all. -->
                     <div class="grid md:grid-cols-2 md:divide-x md:divide-white/5">
                         <div v-for="col in changelogColumns" :key="col.key" class="min-w-0">
-                            <div class="px-4 py-2 border-b border-white/5 text-[10px] font-black uppercase tracking-widest text-gray-500">
-                                {{ col.label }}
+                            <div class="flex items-center gap-2 px-4 py-2.5 border-b" :class="col.c.bar">
+                                <svg class="w-4 h-4 flex-shrink-0" :class="col.c.title" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                                    <template v-if="col.key === 'web'"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" /></template>
+                                    <template v-else><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></template>
+                                </svg>
+                                <span class="text-sm font-black" :class="col.c.title">{{ col.label }}</span>
                             </div>
 
                             <div v-if="col.items.length" class="p-3 space-y-1">
                                 <div v-for="commit in col.items" :key="commit.hash"
-                                     class="relative pl-5 border-l-2 border-green-500/20"
-                                     :class="commit.description ? 'cursor-help' : ''"
+                                     class="relative pl-5 border-l-2"
+                                     :class="[col.c.line, commit.description ? 'cursor-help' : '']"
                                      @mouseenter="commit.description ? onCommitEnter($event, commit) : null"
                                      @mousemove="commit.description ? onCommitMove($event) : null"
                                      @mouseleave="onCommitLeave">
-                                    <div class="absolute left-0 top-2.5 w-3 h-0.5 bg-green-500/20"></div>
-                                    <a :href="`${col.repo}/commit/${commit.hash}`" target="_blank" class="flex items-center gap-2 px-2 py-1.5 bg-gradient-to-r from-green-500/10 to-transparent hover:from-green-500/20 rounded transition-all">
-                                        <div class="w-1.5 h-1.5 bg-green-400 rounded-full flex-shrink-0"></div>
+                                    <div class="absolute left-0 top-2.5 w-3 h-0.5" :class="col.c.tick"></div>
+                                    <a :href="`${col.repo}/commit/${commit.hash}`" target="_blank" class="flex items-center gap-2 px-2 py-1.5 bg-gradient-to-r to-transparent rounded transition-all" :class="col.c.row">
+                                        <div class="w-1.5 h-1.5 rounded-full flex-shrink-0" :class="col.c.dot"></div>
                                         <span class="text-[10px] font-mono text-gray-500 w-16 flex-shrink-0">{{ commit.date }}</span>
-                                        <span class="text-xs font-mono text-green-400/70 flex-shrink-0">{{ commit.hash }}</span>
+                                        <span class="text-xs font-mono flex-shrink-0" :class="col.c.hash">{{ commit.hash }}</span>
                                         <span class="text-xs text-gray-300 truncate flex-1">{{ commit.title }}</span>
                                     </a>
                                 </div>
