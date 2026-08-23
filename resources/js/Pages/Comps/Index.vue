@@ -832,7 +832,8 @@ export default {
                 </div>
             </div>
 
-            <div class="grid gap-5 p-5 md:grid-cols-2">
+            <div class="p-5 space-y-4">
+            <div class="grid gap-5 md:grid-cols-2">
                 <div v-for="physics in PHYSICS" :key="physics" class="rounded-xl border border-white/10 bg-black/30 backdrop-blur-sm overflow-hidden">
                     <div class="flex items-center justify-between border-b border-white/10 px-4 py-2">
                         <span class="text-xs font-black uppercase tracking-widest text-gray-300">{{ physics }}</span>
@@ -940,66 +941,72 @@ export default {
                 </div>
             </div>
 
-            <!-- The whole ballot, in the shape it was voted on. Small, because
-                 it is a record rather than a thing to act on, and the counts
-                 sit over the picture the way they sat under it on the ballot
-                 - one card per map, both physics on each, so a map that lost
-                 one and won the other says so in one place. -->
-            <div v-if="showBallot && playedBallot" class="border-t border-white/10 bg-black/25 px-4 py-4">
-                <div class="mb-2.5 text-[10px] font-black uppercase tracking-widest text-gray-500">
-                    {{ $t('Final votes') }}
-                </div>
+                <!-- The whole ballot, in the shape it was voted on. Small,
+                     because it is a record rather than a thing to act on, and
+                     the counts sit over the picture the way they sat under it
+                     while voting - one card per map, both physics on each, so
+                     a map that lost one and won the other says so in one
+                     place.
 
-                <div class="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-                    <Link
-                        v-for="row in playedBallot.rows"
-                        :key="row.map"
-                        :href="route('maps.map', row.map)"
-                        class="group relative block overflow-hidden rounded-lg border transition-colors"
-                        :class="(row.won?.cpm || row.won?.vq3)
-                            ? 'border-blue-400/50 hover:border-blue-300/70'
-                            : 'border-white/10 hover:border-white/25'"
-                    >
-                        <img
-                            v-if="row.thumbnail"
-                            :src="`/storage/${row.thumbnail}`"
-                            :alt="row.map"
-                            class="w-full h-24 object-cover"
-                        />
-                        <div v-else class="w-full h-24 bg-white/[0.03]"></div>
+                     Inside the same block as the maps rather than below it: it
+                     is what the button on a map card opened, and a panel of its
+                     own further down read as the top of the upload section. -->
+                <div v-if="showBallot && playedBallot" class="rounded-xl border border-white/10 bg-black/30 backdrop-blur-sm px-4 py-3">
+                    <div class="mb-2.5 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                        {{ $t('Final votes') }}
+                    </div>
 
-                        <div class="absolute inset-x-0 top-0 px-2 py-1 bg-gradient-to-b from-black/85 to-transparent">
-                            <div class="truncate text-[11px] font-bold text-white group-hover:text-blue-200 transition-colors">
-                                {{ row.map }}
+                    <div class="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+                        <Link
+                            v-for="row in playedBallot.rows"
+                            :key="row.map"
+                            :href="route('maps.map', row.map)"
+                            class="group relative block overflow-hidden rounded-lg border transition-colors"
+                            :class="(row.won?.cpm || row.won?.vq3)
+                                ? 'border-blue-400/50 hover:border-blue-300/70'
+                                : 'border-white/10 hover:border-white/25'"
+                        >
+                            <img
+                                v-if="row.thumbnail"
+                                :src="`/storage/${row.thumbnail}`"
+                                :alt="row.map"
+                                class="w-full h-24 object-cover"
+                            />
+                            <div v-else class="w-full h-24 bg-white/[0.03]"></div>
+
+                            <div class="absolute inset-x-0 top-0 px-2 py-1 bg-gradient-to-b from-black/85 to-transparent">
+                                <div class="truncate text-[11px] font-bold text-white group-hover:text-blue-200 transition-colors">
+                                    {{ row.map }}
+                                </div>
                             </div>
-                        </div>
 
-                        <!-- Over the bottom half of the picture, both physics. -->
-                        <div class="absolute inset-x-0 bottom-0 h-1/2 flex flex-col justify-end gap-1 px-2 pb-1.5 pt-4 bg-gradient-to-t from-black/90 via-black/70 to-transparent">
-                            <div v-for="physics in ['vq3', 'cpm']" :key="physics"
-                                 class="flex items-center gap-1.5">
-                                <span class="w-6 flex-shrink-0 text-[9px] font-black uppercase tracking-wider"
-                                      :class="row.won?.[physics] ? 'text-blue-300' : 'text-gray-500'">
-                                    {{ physics }}
-                                </span>
+                            <!-- Over the bottom half of the picture, both physics. -->
+                            <div class="absolute inset-x-0 bottom-0 h-1/2 flex flex-col justify-end gap-1 px-2 pb-1.5 pt-4 bg-gradient-to-t from-black/90 via-black/70 to-transparent">
+                                <div v-for="physics in ['vq3', 'cpm']" :key="physics"
+                                     class="flex items-center gap-1.5">
+                                    <span class="w-6 flex-shrink-0 text-[9px] font-black uppercase tracking-wider"
+                                          :class="row.won?.[physics] ? 'text-blue-300' : 'text-gray-500'">
+                                        {{ physics }}
+                                    </span>
 
-                                <template v-if="row.votes?.[physics] === null">
-                                    <span class="flex-1 text-[9px] text-gray-600 truncate">{{ $t('Not on this ballot') }}</span>
-                                </template>
-                                <template v-else>
-                                    <span class="flex-1 h-1 rounded-full bg-white/15 overflow-hidden">
-                                        <span class="block h-full rounded-full"
-                                              :class="row.won?.[physics] ? 'bg-blue-400' : 'bg-gray-400'"
-                                              :style="{ width: ballotShare(physics, row) + '%' }"></span>
-                                    </span>
-                                    <span class="w-4 flex-shrink-0 text-right text-[10px] font-black tabular-nums"
-                                          :class="row.won?.[physics] ? 'text-white' : 'text-gray-400'">
-                                        {{ row.votes[physics] }}
-                                    </span>
-                                </template>
+                                    <template v-if="row.votes?.[physics] === null">
+                                        <span class="flex-1 text-[9px] text-gray-600 truncate">{{ $t('Not on this ballot') }}</span>
+                                    </template>
+                                    <template v-else>
+                                        <span class="flex-1 h-1 rounded-full bg-white/15 overflow-hidden">
+                                            <span class="block h-full rounded-full"
+                                                  :class="row.won?.[physics] ? 'bg-blue-400' : 'bg-gray-400'"
+                                                  :style="{ width: ballotShare(physics, row) + '%' }"></span>
+                                        </span>
+                                        <span class="w-4 flex-shrink-0 text-right text-[10px] font-black tabular-nums"
+                                              :class="row.won?.[physics] ? 'text-white' : 'text-gray-400'">
+                                            {{ row.votes[physics] }}
+                                        </span>
+                                    </template>
+                                </div>
                             </div>
-                        </div>
-                    </Link>
+                        </Link>
+                    </div>
                 </div>
             </div>
 
