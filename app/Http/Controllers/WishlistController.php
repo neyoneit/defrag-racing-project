@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Wish;
+use App\Models\WishReply;
 use App\Models\WishVote;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -38,7 +39,14 @@ class WishlistController extends Controller
             : $query->where('status', $filter);
 
         $wishes = Wish::query()
-            ->with('user:id,name,plain_name,profile_photo_path,country')
+            ->with([
+                'user:id,name,plain_name,profile_photo_path,country',
+                // Loaded with the list rather than fetched when a thread is
+                // opened: there are at most a few replies per wish and the
+                // page is capped at 300 of them, so this is one query against
+                // one round trip per wish somebody expands.
+                'replies.user:id,name,plain_name,profile_photo_path,country',
+            ])
             // Approved only, plus your own while it waits. Hiding somebody's
             // wish from themselves reads as it having been deleted, and they
             // post it again.
@@ -85,6 +93,24 @@ class WishlistController extends Controller
                 'status' => $wish->status,
                 'status_label' => Wish::STATUSES[$wish->status] ?? $wish->status,
                 'status_note' => $wish->status_note,
+                // The conversation under the answer. Only the author and an
+                // admin can add to it, so it is a reply thread rather than
+                // comments - see WishlistController::reply.
+                'replies' => $wish->replies->map(fn ($r) => [
+                    'id' => $r->id,
+                    'body' => $r->body,
+                    'by_admin' => $r->by_admin,
+                    'created_at' => $r->created_at?->toIso8601String(),
+                    'author' => $r->user ? [
+                        'id' => $r->user->id,
+                        'name' => $r->user->plain_name ?: $r->user->name,
+                        'profile_photo_path' => $r->user->profile_photo_path,
+                        'country' => $r->user->country,
+                    ] : null,
+                ])->values(),
+                // Whether the reply box is shown at all. Decided here, not in
+                // the page: the same rule guards the route.
+                'can_reply' => $user && ($wish->user_id === $user->id || (bool) $user->admin),
                 'upvotes' => $wish->upvotes,
                 'downvotes' => $wish->downvotes,
                 'score' => $wish->score,
@@ -261,6 +287,57 @@ class WishlistController extends Controller
      * other people have voted on it, and an author who could delete at will
      * could withdraw an idea the moment it started collecting downvotes.
      */
+    /**
+     * Write into the thread under a wish.
+     *
+     * Only the person who asked and the admins. Anybody else who wants the
+     * same thing files their own wish - that is what keeps the board a list of
+     * asks rather than a forum, and it keeps the votes honest, because a vote
+     * is cast on one request rather than on a discussion that has moved on.
+     *
+     * Append only. There is no edit and no delete: a wish that has been voted
+     * on must not be able to quietly become a different one, and an answer
+     * somebody has already read should stay readable.
+     */
+    public function reply(Request $request, Wish $wish)
+    {
+        $user = $request->user();
+        $isAdmin = (bool) $user->admin;
+
+        if ($wish->user_id !== $user->id && ! $isAdmin) {
+            abort(403);
+        }
+
+        // Nothing to reply to yet. The thread is a conversation about an
+        // answer, and one that starts before the answer would just be the
+        // author talking to themselves.
+        if (! $isAdmin && trim((string) $wish->status_note) === '') {
+            return back()->withDanger('There is nothing to reply to on this wish yet.');
+        }
+
+        $validated = $request->validate([
+            'body' => 'required|string|max:' . WishReply::MAX_LENGTH,
+        ]);
+
+        $reply = $wish->replies()->create([
+            'user_id' => $user->id,
+            'by_admin' => $isAdmin,
+            'body' => trim($validated['body']),
+        ]);
+
+        // An admin writing here is answering; the author writing here is asking
+        // to be read. Each tells the other side, and neither tells itself.
+        if ($isAdmin) {
+            if ($wish->user_id !== $user->id) {
+                $wish->notifyAuthorAnswered();
+            }
+        } else {
+            $wish->notifyAdminsOfReply($reply);
+        }
+
+        return back()->withSuccess('Reply posted.');
+    }
+
     public function requestRemoval(Request $request, Wish $wish)
     {
         if ($wish->user_id !== $request->user()->id) {

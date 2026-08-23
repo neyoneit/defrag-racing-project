@@ -320,6 +320,23 @@
                 borderColor: 'border-fuchsia-500/30',
                 iconColor: 'text-fuchsia-400'
             },
+            // Both halves of a wish thread wear the wishlist's star. Purple
+            // rather than the fuchsia of "done", because these are a question
+            // waiting on somebody rather than an outcome.
+            'wish_answer': {
+                label: 'Wishlist',
+                icon: 'M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z',
+                bgColor: 'bg-purple-500/20',
+                borderColor: 'border-purple-500/30',
+                iconColor: 'text-purple-400'
+            },
+            'wish_reply': {
+                label: 'Wishlist',
+                icon: 'M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z',
+                bgColor: 'bg-purple-500/20',
+                borderColor: 'border-purple-500/30',
+                iconColor: 'text-purple-400'
+            },
             'marketplace': {
                 label: 'Marketplace',
                 icon: 'M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.401 2.999 2.999 0 0 0 4.5 0 2.999 2.999 0 0 0 4.5 0 3.001 3.001 0 0 0 3.75.401m-16.5 0a3.001 3.001 0 0 1-.75-3.751L4.5 3h15l1.5 2.598a3.001 3.001 0 0 1-.75 3.751',
@@ -753,6 +770,12 @@
                                     <template v-else-if="notification.type === 'wish_done'">
                                         <span class="text-gray-400">{{ $t('Your wish is done:') }}</span>
                                         <span class="ml-1.5 text-fuchsia-300 group-hover:text-fuchsia-200 group-hover:underline font-bold transition-colors" v-html="q3tohtml(notification.headline_localized)"></span>
+                                    </template>
+                                    <template v-else-if="notification.type === 'wish_answer' || notification.type === 'wish_reply'">
+                                        <span class="text-gray-400">
+                                            {{ notification.type === 'wish_answer' ? $t('Your wish needs an answer:') : $t('Reply on a wish:') }}
+                                        </span>
+                                        <span class="ml-1.5 text-purple-300 group-hover:text-purple-200 group-hover:underline font-bold transition-colors" v-html="q3tohtml(notification.headline_localized)"></span>
                                     </template>
                                     <template v-else>
                                         <span v-if="getNotificationPrefix(notification.type)" class="text-gray-400 mr-1.5">{{ getNotificationPrefix(notification.type) }}</span>

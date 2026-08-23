@@ -358,8 +358,68 @@
 
     const announcementMode = computed(() => pendingAnnouncements.value.length > 0);
 
-    const previewSystemNotifications = computed(() =>
-        announcementMode.value ? pendingAnnouncements.value : systemNotifications.value);
+    // How loudly a kind of news deserves to be heard.
+    //
+    // The header used to cycle every unread notification at the same weight,
+    // so a question somebody was waiting on you to answer took its turn behind
+    // however many new maps had been uploaded that week - and with thousands of
+    // those, it came round about once a minute and was gone in five seconds.
+    //
+    // 1  somebody is waiting on YOU. Nothing else should be in front of it.
+    // 2  something happened TO you. Worth seeing, nobody is held up by it.
+    // 3  the site did something. True for everybody, urgent for nobody.
+    //
+    // A type nobody has ranked yet lands in 2 on purpose: at the bottom it
+    // would be buried silently the day somebody adds an important one, and at
+    // the top it would shout over a real question. The middle is the safe way
+    // for this to be wrong.
+    const SYSTEM_PRIORITY = {
+        wish_answer: 1,
+        wish_reply: 1,
+        clan_invite: 1,
+        clan_request: 1,
+        alias_suggestion: 1,
+        marketplace: 1,
+        headhunter_submission: 1,
+
+        wish_done: 2,
+        render_completed: 2,
+        clan_accept: 2,
+        clan_kick: 2,
+        clan_leave: 2,
+        clan_transfer: 2,
+        clan_request_accept: 2,
+        clan_request_reject: 2,
+        headhunter_approved: 2,
+        headhunter_closed: 2,
+
+        new_map: 3,
+        tournament_start: 3,
+        round_start: 3,
+        round_end: 3,
+    };
+
+    const systemPriority = (n) => SYSTEM_PRIORITY[n?.type] ?? 2;
+
+    // Only the most important kind is ever on screen. Several of the same kind
+    // still take turns - twenty new maps should not freeze on whichever one
+    // happens to be newest - but a lower rank waits until the one above it has
+    // been read or dismissed.
+    const previewSystemNotifications = computed(() => {
+        if (announcementMode.value) {
+            return pendingAnnouncements.value;
+        }
+
+        const all = systemNotifications.value;
+
+        if (all.length === 0) {
+            return [];
+        }
+
+        const top = Math.min(...all.map(systemPriority));
+
+        return all.filter(n => systemPriority(n) === top);
+    });
 
     const currentSystemNotification = computed(() => {
         const list = previewSystemNotifications.value;
@@ -423,6 +483,10 @@
         // labelled "Announcement:" - which is exactly what the comment above
         // is about.
         if (type === 'wish_done') return t('Your wish is done:');
+        // An answer is a question waiting on the person who asked. The label
+        // has to say that, or it reads as news rather than as your turn.
+        if (type === 'wish_answer') return t('Your wish needs an answer:');
+        if (type === 'wish_reply') return t('Reply on a wish:');
         if (type === 'alias_suggestion') return t('Alias:');
         if (type === 'marketplace') return t('Marketplace:');
         if (type.startsWith('clan_')) return t('Clan:');
