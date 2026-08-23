@@ -83,15 +83,17 @@
     // Recent Changes feed: Website (this repo) vs. Launcher (separate repo,
     // fetched from GitHub in the controller). Tab switches the feed + the
     // GitHub repo the commit links point at.
-    const changesTab = ref('web');
+    // Two feeds side by side rather than behind a tab. They are two different
+    // things being built, both of them mine, and a tab made you click to find
+    // out whether the other one had moved at all.
     const CHANGES_REPOS = {
         web: 'https://github.com/defrag-racing/defrag-racing-project',
         launcher: 'https://github.com/Defrag-racing/defrag-racing-launcher',
     };
-    const activeChangelog = computed(() => changesTab.value === 'web'
-        ? (props.recentChangelog || [])
-        : (props.recentChangelogLauncher || []));
-    const changesRepoUrl = computed(() => CHANGES_REPOS[changesTab.value]);
+    const changelogColumns = computed(() => [
+        { key: 'web', label: t('Website'), repo: CHANGES_REPOS.web, items: props.recentChangelog || [] },
+        { key: 'launcher', label: t('Launcher'), repo: CHANGES_REPOS.launcher, items: props.recentChangelogLauncher || [] },
+    ]);
 
     const timeAgo = (dateStr) => {
         if (!dateStr) return '';
@@ -398,37 +400,38 @@
                             <svg class="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5" /></svg>
                             {{ $t('Recent Changes') }}
                         </h2>
-                        <div class="flex items-center gap-3">
-                            <!-- Website / Launcher tabs -->
-                            <div class="flex bg-white/5 rounded-lg overflow-hidden text-[11px]">
-                                <button
-                                    v-for="tab in [{ v: 'web', label: $t('Website') }, { v: 'launcher', label: $t('Launcher') }]"
-                                    :key="tab.v"
-                                    @click="changesTab = tab.v"
-                                    :class="['px-3 py-1 font-semibold transition-colors', changesTab === tab.v ? 'bg-cyan-500/25 text-cyan-200' : 'text-gray-400 hover:text-gray-200']"
-                                >{{ tab.label }}</button>
+                        <Link href="/roadmap" class="text-xs text-blue-400 hover:text-blue-300 font-medium">{{ $t('Roadmap') }}</Link>
+                    </div>
+
+                    <!-- Website on the left, launcher on the right. They used to
+                         share one list behind a tab, which meant you had to click
+                         to learn whether the other one had moved at all. -->
+                    <div class="grid md:grid-cols-2 md:divide-x md:divide-white/5">
+                        <div v-for="col in changelogColumns" :key="col.key" class="min-w-0">
+                            <div class="px-4 py-2 border-b border-white/5 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                                {{ col.label }}
                             </div>
-                            <Link href="/roadmap" class="text-xs text-blue-400 hover:text-blue-300 font-medium">{{ $t('Roadmap') }}</Link>
+
+                            <div v-if="col.items.length" class="p-3 space-y-1">
+                                <div v-for="commit in col.items" :key="commit.hash"
+                                     class="relative pl-5 border-l-2 border-green-500/20"
+                                     :class="commit.description ? 'cursor-help' : ''"
+                                     @mouseenter="commit.description ? onCommitEnter($event, commit) : null"
+                                     @mousemove="commit.description ? onCommitMove($event) : null"
+                                     @mouseleave="onCommitLeave">
+                                    <div class="absolute left-0 top-2.5 w-3 h-0.5 bg-green-500/20"></div>
+                                    <a :href="`${col.repo}/commit/${commit.hash}`" target="_blank" class="flex items-center gap-2 px-2 py-1.5 bg-gradient-to-r from-green-500/10 to-transparent hover:from-green-500/20 rounded transition-all">
+                                        <div class="w-1.5 h-1.5 bg-green-400 rounded-full flex-shrink-0"></div>
+                                        <span class="text-[10px] font-mono text-gray-500 w-16 flex-shrink-0">{{ commit.date }}</span>
+                                        <span class="text-xs font-mono text-green-400/70 flex-shrink-0">{{ commit.hash }}</span>
+                                        <span class="text-xs text-gray-300 truncate flex-1">{{ commit.title }}</span>
+                                    </a>
+                                </div>
+                            </div>
+                            <div v-else class="px-5 py-8 text-center text-sm text-gray-500">
+                                {{ col.key === 'launcher' ? $t('No launcher changes to show') : $t('No recent changes') }}
+                            </div>
                         </div>
-                    </div>
-                    <div v-if="activeChangelog.length > 0" class="p-4 space-y-1">
-                        <div v-for="commit in activeChangelog" :key="commit.hash"
-                             class="relative pl-5 border-l-2 border-green-500/20"
-                             :class="commit.description ? 'cursor-help' : ''"
-                             @mouseenter="commit.description ? onCommitEnter($event, commit) : null"
-                             @mousemove="commit.description ? onCommitMove($event) : null"
-                             @mouseleave="onCommitLeave">
-                            <div class="absolute left-0 top-2.5 w-3 h-0.5 bg-green-500/20"></div>
-                            <a :href="`${changesRepoUrl}/commit/${commit.hash}`" target="_blank" class="flex items-center gap-2 px-2 py-1.5 bg-gradient-to-r from-green-500/10 to-transparent hover:from-green-500/20 rounded transition-all">
-                                <div class="w-1.5 h-1.5 bg-green-400 rounded-full flex-shrink-0"></div>
-                                <span class="text-[10px] font-mono text-gray-500 w-16 flex-shrink-0">{{ commit.date }}</span>
-                                <span class="text-xs font-mono text-green-400/70">{{ commit.hash }}</span>
-                                <span class="text-xs text-gray-300 truncate flex-1">{{ commit.title }}</span>
-                            </a>
-                        </div>
-                    </div>
-                    <div v-else class="px-5 py-8 text-center text-sm text-gray-500">
-                        {{ changesTab === 'launcher' ? $t('No launcher changes to show') : $t('No recent changes') }}
                     </div>
                 </div>
             </div>
