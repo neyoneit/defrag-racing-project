@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * Draws the maps that go on a round's ballot.
  *
- * A map qualifies when it has at least one record, sits in the round's
- * category, and has never been played in a comps before. That last one is
+ * A map qualifies when it is a run map, has at least one record, sits in the
+ * round's category, and has never been played in a comps before. That last one is
  * permanent rather than a cooldown: strafe comes up three weeks in five, about
  * 156 rounds a year against 7 300 strafe maps, and weapon and combo about ten
  * a year each. The supply outlasts anybody reading this.
@@ -19,16 +19,36 @@ use Illuminate\Support\Facades\DB;
 class CandidateSelector
 {
     /**
+     * The only kind of map comps draws.
+     *
+     * A comps round is one map, one clock, fastest time wins. `fastcaps` is a
+     * different game played on a different kind of map: two flags, a route
+     * between them, and a whole set of rules comps has nothing to say about.
+     * `freestyle` maps are not timed at all. Neither belongs in a draw that
+     * ranks people by a finish time, and 1 384 fastcap maps carry a record and
+     * were being drawn from as if they were runs.
+     *
+     * `unknown` is left out too. It is a handful of maps nobody has classified,
+     * and a map we cannot describe is not one to put in front of everybody for
+     * a week.
+     */
+    public const DRAWABLE_GAMETYPES = ['run'];
+
+    /**
      * Weekly runs one map a week, so the categories take turns over a
      * four-week cycle: half the weeks strafe, a quarter weapon, a quarter
      * combo.
      *
      * That is not a preference, it is what defrag is. Of the maps that can be
-     * drawn at all, 49% are strafe, 27% combo and 24% weapon (7 340, 4 009 and
-     * 3 613 as of August 2026), so 50/25/25 hands each category the share of
+     * drawn at all, 51% are strafe, 26% weapon and 23% combo (6 916, 3 487 and
+     * 3 178 as of August 2026), so 50/25/25 hands each category the share of
      * the weeks its share of the library already earns - nobody has to argue
      * about whose kind of map is being favoured. The old five-week cycle gave
      * strafe 60%, which was a third more than it has coming.
+     *
+     * Those figures moved when fastcap maps were taken out of the draw. They
+     * had been counting as combo, because a flag map carries guns, and they
+     * were about a third of everything combo appeared to have.
      *
      * Spread rather than blocked, so strafe lands every other week and neither
      * of the other two disappears for a month.
@@ -52,7 +72,7 @@ class CandidateSelector
      * Each slot therefore draws from a band of world record time. Bands rather
      * than a spread of the map's own length because the record is the only
      * length we actually know, and the bounds are picked so no band is thin:
-     * 2781, 3036, 4530, 3377 and 1237 maps as of August 2026. The smallest of
+     * 4 643, 4 347, 3 354 and 1 237 maps as of August 2026. The smallest of
      * those lasts twenty years at one map a week.
      *
      * Nothing is barred for being short. A map finished in three seconds is
@@ -353,6 +373,11 @@ class CandidateSelector
         return $this->mapRows = DB::table('maps')
             ->select('maps.id', 'maps.name', 'maps.weapons', 'wr.wr_ms')
             ->joinSub($best, 'wr', fn ($join) => $join->on('wr.mapname', '=', 'maps.name'))
+            // In the query rather than in the pass below, because everything
+            // that reads the pool - the draw, the swap, the pool sizes on the
+            // control page - goes through here, and a filter applied later
+            // would be one every new caller has to remember.
+            ->whereIn('maps.gametype', self::DRAWABLE_GAMETYPES)
             ->get()
             ->all();
     }

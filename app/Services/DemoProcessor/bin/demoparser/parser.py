@@ -187,7 +187,32 @@ class Q3DemoConfigParser:
         self.client.snap.ping = 0
         self.client.snapshots[self.client.snap.messageNum & const.PACKET_MASK] = self.client.snap
         self.client.newSnapshots = True
+        self._note_physics(new_snap)
         self._update_client_events(new_snap)
+
+    # CPM is bit 0x8000 of pm_flags. It is set for every frame the player is
+    # moving under promode physics and clear under VQ3.
+    PMF_PROMODE = 0x8000
+
+    def _note_physics(self, snapshot: CLSnapshot) -> None:
+        """Record which physics this frame was played in.
+
+        Only frames where the player is actually playing. A spectator frame or
+        a frame from the intermission says nothing about the run, and counting
+        them would let the moments before and after a run outvote the run.
+        """
+        if snapshot.ps.pm_type != ClientEvent.PlayerMode.PM_NORMAL:
+            return
+
+        if snapshot.ps.pm_flags & self.PMF_PROMODE:
+            self.client.cpmSnapshots += 1
+        else:
+            self.client.vq3Snapshots += 1
+
+        total = self.client.cpmSnapshots + self.client.vq3Snapshots
+
+        if total > 0:
+            self.client.isCpmInSnapshots = self.client.cpmSnapshots * 2 > total
 
     def _update_client_events(self, snapshot: CLSnapshot) -> None:
         if self.client.dfvers <= 0 or not self.client.mapname:
