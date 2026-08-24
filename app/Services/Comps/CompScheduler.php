@@ -35,6 +35,7 @@ class CompScheduler
         private WildcardService $wildcards,
         private CompPreviewService $previews,
         private PrizeFunding $funding,
+        private PrizePayouts $payouts,
         private UploadGuard $guard,
     ) {
     }
@@ -125,8 +126,15 @@ class CompScheduler
             // and the round ending is exactly when they stop being secret.
             $alsoReleased = $this->guard->releaseForRound($round->load('maps.map'));
 
+            // Who is owed what, written down at the moment it becomes owed.
+            // Nothing pays out on its own - this is the list an admin settles
+            // from, and without it a week's prize only exists in whatever
+            // anybody happened to remember.
+            $owed = $this->payouts->ensureFor($round->refresh());
+
             $done[] = "round {$round->id}: finished, standings frozen, "
-                . ($released + $alsoReleased) . ' demo(s) released';
+                . ($released + $alsoReleased) . ' demo(s) released'
+                . ($owed > 0 ? ", {$owed} prize(s) awaiting payout" : '');
 
             $comp = $round->comp;
 

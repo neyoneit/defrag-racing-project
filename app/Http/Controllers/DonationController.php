@@ -74,18 +74,21 @@ class DonationController extends Controller
         $donationsEUR = 0;
         $selfRaisedEUR = 0;
         $compsEUR = 0;
+        $defragliveEUR = 0;
 
-        // Money earmarked for comps prizes is NOT progress towards running the
-        // site. The bar promises to cover hosting and upkeep; counting a prize
-        // pool towards it would show a month as funded while the actual bills
-        // are still short by exactly the amount that has already been promised
-        // to somebody else. Tracked separately so the page can say where it
-        // went instead of quietly leaving it out.
+        // Money earmarked for a prize is NOT progress towards running the site.
+        // The bar promises to cover hosting and upkeep; counting a prize pool
+        // towards it would show a month as funded while the actual bills are
+        // still short by exactly the amount that has already been promised to
+        // somebody else. Tracked separately so the page can say where it went
+        // instead of quietly leaving it out.
         foreach ($donations as $donation) {
             $eur = $this->convertToEUR($donation->amount, $donation->currency, $rates);
             $comps = min((float) $donation->comps_amount, $eur);
+            $defraglive = min((float) $donation->defraglive_amount, $eur - $comps);
             $compsEUR += $comps;
-            $donationsEUR += $eur - $comps;
+            $defragliveEUR += $defraglive;
+            $donationsEUR += $eur - $comps - $defraglive;
         }
 
         foreach ($selfRaisedMoney as $money) {
@@ -108,13 +111,16 @@ class DonationController extends Controller
             $yearlyDonationsEUR = 0;
             $yearlySelfRaisedEUR = 0;
             $yearlyCompsEUR = 0;
+            $yearlyDefragliveEUR = 0;
 
             // Same split as the monthly path above.
             foreach ($yearlyDonations as $donation) {
                 $eur = $this->convertToEUR($donation->amount, $donation->currency, $rates);
                 $comps = min((float) $donation->comps_amount, $eur);
+                $defraglive = min((float) $donation->defraglive_amount, $eur - $comps);
                 $yearlyCompsEUR += $comps;
-                $yearlyDonationsEUR += $eur - $comps;
+                $yearlyDefragliveEUR += $defraglive;
+                $yearlyDonationsEUR += $eur - $comps - $defraglive;
             }
             foreach ($yearlySelfRaised as $money) {
                 $yearlySelfRaisedEUR += $this->convertToEUR($money->amount, $money->currency, $rates);
@@ -130,6 +136,7 @@ class DonationController extends Controller
                 // Deliberately outside `total`: it was donated, it is just not
                 // paying for the thing this bar is measuring.
                 'comps' => round($yearlyCompsEUR, 2),
+                'defraglive' => round($yearlyDefragliveEUR, 2),
                 'goal' => $yearlyGoal,
                 'percentage' => round($yearlyPercentage, 1),
                 'currency' => 'EUR',
@@ -142,6 +149,7 @@ class DonationController extends Controller
             'donations' => round($donationsEUR, 2),
             'selfRaised' => round($selfRaisedEUR, 2),
             'comps' => round($compsEUR, 2),
+            'defraglive' => round($defragliveEUR, 2),
             'goal' => $monthlyGoal,
             'percentage' => round(min($monthlyPercentage, 100), 1),
             'currency' => 'EUR',

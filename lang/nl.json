@@ -2560,7 +2560,7 @@
     "odds, not a place": "kansen, geen plaats",
     "of :count vote left|of :count votes left": "van :count stem over|van :count stemmen over",
     "of :total demos": "van :total demo's",
-    "of the donations above went to the comps prize pool and is not counted towards the goal.": "van de donaties hierboven ging naar de comps-prijzenpot en telt niet mee voor het doel.",
+    "of the donations went to the comps prize pool and is not counted towards the goal.": "van de donaties ging naar de comps-prijzenpot en telt niet mee voor het doel.",
     "of the total weight in your rating, and your": "van het totale gewicht in je beoordeling, en je",
     "Off the board": "Van het bord af",
     "Offer": "Aanbod",
@@ -4345,5 +4345,9 @@
     "📐 Wireframe OFF": "📐 Wireframe UIT",
     "📐 Wireframe ON": "📐 Wireframe AAN",
     "🔄 Auto-Rotate OFF": "🔄 Auto-Rotatie UIT",
-    "🔄 Auto-Rotate ON": "🔄 Auto-Rotatie AAN"
+    "🔄 Auto-Rotate ON": "🔄 Auto-Rotatie AAN",
+    ":amount to site maintenance": ":amount voor het onderhoud van de site",
+    "of the donations went to the DefragLive contest prize pool and is not counted towards the goal.": "van de donaties ging naar de prijzenpot van de DefragLive-contest en telt niet mee voor het doel.",
+    "See the contest": "Bekijk de contest",
+    ":amount to the DefragLive contest prize pool": ":amount naar de prijzenpot van de DefragLive-contest"
 }

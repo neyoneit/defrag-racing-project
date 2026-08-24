@@ -341,19 +341,34 @@ const convertCurrency = (amount, fromCurrency) => {
 // in, because a prize pool is promised in EUR.
 const compsPart = (donation) => convertCurrency(Number(donation.comps_amount || 0), 'EUR');
 
+// Part of a donation that was earmarked for the DefragLive contest prize pool,
+// in the currency the page is showing. Stored in EUR like the comps earmark.
+const defraglivePart = (donation) => convertCurrency(Number(donation.defraglive_amount || 0), 'EUR');
+
 // What a donation contributed towards running the site: everything it was not
 // promised to somebody as prize money.
 //
 // The goal on this page is a hosting and upkeep bill. Counting a prize pool
 // towards it would show the year as covered while the bills are still short by
 // exactly the amount already promised to a winner - so the split happens here,
-// once, and every total below is built from it.
+// once, and every total below is built from it. Both pools come off, comps and
+// the DefragLive contest: a prize is a prize whichever competition owes it.
 const maintenancePart = (donation) =>
-    Math.max(0, convertCurrency(donation.amount, donation.currency) - compsPart(donation));
+    Math.max(0, convertCurrency(donation.amount, donation.currency) - compsPart(donation) - defraglivePart(donation));
 
-// Everything given to comps prizes, all time, in the selected currency.
+// Was this donation made in the year the goal above is for?
+const isCurrentYear = (donation) =>
+    new Date(donation.donation_date).getFullYear() === props.currentYear;
+
+// Given to comps prizes THIS YEAR, in the selected currency.
+//
+// The year filter is the whole point. This figure only exists to explain why
+// the bar above is lower than the donations add up to, and that bar is one
+// year. All time, the line would go on citing money donated in a previous year
+// as the reason this year's bar falls short - and it would keep the notice on
+// screen through a year in which nothing at all went to comps.
 const compsTotal = computed(() =>
-    props.donations.reduce((sum, donation) => sum + compsPart(donation), 0),
+    props.donations.filter(isCurrentYear).reduce((sum, donation) => sum + compsPart(donation), 0),
 );
 
 // The same figure in EUR, which is the only currency comps is denominated in:
@@ -362,7 +377,16 @@ const compsTotal = computed(() =>
 // picked from the dropdown produced "$116.00" next to a comps page saying 100
 // EUR - the same money, two numbers, and no way to tell they were the same.
 const compsTotalEur = computed(() =>
-    props.donations.reduce((sum, donation) => sum + Number(donation.comps_amount || 0), 0),
+    props.donations.filter(isCurrentYear).reduce((sum, donation) => sum + Number(donation.comps_amount || 0), 0),
+);
+
+// The same pair of figures for the DefragLive contest pool, on the same year.
+const defragliveTotal = computed(() =>
+    props.donations.filter(isCurrentYear).reduce((sum, donation) => sum + defraglivePart(donation), 0),
+);
+
+const defragliveTotalEur = computed(() =>
+    props.donations.filter(isCurrentYear).reduce((sum, donation) => sum + Number(donation.defraglive_amount || 0), 0),
 );
 
 // Calculate total in selected currency
@@ -885,8 +909,19 @@ const getYearProgress = (year, yearTotal) => {
                     <div v-if="compsTotal > 0"
                          class="mt-5 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3 text-sm">
                         <span class="font-bold text-emerald-300">{{ compsTotalEur.toFixed(2) }} EUR</span>
-                        <span class="text-emerald-100/80">{{ $t('of the donations above went to the comps prize pool and is not counted towards the goal.') }}</span>
+                        <span class="text-emerald-100/80">{{ $t('of the donations went to the comps prize pool and is not counted towards the goal.') }}</span>
                         <Link :href="route('comps.index')" class="font-semibold text-emerald-300 underline decoration-emerald-400/40 hover:text-emerald-200">{{ $t('See comps') }}</Link>
+                    </div>
+
+                    <!-- The other prize pool, kept out of the bar for the same
+                         reason. Its own box rather than a second line in the
+                         one above, because the two are funded separately and a
+                         year can easily have one and not the other. -->
+                    <div v-if="defragliveTotal > 0"
+                         class="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-xl border border-purple-400/25 bg-purple-500/10 px-4 py-3 text-sm">
+                        <span class="font-bold text-purple-300">{{ defragliveTotalEur.toFixed(2) }} EUR</span>
+                        <span class="text-purple-100/80">{{ $t('of the donations went to the DefragLive contest prize pool and is not counted towards the goal.') }}</span>
+                        <Link href="/defraglive/contest" class="font-semibold text-purple-300 underline decoration-purple-400/40 hover:text-purple-200">{{ $t('See the contest') }}</Link>
                     </div>
                 </div>
             </div>
@@ -1009,6 +1044,23 @@ const getYearProgress = (year, yearTotal) => {
                                                 class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-500/25 transition-colors">
                                                 🏆 {{ $t(':amount to the comps prize pool', { amount: currencySymbol + compsPart(donation).toFixed(2) }) }}
                                             </Link>
+                                            <Link v-if="defraglivePart(donation) > 0" href="/defraglive/contest"
+                                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/15 border border-purple-400/30 text-[11px] font-semibold text-purple-300 hover:bg-purple-500/25 transition-colors">
+                                                🎬 {{ $t(':amount to the DefragLive contest prize pool', { amount: currencySymbol + defraglivePart(donation).toFixed(2) }) }}
+                                            </Link>
+                                            <!-- The other side of the same
+                                                 split. Without it a donation
+                                                 with no badge read as money
+                                                 nobody had said anything
+                                                 about, and a split one only
+                                                 named the half that left the
+                                                 goal. Not a link: what it
+                                                 pays for is the goal on this
+                                                 very page. -->
+                                            <span v-if="maintenancePart(donation) > 0"
+                                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-500/15 border border-sky-400/30 text-[11px] font-semibold text-sky-300">
+                                                🛠️ {{ $t(':amount to site maintenance', { amount: currencySymbol + maintenancePart(donation).toFixed(2) }) }}
+                                            </span>
                                         </div>
                                         <div class="text-xs text-gray-500 mt-0.5">{{ formatDate(donation.donation_date) }}</div>
                                         <div v-if="donation.note" class="mt-1.5 px-3 py-1.5 rounded-lg bg-white/5 text-sm text-gray-300">

@@ -149,6 +149,38 @@ class DonationResource extends Resource
                     ])
                     ->columns(3)
                     ->collapsed(fn (?SiteDonation $record) => ! $record || $record->comps_amount <= 0),
+
+                // The other prize pool. One field and not three, because a
+                // contest carries its own prize amount - there is no span of
+                // weeks to spread money over and nothing to derive from it.
+                Forms\Components\Section::make('DefragLive contest prize pool')
+                    ->description('Part of this donation that pays for DefragLive contest prizes. Kept out of the yearly goal, exactly like the comps earmark above.')
+                    ->schema([
+                        Forms\Components\TextInput::make('defraglive_amount')
+                            ->label('To the DefragLive pool')
+                            ->numeric()
+                            ->minValue(0)
+                            ->prefix('€')
+                            ->helperText('In EUR whatever the donation was made in, because the pool is quoted in EUR.'),
+                        Forms\Components\TextInput::make('defraglive_note')
+                            ->label('Public note')
+                            ->maxLength(160)
+                            ->columnSpanFull(),
+
+                        // Written by the site when a contest is created, and
+                        // rewritten whenever that contest's prize moves. Saying
+                        // so stops somebody editing the amount here and finding
+                        // it back the way it was.
+                        Forms\Components\Placeholder::make('defraglive_source')
+                            ->label('Where this row came from')
+                            ->columnSpanFull()
+                            ->content(fn (?SiteDonation $record) => $record?->defraglive_contest_id
+                                ? 'Recorded automatically for contest #' . $record->defraglive_contest_id
+                                    . '. Change the prize on the contest itself - editing it here is overwritten.'
+                                : 'Entered by hand.'),
+                    ])
+                    ->columns(2)
+                    ->collapsed(fn (?SiteDonation $record) => ! $record || $record->defraglive_amount <= 0),
             ]);
     }
 
@@ -191,6 +223,16 @@ class DonationResource extends Resource
                         : null)
                     ->placeholder('--')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('defraglive_amount')
+                    ->label('To DefragLive')
+                    ->getStateUsing(fn (SiteDonation $r) => $r->defraglive_amount > 0 ? $r->defraglive_amount : null)
+                    ->money('EUR')
+                    ->description(fn (SiteDonation $r): ?string => $r->defraglive_contest_id
+                        ? 'contest #' . $r->defraglive_contest_id
+                        : null)
+                    ->placeholder('--')
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('donation_date')
                     ->label('Date')
                     ->date()

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\DefragliveContestFunding;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -77,6 +78,37 @@ class DefragliveContest extends Model
         'total_tickets' => 'integer',
         'winning_ticket' => 'integer',
     ];
+
+    /**
+     * Keep the money that pays for this contest recorded alongside it.
+     *
+     * Here rather than in the admin screens because a contest is created from
+     * more than one place - the resource, the rollover command, a backfill -
+     * and a funding row that only appears when somebody used the right screen
+     * is worse than none: the donations page would then be short by an amount
+     * nobody could see was missing.
+     */
+    protected static function booted(): void
+    {
+        $funding = fn (DefragliveContest $contest) => app(DefragliveContestFunding::class)->record($contest);
+
+        static::created($funding);
+
+        // Only when the money or the draft flag moved. Drawing a winner saves
+        // the row too, and rewriting the donation on every one of those would
+        // touch it for no reason.
+        static::updated(function (DefragliveContest $contest) use ($funding) {
+            if ($contest->wasChanged(['prize_amount', 'carried_over_amount', 'status', 'starts_at', 'title'])) {
+                $funding($contest);
+            }
+        });
+
+        // The foreign key is nullOnDelete, so without this the donation would
+        // survive its contest as a row nothing explains.
+        static::deleting(function (DefragliveContest $contest) {
+            SiteDonation::where('defraglive_contest_id', $contest->id)->delete();
+        });
+    }
 
     public function winner(): BelongsTo
     {

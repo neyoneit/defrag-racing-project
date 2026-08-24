@@ -281,12 +281,12 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
     /**
      * What this person's donations paid towards running the site, in EUR.
      *
-     * Not the same as what they gave. A donation can be earmarked for the
-     * comps prize pool, and that money is promised to a winner rather than
-     * spent on hosting - the progress bar has always split the two, and
-     * anything the site hands out in return for paying its bills has to split
-     * them the same way. One of the two people who funded the prize pool put
-     * in 50 EUR of which every cent was prize money.
+     * Not the same as what they gave. A donation can be earmarked for a prize
+     * pool - comps or the DefragLive contest - and that money is promised to a
+     * winner rather than spent on hosting. The progress bar has always split
+     * the two, and anything the site hands out in return for paying its bills
+     * has to split them the same way. One of the two people who funded the
+     * comps pool put in 50 EUR of which every cent was prize money.
      */
     public function getSiteDonationTotalEur(): float
     {
@@ -311,7 +311,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
 
             // min(), because the earmark is stored in EUR and a donation made
             // in another currency can round to slightly less than it.
-            $total += max(0, $eur - min((float) $donation->comps_amount, $eur));
+            $total += max(0, $eur - min($donation->prizeAmount(), $eur));
         }
 
         return round($total, 2);

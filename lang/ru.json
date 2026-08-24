@@ -2560,7 +2560,7 @@
     "odds, not a place": "шансы, а не место",
     "of :count vote left|of :count votes left": "из :count оставшегося голоса|из :count оставшихся голосов|из :count оставшихся голосов",
     "of :total demos": "из :total демок",
-    "of the donations above went to the comps prize pool and is not counted towards the goal.": "из пожертвований выше ушло в призовой фонд comps и в цель не засчитывается.",
+    "of the donations went to the comps prize pool and is not counted towards the goal.": "из пожертвований ушло в призовой фонд comps и в цель не засчитывается.",
     "of the total weight in your rating, and your": "от общего веса в твоем рейтинге, и твой",
     "Off the board": "Снято с доски",
     "Offer": "Предложение",
@@ -4345,5 +4345,9 @@
     "📐 Wireframe OFF": "📐 Каркас ВЫКЛ",
     "📐 Wireframe ON": "📐 Каркас ВКЛ",
     "🔄 Auto-Rotate OFF": "🔄 Автовращение ВЫКЛ",
-    "🔄 Auto-Rotate ON": "🔄 Автовращение ВКЛ"
+    "🔄 Auto-Rotate ON": "🔄 Автовращение ВКЛ",
+    ":amount to site maintenance": ":amount на содержание сайта",
+    "of the donations went to the DefragLive contest prize pool and is not counted towards the goal.": "из пожертвований ушло в призовой фонд конкурса DefragLive и в цель не засчитывается.",
+    "See the contest": "Смотреть конкурс",
+    ":amount to the DefragLive contest prize pool": ":amount в призовой фонд конкурса DefragLive"
 }

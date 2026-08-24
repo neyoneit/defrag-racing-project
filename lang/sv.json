@@ -2560,7 +2560,7 @@
     "odds, not a place": "odds, inte en placering",
     "of :count vote left|of :count votes left": "av :count röst kvar|av :count röster kvar",
     "of :total demos": "av :total demos",
-    "of the donations above went to the comps prize pool and is not counted towards the goal.": "av donationerna ovan gick till comps prispott och räknas inte mot målet.",
+    "of the donations went to the comps prize pool and is not counted towards the goal.": "av donationerna gick till comps prispott och räknas inte mot målet.",
     "of the total weight in your rating, and your": "av den totala vikten i ditt betyg, och din",
     "Off the board": "Utanför listan",
     "Offer": "Erbjudande",
@@ -4345,5 +4345,9 @@
     "📐 Wireframe OFF": "📐 Wireframe AV",
     "📐 Wireframe ON": "📐 Wireframe PÅ",
     "🔄 Auto-Rotate OFF": "🔄 Automatisk rotation AV",
-    "🔄 Auto-Rotate ON": "🔄 Automatisk rotation PÅ"
+    "🔄 Auto-Rotate ON": "🔄 Automatisk rotation PÅ",
+    ":amount to site maintenance": ":amount till driften av sajten",
+    "of the donations went to the DefragLive contest prize pool and is not counted towards the goal.": "av donationerna gick till prispotten för DefragLive-tävlingen och räknas inte mot målet.",
+    "See the contest": "Visa tävlingen",
+    ":amount to the DefragLive contest prize pool": ":amount till prispotten för DefragLive-tävlingen"
 }
