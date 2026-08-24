@@ -19,10 +19,14 @@ const sections = computed(() => [
         title: t('Client and binaries'),
         accent: 'red',
         rules: [
-            t('You may not modify the Quake 3 or DeFRaG binaries in any way.'),
+            // Said broadly on purpose. The old wording banned modifying the
+            // binaries, so somebody who edited the source and built their own
+            // had modified nothing - they had made a new one - and could argue
+            // it was still oDFe.
+            t('The engine is standardised so that everybody is playing the same game. oDFe is that standard. iDFe is accepted alongside it for as long as it changes nothing about how DeFRaG plays: it is allowed because it complies, not because of what it is called.'),
+            t('Anything that changes the game at its base is out, whatever it is called and however it was made: an edited binary, a build of your own from changed source, a patch, an injected library. A client built from modified oDFe source is not oDFe, and records set on it are not accepted.'),
             t('You may not modify the memory DeFRaG uses with external programs while it runs.'),
             t('You may not drop or delay network packets on purpose.'),
-            t('Allowed clients are oDFe and iDFe. Records set on anything else are not accepted.'),
         ],
     },
     {
