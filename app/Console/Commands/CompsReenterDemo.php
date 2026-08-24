@@ -74,7 +74,12 @@ class CompsReenterDemo extends Command
             $this->line(sprintf('  %d  %s  physics=%s', $demo->id, $demo->original_filename, $demo->physics));
 
             if ($demo->comps_withdrawn_at) {
-                $this->line('      <fg=yellow>the player took this run out of comps themselves, leaving it alone</>');
+                // With the timestamp, because "the player withdrew it" is a
+                // claim about something that happened at a moment, and reading
+                // it without the moment leaves you unable to tell a real
+                // withdrawal from a column somebody's tooling filled in.
+                $this->line('      <fg=yellow>the player took this run out of comps themselves on '
+                    . $demo->comps_withdrawn_at . ', leaving it alone</>');
 
                 continue;
             }
