@@ -182,6 +182,7 @@ class NameMatcher
      * Returns the matched user_id plus the tier that produced the match so
      * the caller can attach it as match_method on the demo record:
      *   - 'q3df_colored' : exact colored alias match (most confident)
+     *   - 'q3df_account' : exactly one account is literally named this
      *   - 'q3df_plain'   : exact plain alias match and the plain alias is
      *                      globally unique (1 user owns it)
      *
@@ -212,6 +213,34 @@ class NameMatcher
                     'user_id' => $coloredMatch->user_id,
                     'matched_alias' => $coloredMatch->alias_colored ?: $coloredMatch->alias,
                     'tier' => 'q3df_colored',
+                ];
+            }
+        }
+
+        // Tier 1.5: an account literally named this.
+        //
+        // A name somebody registered is a stronger claim on itself than a
+        // nick somebody else once wore. Without this, two rounds played
+        // under your nick by another player - recorded as their alias -
+        // outranked you forever, because tier 2 below throws away every
+        // alias row with no user attached and then reads "one candidate" as
+        // certainty. Raven's own alias, used 938 times, had no user on it;
+        // a stranger's `raven`, used twice, did. 86 of Raven's demos and 85
+        // of his times sat on that stranger's profile.
+        //
+        // Below the colored tier and not above it, because colour codes make
+        // an alias effectively unique and a bare name does not.
+        //
+        // Same rule as tier 2 for ambiguity: two accounts sharing a name
+        // decide nothing, so the question is passed on rather than guessed.
+        if ($plain) {
+            $named = User::whereRaw('LOWER(name) = ?', [mb_strtolower($plain)])->pluck('id');
+
+            if ($named->count() === 1) {
+                return [
+                    'user_id' => (int) $named->first(),
+                    'matched_alias' => $plain,
+                    'tier' => 'q3df_account',
                 ];
             }
         }
