@@ -66,7 +66,24 @@ class ClientState:
     isCheatsOn: bool = False
     maxSpeed: int = 0
     isCpmInParams: bool | None = None
+
+    # Which physics the run was ACTUALLY played in, read from the movement
+    # rather than from a cvar.
+    #
+    # `df_promode` in serverinfo says what the server is set to, not what is
+    # being played. On a mixed server the two come apart every time somebody
+    # votes the physics across, and three of five demos from one player on one
+    # map came out labelled with the wrong physics because of it. The player
+    # state carries the truth: bit 0x8000 of pm_flags is on in CPM and off in
+    # VQ3, every frame of every run.
+    #
+    # Counted rather than taken from one frame, because a demo also holds
+    # frames from before the run and from spectating. The majority of playing
+    # frames wins; None only when there were no snapshots to read at all, and
+    # then the old cvar guess still applies.
     isCpmInSnapshots: bool | None = None
+    cpmSnapshots: int = 0
+    vq3Snapshots: int = 0
 
 
 from .client_event import ClientEvent  # noqa: E402
