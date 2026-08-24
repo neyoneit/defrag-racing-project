@@ -50,6 +50,9 @@ class SiteDonation extends Model
         'comps_weeks',
         'comps_start_comp',
         'comps_note',
+        'defraglive_amount',
+        'defraglive_contest_id',
+        'defraglive_note',
     ];
 
     protected $casts = [
@@ -58,6 +61,7 @@ class SiteDonation extends Model
         'comps_amount' => 'decimal:2',
         'comps_weeks' => 'integer',
         'comps_start_comp' => 'integer',
+        'defraglive_amount' => 'decimal:2',
     ];
 
     public function user()
@@ -91,6 +95,31 @@ class SiteDonation extends Model
             ->where('comps_amount', '>', 0)
             ->where('comps_weeks', '>', 0)
             ->whereNotNull('comps_start_comp');
+    }
+
+    /** Approved donations with money earmarked for DefragLive contest prizes. */
+    public function scopeFundsDefraglive($query)
+    {
+        return $query->approved()->where('defraglive_amount', '>', 0);
+    }
+
+    /** The contest this row was written to fund, on the automatic rows. */
+    public function defragliveContest()
+    {
+        return $this->belongsTo(DefragliveContest::class, 'defraglive_contest_id');
+    }
+
+    /**
+     * Everything this donation promised to somebody as prize money, in euro.
+     *
+     * The goal on the donations page is a hosting bill. Money already spoken
+     * for by a winner is not paying it, whichever prize it belongs to, so the
+     * two pots are added up in one place rather than being remembered
+     * separately at every call site.
+     */
+    public function prizeAmount(): float
+    {
+        return round((float) $this->comps_amount + (float) $this->defraglive_amount, 2);
     }
 
     /**

@@ -2560,7 +2560,7 @@
     "odds, not a place": "šance, ne pořadí",
     "of :count vote left|of :count votes left": "z :count hlasu|z :count hlasů|z :count hlasů",
     "of :total demos": "z :total dem",
-    "of the donations above went to the comps prize pool and is not counted towards the goal.": "z darů výše šlo do prizepoolu comps a do cíle se nepočítá.",
+    "of the donations went to the comps prize pool and is not counted towards the goal.": "z darů šlo do prizepoolu comps a do cíle se nepočítá.",
     "of the total weight in your rating, and your": "celkové váhy tvého ratingu a tvých",
     "Off the board": "Sundáno z žebříčku",
     "Offer": "Nabídka",
@@ -4345,5 +4345,9 @@
     "📐 Wireframe OFF": "📐 Drátěný model VYP",
     "📐 Wireframe ON": "📐 Drátěný model ZAP",
     "🔄 Auto-Rotate OFF": "🔄 Automatické otáčení VYP",
-    "🔄 Auto-Rotate ON": "🔄 Automatické otáčení ZAP"
+    "🔄 Auto-Rotate ON": "🔄 Automatické otáčení ZAP",
+    ":amount to site maintenance": ":amount na údržbu webu",
+    "of the donations went to the DefragLive contest prize pool and is not counted towards the goal.": "z darů šlo do prizepoolu DefragLive contestu a do cíle se nepočítá.",
+    "See the contest": "Zobrazit contest",
+    ":amount to the DefragLive contest prize pool": ":amount do prizepoolu DefragLive contestu"
 }

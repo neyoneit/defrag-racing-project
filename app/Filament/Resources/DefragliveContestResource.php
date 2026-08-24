@@ -264,11 +264,16 @@ class DefragliveContestResource extends Resource
                                 'note' => "DefragLive contest prize donated back ({$record->title}) - "
                                     . $contestUrl,
                                 'status' => 'approved',
-                                // The earmark. Left null for an ordinary
+                                // The earmark. Left empty for an ordinary
                                 // donation, because PrizeFunding only counts
                                 // rows where all three are filled in - a
                                 // half-filled one would sit in neither pot.
-                                'comps_amount' => $toComps ? $record->prize_amount : null,
+                                //
+                                // Zero and not null: the column is NOT NULL
+                                // with a default of 0, so a null threw and the
+                                // prize could not be settled towards the site
+                                // at all.
+                                'comps_amount' => $toComps ? $record->prize_amount : 0,
                                 'comps_weeks' => $toComps ? (int) $data['comps_weeks'] : null,
                                 'comps_start_comp' => $toComps ? (int) $data['comps_start_comp'] : null,
                                 // Public, printed under the donor's name on the

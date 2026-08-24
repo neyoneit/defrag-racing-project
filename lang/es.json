@@ -2560,7 +2560,7 @@
     "odds, not a place": "probabilidades, no un puesto",
     "of :count vote left|of :count votes left": "de :count voto restante|de :count votos restantes",
     "of :total demos": "de :total demos",
-    "of the donations above went to the comps prize pool and is not counted towards the goal.": "de las donaciones de arriba fue al bote de premios de comps y no cuenta para el objetivo.",
+    "of the donations went to the comps prize pool and is not counted towards the goal.": "de las donaciones fue al bote de premios de comps y no cuenta para el objetivo.",
     "of the total weight in your rating, and your": "del peso total en tu valoración, y tu",
     "Off the board": "Fuera de la tabla",
     "Offer": "Oferta",
@@ -4345,5 +4345,9 @@
     "📐 Wireframe OFF": "📐 Wireframe DESACTIVADO",
     "📐 Wireframe ON": "📐 Wireframe ACTIVADO",
     "🔄 Auto-Rotate OFF": "🔄 Rotación automática DESACTIVADA",
-    "🔄 Auto-Rotate ON": "🔄 Rotación automática ACTIVADA"
+    "🔄 Auto-Rotate ON": "🔄 Rotación automática ACTIVADA",
+    ":amount to site maintenance": ":amount para el mantenimiento del sitio",
+    "of the donations went to the DefragLive contest prize pool and is not counted towards the goal.": "de las donaciones fue al bote de premios del concurso de DefragLive y no cuenta para el objetivo.",
+    "See the contest": "Ver el concurso",
+    ":amount to the DefragLive contest prize pool": ":amount al bote de premios del concurso de DefragLive"
 }
