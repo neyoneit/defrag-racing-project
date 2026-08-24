@@ -45,9 +45,14 @@ class ReparseDemoMetadata extends Command
         $limit = (int) $this->option('limit');
         $journal = $apply ? $this->openJournal() : null;
 
+        // withUnreleasedComps(), or a demo comps is holding is invisible here.
+        // A held demo is exactly the one most worth re-reading: it is waiting
+        // to be entered into a round, and a misparse decides which physics it
+        // is entered as. Without this the command answered "Nothing matches"
+        // for the three demos it was needed for.
         $query = $ids
-            ? UploadedDemo::whereIn('id', $ids)
-            : UploadedDemo::where('player_name', $this->option('player'));
+            ? UploadedDemo::withUnreleasedComps()->whereIn('id', $ids)
+            : UploadedDemo::withUnreleasedComps()->where('player_name', $this->option('player'));
 
         $total = (clone $query)->count();
 
@@ -260,7 +265,7 @@ class ReparseDemoMetadata extends Command
                 continue;
             }
 
-            $demo = UploadedDemo::find($entry['id']);
+            $demo = UploadedDemo::withUnreleasedComps()->find($entry['id']);
 
             if (! $demo) {
                 $missing++;
