@@ -273,6 +273,13 @@ const submitNewCred = () => {
                         <div class="font-semibold text-gray-100 mb-1">{{ $t('2. Server demos are mandatory') }}</div>
                         <p class="text-gray-400"
                            v-html="$t('All servers must run with server-side demo recording enabled (serverdemos). Demos are <strong>not public and never will be</strong> - they are stored privately on defrag.racing infrastructure and are only reviewed by staff if a player report is filed and its validity is confirmed. They exist purely as an integrity/review mechanism.')"></p>
+                        <!-- The rule above says the SITE keeps them private. It
+                             never said the admin must not pass on the copies
+                             sitting on his own box, which is the half that was
+                             actually easy to break. -->
+                        <p class="text-gray-400 mt-2"
+                           v-html="$t('<strong>The demos your server records are not yours to hand out.</strong> Do not share, publish, sell or forward them to anybody - not to another admin, not to a player asking for their own run, not into a Discord, not anywhere. A serverdemo is recorded without the player choosing to record it, and it holds their whole run: their route, their movement, their mistakes. Passing that around is giving away something nobody offered.')"></p>
+                        <p class="text-gray-400 mt-2">{{ $t('This one has no grey area and no warning. Sharing a serverdemo deactivates your server.') }}</p>
                     </li>
                     <li>
                         <div class="font-semibold text-gray-100 mb-1">{{ $t('3. SFTP demo upload connection is mandatory') }}</div>
@@ -339,12 +346,32 @@ for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
                         <div class="font-semibold text-gray-100 mb-1">{{ $t('6. Stability and fair play') }}</div>
                         <p class="text-gray-400">{{ $t('Keep your server reasonably stable and reachable. Do not tamper with recorded demos, timers, or record submission in any way. Any manipulation leads to immediate deactivation.') }}</p>
                     </li>
+                    <!-- Rule 6 named three things - demos, timers, record
+                         submission - and somebody who breaks spectating so
+                         that watching a player disconnects them has touched
+                         none of them.
+
+                         Written broadly on purpose. A list of banned changes
+                         is a list of the ones somebody thought of, and the
+                         first person who wants around it simply picks one that
+                         is not on it. The only precise part is which file is
+                         the owner's, because that they do need to know. -->
                     <li>
-                        <div class="font-semibold text-gray-100 mb-1">{{ $t('7. Naming and conduct') }}</div>
+                        <div class="font-semibold text-gray-100 mb-1">{{ $t('7. Run the server as it is shipped') }}</div>
+                        <p class="text-gray-400"
+                           v-html="$t('Do not modify source code that changes how the game behaves, in the engine or in the mod. That is the whole rule and it is meant to be read broadly: <strong>if your server does not behave like Defrag, it is covered</strong>, whether or not anybody had thought of that particular change when this was written.')"></p>
+                        <p class="text-gray-400 mt-2"
+                           v-html="$t('The configs the bundle ships are part of that. <code>global.cfg</code> and the mode configs - <code>mixed</code>, <code>cpm</code>, <code>vq3</code>, <code>teamruns</code>, <code>fastcaps</code>, <code>freestyle</code> - are what those modes mean. A cpm server that is not running the shipped cpm config is not a cpm server, and the times it produces cannot be compared with anybody else\'s. Leave them as they are.')"></p>
+                        <p class="text-gray-400 mt-2"
+                           v-html="$t('<strong><code>sv.conf</code> is yours.</strong> Hostname, rcon, admin and contact details, location, private server and its password, how many servers of each type and what they are called, ports, the map mode, your MDD ids and your SFTP credentials. Everything in that file is there for you to set, and none of it changes how the game plays.')"></p>
+                        <p class="text-gray-400 mt-2">{{ $t('Breaking this means immediate deactivation, and every record set on the server while it was broken gets reviewed.') }}</p>
+                    </li>
+                    <li>
+                        <div class="font-semibold text-gray-100 mb-1">{{ $t('8. Naming and conduct') }}</div>
                         <p class="text-gray-400">{{ $t('Server names must not impersonate other servers/communities and must not contain offensive content. Admins are expected to act respectfully towards players.') }}</p>
                     </li>
                     <li>
-                        <div class="font-semibold text-gray-100 mb-1">{{ $t('8. Support') }}</div>
+                        <div class="font-semibold text-gray-100 mb-1">{{ $t('9. Support') }}</div>
                         <p class="text-gray-400">{{ $t('If you have trouble setting up the bundle or the SFTP connection, contact') }} <a href="/profile/8"
                                    class="text-emerald-300 hover:text-emerald-200 underline decoration-dotted">neyo</a>
                         {{ $t('- via his defrag.racing profile or on Discord in the server-hosting section. I would rather help you get compliant than delist you.') }}</p>
