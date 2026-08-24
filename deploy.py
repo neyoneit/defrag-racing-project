@@ -77,6 +77,12 @@ def pipeline_cmds(name):
         # demo slow enough to run into the parser's own timeout. Nothing breaks
         # if the build fails (that fallback is exactly what we had until now),
         # so it must never stop a deploy - but say so in the log.
+        # A release is a fresh clone, so there should be nothing compiled in
+        # it - but a parse that runs while the deploy is still going leaves
+        # .pyc files behind, and one stale file is enough to make a fixed
+        # parser go on behaving like the broken one with no sign of why. It
+        # costs nothing to be sure; Python writes them again on first use.
+        "find app/Services/DemoProcessor -name __pycache__ -type d -exec rm -rf {} + 2>/dev/null || true",
         'echo "==> Building the demo parser huffman extension..."',
         "cd app/Services/DemoProcessor/bin/demoparser "
         "&& python3 setup.py build_ext --inplace "

@@ -42,7 +42,11 @@ class CheckDemoPhysics extends Command
 
     public function handle(): int
     {
-        $query = UploadedDemo::query()
+        // withUnreleasedComps(), or every demo comps is currently holding is
+        // invisible - and those are the ones this exists to look at. Without
+        // it --comps reported 87 demos and no problems while three demos of
+        // the round being played were stored under the wrong physics.
+        $query = UploadedDemo::withUnreleasedComps()
             ->whereNotNull('physics')
             ->where('physics', '!=', '')
             ->select('id', 'original_filename', 'physics', 'file_path')
@@ -102,7 +106,7 @@ class CheckDemoPhysics extends Command
             $this->warn('could not read: ' . $failed);
         }
 
-        if ($bad) {
+        if ($bad && $show > 0) {
             $this->newLine();
             $this->table(
                 ['demo', 'stored', 'really', 'filename'],
@@ -139,17 +143,23 @@ class CheckDemoPhysics extends Command
     /** The physics the parser reads out of the file itself. */
     private function fromFile(UploadedDemo $demo, int &$failed): ?string
     {
-        $tmp = null;
+        $dir = null;
 
         try {
-            if (! $demo->file_path || ! Storage::exists($demo->file_path)) {
+            if (! $demo->file_path) {
                 $failed++;
 
                 return null;
             }
 
-            $tmp = tempnam(sys_get_temp_dir(), 'phys') . '.dm_68';
-            file_put_contents($tmp, Storage::get($demo->file_path));
+            $dir = sys_get_temp_dir() . '/demo_physics_' . $demo->id;
+            $tmp = $this->stage($demo, $dir);
+
+            if ($tmp === null) {
+                $failed++;
+
+                return null;
+            }
 
             $process = new Process([
                 'python3',
@@ -177,9 +187,68 @@ class CheckDemoPhysics extends Command
 
             return null;
         } finally {
-            if ($tmp && file_exists($tmp)) {
-                @unlink($tmp);
+            if ($dir) {
+                $this->sweep($dir);
             }
         }
+    }
+
+    /**
+     * Put the demo on disk in a form the parser can read.
+     *
+     * Almost every stored demo is a 7z archive, so handing the bytes straight
+     * to the parser answers "could not parse demo file" for all of them. Told
+     * apart by the archive's own magic number and not by the name: a demo
+     * stored raw under a .7z name would otherwise be treated as a broken
+     * archive and skipped.
+     *
+     * The same staging demos:reparse-metadata does, deliberately - a check
+     * that reads files differently from the repair is a check you cannot act
+     * on.
+     */
+    private function stage(UploadedDemo $demo, string $dir): ?string
+    {
+        if (! Storage::exists($demo->file_path)) {
+            return null;
+        }
+
+        $contents = Storage::get($demo->file_path);
+
+        if (! $contents) {
+            return null;
+        }
+
+        @mkdir($dir, 0755, true);
+
+        if (! str_starts_with($contents, "7z\xBC\xAF\x27\x1C")) {
+            $path = $dir . '/' . basename($demo->original_filename ?: 'demo.dm_68');
+            file_put_contents($path, $contents);
+
+            return $path;
+        }
+
+        $archive = $dir . '/archive.7z';
+        file_put_contents($archive, $contents);
+
+        exec(sprintf('7z x %s -o%s -y 2>&1', escapeshellarg($archive), escapeshellarg($dir)), $out, $code);
+        @unlink($archive);
+
+        if ($code !== 0) {
+            return null;
+        }
+
+        $files = glob($dir . '/*.dm_*') ?: [];
+
+        return $files ? reset($files) : null;
+    }
+
+    /** Nothing is kept: this reads demos, it does not collect them. */
+    private function sweep(string $dir): void
+    {
+        foreach (glob($dir . '/*') ?: [] as $file) {
+            @unlink($file);
+        }
+
+        @rmdir($dir);
     }
 }
