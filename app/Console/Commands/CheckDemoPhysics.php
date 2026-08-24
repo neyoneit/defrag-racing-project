@@ -36,7 +36,8 @@ class CheckDemoPhysics extends Command
                             {--comps : only demos entered into comps}
                             {--reparse : read each file again instead of trusting its name}
                             {--limit=0 : stop after this many demos}
-                            {--show=20 : how many mismatches to print}';
+                            {--show=20 : how many mismatches to print}
+                            {--ids : print nothing but the mismatched ids, one per line}';
 
     protected $description = 'Report demos whose stored physics disagrees with the demo itself. Changes nothing.';
 
@@ -65,14 +66,25 @@ class CheckDemoPhysics extends Command
         $reparse = (bool) $this->option('reparse');
         $show = (int) $this->option('show');
 
+        // Nothing but ids, so the list can be handed straight to the repair:
+        //
+        //   php artisan demos:reparse-metadata \
+        //     $(php artisan demos:check-physics --ids | sed 's/^/--id=/' | tr '\n' ' ')
+        //
+        // Every other line would end up in that argument list, which is why
+        // this silences the counts and the progress note as well as the table.
+        $idsOnly = (bool) $this->option('ids');
+
         $checked = 0;
         $readable = 0;
         $bad = [];
         $failed = 0;
 
-        $this->info($reparse
-            ? 'Reading every file again. This is slow.'
-            : 'Comparing against the filename. No file is read.');
+        if (! $idsOnly) {
+            $this->info($reparse
+                ? 'Reading every file again. This is slow.'
+                : 'Comparing against the filename. No file is read.');
+        }
 
         $query->chunk($reparse ? 200 : 20000, function ($rows) use (&$checked, &$readable, &$bad, &$failed, $reparse, $limit) {
             foreach ($rows as $demo) {
@@ -96,6 +108,14 @@ class CheckDemoPhysics extends Command
                 }
             }
         });
+
+        if ($idsOnly) {
+            foreach ($bad as $row) {
+                $this->line((string) $row[0]);
+            }
+
+            return self::SUCCESS;
+        }
 
         $this->newLine();
         $this->line('checked:     ' . $checked);
