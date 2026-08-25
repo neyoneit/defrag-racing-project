@@ -83,11 +83,19 @@ class DonationResource extends Resource
                 Forms\Components\Section::make('Comps prize pool')
                     ->description('Leave empty unless some of this donation is earmarked for comps. Both physics are paid, so the per-week total is split in two.')
                     ->schema([
+                        // Both earmark columns are NOT NULL with a default of
+                        // zero, so an empty box has to reach the database as 0
+                        // and not as nothing. default() covers a new donation;
+                        // dehydrateStateUsing covers somebody clearing the box
+                        // on one that already exists. Without the second one
+                        // this refuses to save a donation that simply stopped
+                        // being earmarked.
                         Forms\Components\TextInput::make('comps_amount')
                             ->label('Amount going to comps')
                             ->numeric()
                             ->minValue(0)
                             ->default(0)
+                            ->dehydrateStateUsing(fn ($state) => (float) ($state ?? 0))
                             ->prefix('€')
                             ->live(onBlur: true)
                             ->helperText('Can be the whole donation or part of it. The rest pays for running the site.'),
@@ -170,6 +178,8 @@ class DonationResource extends Resource
                             ->label('To the DefragLive pool')
                             ->numeric()
                             ->minValue(0)
+                            ->default(0)
+                            ->dehydrateStateUsing(fn ($state) => (float) ($state ?? 0))
                             ->prefix('€')
                             ->helperText('In EUR whatever the donation was made in, because the pool is quoted in EUR.'),
                         Forms\Components\TextInput::make('defraglive_note')
