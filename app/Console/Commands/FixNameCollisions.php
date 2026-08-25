@@ -53,6 +53,10 @@ class FixNameCollisions extends Command
             ->where('a.is_approved', true)
             ->whereNotNull('a.user_id')
             ->whereColumn('a.user_id', '!=', 'u.id')
+            // Only an account tied to an mdd profile, the same condition the
+            // matcher applies. A bare name proves nothing and there is at
+            // least one empty account registered under a real player's name.
+            ->whereNotNull('u.mdd_id')
             ->select('u.id as account_id', 'u.name as account_name', 'a.user_id as alias_owner')
             ->get()
             ->groupBy('account_id');

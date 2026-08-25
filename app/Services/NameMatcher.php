@@ -231,10 +231,19 @@ class NameMatcher
         // Below the colored tier and not above it, because colour codes make
         // an alias effectively unique and a bare name does not.
         //
+        // Only an account tied to an mdd profile. A name on its own proves
+        // nothing: anybody can register one, and somebody had - `jhheight`
+        // existed twice, once as the real player with 169 records and once
+        // as an empty account holding only the name. Without this the rule
+        // would have sent that player's every future run to the empty one,
+        // which is worse than the bug it was written to fix.
+        //
         // Same rule as tier 2 for ambiguity: two accounts sharing a name
         // decide nothing, so the question is passed on rather than guessed.
         if ($plain) {
-            $named = User::whereRaw('LOWER(name) = ?', [mb_strtolower($plain)])->pluck('id');
+            $named = User::whereRaw('LOWER(name) = ?', [mb_strtolower($plain)])
+                ->whereNotNull('mdd_id')
+                ->pluck('id');
 
             if ($named->count() === 1) {
                 return [

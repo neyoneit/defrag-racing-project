@@ -91,20 +91,30 @@ class DonationResource extends Resource
                             ->prefix('€')
                             ->live(onBlur: true)
                             ->helperText('Can be the whole donation or part of it. The rest pays for running the site.'),
+                        // Required only once there is comps money to place.
+                        // These used to be requiredWith() on each other while
+                        // the week number carried a default, so every new
+                        // donation opened with that field already filled and
+                        // then refused to save until the other one was filled
+                        // too - including a donation that has nothing to do
+                        // with comps and should simply pay the bills.
                         Forms\Components\TextInput::make('comps_weeks')
                             ->label('Spread over how many weeklies')
                             ->numeric()
                             ->minValue(1)
                             ->maxValue(520)
                             ->live(onBlur: true)
-                            ->requiredWith('comps_start_comp'),
+                            ->required(fn (Forms\Get $get) => (float) $get('comps_amount') > 0),
                         Forms\Components\TextInput::make('comps_start_comp')
                             ->label('First weekly it applies to')
                             ->numeric()
                             ->minValue(1)
                             ->live(onBlur: true)
-                            ->default(fn () => ((int) \App\Models\Comp::weekly()->max('number')) + 1)
-                            ->requiredWith('comps_weeks')
+                            // A placeholder and not a default: it still says
+                            // which week is next, without putting a value in
+                            // the field of somebody who never asked for one.
+                            ->placeholder(fn () => ((int) \App\Models\Comp::weekly()->max('number')) + 1)
+                            ->required(fn (Forms\Get $get) => (float) $get('comps_amount') > 0)
                             ->helperText('Weekly number, not a date. A week that already exists keeps the prize it was created with - raise that one on the comps control page.'),
 
                         // Shown publicly on the comps page, under the donor's
