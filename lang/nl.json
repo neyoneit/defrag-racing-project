@@ -4349,5 +4349,7 @@
     ":amount to site maintenance": ":amount voor het onderhoud van de site",
     "of the donations went to the DefragLive contest prize pool and is not counted towards the goal.": "van de donaties ging naar de prijzenpot van de DefragLive-contest en telt niet mee voor het doel.",
     "See the contest": "Bekijk de contest",
-    ":amount to the DefragLive contest prize pool": ":amount naar de prijzenpot van de DefragLive-contest"
+    ":amount to the DefragLive contest prize pool": ":amount naar de prijzenpot van de DefragLive-contest",
+    "No Q3DF profile linked": "Geen Q3DF-profiel gekoppeld",
+    "This account is not linked to a Q3DF/MDD profile, so there are no records, rankings or stats to show.": "Dit account is niet gekoppeld aan een Q3DF/MDD-profiel, dus er zijn geen records, ranglijsten of statistieken om te tonen."
 }
