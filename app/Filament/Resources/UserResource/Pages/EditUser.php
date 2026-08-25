@@ -12,6 +12,26 @@ class EditUser extends EditRecord
 {
     protected static string $resource = UserResource::class;
 
+    /**
+     * Put the address back for this one form.
+     *
+     * `email` sits in the User model's $hidden list, because a User is
+     * serialized into public page payloads wherever it hangs off something
+     * else and those payloads are readable by anyone. Filament fills a form
+     * from the same array that list censors, so the box arrived empty on a
+     * page whose whole audience is an administrator - and empty plus required
+     * meant the form refused to save anything at all, address or not.
+     *
+     * Read off the record itself, which the $hidden list does not touch. The
+     * model keeps its guard and the public payloads stay as they are.
+     */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $data['email'] = $this->record->email;
+
+        return $data;
+    }
+
     protected function getHeaderActions(): array
     {
         return [
