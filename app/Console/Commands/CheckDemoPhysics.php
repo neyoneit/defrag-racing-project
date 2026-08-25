@@ -93,6 +93,18 @@ class CheckDemoPhysics extends Command
         $bad = [];
         $failed = 0;
 
+        // A re-read runs for hours against an otherwise silent screen, so it
+        // says where it is. Counted here and not left to `time`: knowing it
+        // took nine hours after it took nine hours is not what the number is
+        // for - the point is to decide, ten minutes in, whether to let it run
+        // overnight or stop it.
+        $startedAt = microtime(true);
+        $total = $reparse && ! $idsOnly ? (clone $query)->count() : 0;
+
+        if ($limit > 0 && $limit < $total) {
+            $total = $limit;
+        }
+
         // Every untagged demo has, by definition, no name to compare against,
         // so the cheap run over them reports nothing at all. Saying so beats
         // printing a clean zero somebody would read as good news.
@@ -106,13 +118,17 @@ class CheckDemoPhysics extends Command
                 : 'Comparing against the filename. No file is read.');
         }
 
-        $query->chunk($reparse ? 200 : 20000, function ($rows) use (&$checked, &$readable, &$bad, &$failed, $reparse, $limit) {
+        $query->chunk($reparse ? 200 : 20000, function ($rows) use (&$checked, &$readable, &$bad, &$failed, $reparse, $limit, $total, $startedAt) {
             foreach ($rows as $demo) {
                 if ($limit > 0 && $checked >= $limit) {
                     return false;
                 }
 
                 $checked++;
+
+                if ($total > 0 && $checked % 100 === 0) {
+                    $this->progress($checked, $total, $startedAt, count($bad));
+                }
 
                 $truth = $reparse ? $this->fromFile($demo, $failed) : $this->fromName($demo);
 
@@ -137,8 +153,14 @@ class CheckDemoPhysics extends Command
             return self::SUCCESS;
         }
 
+        $elapsed = microtime(true) - $startedAt;
+
         $this->newLine();
         $this->line('checked:     ' . $checked);
+        if ($reparse) {
+            $this->line('took:        ' . $this->clock($elapsed)
+                . ($elapsed > 0 ? sprintf('  (%.1f demos/min)', $checked / $elapsed * 60) : ''));
+        }
         $this->line($reparse ? 'read back:   ' . $readable : 'named:       ' . $readable);
         $this->line('mismatched:  ' . count($bad));
 
@@ -162,6 +184,39 @@ class CheckDemoPhysics extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /** Where the run is, how long it has taken, and when it should end. */
+    private function progress(int $done, int $total, float $startedAt, int $bad): void
+    {
+        $elapsed = microtime(true) - $startedAt;
+        $left = $done > 0 ? $elapsed / $done * ($total - $done) : 0;
+
+        $this->line(sprintf(
+            '  %d/%d  %d%%  running %s  about %s left  %d mismatched so far',
+            $done,
+            $total,
+            (int) round($done / max(1, $total) * 100),
+            $this->clock($elapsed),
+            $this->clock($left),
+            $bad
+        ));
+    }
+
+    /** Seconds as something a person reads without counting zeroes. */
+    private function clock(float $seconds): string
+    {
+        $seconds = (int) round($seconds);
+
+        if ($seconds < 60) {
+            return $seconds . 's';
+        }
+
+        if ($seconds < 3600) {
+            return sprintf('%dm %02ds', intdiv($seconds, 60), $seconds % 60);
+        }
+
+        return sprintf('%dh %02dm', intdiv($seconds, 3600), intdiv($seconds % 3600, 60));
     }
 
     /** CPM or VQ3 out of a stored value like `CPM.TR`. */
