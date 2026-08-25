@@ -29,12 +29,18 @@ use Symfony\Component\Process\Process;
  *   --reparse   read the file again with the fixed parser. The real answer,
  *               and the only one for a demo with no tag in its name, but every
  *               file has to come down from storage first.
+ *
+ * `--untagged` narrows --reparse to the demos the default run cannot see at
+ * all. Without it a full re-read pulls all 382k files down, and 341k of those
+ * were already answered for free by their own name - nine tenths of the
+ * bandwidth spent re-confirming what is not in question.
  */
 class CheckDemoPhysics extends Command
 {
     protected $signature = 'demos:check-physics
                             {--comps : only demos entered into comps}
                             {--reparse : read each file again instead of trusting its name}
+                            {--untagged : only demos whose filename carries no physics tag}
                             {--limit=0 : stop after this many demos}
                             {--show=20 : how many mismatches to print}
                             {--ids : print nothing but the mismatched ids, one per line}';
@@ -59,6 +65,13 @@ class CheckDemoPhysics extends Command
             });
         }
 
+        // The same tag --reparse exists to work around. Written as a raw
+        // NOT REGEXP because the tag is a shape, not a value: `[mdf.cpm]`,
+        // `[df.vq3]`, `[mfs.cpm]` - the middle changes per gametype.
+        if ($this->option('untagged')) {
+            $query->whereRaw("original_filename NOT REGEXP '\\\\[[a-zA-Z]+\\\\.(cpm|vq3)\\\\]'");
+        }
+
         // Not ->limit(): chunk() writes its own limit and offset onto the
         // query and would quietly ignore it. Counted in the loop instead.
         $limit = (int) $this->option('limit');
@@ -79,6 +92,13 @@ class CheckDemoPhysics extends Command
         $readable = 0;
         $bad = [];
         $failed = 0;
+
+        // Every untagged demo has, by definition, no name to compare against,
+        // so the cheap run over them reports nothing at all. Saying so beats
+        // printing a clean zero somebody would read as good news.
+        if ($this->option('untagged') && ! $reparse && ! $idsOnly) {
+            $this->warn('--untagged only means something with --reparse. These demos have no tag to read.');
+        }
 
         if (! $idsOnly) {
             $this->info($reparse
