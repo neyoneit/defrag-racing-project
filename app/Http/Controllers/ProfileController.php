@@ -58,6 +58,16 @@ class ProfileController extends Controller {
                     ]);
                 })())
                 ->with('freestyleDemos', $this->freestyleDemos(['user:' . $user->id], $request))
+                // Said out loud, and not left to the page's own default.
+                // HandleInertiaRequests shares the *visitor's* aliases on
+                // every page under the name `aliases`, and every other profile
+                // branch happens to overwrite it with the profile's own. This
+                // branch did not, so a signed-in visitor read their own nicks
+                // under a stranger's name, complete with a count.
+                ->with('aliases', [])
+                ->with('alias_suggestions', [])
+                ->with('can_suggest_alias', false)
+                ->with('can_manage_aliases', false)
                 ->with('playerRankings', []);
         }
 

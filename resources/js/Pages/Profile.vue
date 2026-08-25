@@ -1762,6 +1762,22 @@
             </div>
         </div>
 
+        <!--
+            The same fact the owner is told above, said to everybody else.
+            Without it a profile with no Q3DF link reads as a player who has
+            simply never run anything, which is a claim about them that is not
+            true. Not shown on your own profile: you get the yellow box above,
+            which also tells you what to do about it.
+        -->
+        <div v-if="!hasProfile && !isOwnProfile" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
+            <div class="relative z-20 mb-6">
+                <div class="bg-white/[0.03] border border-white/10 rounded-2xl px-8 py-6 text-center backdrop-blur-sm">
+                    <div class="text-xl font-bold text-gray-200 mb-2">{{ $t('No Q3DF profile linked') }}</div>
+                    <div class="text-sm text-gray-400">{{ $t('This account is not linked to a Q3DF/MDD profile, so there are no records, rankings or stats to show.') }}</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Admin: Rating Breakdown -->
         <div v-if="canViewBreakdown && hasPlayerRank && activeTab === 'records' && !ownProfileNotVerified && !ownProfileNotLinked" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 mb-2 relative z-10">
             <div>
@@ -2840,7 +2856,7 @@
                 </div>
             </div>
             <!-- Competitors & Rivals Section -->
-            <div v-if="showSection('similar_skill_rivals') && ($page.props.auth.user ? (cpmCompetitors || cpmRivals || loadingExtras) : true)" class="bg-black/40 backdrop-blur-sm rounded-xl shadow-2xl border border-white/5 mb-6 overflow-hidden relative" :style="{ order: sectionOrder('similar_skill_rivals') }">
+            <div v-if="hasProfile && showSection('similar_skill_rivals') && ($page.props.auth.user ? (cpmCompetitors || cpmRivals || loadingExtras) : true)" class="bg-black/40 backdrop-blur-sm rounded-xl shadow-2xl border border-white/5 mb-6 overflow-hidden relative" :style="{ order: sectionOrder('similar_skill_rivals') }">
                 <!-- Anon teaser overlay: blurred skeleton + sign-in CTA -->
                 <div v-if="!$page.props.auth.user" class="absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-md">
                     <div class="text-center px-6 py-8">
@@ -2988,7 +3004,7 @@
             </div>
 
             <!-- Direct Competitor Comparison -->
-            <div v-if="showSection('competitor_comparison')" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5 mb-6 relative" :style="{ order: sectionOrder('competitor_comparison') }">
+            <div v-if="hasProfile && showSection('competitor_comparison')" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5 mb-6 relative" :style="{ order: sectionOrder('competitor_comparison') }">
                 <!-- Anon teaser overlay -->
                 <template v-if="!$page.props.auth.user">
                     <div class="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/60 backdrop-blur-md">

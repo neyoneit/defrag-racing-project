@@ -4349,5 +4349,7 @@
     ":amount to site maintenance": ":amount на утримання сайту",
     "of the donations went to the DefragLive contest prize pool and is not counted towards the goal.": "з пожертв пішло у призовий фонд конкурсу DefragLive і до цілі не зараховується.",
     "See the contest": "Дивитися конкурс",
-    ":amount to the DefragLive contest prize pool": ":amount у призовий фонд конкурсу DefragLive"
+    ":amount to the DefragLive contest prize pool": ":amount у призовий фонд конкурсу DefragLive",
+    "No Q3DF profile linked": "Профіль Q3DF не прив’язано",
+    "This account is not linked to a Q3DF/MDD profile, so there are no records, rankings or stats to show.": "Цей обліковий запис не прив’язано до профілю Q3DF/MDD, тому тут немає рекордів, рейтингів чи статистики."
 }
