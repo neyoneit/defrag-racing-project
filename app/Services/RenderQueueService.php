@@ -354,8 +354,41 @@ class RenderQueueService
             ->toArray();
         $usedMaps = array_flip($recentPublishedMaps);
 
+        // How much of each tier may go out in a day. The rotation already says
+        // this - a tier holding two of the twelve positions is meant to be a
+        // sixth of the day - but as a sequence it only held for one pass. The
+        // loop keeps going until it has $count videos, so with every other tier
+        // empty it came back round and filled the whole day from the one tier
+        // that had stock: drain the rest and the channel publishes nothing but
+        // world records. As a cap the same weights hold on every pass.
+        $tierCaps = array_count_values(self::PUBLISH_ROTATION);
+
+        // What already counts toward today, the same pair the daily total uses
+        // in autoApprovePublish(): published today, plus approved today and not
+        // yet published. Without the second half the bot's four-hourly call
+        // would hand out the same tier's whole day again before the first batch
+        // had gone public.
+        $usedToday = RenderedVideo::where('source', 'auto')
+            ->where(function ($q) {
+                $q->whereDate('published_at', today())
+                    ->orWhere(fn($inner) => $inner->where('publish_approved', true)
+                        ->whereNull('published_at')
+                        ->whereDate('updated_at', today()));
+            })
+            ->selectRaw('COALESCE(quality_tier, 0) as tier, COUNT(*) as cnt')
+            ->groupByRaw('COALESCE(quality_tier, 0)')
+            ->pluck('cnt', 'tier')
+            ->toArray();
+
         while ($items->count() < $count && $attempts < $maxAttempts) {
             $tier = self::PUBLISH_ROTATION[$publishIndex % count(self::PUBLISH_ROTATION)];
+
+            // This tier has had its day. Move on rather than take another.
+            if (($usedToday[$tier] ?? 0) >= ($tierCaps[$tier] ?? 0)) {
+                $publishIndex++;
+                $attempts++;
+                continue;
+            }
 
             $excludeMapNames = array_keys($usedMaps);
             $baseQuery = RenderedVideo::where('status', 'completed')
@@ -376,6 +409,7 @@ class RenderQueueService
             if ($video) {
                 $items->push($video);
                 $usedMaps[$video->map_name] = true;
+                $usedToday[$tier] = ($usedToday[$tier] ?? 0) + 1;
             }
 
             $publishIndex++;
