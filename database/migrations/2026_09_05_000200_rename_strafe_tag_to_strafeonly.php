@@ -21,16 +21,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Only if the old one is there and the new one is not, so a database
-        // seeded after this migration was written is left alone rather than
-        // ending up with two tags nobody can tell apart.
+        // Production was renamed by hand before this shipped, and a fresh
+        // database is seeded with the new name already. Both are correct and
+        // neither wants touching: the rename runs only where the old name is
+        // still the one there.
         if (DB::table('tags')->where('name', 'strafeonly')->exists()) {
             return;
         }
 
         DB::table('tags')->where('name', 'strafe')->update([
             'name' => 'strafeonly',
-            'display_name' => 'Strafe only',
+            'display_name' => 'StrafeOnly',
             'updated_at' => now(),
         ]);
     }
