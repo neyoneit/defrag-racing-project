@@ -36,7 +36,7 @@ class TagSeeder extends Seeder
             ['name' => 'battlesuit', 'display_name' => 'BattleSuit', 'category' => 'items'],
 
             // Functions/Techniques
-            ['name' => 'strafe', 'display_name' => 'Strafe', 'category' => 'functions'],
+            ['name' => 'strafeonly', 'display_name' => 'Strafe only', 'category' => 'functions'],
             ['name' => 'circle', 'display_name' => 'Circle', 'category' => 'functions'],
             ['name' => 'circlejump', 'display_name' => 'CircleJump', 'category' => 'functions'],
             ['name' => 'doublejump', 'display_name' => 'DoubleJump', 'category' => 'functions'],

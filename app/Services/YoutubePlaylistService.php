@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\RenderedVideo;
 use App\Models\YoutubePlaylist;
 use App\Services\Comps\MapClassifier;
+use App\Services\Comps\MapEligibilityTagger;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -197,10 +198,25 @@ class YoutubePlaylistService
     {
         $strafeTagged = DB::table('map_tag')
             ->join('tags', 'tags.id', '=', 'map_tag.tag_id')
-            ->where('tags.name', 'strafe')
+            ->where('tags.name', MapClassifier::STRAFE_TAG)
             ->pluck('map_tag.map_id')
             ->flip()
             ->all();
+
+        // A map tagged `cpmonly` cannot be finished in vq3, and the other way
+        // round. A run in the barred physics is either a mistagged map or a
+        // run that never really ended, and either way it must not head a
+        // playlist as that map's fastest time. Same pair comps bars on.
+        $barred = [];
+
+        foreach (MapEligibilityTagger::ONLY_TAG as $physics => $tagName) {
+            foreach (DB::table('map_tag')
+                ->join('tags', 'tags.id', '=', 'map_tag.tag_id')
+                ->where('tags.name', $tagName)
+                ->pluck('map_tag.map_id') as $mapId) {
+                $barred[$mapId] = $physics;
+            }
+        }
 
         $classifier = new MapClassifier();
         $out = [];
@@ -229,6 +245,10 @@ class YoutubePlaylistService
                     $physics = strtolower((string) preg_split('/[.\-_ ]/', (string) $row->physics)[0]);
 
                     if (! in_array($physics, ['cpm', 'vq3'], true)) {
+                        continue;
+                    }
+
+                    if ($row->map_id !== null && ($barred[$row->map_id] ?? null) === $physics) {
                         continue;
                     }
 

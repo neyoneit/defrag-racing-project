@@ -30,6 +30,13 @@ class MapClassifier
      */
     public const COUNTED = ['rl', 'pg', 'gl', 'lg', 'bfg'];
 
+    /**
+     * The tag that says a map is run without weapons whatever is lying in it.
+     * Named here rather than written out at each reader, so the day it is
+     * renamed is a one-line day.
+     */
+    public const STRAFE_TAG = 'strafeonly';
+
     public const STRAFE = 'strafe';
     public const WEAPON = 'weapon';
     public const COMBO = 'combo';
