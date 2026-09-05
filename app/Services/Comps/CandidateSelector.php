@@ -386,7 +386,7 @@ class CandidateSelector
     {
         return DB::table('map_tag')
             ->join('tags', 'tags.id', '=', 'map_tag.tag_id')
-            ->where('tags.name', 'strafe')
+            ->where('tags.name', MapClassifier::STRAFE_TAG)
             ->pluck('map_tag.map_id')
             ->flip()
             ->all();

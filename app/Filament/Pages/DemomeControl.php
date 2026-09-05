@@ -102,6 +102,11 @@ class DemomeControl extends Page
                     ->count();
             }),
             'unlisted_tier_counts' => Cache::remember('demome:control_unlisted_tier_counts', 60, fn () => $this->getUnlistedTierCounts()),
+            // Working out what belongs in thirty-odd playlists means one pass
+            // over every published video, so it is cached: the numbers only
+            // move when something is published, and a few minutes stale costs
+            // nothing here.
+            'playlist_buttons' => Cache::remember('demome:control_playlist_buttons', 600, fn () => $this->getPlaylistButtons()),
             // Cache the page list per (tier, page) so changing tier or paging
             // doesn't pay the full filter+sort cost every click.
             'unlisted_videos' => Cache::remember(
@@ -296,6 +301,114 @@ class DemomeControl extends Page
      * the new state is invisible until the per-key TTL elapses, which makes
      * the panel look broken even though the change went through.
      */
+    /**
+     * Every playlist the channel can have, with how many videos it should hold
+     * and where it stands.
+     *
+     * `planned` is what the definitions say belongs in it right now. `synced`
+     * is what YouTube held when the bot last finished with it. The two coming
+     * apart is the whole point of the page: that difference is the work.
+     */
+    private function getPlaylistButtons(): array
+    {
+        $service = new \App\Services\YoutubePlaylistService();
+        $definitions = $service->definitions();
+
+        $counts = array_map('count', $service->compute(array_keys($definitions)));
+        $state = \App\Models\YoutubePlaylist::pluck('sync_queued', 'key');
+        $synced = \App\Models\YoutubePlaylist::pluck('synced_count', 'key');
+        $created = \App\Models\YoutubePlaylist::pluck('youtube_playlist_id', 'key');
+
+        $out = [];
+
+        foreach ($definitions as $key => $definition) {
+            $out[] = [
+                'key' => $key,
+                'group' => $definition['group'],
+                // The channel-wide prefix is on every one of them and says
+                // nothing here. The shelf's own name is what has to be read.
+                'label' => str_replace('Quake 3 Defrag - ', '', $definition['title']),
+                'planned' => $counts[$key] ?? 0,
+                'synced' => (int) ($synced[$key] ?? 0),
+                'queued' => (bool) ($state[$key] ?? false),
+                'exists' => (bool) ($created[$key] ?? false),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Work out one playlist's contents and put it in the queue the bot reads.
+     */
+    public function queuePlaylist(string $key): void
+    {
+        $service = new \App\Services\YoutubePlaylistService();
+
+        if (! isset($service->definitions()[$key])) {
+            Notification::make()->title('No such playlist')->danger()->send();
+
+            return;
+        }
+
+        $counts = $service->snapshot([$key]);
+        $this->flushDemomeViewCache();
+
+        Notification::make()
+            ->title('Playlist Queued')
+            ->body(($counts[$key] ?? 0) . ' videos worked out. Run playlists_sync.py on the demome box.')
+            ->success()
+            ->send();
+    }
+
+    /**
+     * Queue every playlist whose contents are not already what they should be.
+     * A shelf that is already right is left alone: queueing it would make the
+     * bot read it from YouTube for nothing.
+     */
+    public function queueAllPlaylists(): void
+    {
+        $service = new \App\Services\YoutubePlaylistService();
+        $counts = array_map('count', $service->compute(array_keys($service->definitions())));
+
+        $synced = \App\Models\YoutubePlaylist::pluck('synced_count', 'key');
+
+        $keys = [];
+
+        foreach ($counts as $key => $count) {
+            if ($count > 0 && $count !== (int) ($synced[$key] ?? -1)) {
+                $keys[] = $key;
+            }
+        }
+
+        if (! $keys) {
+            Notification::make()->title('Nothing to queue')->body('Every playlist already holds what it should.')->warning()->send();
+
+            return;
+        }
+
+        $done = $service->snapshot($keys);
+        $this->flushDemomeViewCache();
+
+        Notification::make()
+            ->title(count($keys) . ' Playlists Queued')
+            ->body(array_sum($done) . ' video slots in total. Run playlists_sync.py on the demome box.')
+            ->success()
+            ->send();
+    }
+
+    /**
+     * Empty the queue without touching YouTube. For a change of mind before
+     * the bot has been run.
+     */
+    public function clearPlaylistQueue(): void
+    {
+        $cleared = \App\Models\YoutubePlaylist::where('sync_queued', true)->update(['sync_queued' => false]);
+        $this->flushDemomeViewCache();
+
+        Notification::make()->title("Queue cleared ({$cleared} playlists)")->success()->send();
+    }
+
     private function flushDemomeViewCache(): void
     {
         Cache::forget('demome:control_stats');
@@ -304,6 +417,7 @@ class DemomeControl extends Page
         Cache::forget('demome:control_unlisted_tier_counts');
         Cache::forget('demome:control_publishing_count');
         Cache::forget('demome:control_bulk_tier_buttons');
+        Cache::forget('demome:control_playlist_buttons');
         // unlisted_videos / unlisted_total_pages are keyed by tier+page; we
         // can't enumerate cheaply, so we let them expire on their short TTL
         // (30s/60s). The list view is the least state-sensitive piece - a

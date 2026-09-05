@@ -199,6 +199,85 @@
         </div>
     </x-filament::section>
 
+    {{-- Row 2.6: YouTube playlists --}}
+    <x-filament::section class="mt-4">
+        <x-slot name="heading">YouTube Playlists</x-slot>
+        <x-slot name="description">
+            Pick the playlists to bring up to date, then run the sync on the demome box.
+            Each holds one video per map: the fastest run on it. A playlist without (CPM) or (VQ3)
+            holds both, with the two physics alternating so the same map is never twice in a row.
+            Nothing here talks to YouTube - it only works out what should go where.
+        </x-slot>
+
+        @php
+            $queuedPlaylists = collect($playlist_buttons)->where('queued', true);
+            $queuedSlots = $queuedPlaylists->sum('planned');
+            // Every add and every removal costs 50 units of the daily quota,
+            // and a first fill is nearly all adds. Worth showing before the
+            // click rather than after the run stops half way.
+            $queuedQuota = $queuedSlots * 50;
+        @endphp
+
+        <div class="flex flex-wrap items-center gap-3 mb-4">
+            <x-filament::button wire:click="queueAllPlaylists" color="danger" icon="heroicon-o-queue-list">
+                Queue everything out of date
+            </x-filament::button>
+
+            @if($queuedPlaylists->count() > 0)
+                <x-filament::button wire:click="clearPlaylistQueue" color="gray" icon="heroicon-o-x-mark">
+                    Clear queue
+                </x-filament::button>
+            @endif
+
+            <a href="https://console.cloud.google.com/apis/api/youtube.googleapis.com/quotas"
+               target="_blank" rel="noopener"
+               class="text-sm text-primary-400 hover:text-primary-300 underline">
+                YouTube quota &rarr;
+            </a>
+        </div>
+
+        @if($queuedPlaylists->count() > 0)
+            <div class="mb-4 p-3 rounded-lg bg-white/[0.03] border border-white/10">
+                <div class="text-sm text-gray-300 mb-2">
+                    <span class="font-bold text-white">{{ $queuedPlaylists->count() }}</span> playlists queued,
+                    <span class="font-bold text-white">{{ number_format($queuedSlots) }}</span> video slots,
+                    up to <span class="font-bold text-white">{{ number_format($queuedQuota) }}</span> quota units
+                    @if($queuedQuota > 463000)
+                        <span class="text-amber-400">- more than one day. The run will stop and carry on tomorrow.</span>
+                    @endif
+                </div>
+                <code class="block px-3 py-2 bg-gray-800 rounded text-sm font-mono text-gray-300 break-all select-all">python playlists_sync.py --apply</code>
+            </div>
+        @endif
+
+        @foreach(collect($playlist_buttons)->groupBy('group') as $group => $buttons)
+            <div class="text-xs font-bold uppercase tracking-wide text-gray-500 mt-4 mb-2">{{ $group }}</div>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                @foreach($buttons as $btn)
+                    @php
+                        $behind = $btn['planned'] !== $btn['synced'];
+                        $confirm = "Work out '{$btn['label']}' and put it in the sync queue? It should hold {$btn['planned']} videos.";
+                    @endphp
+                    <x-filament::button
+                        wire:click="queuePlaylist('{{ $btn['key'] }}')"
+                        wire:confirm="{{ $confirm }}"
+                        :color="$btn['queued'] ? 'warning' : ($behind ? 'success' : 'gray')"
+                        :disabled="$btn['planned'] === 0"
+                        :icon="$btn['queued'] ? 'heroicon-o-clock' : 'heroicon-o-list-bullet'"
+                        class="w-full"
+                    >
+                        {{ $btn['label'] }} ({{ $btn['planned'] }})
+                    </x-filament::button>
+                @endforeach
+            </div>
+        @endforeach
+
+        <div class="mt-4 text-xs text-gray-500">
+            Green means the playlist is out of date. Grey means YouTube already holds what it should.
+            Amber means it is queued and waiting for the sync.
+        </div>
+    </x-filament::section>
+
     {{-- Row 3: API Token (compact) --}}
     <x-filament::section class="mt-4">
         <x-slot name="heading">API Token</x-slot>

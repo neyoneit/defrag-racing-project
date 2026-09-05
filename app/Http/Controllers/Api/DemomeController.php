@@ -1097,6 +1097,87 @@ class DemomeController extends Controller
         return response()->json(['approved' => $approved]);
     }
 
+    /**
+     * The playlists the admin has queued, each with the videos it should hold.
+     *
+     * Sent whole rather than paged: a playlist is a few thousand ids at most,
+     * and the bot has to see the entire list before it can work out what to
+     * add and what to take out.
+     */
+    public function playlistsToSync()
+    {
+        $service = new \App\Services\YoutubePlaylistService();
+        $definitions = $service->definitions();
+
+        $playlists = \App\Models\YoutubePlaylist::where('sync_queued', true)->orderBy('key')->get();
+
+        $out = [];
+
+        foreach ($playlists as $playlist) {
+            if (! isset($definitions[$playlist->key])) {
+                continue;
+            }
+
+            $videoIds = \App\Models\YoutubePlaylistItem::where('youtube_playlist_id', $playlist->id)
+                ->join('rendered_videos', 'rendered_videos.id', '=', 'youtube_playlist_items.rendered_video_id')
+                ->orderBy('youtube_playlist_items.position')
+                ->pluck('rendered_videos.youtube_video_id')
+                ->filter()
+                ->values();
+
+            $out[] = [
+                'key' => $playlist->key,
+                'title' => $definitions[$playlist->key]['title'],
+                'description' => $service->description($playlist->key),
+                'youtube_playlist_id' => $playlist->youtube_playlist_id,
+                'video_ids' => $videoIds,
+            ];
+        }
+
+        return response()->json(['playlists' => $out]);
+    }
+
+    /**
+     * Remember the id YouTube gave a playlist the bot has just created. Without
+     * this the next run has no way to tell an existing playlist from a missing
+     * one and would make a second copy of every shelf.
+     */
+    public function playlistCreated(Request $request)
+    {
+        $data = $request->validate([
+            'key' => 'required|string',
+            'youtube_playlist_id' => 'required|string',
+        ]);
+
+        $playlist = \App\Models\YoutubePlaylist::where('key', $data['key'])->firstOrFail();
+        $playlist->update(['youtube_playlist_id' => $data['youtube_playlist_id']]);
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * A playlist the bot has finished with. It leaves the queue, and the count
+     * it reports is what YouTube actually holds, not what was planned - the two
+     * come apart when a run stops on a dead quota.
+     */
+    public function playlistSynced(Request $request)
+    {
+        $data = $request->validate([
+            'key' => 'required|string',
+            'count' => 'required|integer|min:0',
+        ]);
+
+        $playlist = \App\Models\YoutubePlaylist::where('key', $data['key'])->firstOrFail();
+
+        $playlist->update([
+            'sync_queued' => false,
+            'synced_count' => $data['count'],
+            'synced_at' => now(),
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
     public function publishCountsToday()
     {
         return response()->json([
